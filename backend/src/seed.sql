@@ -1,0 +1,21 @@
+﻿insert into guidelines (id, title, description, tags, featured)
+values
+  (gen_random_uuid(), 'High quality products and services', 'Klientų pasitenkinimo lygio matavimas NPS.', null, true),
+  (gen_random_uuid(), 'AI with purpose', 'DI sprendimai įtraukiami į procesus tik įvertinus jų naudą.', null, true),
+  (gen_random_uuid(), 'Data governance', 'Duomenų valdysena užtikrina kokybišką duomenų gyvavimo ciklo priežiūrą ir duomenų prieinamumą.', null, true),
+  (gen_random_uuid(), 'Coherence (SADM, VSSA, VDA, NKSC)', 'Suderinamumas su platesniu kontekstu.', null, false),
+  (gen_random_uuid(), 'Robust IT infrastructure', 'Patikima ir saugi IT infrastruktūra.', null, false),
+  (gen_random_uuid(), 'Simplicity', 'Priimami kaip įmanoma paprastesni / elegantiškesni technologiniai sprendimai.', null, false),
+  (gen_random_uuid(), 'EU centric', 'Prioritetizuojami EU sukurti sprendimai.', null, false),
+  (gen_random_uuid(), 'SME Leadership', 'Veiklos specialistų pritraukimas į sprendimų priėmimą.', null, false),
+  (gen_random_uuid(), 'PES network', 'PES tinklo išnaudojimas ir dalinimasis IT žiniomis.', null, false),
+  (gen_random_uuid(), 'Inhouse development', 'Balansas tarp perkamų ir savadarbių sprendimų.', null, false),
+  (gen_random_uuid(), 'Security', 'Saugumui skiriama ypač didelė svarba.', null, false),
+  (gen_random_uuid(), 'Modern workstation', 'Moderni darbo vieta ir įranga.', null, false),
+  (gen_random_uuid(), 'Communication', null, null, false),
+  (gen_random_uuid(), 'UDTS', null, null, false),
+  (gen_random_uuid(), 'Ethics', null, null, false),
+  (gen_random_uuid(), 'Data maturity', null, null, false),
+  (gen_random_uuid(), 'Data democratisation', null, null, false),
+  (gen_random_uuid(), 'Lowcode / nocode', null, null, false),
+  (gen_random_uuid(), 'Both way learning', null, null, false);

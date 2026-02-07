@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UŽT Strategijos Misija</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <p class="kicker">Skaitmenizacijos strategijos dirbtuvės</p>
+        <input id="sessionName" class="session-name" value="UŽT Strategijos Misija" />
+      </div>
+      <div class="top-actions">
+        <button id="exportBtn" class="btn btn-primary">Eksportuoti santrauką</button>
+        <button id="resetBtn" class="btn btn-ghost">Išvalyti duomenis</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="steps" id="steps"></aside>
+      <main class="stage">
+        <section class="step-view" id="stepView"></section>
+      </main>
+    </div>
+
+    <section class="export" id="exportPanel" hidden>
+      <div class="export-card">
+        <div class="export-header">
+          <h2>Santrauka</h2>
+          <div class="export-actions">
+            <button id="copySummary" class="btn btn-ghost">Kopijuoti tekstą</button>
+            <button id="downloadJson" class="btn btn-primary">Atsisiųsti JSON</button>
+            <button id="closeExport" class="btn btn-ghost">Uždaryti</button>
+          </div>
+        </div>
+        <textarea id="summaryText" class="summary"></textarea>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

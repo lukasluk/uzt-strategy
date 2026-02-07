@@ -1,0 +1,12 @@
+﻿[Unit]
+Description=Uzt Strategy API
+After=network.target
+
+[Service]
+WorkingDirectory=/srv/uzt-strategy/backend
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+EnvironmentFile=/srv/uzt-strategy/backend/.env
+
+[Install]
+WantedBy=multi-user.target
