@@ -430,58 +430,47 @@ function triggerVoteBurstAt(origin, delta) {
 
 function renderInstitutionPicker() {
   if (!elements.institutionPicker) return;
+  elements.institutionPicker.hidden = true;
+  elements.institutionPicker.innerHTML = '';
+}
 
-  if (state.loading && !state.institutionsLoaded) {
-    elements.institutionPicker.innerHTML = `
-      <div class="institution-picker-card">
-        <h3>Institucijų strategijos</h3>
-        <p class="prompt">Kraunamas institucijų sąrašas...</p>
-      </div>
-    `;
-    return;
-  }
+function institutionSelectMarkup() {
+  const selectedSlug = normalizeSlug(state.institutionSlug);
+  const institutions = Array.isArray(state.institutions) ? state.institutions : [];
+  const hasInstitutions = institutions.length > 0;
+  const loading = state.loading && !state.institutionsLoaded;
 
-  if (!state.institutions.length) {
-    elements.institutionPicker.innerHTML = `
-      <div class="institution-picker-card">
-        <h3>Institucijų strategijos</h3>
-        <p class="prompt">Šiuo metu viešai paskelbtų institucijų dar nėra.</p>
-      </div>
-    `;
-    return;
-  }
-
-  const cards = state.institutions.map((institution) => {
+  const placeholder = loading
+    ? '<option value="">Institucijos kraunamos...</option>'
+    : '<option value="">Pasirinkite instituciją</option>';
+  const options = institutions.map((institution) => {
     const slug = normalizeSlug(institution.slug);
-    const active = slug && slug === state.institutionSlug;
-    const created = formatInstitutionDate(institution.created_at);
-    const href = `index.html?institution=${encodeURIComponent(slug)}`;
-
-    return `
-      <a class="institution-card ${active ? 'active' : ''}" href="${href}">
-        <div class="institution-card-header">
-          <strong>${escapeHtml(institution.name || slug)}</strong>
-          ${active ? '<span class="tag tag-main">Atidaryta</span>' : ''}
-        </div>
-        <div class="institution-card-meta">
-          <span>Slug: ${escapeHtml(slug)}</span>
-          ${created ? `<span>Sukurta: ${escapeHtml(created)}</span>` : ''}
-        </div>
-        <span class="institution-card-link">Peržiūrėti viešas gaires</span>
-      </a>
-    `;
+    const name = institution.name || slug || '-';
+    const selected = slug === selectedSlug ? ' selected' : '';
+    return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(name)}</option>`;
   }).join('');
 
-  elements.institutionPicker.innerHTML = `
-    <div class="institution-picker-card">
-      <div class="header-row">
-        <h3>Institucijų strategijos</h3>
-        <span class="tag">${state.institutions.length} institucijos</span>
-      </div>
-      <p class="prompt">Pasirinkite instituciją ir peržiūrėkite jos viešą gairių puslapį.</p>
-      <div class="institution-grid">${cards}</div>
-    </div>
+  return `
+    <label class="institution-switcher" title="Pasirinkite instituciją peržiūrai">
+      <span>Institucija</span>
+      <select id="institutionSwitchSelect" ${loading || !hasInstitutions ? 'disabled' : ''}>
+        ${placeholder}
+        ${options}
+      </select>
+    </label>
   `;
+}
+
+function bindInstitutionSwitch(container) {
+  const select = container.querySelector('#institutionSwitchSelect');
+  if (!select) return;
+
+  select.addEventListener('change', () => {
+    const slug = normalizeSlug(select.value);
+    if (slug === normalizeSlug(state.institutionSlug)) return;
+    const href = slug ? `index.html?institution=${encodeURIComponent(slug)}` : 'index.html';
+    window.location.href = href;
+  });
 }
 
 function setActiveView(nextView) {
@@ -1102,7 +1091,7 @@ function renderStepView() {
       <div class="card">
         <strong>Pasirinkite instituciją</strong>
         <p class="prompt" style="margin: 8px 0 0;">
-          Viršuje matote institucijų sąrašą. Paspauskite instituciją, kad atvertumėte jos viešą gairių puslapį.
+          Viršuje dešinėje pasirinkite instituciją iš išskleidžiamo sąrašo, kad atvertumėte jos viešą gairių puslapį.
         </p>
       </div>
     `;
@@ -1299,29 +1288,36 @@ async function changeVote(guidelineId, delta) {
 function renderUserBar() {
   const container = document.getElementById('userBar');
   if (!container) return;
+  const switcher = institutionSelectMarkup();
+  const viewingName = state.institution?.name || state.institutionSlug || 'Nepasirinkta';
 
   if (!state.institutionSlug) {
     container.innerHTML = `
       <div class="user-toolbar">
+        ${switcher}
         <div class="user-chip">
-          <span>Pasirinkite instituciją</span>
+          <span>Peržiūrima: ${escapeHtml(viewingName)}</span>
           <span class="tag">Peržiūros režimas</span>
         </div>
       </div>
     `;
+    bindInstitutionSwitch(container);
     return;
   }
 
   if (!isAuthenticated()) {
     container.innerHTML = `
       <div class="user-toolbar">
+        ${switcher}
         <div class="user-chip">
           <span>Viešas režimas</span>
           <span class="tag">Skaitymas</span>
         </div>
+        <span class="tag">Peržiūrima: ${escapeHtml(viewingName)}</span>
         <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
       </div>
     `;
+    bindInstitutionSwitch(container);
     const openBtn = container.querySelector('#openAuthBtn');
     if (openBtn) openBtn.addEventListener('click', () => showAuthModal('login'));
     return;
@@ -1332,17 +1328,18 @@ function renderUserBar() {
   const homeSlug = state.accountContext?.institution?.slug || '';
   const homeName = state.accountContext?.institution?.name || homeSlug || 'Jūsų institucija';
   const viewingCurrentInstitution = Boolean(homeSlug && homeSlug === state.institutionSlug);
-  const viewingName = state.institution?.name || state.institutionSlug || '-';
 
   container.innerHTML = `
     <div class="user-toolbar">
+      ${switcher}
       <div class="user-chip">
         <span>${escapeHtml(displayName)}</span>
         <span class="tag">${escapeHtml(roleLabel)}</span>
       </div>
+      <span class="tag">Peržiūrima: ${escapeHtml(viewingName)}</span>
       ${viewingCurrentInstitution
         ? '<span class="tag">Pilna prieiga</span>'
-        : `<span class="tag">Prisijungta: ${escapeHtml(homeName)}</span><span class="tag">Peržiūra: ${escapeHtml(viewingName)}</span>`}
+        : `<span class="tag">Prisijungta: ${escapeHtml(homeName)}</span>`}
       ${viewingCurrentInstitution && state.role === 'institution_admin'
         ? `<a href="admin.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Admin</a>`
         : ''}
@@ -1353,6 +1350,7 @@ function renderUserBar() {
     </div>
   `;
 
+  bindInstitutionSwitch(container);
   const logoutBtn = container.querySelector('#logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
