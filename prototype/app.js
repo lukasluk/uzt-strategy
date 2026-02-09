@@ -9,25 +9,45 @@ const steps = [
 
 const introSlides = [
   {
-    title: '1. Kas tai per sistema',
-    body: 'Tai strategijos gairių vertinimo ir komentavimo įrankis. Kiekviena gairė vertinama atskirai, o komentarai kaupiami vienoje vietoje.'
+    title: '1. Pasirinkite instituciją',
+    body: 'Viršuje dešinėje pasirinkite instituciją. Matysite tik tos institucijos viešas gaires ir strategijos eigą.',
+    points: ['Instituciją galima keisti bet kada.', 'Perjungus instituciją duomenys atsinaujina automatiškai.']
   },
   {
-    title: '2. Kaip vyksta balsavimas',
-    body: 'Kiekvienas narys turi 10 balsų ir gali paskirstyti juos tarp gairių (0-5 vienai gairei). Balsavimas atidaromas pagal ciklo būseną.'
+    title: '2. Peržiūrėkite gaires',
+    body: 'Skiltyje „Gairės“ matysite pasiūlymus, komentarus ir bendrus balsų rezultatus. Neprisijungę vartotojai mato tik viešą informaciją.',
+    points: ['Kiekviena gairė turi atskirą diskusijos bloką.', 'Matomi bendri balsai ir balsuotojų skaičius.']
   },
   {
-    title: '3. Kaip uždaromas etapas',
-    body: 'Balsuoti galima iki ciklo būsenos Final. Viešai rodomi tik agreguoti balsų rezultatai ir vieši komentarai.'
+    title: '3. Prisijungimas ir teisės',
+    body: 'Prisijungę dalyviai gali komentuoti, balsuoti ir siūlyti naujas gaires. Administratoriaus teisės suteikia papildomą valdymą.',
+    points: ['Administratoriai gali valdyti ciklą ir narius.', 'Ne savo institucijos strategijose veikia tik peržiūros režimas.']
   },
   {
-    title: '4. Kaip veikia ciklai',
-    body: 'Strategija valdoma ciklais: Draft, Open, Review, Final ir Archived. Redagavimas ir balsavimas galimi Open/Review būsenose.'
+    title: '4. Balsavimo logika',
+    body: 'Kiekvienas narys turi ribotą balsų biudžetą. Balsai skiriami su „+“ ir „-“ mygtukais, o panelėje matomas likutis.',
+    points: ['Vienai gairei taikomos minimalios ir maksimalios ribos.', 'Balsus galima koreguoti, kol ciklas leidžia redagavimą.']
+  },
+  {
+    title: '5. Ciklo būsenos',
+    body: 'Strategija keliauja per būsenas: Draft, Open, Review, Final ir Archived. Nuo būsenos priklauso, ar galima aktyviai dalyvauti.',
+    points: ['Open/Review: galima balsuoti ir komentuoti.', 'Final/Archived: peržiūra ir rezultatų analizė.']
+  },
+  {
+    title: '6. Strategijų žemėlapis',
+    body: 'Žemėlapyje matysite institucijos gaires ir jų ryšius: tėvinė, vaikinė arba našlaitė.',
+    points: ['Administratoriai gali tempti korteles ir išsaugoti išdėstymą.', 'Kortelėse rodoma balsų dinamika vizualiais indikatoriais.']
+  },
+  {
+    title: '7. Kaip užbaigti etapą',
+    body: 'Etapo pabaigoje administratorius užfiksuoja ciklo būseną ir, jei reikia, paskelbia rezultatus viešam peržiūrėjimui.',
+    points: ['Prieš uždarymą verta peržiūrėti komentarus ir balsus.', 'Santrauką galima eksportuoti į tekstą ir JSON.']
   }
 ];
 
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
+const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
 
@@ -64,6 +84,7 @@ const state = {
   accountContext: null,
   context: null,
   userVotes: {},
+  voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapTransform: { x: 120, y: 80, scale: 1 }
 };
 
@@ -101,6 +122,14 @@ function hydrateIntroCollapsed() {
 
 function persistIntroCollapsed() {
   localStorage.setItem(INTRO_COLLAPSED_KEY, state.introCollapsed ? '1' : '0');
+}
+
+function hydrateVoteFloatingCollapsed() {
+  return localStorage.getItem(VOTE_FLOATING_COLLAPSED_KEY) === '1';
+}
+
+function persistVoteFloatingCollapsed() {
+  localStorage.setItem(VOTE_FLOATING_COLLAPSED_KEY, state.voteFloatingCollapsed ? '1' : '0');
 }
 
 function hydrateAuthFromStorage() {
@@ -522,8 +551,14 @@ function renderIntroDeck() {
   const toggleLabel = state.introCollapsed ? 'Rodyti naudojimosi gidą' : 'Slėpti naudojimosi gidą';
   const helpCards = introSlides.map((slide, idx) => `
     <article class="guide-card">
-      <span class="guide-index">${idx + 1}</span>
-      <h4>${escapeHtml(String(slide.title || '').replace(/^\d+\.\s*/, ''))}</h4>
+      <div class="guide-head">
+        <span class="guide-index">${idx + 1}</span>
+        <h4>${escapeHtml(String(slide.title || '').replace(/^\d+\.\s*/, ''))}</h4>
+      </div>
+      <p>${escapeHtml(slide.body || '')}</p>
+      ${Array.isArray(slide.points) && slide.points.length
+        ? `<ul class="guide-points">${slide.points.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+        : ''}
     </article>
   `).join('');
 
@@ -1380,13 +1415,26 @@ function renderVoteFloating() {
   const locked = !cycleIsWritable();
 
   floating.hidden = false;
+  floating.classList.toggle('collapsed', state.voteFloatingCollapsed);
   floating.innerHTML = `
+    <button id="toggleVoteFloatingBtn" class="vote-floating-toggle" type="button" aria-label="${state.voteFloatingCollapsed ? 'Rodyti balsų biudžetą' : 'Slėpti balsų biudžetą'}">
+      ${state.voteFloatingCollapsed ? '›' : '‹'}
+    </button>
     <div class="vote-floating-inner">
       <div class="vote-floating-title">Balsų biudžetas</div>
       <div class="vote-floating-count">${remaining} / ${budget}</div>
       <div class="vote-total">${locked ? 'Ciklas užrakintas' : 'Balsavimas aktyvus'}</div>
     </div>
   `;
+
+  const toggleBtn = floating.querySelector('#toggleVoteFloatingBtn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      state.voteFloatingCollapsed = !state.voteFloatingCollapsed;
+      persistVoteFloatingCollapsed();
+      renderVoteFloating();
+    });
+  }
 }
 
 function buildSummary() {
