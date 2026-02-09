@@ -69,6 +69,7 @@ async function getCurrentCycle(query, institutionId) {
 function registerV1Routes({ app, query, broadcast, uuid }) {
   const SUPERADMIN_CODE = process.env.SUPERADMIN_CODE || 'change-me';
   const AUTH_SECRET = process.env.AUTH_SECRET || 'change-me-too';
+  const META_ADMIN_PASSWORD = process.env.META_ADMIN_PASSWORD || 'Bedarbystės-ratas-sukasi';
   const VOTE_BUDGET = Number(process.env.VOTE_BUDGET || 10);
   const INVITE_TTL_HOURS = Number(process.env.INVITE_TTL_HOURS || 72);
   const AUTH_TTL_HOURS = Number(process.env.AUTH_TTL_HOURS || 12);
@@ -76,6 +77,14 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   function requireSuperAdmin(req, res, next) {
     const code = String(req.headers['x-superadmin-code'] || '').trim();
     if (!code || code !== SUPERADMIN_CODE) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    next();
+  }
+
+  function requireMetaAdmin(req, res, next) {
+    const password = String(req.headers['x-meta-admin-password'] || req.body?.password || '').trim();
+    if (!password || password !== META_ADMIN_PASSWORD) {
       return res.status(403).json({ error: 'forbidden' });
     }
     next();
@@ -205,6 +214,168 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         comments: commentsByGuideline[g.id] || []
       }))
     });
+  });
+
+  app.post('/api/v1/meta-admin/auth', (req, res) => {
+    const password = String(req.body?.password || '').trim();
+    if (!password || password !== META_ADMIN_PASSWORD) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    res.json({ ok: true });
+  });
+
+  app.get('/api/v1/meta-admin/overview', requireMetaAdmin, async (_req, res) => {
+    const institutionsRes = await query(
+      'select id, name, slug, status, created_at from institutions order by created_at desc'
+    );
+    const usersRes = await query(
+      'select id, email, display_name, status, created_at from platform_users order by created_at desc'
+    );
+    const membershipsRes = await query(
+      `select m.id, m.user_id, m.institution_id, m.role, m.status, m.created_at,
+              i.name as institution_name, i.slug as institution_slug
+       from institution_memberships m
+       join institutions i on i.id = m.institution_id
+       order by m.created_at desc`
+    );
+    const invitesRes = await query(
+      `select inv.id, inv.institution_id, inv.email, inv.role, inv.expires_at, inv.used_at, inv.revoked_at, inv.created_at,
+              i.name as institution_name, i.slug as institution_slug
+       from institution_invites inv
+       join institutions i on i.id = inv.institution_id
+       order by inv.created_at desc
+       limit 300`
+    );
+
+    const membershipsByUser = membershipsRes.rows.reduce((acc, row) => {
+      if (!acc[row.user_id]) acc[row.user_id] = [];
+      acc[row.user_id].push({
+        id: row.id,
+        institutionId: row.institution_id,
+        institutionName: row.institution_name,
+        institutionSlug: row.institution_slug,
+        role: row.role,
+        status: row.status,
+        createdAt: row.created_at
+      });
+      return acc;
+    }, {});
+
+    const pendingInvites = invitesRes.rows
+      .filter((row) => !row.used_at && !row.revoked_at && new Date(row.expires_at).getTime() > Date.now())
+      .map((row) => ({
+        id: row.id,
+        institutionId: row.institution_id,
+        institutionName: row.institution_name,
+        institutionSlug: row.institution_slug,
+        email: row.email,
+        role: row.role,
+        expiresAt: row.expires_at,
+        createdAt: row.created_at
+      }));
+
+    res.json({
+      institutions: institutionsRes.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        status: row.status,
+        createdAt: row.created_at
+      })),
+      users: usersRes.rows.map((row) => ({
+        id: row.id,
+        email: row.email,
+        displayName: row.display_name,
+        status: row.status,
+        createdAt: row.created_at,
+        memberships: membershipsByUser[row.id] || []
+      })),
+      pendingInvites
+    });
+  });
+
+  app.post('/api/v1/meta-admin/institutions', requireMetaAdmin, async (req, res) => {
+    const name = String(req.body?.name || '').trim();
+    const slugInput = String(req.body?.slug || '').trim();
+    if (!name) return res.status(400).json({ error: 'name required' });
+
+    const slug = slugify(slugInput || name);
+    if (!slug) return res.status(400).json({ error: 'invalid slug' });
+
+    const existing = await query('select id from institutions where slug = $1', [slug]);
+    if (existing.rowCount > 0) return res.status(409).json({ error: 'slug already exists' });
+
+    const institutionId = uuid();
+    const cycleId = uuid();
+    await query(
+      `insert into institutions (id, name, slug, status)
+       values ($1, $2, $3, 'active')`,
+      [institutionId, name, slug]
+    );
+    await query(
+      `insert into strategy_cycles (id, institution_id, title, state, results_published, starts_at)
+       values ($1, $2, $3, 'open', false, now())`,
+      [cycleId, institutionId, `${name} strategijos ciklas`]
+    );
+
+    res.status(201).json({
+      institutionId,
+      cycleId,
+      slug
+    });
+  });
+
+  app.post('/api/v1/meta-admin/institutions/:institutionId/invites', requireMetaAdmin, async (req, res) => {
+    const institutionId = String(req.params.institutionId || '').trim();
+    const email = normalizeEmail(req.body?.email);
+    const role = String(req.body?.role || 'member').trim();
+    if (!institutionId || !email) return res.status(400).json({ error: 'institutionId and email required' });
+    if (!['institution_admin', 'member'].includes(role)) return res.status(400).json({ error: 'invalid role' });
+
+    const exists = await query('select id from institutions where id = $1', [institutionId]);
+    if (exists.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
+
+    const inviteToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = sha256(inviteToken);
+    const inviteId = uuid();
+
+    await query(
+      `insert into institution_invites (id, institution_id, email, role, token_hash, expires_at)
+       values ($1, $2, $3, $4, $5, now() + ($6 || ' hours')::interval)`,
+      [inviteId, institutionId, email, role, tokenHash, String(INVITE_TTL_HOURS)]
+    );
+
+    res.status(201).json({ inviteId, inviteToken, email, role });
+  });
+
+  app.put('/api/v1/meta-admin/users/:userId/status', requireMetaAdmin, async (req, res) => {
+    const userId = String(req.params.userId || '').trim();
+    const status = String(req.body?.status || '').trim();
+    if (!userId || !['active', 'blocked'].includes(status)) {
+      return res.status(400).json({ error: 'userId and valid status required' });
+    }
+
+    const result = await query(
+      'update platform_users set status = $1 where id = $2',
+      [status, userId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'user not found' });
+    res.json({ ok: true, status });
+  });
+
+  app.put('/api/v1/meta-admin/memberships/:membershipId/status', requireMetaAdmin, async (req, res) => {
+    const membershipId = String(req.params.membershipId || '').trim();
+    const status = String(req.body?.status || '').trim();
+    if (!membershipId || !['active', 'blocked'].includes(status)) {
+      return res.status(400).json({ error: 'membershipId and valid status required' });
+    }
+
+    const result = await query(
+      'update institution_memberships set status = $1 where id = $2',
+      [status, membershipId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'membership not found' });
+    res.json({ ok: true, status });
   });
 
   app.post('/api/v1/superadmin/institutions', requireSuperAdmin, async (req, res) => {
