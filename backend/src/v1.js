@@ -132,6 +132,33 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     return state === 'open' || state === 'review';
   }
 
+  async function validateGuidelineRelationship({ guidelineId, cycleId, relationType, parentGuidelineId }) {
+    if (!['orphan', 'parent', 'child'].includes(relationType)) {
+      throw new Error('invalid relation type');
+    }
+
+    if (relationType !== 'child') {
+      return null;
+    }
+
+    const parentId = String(parentGuidelineId || '').trim();
+    if (!parentId) throw new Error('parent guideline required for child');
+    if (parentId === guidelineId) throw new Error('child cannot be parent of itself');
+
+    const parentRes = await query(
+      `select id, cycle_id, relation_type
+       from strategy_guidelines
+       where id = $1`,
+      [parentId]
+    );
+    const parent = parentRes.rows[0];
+    if (!parent) throw new Error('parent guideline not found');
+    if (parent.cycle_id !== cycleId) throw new Error('parent must be in same cycle');
+    if (parent.relation_type !== 'parent') throw new Error('parent guideline must be parent');
+
+    return parent.id;
+  }
+
   app.get('/api/v1/health', (_req, res) => {
     res.json({ ok: true, version: 'v1' });
   });
@@ -142,6 +169,77 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
       ['active']
     );
     res.json({ institutions: institutions.rows });
+  });
+
+  app.get('/api/v1/public/strategy-map', async (_req, res) => {
+    const institutionsRes = await query(
+      `select id, name, slug, status, created_at
+       from institutions
+       where status = 'active'
+       order by name asc`
+    );
+    const institutions = institutionsRes.rows;
+    if (!institutions.length) return res.json({ institutions: [] });
+
+    const institutionIds = institutions.map((row) => row.id);
+    const cyclesRes = await query(
+      `select distinct on (institution_id)
+          id, institution_id, title, state, finalized_at, created_at
+       from strategy_cycles
+       where institution_id = any($1::uuid[])
+         and state in ('final', 'archived')
+       order by institution_id, coalesce(finalized_at, created_at) desc`,
+      [institutionIds]
+    );
+    const cyclesByInstitution = Object.fromEntries(cyclesRes.rows.map((row) => [row.institution_id, row]));
+    const cycleIds = cyclesRes.rows.map((row) => row.id);
+
+    const guidelinesByCycle = {};
+    if (cycleIds.length) {
+      const guidelinesRes = await query(
+        `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, created_at
+         from strategy_guidelines
+         where cycle_id = any($1::uuid[])
+           and status in ('active', 'merged')
+         order by created_at asc`,
+        [cycleIds]
+      );
+      guidelinesRes.rows.forEach((row) => {
+        if (!guidelinesByCycle[row.cycle_id]) guidelinesByCycle[row.cycle_id] = [];
+        guidelinesByCycle[row.cycle_id].push({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          status: row.status,
+          relationType: row.relation_type || 'orphan',
+          parentGuidelineId: row.parent_guideline_id || null,
+          createdAt: row.created_at
+        });
+      });
+    }
+
+    res.json({
+      institutions: institutions.map((institution) => {
+        const cycle = cyclesByInstitution[institution.id] || null;
+        return {
+          id: institution.id,
+          name: institution.name,
+          slug: institution.slug,
+          status: institution.status,
+          createdAt: institution.created_at,
+          cycle: cycle
+            ? {
+                id: cycle.id,
+                title: cycle.title,
+                state: cycle.state,
+                finalizedAt: cycle.finalized_at,
+                createdAt: cycle.created_at
+              }
+            : null,
+          guidelines: cycle ? (guidelinesByCycle[cycle.id] || []) : []
+        };
+      })
+    });
   });
 
   app.get('/api/v1/public/institutions/:slug/cycles/current/summary', async (req, res) => {
@@ -174,7 +272,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     if (!cycle) return res.status(404).json({ error: 'cycle not found' });
 
     const guidelines = await query(
-      `select id, title, description, status, created_at
+      `select id, title, description, status, relation_type, parent_guideline_id, created_at
        from strategy_guidelines
        where cycle_id = $1 and status = 'active'
        order by created_at asc`,
@@ -221,6 +319,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         id: g.id,
         title: g.title,
         description: g.description,
+        relationType: g.relation_type || 'orphan',
+        parentGuidelineId: g.parent_guideline_id || null,
         totalScore: voteByGuideline[g.id]?.totalScore || 0,
         voterCount: voteByGuideline[g.id]?.voterCount || 0,
         comments: commentsByGuideline[g.id] || []
@@ -848,7 +948,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     }
 
     const guidelinesRes = await query(
-      `select g.id, g.title, g.description, g.status, g.created_at,
+      `select g.id, g.title, g.description, g.status, g.relation_type, g.parent_guideline_id, g.created_at,
               coalesce(v.total_score, 0)::int as total_score,
               coalesce(v.voter_count, 0)::int as voter_count,
               coalesce(c.comment_count, 0)::int as comment_count
@@ -878,6 +978,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         title: row.title,
         description: row.description,
         status: row.status,
+        relationType: row.relation_type || 'orphan',
+        parentGuidelineId: row.parent_guideline_id || null,
         createdAt: row.created_at,
         totalScore: row.total_score,
         voterCount: row.voter_count,
@@ -892,6 +994,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const title = String(req.body?.title || '').trim();
     const description = String(req.body?.description || '').trim();
     const status = String(req.body?.status || 'active').trim();
+    const relationType = String(req.body?.relationType || 'orphan').trim().toLowerCase();
+    const parentGuidelineIdRaw = req.body?.parentGuidelineId;
     if (!guidelineId || !title) return res.status(400).json({ error: 'guidelineId and title required' });
     if (!['active', 'merged', 'hidden'].includes(status)) return res.status(400).json({ error: 'invalid status' });
 
@@ -899,11 +1003,40 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     if (!context) return res.status(404).json({ error: 'guideline not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
 
+    let parentGuidelineId = null;
+    try {
+      parentGuidelineId = await validateGuidelineRelationship({
+        guidelineId,
+        cycleId: context.cycle_id,
+        relationType,
+        parentGuidelineId: parentGuidelineIdRaw
+      });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid relation') });
+    }
+
+    if (relationType !== 'parent') {
+      const childrenRes = await query(
+        `select id from strategy_guidelines
+         where parent_guideline_id = $1 and id <> $1
+         limit 1`,
+        [guidelineId]
+      );
+      if (childrenRes.rowCount > 0) {
+        return res.status(400).json({ error: 'cannot demote parent with children' });
+      }
+    }
+
     await query(
       `update strategy_guidelines
-       set title = $1, description = $2, status = $3, updated_at = now()
-       where id = $4`,
-      [title, description || null, status, guidelineId]
+       set title = $1,
+           description = $2,
+           status = $3,
+           relation_type = $4,
+           parent_guideline_id = $5,
+           updated_at = now()
+       where id = $6`,
+      [title, description || null, status, relationType, parentGuidelineId, guidelineId]
     );
 
     broadcast({ type: 'v1.guideline.updated', institutionId: req.auth.institutionId, guidelineId });

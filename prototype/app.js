@@ -27,6 +27,7 @@ const introSlides = [
 ];
 
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
+const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
 
@@ -43,7 +44,8 @@ const elements = {
 
 const state = {
   institutionSlug: resolveInstitutionSlug(),
-  introCollapsed: false,
+  activeView: 'guidelines',
+  introCollapsed: hydrateIntroCollapsed(),
   loading: false,
   busy: false,
   error: '',
@@ -54,11 +56,15 @@ const state = {
   cycle: null,
   summary: null,
   guidelines: [],
+  mapData: null,
+  mapError: '',
   token: null,
   user: null,
   role: null,
+  accountContext: null,
   context: null,
-  userVotes: {}
+  userVotes: {},
+  mapTransform: { x: 120, y: 80, scale: 1 }
 };
 
 hydrateAuthFromStorage();
@@ -89,12 +95,20 @@ function normalizeSlug(value) {
   return /^[a-z0-9-]+$/.test(slug) ? slug : '';
 }
 
+function hydrateIntroCollapsed() {
+  return localStorage.getItem(INTRO_COLLAPSED_KEY) === '1';
+}
+
+function persistIntroCollapsed() {
+  localStorage.setItem(INTRO_COLLAPSED_KEY, state.introCollapsed ? '1' : '0');
+}
+
 function hydrateAuthFromStorage() {
   const raw = localStorage.getItem(AUTH_STORAGE_KEY);
   if (!raw) return;
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed || parsed.slug !== state.institutionSlug || !parsed.token) return;
+    if (!parsed || !parsed.token) return;
     state.token = parsed.token;
     state.user = parsed.user || null;
     state.role = parsed.role || null;
@@ -111,7 +125,7 @@ function persistAuthToStorage() {
   localStorage.setItem(
     AUTH_STORAGE_KEY,
     JSON.stringify({
-      slug: state.institutionSlug,
+      homeSlug: state.accountContext?.institution?.slug || null,
       token: state.token,
       user: state.user,
       role: state.role
@@ -123,6 +137,7 @@ function clearSession() {
   state.token = null;
   state.user = null;
   state.role = null;
+  state.accountContext = null;
   state.context = null;
   state.userVotes = {};
   localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -132,11 +147,16 @@ function setSession(payload) {
   state.token = payload.token || null;
   state.user = payload.user || null;
   state.role = payload.role || null;
+  state.accountContext = null;
   persistAuthToStorage();
 }
 
 function isLoggedIn() {
   return Boolean(state.token && state.context);
+}
+
+function isAuthenticated() {
+  return Boolean(state.token && state.user);
 }
 
 function cycleIsWritable() {
@@ -262,29 +282,36 @@ async function loadInstitutions() {
   state.institutionsLoaded = true;
 }
 
+async function loadStrategyMap() {
+  const payload = await api('/api/v1/public/strategy-map', { auth: false });
+  state.mapData = payload || { institutions: [] };
+}
+
 async function loadMemberContext() {
   const context = await api('/api/v1/me/context');
   if (!context?.institution?.slug) throw new Error('Nepavyko gauti naudotojo konteksto.');
-
-  if (context.institution.slug !== state.institutionSlug) {
-    clearSession();
-    throw new Error(`Prisijungimas priklauso institucijai "${context.institution.slug}".`);
-  }
-
-  state.context = context;
+  state.accountContext = context;
   state.role = context.membership?.role || state.role || 'member';
   state.user = state.user || context.user || null;
+  persistAuthToStorage();
 
-  if (context.cycle?.id) {
-    const votesPayload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycle.id)}/my-votes`);
-    const nextVotes = {};
-    (votesPayload.votes || []).forEach((vote) => {
-      nextVotes[vote.guidelineId] = Number(vote.score || 0);
-    });
-    state.userVotes = nextVotes;
-  } else {
-    state.userVotes = {};
+  if (context.institution.slug === state.institutionSlug) {
+    state.context = context;
+    if (context.cycle?.id) {
+      const votesPayload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycle.id)}/my-votes`);
+      const nextVotes = {};
+      (votesPayload.votes || []).forEach((vote) => {
+        nextVotes[vote.guidelineId] = Number(vote.score || 0);
+      });
+      state.userVotes = nextVotes;
+    } else {
+      state.userVotes = {};
+    }
+    return;
   }
+
+  state.context = null;
+  state.userVotes = {};
 }
 
 async function bootstrap() {
@@ -294,9 +321,15 @@ async function bootstrap() {
 
   try {
     await loadInstitutions();
+    try {
+      await loadStrategyMap();
+      state.mapError = '';
+    } catch (error) {
+      state.mapData = { institutions: [] };
+      state.mapError = toUserMessage(error);
+    }
 
     if (!state.institutionSlug) {
-      clearSession();
       state.institution = null;
       state.cycle = null;
       state.summary = null;
@@ -310,8 +343,13 @@ async function bootstrap() {
       try {
         await loadMemberContext();
       } catch (error) {
-        clearSession();
-        throw error;
+        const raw = String(error?.message || '').toLowerCase();
+        if (raw === 'invalid token' || raw === 'unauthorized') {
+          clearSession();
+          throw error;
+        }
+        state.context = null;
+        state.userVotes = {};
       }
     }
   } catch (error) {
@@ -342,6 +380,42 @@ function formatInstitutionDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('lt-LT', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function getElementCenter(element) {
+  if (!(element instanceof HTMLElement)) return null;
+  const rect = element.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2 + window.scrollX,
+    y: rect.top + rect.height / 2 + window.scrollY
+  };
+}
+
+function triggerVoteBurstAt(origin, delta) {
+  if (!origin) return;
+  const burst = document.createElement('div');
+  burst.className = 'vote-burst';
+  burst.style.left = `${origin.x}px`;
+  burst.style.top = `${origin.y}px`;
+
+  const colors = delta > 0
+    ? ['#2b8a7e', '#1f6e64', '#d86b4b', '#f0b873']
+    : ['#d86b4b', '#bf4f2f', '#2b8a7e', '#f0b873'];
+
+  for (let i = 0; i < 10; i += 1) {
+    const dot = document.createElement('span');
+    dot.className = 'vote-burst-dot';
+    const angle = (Math.PI * 2 * i) / 10;
+    const distance = 20 + Math.random() * 20;
+    dot.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+    dot.style.setProperty('--dy', `${Math.sin(angle) * distance}px`);
+    dot.style.setProperty('--color', colors[i % colors.length]);
+    dot.style.setProperty('--delay', `${Math.random() * 0.08}s`);
+    burst.appendChild(dot);
+  }
+
+  document.body.appendChild(burst);
+  setTimeout(() => burst.remove(), 700);
 }
 
 function renderInstitutionPicker() {
@@ -400,16 +474,28 @@ function renderInstitutionPicker() {
   `;
 }
 
+function setActiveView(nextView) {
+  if (!['guidelines', 'map'].includes(nextView)) return;
+  state.activeView = nextView;
+  render();
+}
+
 function renderSteps() {
   elements.steps.innerHTML = '';
-  steps.forEach((step) => {
-    const pill = document.createElement('button');
-    pill.className = 'step-pill' + (step.id === 'guidelines' ? ' active' : '');
-    pill.innerHTML = `<h4>${escapeHtml(step.title)}</h4><p>${escapeHtml(step.hint)}</p>`;
-    elements.steps.appendChild(pill);
-  });
 
-  if (state.institutionSlug) {
+  const guidelinesStep = document.createElement('button');
+  guidelinesStep.className = 'step-pill' + (state.activeView === 'guidelines' ? ' active' : '');
+  guidelinesStep.innerHTML = `<h4>${escapeHtml(steps[0].title)}</h4><p>${escapeHtml(steps[0].hint)}</p>`;
+  guidelinesStep.addEventListener('click', () => setActiveView('guidelines'));
+  elements.steps.appendChild(guidelinesStep);
+
+  const canOpenAdmin = Boolean(
+    state.institutionSlug &&
+    isAuthenticated() &&
+    state.role === 'institution_admin' &&
+    state.accountContext?.institution?.slug === state.institutionSlug
+  );
+  if (canOpenAdmin) {
     const adminLink = document.createElement('a');
     adminLink.className = 'step-pill admin-pill';
     adminLink.href = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}`;
@@ -424,43 +510,12 @@ function renderSteps() {
     <p>Čia bus aprašymas, kas čia per iniciatyva.</p>
   `;
   elements.steps.appendChild(aboutCard);
-}
 
-function renderSlideIllustration(index) {
-  if (index === 0) {
-    return `
-      <svg viewBox="0 0 360 160" class="slide-illus" aria-hidden="true">
-        <rect x="18" y="16" width="324" height="126" rx="18" fill="#fff" stroke="#2a2722" stroke-width="3" stroke-dasharray="6 5"/>
-        <circle cx="65" cy="56" r="16" fill="none" stroke="#2a2722" stroke-width="3"/>
-        <circle cx="130" cy="56" r="16" fill="none" stroke="#2a2722" stroke-width="3"/>
-        <circle cx="195" cy="56" r="16" fill="none" stroke="#2a2722" stroke-width="3"/>
-        <path d="M81 56h33M146 56h33" stroke="#2a2722" stroke-width="3" stroke-linecap="round"/>
-        <path d="M44 98h110M44 116h172M228 98h86" stroke="#2a2722" stroke-width="3" stroke-linecap="round"/>
-      </svg>
-    `;
-  }
-  if (index === 1) {
-    return `
-      <svg viewBox="0 0 360 160" class="slide-illus" aria-hidden="true">
-        <rect x="26" y="22" width="112" height="112" rx="16" fill="#fff" stroke="#2a2722" stroke-width="3"/>
-        <rect x="152" y="22" width="182" height="46" rx="12" fill="none" stroke="#2a2722" stroke-width="3" stroke-dasharray="5 5"/>
-        <rect x="152" y="88" width="182" height="46" rx="12" fill="none" stroke="#2a2722" stroke-width="3" stroke-dasharray="5 5"/>
-        <text x="82" y="92" text-anchor="middle" font-size="34" font-family="monospace" fill="#2a2722">10</text>
-        <path d="M124 78h24M138 64l10 14-10 14" stroke="#2a2722" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    `;
-  }
-  return `
-    <svg viewBox="0 0 360 160" class="slide-illus" aria-hidden="true">
-      <rect x="20" y="18" width="130" height="124" rx="18" fill="none" stroke="#2a2722" stroke-width="3"/>
-      <rect x="170" y="18" width="170" height="58" rx="14" fill="#fff" stroke="#2a2722" stroke-width="3"/>
-      <rect x="170" y="84" width="170" height="58" rx="14" fill="#fff" stroke="#2a2722" stroke-width="3"/>
-      <path d="M40 52h88M40 74h56M40 96h78" stroke="#2a2722" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="190" cy="47" r="7" fill="#2a2722"/>
-      <circle cx="190" cy="113" r="7" fill="#2a2722"/>
-      <path d="M207 47h104M207 113h104" stroke="#2a2722" stroke-width="3" stroke-linecap="round"/>
-    </svg>
-  `;
+  const mapStep = document.createElement('button');
+  mapStep.className = 'step-pill map-pill' + (state.activeView === 'map' ? ' active' : '');
+  mapStep.innerHTML = '<h4>Strategijų žemėlapis</h4><p>Tarpinstituciniai ryšiai, gairių visuma</p>';
+  mapStep.addEventListener('click', () => setActiveView('map'));
+  elements.steps.appendChild(mapStep);
 }
 
 function renderIntroDeck() {
@@ -469,8 +524,7 @@ function renderIntroDeck() {
   const helpCards = introSlides.map((slide, idx) => `
     <article class="guide-card">
       <span class="guide-index">${idx + 1}</span>
-      <h4>${escapeHtml(slide.title)}</h4>
-      <p>${escapeHtml(slide.body)}</p>
+      <h4>${escapeHtml(String(slide.title || '').replace(/^\d+\.\s*/, ''))}</h4>
     </article>
   `).join('');
 
@@ -495,7 +549,275 @@ function renderIntroDeck() {
   if (toggleIntroBtn) {
     toggleIntroBtn.addEventListener('click', () => {
       state.introCollapsed = !state.introCollapsed;
+      persistIntroCollapsed();
       renderIntroDeck();
+    });
+  }
+}
+
+function applyMapTransform(viewport, world) {
+  const { x, y, scale } = state.mapTransform;
+  world.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+  const gridSize = 48 * scale;
+  viewport.style.setProperty('--grid-size', `${Math.max(18, gridSize)}px`);
+  viewport.style.setProperty('--grid-x', `${x % gridSize}px`);
+  viewport.style.setProperty('--grid-y', `${y % gridSize}px`);
+}
+
+function layoutStrategyMap() {
+  const institutions = Array.isArray(state.mapData?.institutions) ? state.mapData.institutions : [];
+  const nodes = [];
+  const edges = [];
+  let maxY = 240;
+
+  institutions.forEach((institution, idx) => {
+    const baseX = 80 + idx * 560;
+    const institutionNodeId = `inst-${institution.id}`;
+    const instY = 40;
+    nodes.push({
+      id: institutionNodeId,
+      kind: 'institution',
+      x: baseX,
+      y: instY,
+      w: 260,
+      h: 110,
+      institution
+    });
+
+    const guidelines = Array.isArray(institution.guidelines) ? institution.guidelines : [];
+    if (!guidelines.length) {
+      maxY = Math.max(maxY, instY + 180);
+      return;
+    }
+
+    const guidelineById = Object.fromEntries(guidelines.map((g) => [g.id, g]));
+    const childrenByParent = {};
+    guidelines.forEach((guideline) => {
+      const parentId = guideline.parentGuidelineId;
+      if (!parentId || !guidelineById[parentId]) return;
+      if (!childrenByParent[parentId]) childrenByParent[parentId] = [];
+      childrenByParent[parentId].push(guideline);
+    });
+
+    const roots = guidelines.filter((guideline) => {
+      const parentId = guideline.parentGuidelineId;
+      return guideline.relationType !== 'child' || !parentId || !guidelineById[parentId];
+    });
+
+    const visited = new Set();
+    let nextY = 190;
+    const placeNodeTree = (guideline, depth, parentNodeId) => {
+      if (visited.has(guideline.id)) return;
+      visited.add(guideline.id);
+
+      const nodeId = `guide-${guideline.id}`;
+      const nodeX = baseX + depth * 220;
+      const nodeY = nextY;
+      nextY += 92;
+
+      nodes.push({
+        id: nodeId,
+        kind: 'guideline',
+        x: nodeX,
+        y: nodeY,
+        w: 190,
+        h: 70,
+        institution,
+        guideline
+      });
+
+      if (parentNodeId) {
+        edges.push({ from: parentNodeId, to: nodeId, type: 'child' });
+      } else {
+        edges.push({
+          from: institutionNodeId,
+          to: nodeId,
+          type: guideline.relationType === 'orphan' ? 'orphan' : 'root'
+        });
+      }
+
+      const children = childrenByParent[guideline.id] || [];
+      children.forEach((child) => placeNodeTree(child, depth + 1, nodeId));
+    };
+
+    roots.forEach((root) => placeNodeTree(root, 0, null));
+    guidelines.forEach((guideline) => {
+      if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
+    });
+    maxY = Math.max(maxY, nextY + 80);
+  });
+
+  const width = Math.max(1400, institutions.length * 560 + 600);
+  const height = Math.max(900, maxY);
+  return { nodes, edges, width, height };
+}
+
+function relationLabel(relationType) {
+  const relation = String(relationType || 'orphan').toLowerCase();
+  if (relation === 'parent') return 'tėvinė';
+  if (relation === 'child') return 'vaikinė';
+  return 'našlaitė';
+}
+
+function bindMapInteractions(viewport, world) {
+  let dragActive = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let originX = 0;
+  let originY = 0;
+
+  const onPointerMove = (event) => {
+    if (!dragActive) return;
+    const dx = event.clientX - dragStartX;
+    const dy = event.clientY - dragStartY;
+    state.mapTransform.x = originX + dx;
+    state.mapTransform.y = originY + dy;
+    applyMapTransform(viewport, world);
+  };
+
+  const endDrag = () => {
+    dragActive = false;
+    viewport.classList.remove('dragging');
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', endDrag);
+  };
+
+  viewport.addEventListener('pointerdown', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest('.strategy-map-node')) return;
+    if (event.button !== 0) return;
+
+    dragActive = true;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    originX = state.mapTransform.x;
+    originY = state.mapTransform.y;
+    viewport.classList.add('dragging');
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', endDrag);
+  });
+
+  viewport.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const nextScale = clamp(
+      state.mapTransform.scale + (event.deltaY < 0 ? 0.08 : -0.08),
+      0.45,
+      1.8
+    );
+    if (nextScale === state.mapTransform.scale) return;
+
+    const rect = viewport.getBoundingClientRect();
+    const anchorX = event.clientX - rect.left;
+    const anchorY = event.clientY - rect.top;
+    const ratio = nextScale / state.mapTransform.scale;
+    state.mapTransform.x = anchorX - (anchorX - state.mapTransform.x) * ratio;
+    state.mapTransform.y = anchorY - (anchorY - state.mapTransform.y) * ratio;
+    state.mapTransform.scale = nextScale;
+    applyMapTransform(viewport, world);
+  }, { passive: false });
+}
+
+function renderMapView() {
+  if (state.loading && !state.mapData) {
+    elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategijų žemėlapis...</strong></div>';
+    return;
+  }
+
+  if (state.mapError) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Nepavyko įkelti strategijų žemėlapio</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapError)}</p>
+        <button id="retryMapLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar kartą</button>
+      </div>
+    `;
+    const retryBtn = elements.stepView.querySelector('#retryMapLoadBtn');
+    if (retryBtn) retryBtn.addEventListener('click', bootstrap);
+    return;
+  }
+
+  if (!Array.isArray(state.mapData?.institutions) || !state.mapData.institutions.length) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Strategijų žemėlapis dar tuščias</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Kai institucijos patvirtins ciklus (Final/Archived), jų gairės atsiras šiame žemėlapyje.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const graph = layoutStrategyMap();
+  const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
+  const edgeMarkup = graph.edges.map((edge) => {
+    const fromNode = nodeById[edge.from];
+    const toNode = nodeById[edge.to];
+    if (!fromNode || !toNode) return '';
+
+    const fromX = fromNode.x + fromNode.w;
+    const fromY = fromNode.y + fromNode.h / 2;
+    const toX = toNode.x;
+    const toY = toNode.y + toNode.h / 2;
+    const c1x = fromX + 70;
+    const c2x = toX - 70;
+    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}" d="M ${fromX} ${fromY} C ${c1x} ${fromY}, ${c2x} ${toY}, ${toX} ${toY}"></path>`;
+  }).join('');
+
+  const nodeMarkup = graph.nodes.map((node) => {
+    if (node.kind === 'institution') {
+      const cycleTitle = node.institution.cycle?.title || 'Nėra patvirtinto ciklo';
+      const cycleState = node.institution.cycle?.state || '-';
+      return `
+        <a href="index.html?institution=${encodeURIComponent(node.institution.slug)}"
+           class="strategy-map-node institution-node ${node.institution.slug === state.institutionSlug ? 'active' : ''}"
+           style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
+          <strong>${escapeHtml(node.institution.name)}</strong>
+          <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
+          <small>${escapeHtml(cycleTitle)}</small>
+        </a>
+      `;
+    }
+
+    const relation = String(node.guideline.relationType || 'orphan');
+    const relationText = relationLabel(relation);
+    return `
+      <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)}"
+               style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
+        <h4>${escapeHtml(node.guideline.title)}</h4>
+        <small>${escapeHtml(node.institution.slug)} · ${escapeHtml(relationText)}</small>
+      </article>
+    `;
+  }).join('');
+
+  elements.stepView.innerHTML = `
+    <div class="step-header">
+      <h2>Strategijų žemėlapis</h2>
+      <div class="header-stack step-header-actions">
+        <button id="mapResetBtn" class="btn btn-ghost">Atstatyti vaizdą</button>
+        <span class="tag">Institucijos: ${Array.isArray(state.mapData?.institutions) ? state.mapData.institutions.length : 0}</span>
+      </div>
+    </div>
+    <p class="prompt">Peržiūrėkite patvirtintų strategijų visumą: institucijos, tėvinės/vaikinės gairės ir jų ryšiai. Temkite foną pele ir artinkite pelės ratuku.</p>
+    <section id="strategyMapViewport" class="strategy-map-viewport">
+      <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
+        <svg class="strategy-map-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
+          ${edgeMarkup}
+        </svg>
+        ${nodeMarkup}
+      </div>
+    </section>
+  `;
+
+  const viewport = elements.stepView.querySelector('#strategyMapViewport');
+  const world = elements.stepView.querySelector('#strategyMapWorld');
+  const resetBtn = elements.stepView.querySelector('#mapResetBtn');
+  if (viewport && world) {
+    applyMapTransform(viewport, world);
+    bindMapInteractions(viewport, world);
+  }
+  if (resetBtn && viewport && world) {
+    resetBtn.addEventListener('click', () => {
+      state.mapTransform = { x: 120, y: 80, scale: 1 };
+      applyMapTransform(viewport, world);
     });
   }
 }
@@ -560,6 +882,11 @@ function renderGuidelineCard(guideline, options) {
 }
 
 function renderStepView() {
+  if (state.activeView === 'map') {
+    renderMapView();
+    return;
+  }
+
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
@@ -591,6 +918,7 @@ function renderStepView() {
   }
 
   const member = isLoggedIn();
+  const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
   const budget = voteBudget();
   const used = member ? usedVotesTotal() : 0;
@@ -645,7 +973,14 @@ function renderStepView() {
         <strong>Ciklas užrakintas redagavimui</strong>
         <p class="prompt" style="margin: 8px 0 0;">Balsuoti ir komentuoti galima tik kai ciklo būsena yra Open arba Review.</p>
       </div>
-    `) : `
+    `) : (authenticated ? `
+      <div class="card" style="margin-top: 16px;">
+        <strong>Prisijungta prie kitos institucijos</strong>
+        <p class="prompt" style="margin: 8px 0 0;">
+          Šios institucijos strategiją galite peržiūrėti, bet teikti pasiūlymų, komentuoti ir balsuoti negalite.
+        </p>
+      </div>
+    ` : `
       <div class="card" style="margin-top: 16px;">
         <strong>Prisijunkite, kad galėtumėte aktyviai dalyvauti</strong>
         <p class="prompt" style="margin: 8px 0 0;">Viešai matomi visi komentarai prie strategijos gairių. Prisijungus galima siūlyti gaires, komentuoti ir balsuoti.</p>
@@ -699,8 +1034,10 @@ function bindStepEvents() {
 
       if (action === 'vote-plus' || action === 'vote-minus') {
         const delta = action === 'vote-plus' ? 1 : -1;
+        const origin = getElementCenter(target);
         await runBusy(async () => {
-          await changeVote(guidelineId, delta);
+          const changed = await changeVote(guidelineId, delta);
+          if (changed) triggerVoteBurstAt(origin, delta);
         });
       }
     });
@@ -738,7 +1075,7 @@ async function changeVote(guidelineId, delta) {
     maxPerGuideline()
   );
   const next = clamp(current + delta, minPerGuideline(), maxAllowed);
-  if (next === current) return;
+  if (next === current) return false;
 
   const response = await api(`/api/v1/guidelines/${encodeURIComponent(guidelineId)}/vote`, {
     method: 'PUT',
@@ -746,19 +1083,34 @@ async function changeVote(guidelineId, delta) {
   });
   state.userVotes[guidelineId] = Number(response.score || next);
   await Promise.all([refreshGuidelines(), refreshSummary()]);
+  return true;
 }
 
 function renderUserBar() {
   const container = document.getElementById('userBar');
   if (!container) return;
 
-  if (!isLoggedIn()) {
+  if (!state.institutionSlug) {
     container.innerHTML = `
-      <div class="user-chip">
-        <span>Viešas režimas</span>
-        <span class="tag">Skaitymas</span>
+      <div class="user-toolbar">
+        <div class="user-chip">
+          <span>Pasirinkite instituciją</span>
+          <span class="tag">Peržiūros režimas</span>
+        </div>
       </div>
-      <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
+    `;
+    return;
+  }
+
+  if (!isAuthenticated()) {
+    container.innerHTML = `
+      <div class="user-toolbar">
+        <div class="user-chip">
+          <span>Viešas režimas</span>
+          <span class="tag">Skaitymas</span>
+        </div>
+        <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
+      </div>
     `;
     const openBtn = container.querySelector('#openAuthBtn');
     if (openBtn) openBtn.addEventListener('click', () => showAuthModal('login'));
@@ -766,16 +1118,29 @@ function renderUserBar() {
   }
 
   const displayName = state.user?.displayName || state.user?.email || 'Prisijungęs vartotojas';
-  const roleLabel = state.role === 'institution_admin' ? 'Administravimas' : 'Narys';
+  const roleLabel = state.role === 'institution_admin' ? 'Administratorius' : 'Narys';
+  const homeSlug = state.accountContext?.institution?.slug || '';
+  const homeName = state.accountContext?.institution?.name || homeSlug || 'Jūsų institucija';
+  const viewingCurrentInstitution = Boolean(homeSlug && homeSlug === state.institutionSlug);
+  const viewingName = state.institution?.name || state.institutionSlug || '-';
+
   container.innerHTML = `
-    <div class="user-chip">
-      <span>${escapeHtml(displayName)}</span>
-      <span class="tag">${escapeHtml(roleLabel)}</span>
+    <div class="user-toolbar">
+      <div class="user-chip">
+        <span>${escapeHtml(displayName)}</span>
+        <span class="tag">${escapeHtml(roleLabel)}</span>
+      </div>
+      ${viewingCurrentInstitution
+        ? '<span class="tag">Pilna prieiga</span>'
+        : `<span class="tag">Prisijungta: ${escapeHtml(homeName)}</span><span class="tag">Peržiūra: ${escapeHtml(viewingName)}</span>`}
+      ${viewingCurrentInstitution && state.role === 'institution_admin'
+        ? `<a href="admin.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Admin</a>`
+        : ''}
+      ${!viewingCurrentInstitution && homeSlug
+        ? `<a href="index.html?institution=${encodeURIComponent(homeSlug)}" class="btn btn-ghost">Mano institucija</a>`
+        : ''}
+      <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
     </div>
-    ${state.role === 'institution_admin'
-      ? `<a href="admin.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Admin</a>`
-      : ''}
-    <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
   `;
 
   const logoutBtn = container.querySelector('#logoutBtn');
@@ -796,7 +1161,7 @@ function renderVoteFloating() {
     document.body.appendChild(floating);
   }
 
-  if (!isLoggedIn()) {
+  if (!isLoggedIn() || state.activeView !== 'guidelines') {
     floating.hidden = true;
     return;
   }
@@ -974,20 +1339,11 @@ function showAuthModal(initialMode) {
 }
 
 function render() {
-  const hasInstitution = Boolean(state.institutionSlug);
-
   renderSteps();
   renderIntroDeck();
   renderInstitutionPicker();
   renderStepView();
   renderUserBar();
   renderVoteFloating();
-
-  if (elements.mainLayout) {
-    elements.mainLayout.hidden = !hasInstitution;
-  }
-  if (elements.userBar) {
-    elements.userBar.hidden = !hasInstitution;
-  }
 }
 

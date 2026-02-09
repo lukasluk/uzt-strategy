@@ -104,3 +104,10 @@ create index if not exists idx_comments_guideline on strategy_comments(guideline
 create index if not exists idx_votes_guideline on strategy_votes(guideline_id);
 create index if not exists idx_votes_voter on strategy_votes(voter_id);
 
+alter table if exists strategy_guidelines
+  add column if not exists relation_type text not null default 'orphan';
+
+alter table if exists strategy_guidelines
+  add column if not exists parent_guideline_id uuid references strategy_guidelines(id) on delete set null;
+
+create index if not exists idx_guidelines_parent on strategy_guidelines(parent_guideline_id);

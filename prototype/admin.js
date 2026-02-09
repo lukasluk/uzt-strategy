@@ -57,7 +57,9 @@ function hydrateAuthFromStorage() {
   if (!raw) return;
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed || parsed.slug !== state.institutionSlug || !parsed.token) return;
+    if (!parsed || !parsed.token) return;
+    const storedSlug = normalizeSlug(parsed.slug || parsed.homeSlug);
+    if (storedSlug && storedSlug !== state.institutionSlug) return;
     state.token = parsed.token;
     state.user = parsed.user || null;
     state.role = parsed.role || null;
@@ -75,6 +77,7 @@ function persistAuthToStorage() {
     AUTH_STORAGE_KEY,
     JSON.stringify({
       slug: state.institutionSlug,
+      homeSlug: state.institutionSlug,
       token: state.token,
       user: state.user,
       role: state.role
@@ -118,7 +121,14 @@ function toUserMessage(error) {
     'admin role required': 'Reikalingos administratoriaus teisės.',
     'cross-institution forbidden': 'Prieiga prie kitos institucijos duomenų neleidžiama.',
     'invalid credentials': 'Neteisingi prisijungimo duomenys.',
-    'email required': 'Nurodykite el. paštą.'
+    'email required': 'Nurodykite el. paštą.',
+    'invalid relation type': 'Netinkamas gairės ryšio tipas.',
+    'parent guideline required for child': 'Vaikinei gairei būtina parinkti tėvinę gairę.',
+    'parent guideline not found': 'Tėvinė gairė nerasta.',
+    'parent must be in same cycle': 'Tėvinė gairė turi būti tame pačiame cikle.',
+    'child cannot be parent of itself': 'Gairė negali būti pati sau tėvinė.',
+    'parent guideline must be parent': 'Pasirinkta gairė nėra tėvinė.',
+    'cannot demote parent with children': 'Negalima keisti tėvinės gairės tipo, kol ji turi vaikinių gairių.'
   };
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
@@ -372,7 +382,14 @@ function renderDashboard() {
         <span class="tag">${state.guidelines.length}</span>
       </div>
       <div class="card-list">
-        ${state.guidelines.map((guideline) => `
+        ${state.guidelines.map((guideline) => {
+          const relationType = guideline.relationType || 'orphan';
+          const parentOptions = state.guidelines
+            .filter((candidate) => candidate.id !== guideline.id && candidate.relationType === 'parent')
+            .map((candidate) => `<option value="${escapeHtml(candidate.id)}" ${candidate.id === guideline.parentGuidelineId ? 'selected' : ''}>${escapeHtml(candidate.title)}</option>`)
+            .join('');
+
+          return `
           <article class="card ${guideline.status === 'active' ? '' : 'admin-panel'}">
             <form class="admin-guideline-form" data-id="${escapeHtml(guideline.id)}">
               <input type="text" name="title" value="${escapeHtml(guideline.title)}" required ${state.busy ? 'disabled' : ''}/>
@@ -381,16 +398,27 @@ function renderDashboard() {
                 <select name="status" ${state.busy ? 'disabled' : ''}>
                   ${['active', 'merged', 'hidden'].map((item) => `<option value="${item}" ${item === guideline.status ? 'selected' : ''}>${item}</option>`).join('')}
                 </select>
+                <select name="relationType" ${state.busy ? 'disabled' : ''}>
+                  <option value="orphan" ${relationType === 'orphan' ? 'selected' : ''}>Našlaitė</option>
+                  <option value="parent" ${relationType === 'parent' ? 'selected' : ''}>Tėvinė</option>
+                  <option value="child" ${relationType === 'child' ? 'selected' : ''}>Vaikinė</option>
+                </select>
+                <select name="parentGuidelineId" ${state.busy ? 'disabled' : ''} ${relationType === 'child' ? '' : 'disabled'}>
+                  <option value="">Pasirinkite tėvinę gairę</option>
+                  ${parentOptions}
+                </select>
                 <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Išsaugoti</button>
               </div>
               <div class="header-stack">
                 <span class="tag">Balas: ${Number(guideline.totalScore || 0)}</span>
                 <span class="tag">Balsuotojai: ${Number(guideline.voterCount || 0)}</span>
                 <span class="tag">Komentarai: ${Number(guideline.commentCount || 0)}</span>
+                <span class="tag">Ryšys: ${escapeHtml(relationType)}</span>
               </div>
             </form>
           </article>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     </section>
   `;
@@ -494,6 +522,19 @@ function bindDashboardEvents() {
   }
 
   root.querySelectorAll('.admin-guideline-form').forEach((form) => {
+    const relationSelect = form.querySelector('[name="relationType"]');
+    const parentSelect = form.querySelector('[name="parentGuidelineId"]');
+    if (relationSelect && parentSelect) {
+      const syncParentSelect = () => {
+        const relationType = String(relationSelect.value || 'orphan');
+        const needsParent = relationType === 'child';
+        parentSelect.disabled = state.busy || !needsParent;
+        if (!needsParent) parentSelect.value = '';
+      };
+      relationSelect.addEventListener('change', syncParentSelect);
+      syncParentSelect();
+    }
+
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const guidelineId = form.dataset.id;
@@ -503,12 +544,20 @@ function bindDashboardEvents() {
       const title = String(fd.get('title') || '').trim();
       const description = String(fd.get('description') || '').trim();
       const status = String(fd.get('status') || 'active').trim();
+      const relationType = String(fd.get('relationType') || 'orphan').trim();
+      const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
       if (!title) return;
 
       await runBusy(async () => {
         await api(`/api/v1/admin/guidelines/${encodeURIComponent(guidelineId)}`, {
           method: 'PUT',
-          body: { title, description, status }
+          body: {
+            title,
+            description,
+            status,
+            relationType,
+            parentGuidelineId: relationType === 'child' ? parentGuidelineId : null
+          }
         });
         await bootstrap();
       });
