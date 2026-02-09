@@ -29,7 +29,6 @@ const introSlides = [
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
-const BRAND_TITLE = 'digistrategija.lt - tavo įstaigos strategijos kūrimo dirbtuvės paprastai';
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -38,15 +37,12 @@ const elements = {
   institutionPicker: document.getElementById('institutionPicker'),
   mainLayout: document.getElementById('mainLayout'),
   userBar: document.getElementById('userBar'),
-  exportBtn: document.getElementById('exportBtn'),
-  sessionName: document.getElementById('sessionName'),
   exportPanel: document.getElementById('exportPanel'),
   summaryText: document.getElementById('summaryText')
 };
 
 const state = {
   institutionSlug: resolveInstitutionSlug(),
-  guideSlideIndex: 0,
   introCollapsed: false,
   loading: false,
   busy: false,
@@ -469,26 +465,27 @@ function renderSlideIllustration(index) {
 
 function renderIntroDeck() {
   if (!elements.introDeck) return;
-  const slideIndex = clamp(state.guideSlideIndex || 0, 0, introSlides.length - 1);
-  const slide = introSlides[slideIndex];
-  const toggleLabel = state.introCollapsed ? 'Rodyti skaidres' : 'Suskleisti';
+  const toggleLabel = state.introCollapsed ? 'Rodyti naudojimosi gidą' : 'Slėpti naudojimosi gidą';
+  const helpCards = introSlides.map((slide, idx) => `
+    <article class="guide-card">
+      <span class="guide-index">${idx + 1}</span>
+      <h4>${escapeHtml(slide.title)}</h4>
+      <p>${escapeHtml(slide.body)}</p>
+    </article>
+  `).join('');
 
   elements.introDeck.innerHTML = `
-    <div class="intro-card intro-shell-card ${state.introCollapsed ? 'collapsed' : ''}">
-      <div class="header-row">
-        <strong>${escapeHtml(slide.title)}</strong>
-        <div class="header-stack">
-          <span class="tag">Skaidrė ${slideIndex + 1} / ${introSlides.length}</span>
-          <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button">${toggleLabel}</button>
+    <div class="intro-guide ${state.introCollapsed ? 'collapsed' : ''}">
+      <div class="intro-guide-header">
+        <div>
+          <p class="kicker">Kaip naudotis</p>
+          <h3>Naudojimosi gidas</h3>
         </div>
+        <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button">${toggleLabel}</button>
       </div>
-      <div class="intro-collapse">
-        ${renderSlideIllustration(slideIndex)}
-        <p class="prompt" style="margin-bottom: 10px;">${escapeHtml(slide.body)}</p>
-        <div class="slide-controls">
-          <div class="slide-dots">
-            ${introSlides.map((_, idx) => `<button class="slide-dot ${idx === slideIndex ? 'active' : ''}" data-action="goto-slide" data-index="${idx}" aria-label="Skaidrė ${idx + 1}"></button>`).join('')}
-          </div>
+      <div class="intro-guide-body">
+        <div class="guide-grid">
+          ${helpCards}
         </div>
       </div>
     </div>
@@ -501,15 +498,6 @@ function renderIntroDeck() {
       renderIntroDeck();
     });
   }
-
-  elements.introDeck.querySelectorAll('[data-action="goto-slide"]').forEach((dot) => {
-    dot.addEventListener('click', () => {
-      const idx = Number(dot.dataset.index);
-      if (!Number.isInteger(idx)) return;
-      state.guideSlideIndex = clamp(idx, 0, introSlides.length - 1);
-      renderIntroDeck();
-    });
-  });
 }
 
 function renderGuidelineCard(guideline, options) {
@@ -618,7 +606,8 @@ function renderStepView() {
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>Gairės</h2>
-      <div class="header-stack">
+      <div class="header-stack step-header-actions">
+        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Eksportuoti santrauką</button>
         <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
         ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viešas režimas</span>'}
@@ -670,11 +659,16 @@ function renderStepView() {
 
 function bindStepEvents() {
   const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
+  const exportBtnInline = elements.stepView.querySelector('#exportBtnInline');
   const guidelineForm = elements.stepView.querySelector('#guidelineAddForm');
   const list = elements.stepView.querySelector('.card-list');
 
   if (openAuthFromStep) {
     openAuthFromStep.addEventListener('click', () => showAuthModal('login'));
+  }
+
+  if (exportBtnInline) {
+    exportBtnInline.addEventListener('click', exportSummary);
   }
 
   if (guidelineForm) {
@@ -866,7 +860,6 @@ function downloadJson() {
 }
 
 function bindGlobal() {
-  document.getElementById('exportBtn').addEventListener('click', exportSummary);
   document.getElementById('closeExport').addEventListener('click', () => {
     elements.exportPanel.hidden = true;
   });
@@ -981,7 +974,6 @@ function showAuthModal(initialMode) {
 }
 
 function render() {
-  elements.sessionName.textContent = BRAND_TITLE;
   const hasInstitution = Boolean(state.institutionSlug);
 
   renderSteps();
@@ -996,9 +988,6 @@ function render() {
   }
   if (elements.userBar) {
     elements.userBar.hidden = !hasInstitution;
-  }
-  if (elements.exportBtn) {
-    elements.exportBtn.disabled = !hasInstitution || state.loading || Boolean(state.error);
   }
 }
 

@@ -80,8 +80,13 @@ body {
 
 .top-actions {
   display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
+}
+.user-bar-top {
+  margin: 0;
 }
 
 .btn {
@@ -398,10 +403,7 @@ textarea {
   text-decoration: underline;
 }
 .intro-shell {
-  margin-top: 6px;
-}
-.intro-shell-card {
-  margin: 0;
+  margin-top: 10px;
 }
 .institution-picker {
   margin-top: 14px;
@@ -473,72 +475,74 @@ textarea {
   gap: 12px;
   flex-wrap: wrap;
 }
-.intro-card {
-  border: 2px solid #ccb8a0;
-  background: linear-gradient(160deg, #fffefb 0%, #f8efe2 100%);
+.intro-guide {
+  border: 1px solid #e0cfb9;
+  background: linear-gradient(160deg, #fffef9 0%, #f7ecde 100%);
+  border-radius: 18px;
+  padding: 14px 16px;
+}
+.intro-guide-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.intro-guide-header h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  line-height: 1.2;
 }
 .intro-toggle-btn {
-  padding: 6px 12px;
+  padding: 8px 12px;
   font-size: 12px;
 }
-.intro-collapse {
-  max-height: 520px;
+.intro-guide-body {
+  max-height: 820px;
   overflow: hidden;
   opacity: 1;
-  transition: max-height 0.25s ease, opacity 0.25s ease;
+  transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
+  margin-top: 10px;
 }
-.intro-card.collapsed .intro-collapse {
+.intro-guide.collapsed .intro-guide-body {
   max-height: 0;
   opacity: 0;
+  margin-top: 0;
 }
-.slide-illus {
-  width: 100%;
-  height: 150px;
-  margin: 4px 0 12px;
-  display: block;
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
 }
-.slide-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin-top: 4px;
-}
-.slide-nav {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1px solid #ccb9a2;
+.guide-card {
   background: #fff;
-  color: #2a2722;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-}
-.slide-nav:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.slide-dots {
-  display: flex;
-  align-items: center;
+  border: 1px solid #e7d7c5;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 6px 14px rgba(28, 26, 22, 0.06);
+  display: grid;
   gap: 8px;
 }
-.slide-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  border: none;
-  background: #c6b39d;
-  cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
-}
-.slide-dot.active {
+.guide-index {
   width: 26px;
-  background: #bf4f2f;
+  height: 26px;
+  border-radius: 999px;
+  background: #2b8a7e;
+  color: #fff;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
 }
-.slide-dot:hover {
-  transform: scale(1.15);
+.guide-card h4 {
+  font-size: 15px;
+  line-height: 1.3;
+}
+.guide-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 .checkbox-row {
   font-size: 13px;
@@ -653,6 +657,9 @@ textarea {
   gap: 8px;
   align-items: center;
   font-size: 13px;
+}
+.step-header-actions {
+  justify-content: flex-end;
 }
 .card.featured {
   border: 3px solid #bf4f2f;
