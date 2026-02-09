@@ -83,11 +83,23 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   }
 
   function requireMetaAdmin(req, res, next) {
-    const password = String(req.headers['x-meta-admin-password'] || req.body?.password || '').trim();
+    const rawHeaderPassword = String(req.headers['x-meta-admin-password'] || '').trim();
+    const rawBodyPassword = String(req.body?.password || '').trim();
+    const password = decodePasswordCandidate(rawHeaderPassword) || decodePasswordCandidate(rawBodyPassword);
     if (!password || password !== META_ADMIN_PASSWORD) {
       return res.status(403).json({ error: 'forbidden' });
     }
     next();
+  }
+
+  function decodePasswordCandidate(value) {
+    const candidate = String(value || '').trim();
+    if (!candidate) return '';
+    try {
+      return decodeURIComponent(candidate);
+    } catch {
+      return candidate;
+    }
   }
 
   function requireAuth(req, res, next) {
@@ -217,7 +229,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   });
 
   app.post('/api/v1/meta-admin/auth', (req, res) => {
-    const password = String(req.body?.password || '').trim();
+    const password = decodePasswordCandidate(req.body?.password);
     if (!password || password !== META_ADMIN_PASSWORD) {
       return res.status(403).json({ error: 'forbidden' });
     }

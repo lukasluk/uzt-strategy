@@ -41,7 +41,7 @@ function toUserMessage(error) {
 async function api(path, { method = 'GET', body = null } = {}) {
   if (!state.password) throw new Error('forbidden');
   const headers = {
-    'x-meta-admin-password': state.password
+    'x-meta-admin-password': encodeURIComponent(state.password)
   };
   if (body !== null) headers['Content-Type'] = 'application/json';
 
