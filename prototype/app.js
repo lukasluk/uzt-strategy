@@ -237,9 +237,9 @@ function normalizeLineSide(value) {
   return MAP_LINE_SIDES.has(side) ? side : 'auto';
 }
 
-function estimateGuidelineNodeHeight(voterCount) {
-  const voters = Math.max(0, Number(voterCount || 0));
-  const voteRows = Math.max(1, Math.ceil(voters / MAP_VOTE_SQUARES_PER_ROW));
+function estimateGuidelineNodeHeight(totalScore) {
+  const score = Math.max(0, Number(totalScore || 0));
+  const voteRows = Math.max(1, Math.ceil(score / MAP_VOTE_SQUARES_PER_ROW));
   return 104 + voteRows * 14;
 }
 
@@ -734,7 +734,7 @@ function layoutStrategyMap() {
       x: nodeX,
       y: nodeY,
       w: 220,
-      h: estimateGuidelineNodeHeight(guideline.voterCount),
+      h: estimateGuidelineNodeHeight(guideline.totalScore),
       institution,
       guideline
     });
@@ -1042,8 +1042,9 @@ function renderMapView() {
     const relationText = relationLabel(relation);
     const score = Number(node.guideline.totalScore || 0);
     const voters = Math.max(0, Number(node.guideline.voterCount || 0));
-    const voteSquares = voters
-      ? Array.from({ length: voters }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
+    const scoreForSquares = Math.max(0, Math.round(score));
+    const voteSquares = scoreForSquares
+      ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
       : '<span class="map-vote-empty">Dar nebalsuota</span>';
 
     return `
