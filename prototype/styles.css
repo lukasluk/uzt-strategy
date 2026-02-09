@@ -693,19 +693,34 @@ textarea {
   cursor: move;
 }
 .institution-node {
-  border: 2px solid #2b8a7e;
-  background: #fff;
-  padding: 12px;
+  border: 3px solid #1f8a7a;
+  background: linear-gradient(165deg, #f4fffb 0%, #e8faf4 100%);
+  padding: 14px;
   display: grid;
   gap: 8px;
   align-content: start;
+  box-shadow: 0 16px 30px rgba(20, 120, 104, 0.24);
+}
+.institution-node::before {
+  content: 'Institucija';
+  justify-self: start;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1e6c61;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #b7ddd5;
+  border-radius: 999px;
+  padding: 2px 8px;
 }
 .institution-node.active {
-  box-shadow: 0 0 0 3px rgba(43, 138, 126, 0.2);
+  box-shadow:
+    0 0 0 4px rgba(43, 138, 126, 0.24),
+    0 20px 36px rgba(20, 120, 104, 0.3);
 }
 .institution-node strong {
   font-family: 'Fraunces', serif;
-  font-size: 19px;
+  font-size: 21px;
   line-height: 1.2;
 }
 .institution-node small {
@@ -941,11 +956,6 @@ textarea {
   align-items: center;
   flex-wrap: wrap;
   font-size: 13px;
-}
-.tag-home {
-  background: #dcefe8;
-  color: #215f55;
-  font-weight: 600;
 }
 .step-header-actions {
   justify-content: flex-end;

@@ -525,19 +525,12 @@ function renderInstitutionPicker() {
 
 function institutionSelectMarkup() {
   const selectedSlug = normalizeSlug(state.institutionSlug);
-  const homeSlug = normalizeSlug(state.accountContext?.institution?.slug);
   const institutions = Array.isArray(state.institutions) ? state.institutions : [];
   const hasInstitutions = institutions.length > 0;
   const loading = state.loading && !state.institutionsLoaded;
-
-  const placeholder = loading
-    ? '<option value="">Institucijos kraunamos...</option>'
-    : '<option value="">Pasirinkite instituciją</option>';
   const options = institutions.map((institution) => {
     const slug = normalizeSlug(institution.slug);
-    const isHome = Boolean(homeSlug && slug === homeSlug);
-    const marker = isHome ? ' (jūsų)' : '';
-    const name = `${institution.name || slug || '-'}${marker}`;
+    const name = institution.name || slug || '-';
     const selected = slug === selectedSlug ? ' selected' : '';
     return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(name)}</option>`;
   }).join('');
@@ -546,7 +539,6 @@ function institutionSelectMarkup() {
     <label class="institution-switcher" title="Pasirinkite instituciją peržiūrai">
       <span>Institucija</span>
       <select id="institutionSwitchSelect" ${loading || !hasInstitutions ? 'disabled' : ''}>
-        ${placeholder}
         ${options}
       </select>
     </label>
@@ -1468,9 +1460,6 @@ function renderUserBar() {
 
   const displayName = state.user?.displayName || state.user?.email || 'Prisijungęs vartotojas';
   const roleLabel = state.role === 'institution_admin' ? 'Administratorius' : 'Narys';
-  const homeSlug = state.accountContext?.institution?.slug || '';
-  const homeName = state.accountContext?.institution?.name || homeSlug || 'Jūsų institucija';
-  const viewingCurrentInstitution = Boolean(homeSlug && homeSlug === state.institutionSlug);
 
   container.innerHTML = `
     <div class="user-toolbar">
@@ -1478,11 +1467,7 @@ function renderUserBar() {
       <div class="user-chip">
         <span>${escapeHtml(displayName)}</span>
         <span class="tag">${escapeHtml(roleLabel)}</span>
-        <span class="tag tag-home">Jūsų institucija: ${escapeHtml(homeName)}</span>
       </div>
-      ${viewingCurrentInstitution && state.role === 'institution_admin'
-        ? `<a href="admin.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Admin</a>`
-        : ''}
       <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
     </div>
   `;
