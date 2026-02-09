@@ -571,6 +571,9 @@ textarea {
 .strategy-map-viewport.dragging {
   cursor: grabbing;
 }
+.strategy-map-viewport.node-dragging {
+  cursor: default;
+}
 .strategy-map-world {
   position: absolute;
   top: 0;
@@ -604,6 +607,9 @@ textarea {
   text-decoration: none;
   color: var(--ink);
   box-shadow: 0 8px 16px rgba(28, 26, 22, 0.08);
+}
+.strategy-map-node[data-draggable="true"] {
+  cursor: move;
 }
 .institution-node {
   border: 2px solid #2b8a7e;
@@ -830,8 +836,9 @@ textarea {
 .vote-floating {
   position: fixed;
   left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 20px;
+  top: auto;
+  transform: none;
   z-index: 25;
 }
 .vote-floating[hidden] {

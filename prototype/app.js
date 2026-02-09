@@ -159,6 +159,14 @@ function isAuthenticated() {
   return Boolean(state.token && state.user);
 }
 
+function canEditMapLayout() {
+  if (!isAuthenticated()) return false;
+  if (state.role !== 'institution_admin') return false;
+  const homeSlug = normalizeSlug(state.accountContext?.institution?.slug);
+  const currentSlug = normalizeSlug(state.institutionSlug);
+  return Boolean(homeSlug && currentSlug && homeSlug === currentSlug);
+}
+
 function cycleIsWritable() {
   return WRITABLE_CYCLE_STATES.has(String(state.cycle?.state || '').toLowerCase());
 }
@@ -209,6 +217,8 @@ function toUserMessage(error) {
     'invite revoked': 'Kvietimas atšauktas.',
     'invite already used': 'Kvietimas jau panaudotas.',
     'guidelineId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
+    'layout payload required': 'Nepateikti žemėlapio išdėstymo duomenys.',
+    'guideline not in cycle': 'Gairė nepriklauso šiam ciklui.',
     'name required': 'Nurodykite pavadinimą.',
     'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.'
   };
@@ -566,90 +576,104 @@ function applyMapTransform(viewport, world) {
 
 function layoutStrategyMap() {
   const institutions = Array.isArray(state.mapData?.institutions) ? state.mapData.institutions : [];
+  const selectedSlug = normalizeSlug(state.institutionSlug);
+  if (!selectedSlug) return { nodes: [], edges: [], width: 1200, height: 820, institution: null };
+
+  const institution = institutions.find((item) => normalizeSlug(item.slug) === selectedSlug);
+  if (!institution) return { nodes: [], edges: [], width: 1200, height: 820, institution: null };
+
+  const toNumberOrNull = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   const nodes = [];
   const edges = [];
-  let maxY = 240;
-
-  institutions.forEach((institution, idx) => {
-    const baseX = 80 + idx * 560;
-    const institutionNodeId = `inst-${institution.id}`;
-    const instY = 40;
-    nodes.push({
-      id: institutionNodeId,
-      kind: 'institution',
-      x: baseX,
-      y: instY,
-      w: 260,
-      h: 110,
-      institution
-    });
-
-    const guidelines = Array.isArray(institution.guidelines) ? institution.guidelines : [];
-    if (!guidelines.length) {
-      maxY = Math.max(maxY, instY + 180);
-      return;
-    }
-
-    const guidelineById = Object.fromEntries(guidelines.map((g) => [g.id, g]));
-    const childrenByParent = {};
-    guidelines.forEach((guideline) => {
-      const parentId = guideline.parentGuidelineId;
-      if (!parentId || !guidelineById[parentId]) return;
-      if (!childrenByParent[parentId]) childrenByParent[parentId] = [];
-      childrenByParent[parentId].push(guideline);
-    });
-
-    const roots = guidelines.filter((guideline) => {
-      const parentId = guideline.parentGuidelineId;
-      return guideline.relationType !== 'child' || !parentId || !guidelineById[parentId];
-    });
-
-    const visited = new Set();
-    let nextY = 190;
-    const placeNodeTree = (guideline, depth, parentNodeId) => {
-      if (visited.has(guideline.id)) return;
-      visited.add(guideline.id);
-
-      const nodeId = `guide-${guideline.id}`;
-      const nodeX = baseX + depth * 220;
-      const nodeY = nextY;
-      nextY += 92;
-
-      nodes.push({
-        id: nodeId,
-        kind: 'guideline',
-        x: nodeX,
-        y: nodeY,
-        w: 190,
-        h: 70,
-        institution,
-        guideline
-      });
-
-      if (parentNodeId) {
-        edges.push({ from: parentNodeId, to: nodeId, type: 'child' });
-      } else {
-        edges.push({
-          from: institutionNodeId,
-          to: nodeId,
-          type: guideline.relationType === 'orphan' ? 'orphan' : 'root'
-        });
-      }
-
-      const children = childrenByParent[guideline.id] || [];
-      children.forEach((child) => placeNodeTree(child, depth + 1, nodeId));
-    };
-
-    roots.forEach((root) => placeNodeTree(root, 0, null));
-    guidelines.forEach((guideline) => {
-      if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
-    });
-    maxY = Math.max(maxY, nextY + 80);
+  const baseX = 140;
+  const institutionNodeId = `inst-${institution.id}`;
+  const institutionX = toNumberOrNull(institution.cycle?.mapX) ?? baseX;
+  const institutionY = toNumberOrNull(institution.cycle?.mapY) ?? 48;
+  nodes.push({
+    id: institutionNodeId,
+    kind: 'institution',
+    entityId: institution.id,
+    cycleId: institution.cycle?.id || null,
+    x: institutionX,
+    y: institutionY,
+    w: 300,
+    h: 114,
+    institution
   });
 
-  const width = Math.max(1400, institutions.length * 560 + 600);
-  const height = Math.max(900, maxY);
-  return { nodes, edges, width, height };
+  const guidelines = Array.isArray(institution.guidelines) ? institution.guidelines : [];
+  if (!guidelines.length) {
+    return { nodes, edges, width: 1600, height: 900, institution };
+  }
+
+  const guidelineById = Object.fromEntries(guidelines.map((g) => [g.id, g]));
+  const childrenByParent = {};
+  guidelines.forEach((guideline) => {
+    const parentId = guideline.parentGuidelineId;
+    if (!parentId || !guidelineById[parentId]) return;
+    if (!childrenByParent[parentId]) childrenByParent[parentId] = [];
+    childrenByParent[parentId].push(guideline);
+  });
+
+  const roots = guidelines.filter((guideline) => {
+    const parentId = guideline.parentGuidelineId;
+    return guideline.relationType !== 'child' || !parentId || !guidelineById[parentId];
+  });
+
+  const visited = new Set();
+  let nextY = institutionY + 170;
+  let maxY = institutionY + 240;
+  const placeNodeTree = (guideline, depth, parentNodeId) => {
+    if (visited.has(guideline.id)) return;
+    visited.add(guideline.id);
+
+    const nodeId = `guide-${guideline.id}`;
+    const defaultX = institutionX + 46 + depth * 250;
+    const defaultY = nextY;
+    nextY += 100;
+
+    const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
+    const nodeY = toNumberOrNull(guideline.mapY) ?? defaultY;
+    nodes.push({
+      id: nodeId,
+      kind: 'guideline',
+      entityId: guideline.id,
+      cycleId: institution.cycle?.id || null,
+      x: nodeX,
+      y: nodeY,
+      w: 220,
+      h: 76,
+      institution,
+      guideline
+    });
+
+    maxY = Math.max(maxY, nodeY + 220);
+    if (parentNodeId) {
+      edges.push({ from: parentNodeId, to: nodeId, type: 'child' });
+    } else {
+      edges.push({
+        from: institutionNodeId,
+        to: nodeId,
+        type: guideline.relationType === 'orphan' ? 'orphan' : 'root'
+      });
+    }
+
+    const children = childrenByParent[guideline.id] || [];
+    children.forEach((child) => placeNodeTree(child, depth + 1, nodeId));
+  };
+
+  roots.forEach((root) => placeNodeTree(root, 0, null));
+  guidelines.forEach((guideline) => {
+    if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
+  });
+
+  const width = Math.max(1800, institutionX + 1300);
+  const height = Math.max(920, maxY);
+  return { nodes, edges, width, height, institution };
 }
 
 function relationLabel(relationType) {
@@ -659,15 +683,105 @@ function relationLabel(relationType) {
   return 'našlaitė';
 }
 
-function bindMapInteractions(viewport, world) {
+function refreshMapEdges(world) {
+  const nodeElements = Array.from(world.querySelectorAll('.strategy-map-node[data-node-id]'));
+  const nodeById = new Map();
+  nodeElements.forEach((node) => {
+    nodeById.set(node.dataset.nodeId, {
+      x: Number(node.dataset.x),
+      y: Number(node.dataset.y),
+      w: Number(node.dataset.w),
+      h: Number(node.dataset.h)
+    });
+  });
+
+  world.querySelectorAll('.strategy-map-edge').forEach((path) => {
+    const fromNode = nodeById.get(path.dataset.from);
+    const toNode = nodeById.get(path.dataset.to);
+    if (!fromNode || !toNode) return;
+
+    const fromX = fromNode.x + fromNode.w;
+    const fromY = fromNode.y + fromNode.h / 2;
+    const toX = toNode.x;
+    const toY = toNode.y + toNode.h / 2;
+    const c1x = fromX + 70;
+    const c2x = toX - 70;
+    path.setAttribute('d', `M ${fromX} ${fromY} C ${c1x} ${fromY}, ${c2x} ${toY}, ${toX} ${toY}`);
+  });
+}
+
+async function persistMapNodePosition(nodeElement) {
+  if (!nodeElement) return;
+  const cycleId = String(nodeElement.dataset.cycleId || '').trim();
+  if (!cycleId) return;
+
+  const kind = String(nodeElement.dataset.kind || '').trim();
+  const entityId = String(nodeElement.dataset.entityId || '').trim();
+  const x = Number(nodeElement.dataset.x);
+  const y = Number(nodeElement.dataset.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
+  const selectedSlug = normalizeSlug(state.institutionSlug);
+  const institutions = Array.isArray(state.mapData?.institutions) ? state.mapData.institutions : [];
+  const institution = institutions.find((item) => normalizeSlug(item.slug) === selectedSlug);
+  if (!institution) return;
+
+  if (kind === 'institution') {
+    if (institution.cycle) {
+      institution.cycle.mapX = Math.round(x);
+      institution.cycle.mapY = Math.round(y);
+    }
+    await api(`/api/v1/admin/cycles/${encodeURIComponent(cycleId)}/map-layout`, {
+      method: 'PUT',
+      body: {
+        institutionPosition: { x: Math.round(x), y: Math.round(y) }
+      }
+    });
+    return;
+  }
+
+  if (kind === 'guideline' && entityId) {
+    const guideline = Array.isArray(institution.guidelines)
+      ? institution.guidelines.find((item) => item.id === entityId)
+      : null;
+    if (guideline) {
+      guideline.mapX = Math.round(x);
+      guideline.mapY = Math.round(y);
+    }
+    await api(`/api/v1/admin/cycles/${encodeURIComponent(cycleId)}/map-layout`, {
+      method: 'PUT',
+      body: {
+        guidelinePositions: [{ guidelineId: entityId, x: Math.round(x), y: Math.round(y) }]
+      }
+    });
+  }
+}
+
+function bindMapInteractions(viewport, world, { editable }) {
   let dragActive = false;
   let dragStartX = 0;
   let dragStartY = 0;
   let originX = 0;
   let originY = 0;
+  let draggedNode = null;
+  let nodeOriginX = 0;
+  let nodeOriginY = 0;
 
   const onPointerMove = (event) => {
     if (!dragActive) return;
+    if (draggedNode) {
+      const dx = (event.clientX - dragStartX) / state.mapTransform.scale;
+      const dy = (event.clientY - dragStartY) / state.mapTransform.scale;
+      const nextX = Math.round(nodeOriginX + dx);
+      const nextY = Math.round(nodeOriginY + dy);
+      draggedNode.dataset.x = String(nextX);
+      draggedNode.dataset.y = String(nextY);
+      draggedNode.style.left = `${nextX}px`;
+      draggedNode.style.top = `${nextY}px`;
+      refreshMapEdges(world);
+      return;
+    }
+
     const dx = event.clientX - dragStartX;
     const dy = event.clientY - dragStartY;
     state.mapTransform.x = originX + dx;
@@ -676,16 +790,43 @@ function bindMapInteractions(viewport, world) {
   };
 
   const endDrag = () => {
+    const droppedNode = draggedNode;
     dragActive = false;
+    draggedNode = null;
     viewport.classList.remove('dragging');
+    viewport.classList.remove('node-dragging');
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', endDrag);
+
+    if (!droppedNode || !editable) return;
+    persistMapNodePosition(droppedNode).catch((error) => {
+      state.notice = toUserMessage(error);
+      render();
+    });
   };
 
   viewport.addEventListener('pointerdown', (event) => {
     const target = event.target;
-    if (target instanceof HTMLElement && target.closest('.strategy-map-node')) return;
     if (event.button !== 0) return;
+
+    if (editable && target instanceof HTMLElement) {
+      const node = target.closest('.strategy-map-node');
+      if (node instanceof HTMLElement && node.dataset.draggable === 'true') {
+        event.preventDefault();
+        dragActive = true;
+        draggedNode = node;
+        dragStartX = event.clientX;
+        dragStartY = event.clientY;
+        nodeOriginX = Number(node.dataset.x || 0);
+        nodeOriginY = Number(node.dataset.y || 0);
+        viewport.classList.add('node-dragging');
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', endDrag);
+        return;
+      }
+    }
+
+    if (target instanceof HTMLElement && target.closest('.strategy-map-node')) return;
 
     dragActive = true;
     dragStartX = event.clientX;
@@ -747,6 +888,19 @@ function renderMapView() {
   }
 
   const graph = layoutStrategyMap();
+  if (!graph.institution) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Pasirinkite instituciją</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Žemėlapyje rodoma tik viršuje pasirinktos institucijos strategija.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const editable = canEditMapLayout()
+    && normalizeSlug(graph.institution.slug) === normalizeSlug(state.institutionSlug)
+    && Boolean(graph.institution.cycle?.id);
   const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
   const edgeMarkup = graph.edges.map((edge) => {
     const fromNode = nodeById[edge.from];
@@ -759,7 +913,7 @@ function renderMapView() {
     const toY = toNode.y + toNode.h / 2;
     const c1x = fromX + 70;
     const c2x = toX - 70;
-    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}" d="M ${fromX} ${fromY} C ${c1x} ${fromY}, ${c2x} ${toY}, ${toX} ${toY}"></path>`;
+    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" d="M ${fromX} ${fromY} C ${c1x} ${fromY}, ${c2x} ${toY}, ${toX} ${toY}"></path>`;
   }).join('');
 
   const nodeMarkup = graph.nodes.map((node) => {
@@ -769,6 +923,15 @@ function renderMapView() {
       return `
         <a href="index.html?institution=${encodeURIComponent(node.institution.slug)}"
            class="strategy-map-node institution-node ${node.institution.slug === state.institutionSlug ? 'active' : ''}"
+           data-node-id="${escapeHtml(node.id)}"
+           data-kind="institution"
+           data-entity-id="${escapeHtml(node.entityId)}"
+           data-cycle-id="${escapeHtml(node.cycleId || '')}"
+           data-x="${node.x}"
+           data-y="${node.y}"
+           data-w="${node.w}"
+           data-h="${node.h}"
+           data-draggable="${editable ? 'true' : 'false'}"
            style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
           <strong>${escapeHtml(node.institution.name)}</strong>
           <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
@@ -781,9 +944,18 @@ function renderMapView() {
     const relationText = relationLabel(relation);
     return `
       <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)}"
+               data-node-id="${escapeHtml(node.id)}"
+               data-kind="guideline"
+               data-entity-id="${escapeHtml(node.entityId)}"
+               data-cycle-id="${escapeHtml(node.cycleId || '')}"
+               data-x="${node.x}"
+               data-y="${node.y}"
+               data-w="${node.w}"
+               data-h="${node.h}"
+               data-draggable="${editable ? 'true' : 'false'}"
                style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
         <h4>${escapeHtml(node.guideline.title)}</h4>
-        <small>${escapeHtml(node.institution.slug)} · ${escapeHtml(relationText)}</small>
+        <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
       </article>
     `;
   }).join('');
@@ -793,10 +965,11 @@ function renderMapView() {
       <h2>Strategijų žemėlapis</h2>
       <div class="header-stack step-header-actions">
         <button id="mapResetBtn" class="btn btn-ghost">Atstatyti vaizdą</button>
-        <span class="tag">Institucijos: ${Array.isArray(state.mapData?.institutions) ? state.mapData.institutions.length : 0}</span>
+        <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
+        ${editable ? '<span class="tag tag-main">Admin: galite tempti korteles</span>' : ''}
       </div>
     </div>
-    <p class="prompt">Peržiūrėkite patvirtintų strategijų visumą: institucijos, tėvinės/vaikinės gairės ir jų ryšiai. Temkite foną pele ir artinkite pelės ratuku.</p>
+    <p class="prompt">Peržiūrėkite pasirinktos institucijos patvirtintą strategiją: tėvinės/vaikinės gairės ir jų ryšiai. Temkite foną pele ir artinkite pelės ratuku.</p>
     <section id="strategyMapViewport" class="strategy-map-viewport">
       <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
         <svg class="strategy-map-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
@@ -812,7 +985,7 @@ function renderMapView() {
   const resetBtn = elements.stepView.querySelector('#mapResetBtn');
   if (viewport && world) {
     applyMapTransform(viewport, world);
-    bindMapInteractions(viewport, world);
+    bindMapInteractions(viewport, world, { editable });
   }
   if (resetBtn && viewport && world) {
     resetBtn.addEventListener('click', () => {

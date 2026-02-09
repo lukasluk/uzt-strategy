@@ -111,3 +111,15 @@ alter table if exists strategy_guidelines
   add column if not exists parent_guideline_id uuid references strategy_guidelines(id) on delete set null;
 
 create index if not exists idx_guidelines_parent on strategy_guidelines(parent_guideline_id);
+
+alter table if exists strategy_cycles
+  add column if not exists map_x integer;
+
+alter table if exists strategy_cycles
+  add column if not exists map_y integer;
+
+alter table if exists strategy_guidelines
+  add column if not exists map_x integer;
+
+alter table if exists strategy_guidelines
+  add column if not exists map_y integer;

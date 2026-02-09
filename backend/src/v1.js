@@ -184,7 +184,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const institutionIds = institutions.map((row) => row.id);
     const cyclesRes = await query(
       `select distinct on (institution_id)
-          id, institution_id, title, state, finalized_at, created_at
+          id, institution_id, title, state, finalized_at, created_at, map_x, map_y
        from strategy_cycles
        where institution_id = any($1::uuid[])
          and state in ('final', 'archived')
@@ -197,7 +197,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const guidelinesByCycle = {};
     if (cycleIds.length) {
       const guidelinesRes = await query(
-        `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, created_at
+        `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, map_x, map_y, created_at
          from strategy_guidelines
          where cycle_id = any($1::uuid[])
            and status in ('active', 'merged')
@@ -213,6 +213,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
           status: row.status,
           relationType: row.relation_type || 'orphan',
           parentGuidelineId: row.parent_guideline_id || null,
+          mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
+          mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
           createdAt: row.created_at
         });
       });
@@ -233,7 +235,9 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
                 title: cycle.title,
                 state: cycle.state,
                 finalizedAt: cycle.finalized_at,
-                createdAt: cycle.created_at
+                createdAt: cycle.created_at,
+                mapX: Number.isFinite(Number(cycle.map_x)) ? Number(cycle.map_x) : null,
+                mapY: Number.isFinite(Number(cycle.map_y)) ? Number(cycle.map_y) : null
               }
             : null,
           guidelines: cycle ? (guidelinesByCycle[cycle.id] || []) : []
@@ -985,6 +989,83 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         voterCount: row.voter_count,
         commentCount: row.comment_count
       }))
+    });
+  });
+
+  app.put('/api/v1/admin/cycles/:cycleId/map-layout', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+
+    const cycleRes = await query(
+      'select id, institution_id from strategy_cycles where id = $1',
+      [cycleId]
+    );
+    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
+    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
+      return res.status(403).json({ error: 'cross-institution forbidden' });
+    }
+
+    const parseCoord = (value) => {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return null;
+      return Math.round(parsed);
+    };
+
+    const institutionPosition = req.body?.institutionPosition || null;
+    const rawGuidelinePositions = Array.isArray(req.body?.guidelinePositions) ? req.body.guidelinePositions : [];
+    const guidelinePositions = rawGuidelinePositions
+      .map((item) => ({
+        guidelineId: String(item?.guidelineId || '').trim(),
+        x: parseCoord(item?.x),
+        y: parseCoord(item?.y)
+      }))
+      .filter((item) => item.guidelineId && item.x !== null && item.y !== null);
+
+    const hasInstitutionPosition =
+      institutionPosition &&
+      parseCoord(institutionPosition.x) !== null &&
+      parseCoord(institutionPosition.y) !== null;
+    if (!hasInstitutionPosition && guidelinePositions.length === 0) {
+      return res.status(400).json({ error: 'layout payload required' });
+    }
+
+    if (hasInstitutionPosition) {
+      await query(
+        `update strategy_cycles
+         set map_x = $1, map_y = $2
+         where id = $3`,
+        [parseCoord(institutionPosition.x), parseCoord(institutionPosition.y), cycleId]
+      );
+    }
+
+    if (guidelinePositions.length > 0) {
+      const guidelineIds = [...new Set(guidelinePositions.map((item) => item.guidelineId))];
+      const validRes = await query(
+        `select id
+         from strategy_guidelines
+         where cycle_id = $1 and id = any($2::uuid[])`,
+        [cycleId, guidelineIds]
+      );
+      const validIds = new Set(validRes.rows.map((row) => row.id));
+      const invalid = guidelineIds.find((id) => !validIds.has(id));
+      if (invalid) return res.status(400).json({ error: 'guideline not in cycle' });
+
+      for (const item of guidelinePositions) {
+        await query(
+          `update strategy_guidelines
+           set map_x = $1, map_y = $2
+           where id = $3 and cycle_id = $4`,
+          [item.x, item.y, item.guidelineId, cycleId]
+        );
+      }
+    }
+
+    broadcast({ type: 'v1.map.layout.updated', institutionId: req.auth.institutionId, cycleId });
+    res.json({
+      ok: true,
+      updatedInstitution: Boolean(hasInstitutionPosition),
+      updatedGuidelines: guidelinePositions.length
     });
   });
 
