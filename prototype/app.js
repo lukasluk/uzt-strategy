@@ -1,114 +1,72 @@
 ﻿const steps = [
   {
     id: 'guidelines',
-    title: 'Gairės',
-    hint: 'Aptarimas, balsavimas, papildymai',
-    prompt: 'Kur link judėsime ir kokią naudą kursime?'
+    title: 'Gaires',
+    hint: 'Aptarimas, balsavimas, komentarai',
+    prompt: 'Kur link judesime ir kokia nauda kursime?'
+  }
+];
+
+const introSlides = [
+  {
+    title: '1. Kas tai per sistema',
+    body: 'Tai UZT skaitmenizacijos gairiu vertinimo ir komentavimo irankis. Kiekviena gaire vertinama atskirai, o komentarai kaupiami vienoje vietoje.'
+  },
+  {
+    title: '2. Kaip vyksta balsavimas',
+    body: 'Kiekvienas vartotojas turi 10 balsu ir gali paskirstyti juos tarp gairiu (0-5 vienai gairei). Kaireje esantis floating blokas rodo, kiek balsu liko.'
+  },
+  {
+    title: '3. Kaip uzdaromas etapas',
+    body: 'Paspaudus Patvirtinti balsus, vartotojo balsai uzfiksuojami. Administravimas vyksta atskirame Admin puslapyje.'
   }
 ];
 
 const storageKey = 'uzt-strategy-prototype';
-const adminCodeDefault = 'admin';
+
+if (!crypto.randomUUID) {
+  crypto.randomUUID = () => {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0'));
+    return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
+  };
+}
 
 const guidelineSeed = [
-  {
-    title: 'High quality products and services',
-    desc: 'Klientų pasitenkinimo lygio matavimas NPS.',
-    featured: true
-  },
-  {
-    title: 'AI with purpose',
-    desc: 'DI sprendimai įtraukiami į procesus tik įvertinus jų naudą.',
-    featured: true
-  },
-  {
-    title: 'Data governance',
-    desc: 'Duomenų valdysena užtikrina kokybišką duomenų gyvavimo ciklo priežiūrą ir duomenų prieinamumą.',
-    featured: true
-  },
-  {
-    title: 'Coherence (SADM, VSSA, VDA, NKSC)',
-    desc: 'Suderinamumas su platesniu kontekstu.'
-  },
-  {
-    title: 'Robust IT infrastructure',
-    desc: 'Patikima ir saugi IT infrastruktūra.'
-  },
-  {
-    title: 'Simplicity',
-    desc: 'Priimami kaip įmanoma paprastesni / elegantiškesni technologiniai sprendimai.'
-  },
-  {
-    title: 'EU centric',
-    desc: 'Prioritetizuojami EU sukurti sprendimai.'
-  },
-  {
-    title: 'SME Leadership',
-    desc: 'Veiklos specialistų pritraukimas į sprendimų priėmimą.'
-  },
-  {
-    title: 'PES network',
-    desc: 'PES tinklo išnaudojimas ir dalinimasis IT žiniomis.'
-  },
-  {
-    title: 'Inhouse development',
-    desc: 'Balansas tarp perkamų ir savadarbių sprendimų.'
-  },
-  {
-    title: 'Security',
-    desc: 'Saugumui skiriama ypač didelė svarba.'
-  },
-  {
-    title: 'Modern workstation',
-    desc: 'Moderni darbo vieta ir įranga.'
-  },
-  {
-    title: 'Communication',
-    desc: ''
-  },
-  {
-    title: 'UDTS',
-    desc: ''
-  },
-  {
-    title: 'Ethics',
-    desc: ''
-  },
-  {
-    title: 'Data maturity',
-    desc: ''
-  },
-  {
-    title: 'Data democratisation',
-    desc: ''
-  },
-  {
-    title: 'Lowcode / nocode',
-    desc: ''
-  },
-  {
-    title: 'Both way learning',
-    desc: ''
-  }
+  { title: 'High quality products and services', desc: 'Klientu pasitenkinimo lygio matavimas NPS.', featured: true },
+  { title: 'AI with purpose', desc: 'DI sprendimai itraukiami i procesus tik ivertinus ju nauda.', featured: true },
+  { title: 'Data governance', desc: 'Duomenu valdymas uztikrina kokybe ir prieinamuma.', featured: true },
+  { title: 'Coherence (SADM, VSSA, VDA, NKSC)', desc: 'Suderinamumas su platesniu kontekstu.' },
+  { title: 'Robust IT infrastructure', desc: 'Patikima ir saugi IT infrastruktura.' },
+  { title: 'Simplicity', desc: 'Priimami kuo paprastesni ir elegantiski technologiniai sprendimai.' },
+  { title: 'EU centric', desc: 'Prioritetizuojami EU sukurti sprendimai.' },
+  { title: 'SME Leadership', desc: 'Veiklos specialistu itraukimas i sprendimu priemima.' },
+  { title: 'PES network', desc: 'PES tinklo isnaudojimas ir dalinimasis IT ziniomis.' },
+  { title: 'Inhouse development', desc: 'Balansas tarp perkamu ir savadarbiu sprendimu.' },
+  { title: 'Security', desc: 'Saugumui skiriama ypac didele svarba.' },
+  { title: 'Modern workstation', desc: 'Moderni darbo vieta ir iranga.' }
 ];
 
 const defaultData = {
-  sessionName: 'UŽT Strategijos Misija',
+  sessionName: 'UZT Skaitmenizacijos Strategija',
   currentStep: 'guidelines',
+  guideSlideIndex: 0,
   guidelineBudget: 10,
-  adminCode: adminCodeDefault,
   currentUser: null,
+  users: [],
+  blockedUsers: {},
+  submittedUsers: {},
   resultsPublished: false,
   cards: {
     guidelines: guidelineSeed.map((item) => ({
       id: crypto.randomUUID(),
       title: item.title,
       desc: item.desc,
-      tags: '',
       featured: Boolean(item.featured),
       comments: [],
-      proposals: [],
-      initiatives: [],
       votesByUser: {}
     }))
   }
@@ -141,12 +99,14 @@ function load() {
     if (!merged.cards.guidelines || merged.cards.guidelines.length === 0) {
       merged.cards.guidelines = structuredClone(defaultData.cards.guidelines);
     }
-    if (typeof merged.guidelineBudget !== 'number') {
-      merged.guidelineBudget = 10;
-    }
-    if (!merged.adminCode) {
-      merged.adminCode = adminCodeDefault;
-    }
+    merged.cards.guidelines = merged.cards.guidelines.map((g) => {
+      const copy = { ...g };
+      if ('tags' in copy) delete copy.tags;
+      return copy;
+    });
+    if (!Array.isArray(merged.users)) merged.users = [];
+    if (!merged.blockedUsers || typeof merged.blockedUsers !== 'object') merged.blockedUsers = {};
+    if (!merged.submittedUsers || typeof merged.submittedUsers !== 'object') merged.submittedUsers = {};
     return merged;
   } catch {
     return structuredClone(defaultData);
@@ -157,18 +117,14 @@ function save() {
   localStorage.setItem(storageKey, JSON.stringify(data));
 }
 
-function setStep(stepId) {
-  data.currentStep = stepId;
-  save();
-  render();
-}
-
 function currentUserKey() {
   return data.currentUser?.name?.trim() || '';
 }
 
-function isAdmin() {
-  return data.currentUser?.role === 'admin';
+function setStep(stepId) {
+  data.currentStep = stepId;
+  save();
+  render();
 }
 
 function renderSteps() {
@@ -180,107 +136,117 @@ function renderSteps() {
     pill.addEventListener('click', () => setStep(step.id));
     elements.steps.appendChild(pill);
   });
+
+  const adminLink = document.createElement('a');
+  adminLink.className = 'step-pill admin-pill';
+  adminLink.href = 'admin.html';
+  adminLink.innerHTML = '<h4>Admin</h4><p>Atskiras administravimo puslapis</p>';
+  elements.steps.appendChild(adminLink);
+}
+
+function renderSlideIllustration(index) {
+  if (index === 0) {
+    return `
+      <svg viewBox="0 0 360 160" class="slide-illus" aria-hidden="true">
+        <rect x="18" y="16" width="324" height="126" rx="18" fill="#fff" stroke="#2a2722" stroke-width="3" stroke-dasharray="6 5"/>
+        <circle cx="65" cy="56" r="16" fill="none" stroke="#2a2722" stroke-width="3"/>
+        <circle cx="130" cy="56" r="16" fill="none" stroke="#2a2722" stroke-width="3"/>
+        <circle cx="195" cy="56" r="16" fill="none" stroke="#2a2722" stroke-width="3"/>
+        <path d="M81 56h33M146 56h33" stroke="#2a2722" stroke-width="3" stroke-linecap="round"/>
+        <path d="M44 98h110M44 116h172M228 98h86" stroke="#2a2722" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    `;
+  }
+  if (index === 1) {
+    return `
+      <svg viewBox="0 0 360 160" class="slide-illus" aria-hidden="true">
+        <rect x="26" y="22" width="112" height="112" rx="16" fill="#fff" stroke="#2a2722" stroke-width="3"/>
+        <rect x="152" y="22" width="182" height="46" rx="12" fill="none" stroke="#2a2722" stroke-width="3" stroke-dasharray="5 5"/>
+        <rect x="152" y="88" width="182" height="46" rx="12" fill="none" stroke="#2a2722" stroke-width="3" stroke-dasharray="5 5"/>
+        <text x="82" y="92" text-anchor="middle" font-size="34" font-family="monospace" fill="#2a2722">10</text>
+        <path d="M124 78h24M138 64l10 14-10 14" stroke="#2a2722" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+  }
+  return `
+    <svg viewBox="0 0 360 160" class="slide-illus" aria-hidden="true">
+      <rect x="20" y="18" width="130" height="124" rx="18" fill="none" stroke="#2a2722" stroke-width="3"/>
+      <rect x="170" y="18" width="170" height="58" rx="14" fill="#fff" stroke="#2a2722" stroke-width="3"/>
+      <rect x="170" y="84" width="170" height="58" rx="14" fill="#fff" stroke="#2a2722" stroke-width="3"/>
+      <path d="M40 52h88M40 74h56M40 96h78" stroke="#2a2722" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="190" cy="47" r="7" fill="#2a2722"/>
+      <circle cx="190" cy="113" r="7" fill="#2a2722"/>
+      <path d="M207 47h104M207 113h104" stroke="#2a2722" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+  `;
 }
 
 function renderStepView() {
-  const step = steps.find((item) => item.id === data.currentStep);
-  const cards = data.cards[step.id];
-
-  renderGuidelinesView(step, cards);
-}
-
-function renderGuidelinesView(step, cards) {
+  const cards = data.cards.guidelines;
   const userKey = currentUserKey();
   const budget = data.guidelineBudget || 10;
-  const used = userKey
-    ? cards.reduce((sum, card) => sum + (card.votesByUser?.[userKey] || 0), 0)
-    : 0;
+  const used = userKey ? cards.reduce((sum, card) => sum + (card.votesByUser?.[userKey] || 0), 0) : 0;
   const remaining = Math.max(0, budget - used);
+  const slideIndex = Math.min(introSlides.length - 1, data.guideSlideIndex || 0);
+  const slide = introSlides[slideIndex];
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>${step.title}</h2>
+      <h2>Gaires</h2>
       <div class="header-stack">
         <span class="tag">Tavo balsai: ${remaining} / ${budget}</span>
         ${data.resultsPublished ? '<span class="tag tag-main">Rezultatai paskelbti</span>' : ''}
       </div>
     </div>
-    <p class="prompt">${step.prompt}</p>
-    <div class="card" style="margin-bottom: 16px;">
+    <p class="prompt">Kur link judesime ir kokia nauda kursime?</p>
+
+    <div class="card intro-card" style="margin-bottom: 16px;">
       <div class="header-row">
-        <strong>Nauja gairė</strong>
-        <span class="tag">Siūlymas</span>
+        <strong>${slide.title}</strong>
+        <span class="tag">Skaidre ${slideIndex + 1} / ${introSlides.length}</span>
       </div>
-      <p class="prompt" style="margin-bottom: 10px;">Siūlykite papildomas gaires, kurios turėtų būti įtrauktos.</p>
+      ${renderSlideIllustration(slideIndex)}
+      <p class="prompt" style="margin-bottom: 10px;">${slide.body}</p>
+      <div class="slide-controls">
+        <button id="slidePrev" class="slide-nav" aria-label="Ankstesne skaidre" ${slideIndex === 0 ? 'disabled' : ''}>‹</button>
+        <div class="slide-dots">
+          ${introSlides.map((_, idx) => `<button class="slide-dot ${idx === slideIndex ? 'active' : ''}" data-action="goto-slide" data-index="${idx}" aria-label="Skaidre ${idx + 1}"></button>`).join('')}
+        </div>
+        <button id="slideNext" class="slide-nav" aria-label="Kita skaidre" ${slideIndex === introSlides.length - 1 ? 'disabled' : ''}>›</button>
+      </div>
+    </div>
+
+    <div class="card-list">
+      ${cards.map((card) => renderGuidelineCard(card)).join('')}
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <div class="header-row">
+        <strong>Nauja gaire</strong>
+        <span class="tag">Siulymas</span>
+      </div>
+      <p class="prompt" style="margin-bottom: 10px;">Siulykite papildomas gaires, kurios turetu buti itrauktos.</p>
       <form id="guidelineAddForm">
         <div class="form-row">
-          <input type="text" name="title" placeholder="Gairės pavadinimas" required />
-          <input type="text" name="tags" placeholder="Žymos (pvz. klientas, vidus, duomenys)" />
+          <input type="text" name="title" placeholder="Gaires pavadinimas" required />
         </div>
-        <textarea name="desc" placeholder="Trumpas paaiškinimas"></textarea>
-        <label class="checkbox-row">
-          <input type="checkbox" name="featured" />
-          Pagrindinė gairė
-        </label>
-        <button class="btn btn-primary" type="submit" style="margin-top: 12px;">Pridėti gairę</button>
+        <textarea name="desc" placeholder="Trumpas paaiskinimas"></textarea>
+        <button class="btn btn-primary" type="submit" style="margin-top: 12px;">Prideti gaire</button>
       </form>
-    </div>
-    <div class="card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>Papildymas esamai</strong>
-        <span class="tag">Pasiūlymas</span>
-      </div>
-      <p class="prompt" style="margin-bottom: 10px;">Pasiūlykite papildymą konkrečiai gairės formuluotei.</p>
-      <form id="guidelineProposalForm">
-        <div class="form-row">
-          <select name="target" required>
-            <option value="">Pasirinkti gairę</option>
-            ${cards.map((card) => `<option value="${card.id}">${card.title}</option>`).join('')}
-          </select>
-          <input type="text" name="proposal" placeholder="Papildymo pasiūlymas" required />
-        </div>
-        <button class="btn btn-ghost" type="submit">Pridėti papildymą</button>
-      </form>
-    </div>
-    ${isAdmin() ? `
-      <div class="card admin-panel" style="margin-bottom: 16px;">
-        <div class="header-row">
-          <strong>Administratoriaus veiksmai</strong>
-          <span class="tag tag-main">Admin</span>
-        </div>
-        <div class="inline-form">
-          <button id="publishResults" class="btn btn-primary" ${data.resultsPublished ? 'disabled' : ''}>Pranešti rezultatus</button>
-          <button id="editAdminCode" class="btn btn-ghost">Keisti admin kodą</button>
-        </div>
-      </div>
-    ` : ''}
-    <div class="card-list">
-      ${cards.map((card) => renderGuidelineCard(card, remaining)).join('')}
     </div>
   `;
 
-  bindGuidelinesEvents(cards);
+  bindGuidelinesEvents();
 }
 
 function renderGuidelineCard(card) {
   const userKey = currentUserKey();
   const userScore = userKey ? card.votesByUser?.[userKey] || 0 : 0;
+  const isLocked = userKey ? Boolean(data.submittedUsers[userKey]) : false;
   const totalScore = Object.values(card.votesByUser || {}).reduce((sum, value) => sum + value, 0);
-  const tags = card.tags
-    ? card.tags.split(',').map((tag) => `<span class="tag">${tag.trim()}</span>`).join('')
-    : '';
   const comments = (card.comments || []).map((item) => `<li>${item}</li>`).join('');
-  const proposals = (card.proposals || []).map((item) => `<li>${item}</li>`).join('');
-  const initiatives = (card.initiatives || []).map((item) => `
-    <li>
-      <strong>${item.action}</strong>
-      <span class="muted">Rodiklis: ${item.kpi || '-'}</span>
-      <span class="muted">Siūlė: ${item.by}</span>
-    </li>
-  `).join('');
-
   const voteBreakdown = data.resultsPublished
-    ? `<ul class="mini-list">${Object.entries(card.votesByUser || {}).map(([name, score]) => `<li>${name}: ${score}</li>`).join('') || '<li>Nėra balsų.</li>'}</ul>`
+    ? `<ul class="mini-list">${Object.entries(card.votesByUser || {}).map(([name, score]) => `<li>${name}: ${score}</li>`).join('') || '<li>Nera balsu.</li>'}</ul>`
     : '';
 
   return `
@@ -289,162 +255,79 @@ function renderGuidelineCard(card) {
         <div>
           <div class="title-row">
             <h4>${card.title}</h4>
-            ${card.featured ? '<span class="tag tag-main">Pagrindinė</span>' : ''}
+            ${card.featured ? '<span class="tag tag-main">Pagrindine</span>' : ''}
           </div>
-          <p>${card.desc || 'Be paaiškinimo'}</p>
+          <p>${card.desc || 'Be paaiskinimo'}</p>
         </div>
         <div class="vote-panel">
           <span class="vote-label">Tavo balas</span>
           <div class="vote-controls">
-            <button class="vote-btn" data-action="vote-minus" data-id="${card.id}" ${userScore <= 0 ? 'disabled' : ''}>-</button>
+            <button class="vote-btn" data-action="vote-minus" data-id="${card.id}" ${(userScore <= 0 || isLocked) ? 'disabled' : ''}>-</button>
             <span class="vote-score">${userScore}</span>
-            <button class="vote-btn" data-action="vote-plus" data-id="${card.id}" ${userScore >= 5 ? 'disabled' : ''}>+</button>
+            <button class="vote-btn" data-action="vote-plus" data-id="${card.id}" ${(userScore >= 5 || isLocked) ? 'disabled' : ''}>+</button>
           </div>
+          ${isLocked ? '<div class="vote-total"><strong>Balsai patvirtinti</strong></div>' : ''}
           ${data.resultsPublished ? `<div class="vote-total">Bendras balas: <strong>${totalScore}</strong></div>` : ''}
         </div>
       </div>
-      <div>${tags}</div>
-      ${data.resultsPublished ? `
-        <div class="card-section">
-          <strong>Visų balsai</strong>
-          ${voteBreakdown}
-        </div>
-      ` : ''}
+      ${data.resultsPublished ? `<div class="card-section"><strong>Visu balsai</strong>${voteBreakdown}</div>` : ''}
       <div class="card-section">
         <strong>Komentarai</strong>
-        <ul class="mini-list">${comments || '<li>Dar nėra komentarų.</li>'}</ul>
+        <ul class="mini-list">${comments || '<li>Dar nera komentaru.</li>'}</ul>
         <form data-action="comment" data-id="${card.id}" class="inline-form">
-          <input type="text" name="comment" placeholder="Įrašykite komentarą" required />
-          <button class="btn btn-ghost" type="submit">Pridėti</button>
+          <input type="text" name="comment" placeholder="Irasykite komentara" required />
+          <button class="btn btn-ghost" type="submit">Prideti</button>
         </form>
       </div>
-      <div class="card-section">
-        <strong>Papildymai</strong>
-        <ul class="mini-list">${proposals || '<li>Dar nėra papildymų.</li>'}</ul>
-        <form data-action="proposal" data-id="${card.id}" class="inline-form">
-          <input type="text" name="proposal" placeholder="Papildymo pasiūlymas" required />
-          <button class="btn btn-ghost" type="submit">Pridėti</button>
-        </form>
-      </div>
-      <div class="card-section">
-        <strong>Iniciatyvos padėsiančios pasiekti gairėje iškeltus tikslus</strong>
-        <p class="prompt">Kokius veiksmus atliksime ir kokius rodiklius nusibrėšime kad pasiektume tikslą?</p>
-        <ul class="mini-list">${initiatives || '<li>Dar nėra iniciatyvų.</li>'}</ul>
-        <form data-action="initiative" data-id="${card.id}" class="inline-form">
-          <input type="text" name="action" placeholder="Veiksmas" required />
-          <input type="text" name="kpi" placeholder="Rodiklis / KPI" />
-          <button class="btn btn-ghost" type="submit">Pridėti</button>
-        </form>
-      </div>
-      ${isAdmin() ? renderAdminEdit(card) : ''}
     </article>
-  `;
-}
-
-function renderAdminEdit(card) {
-  return `
-    <div class="card-section admin-edit">
-      <strong>Redaguoti gairę</strong>
-      <form data-action="admin-edit" data-id="${card.id}" class="inline-form">
-        <input type="text" name="title" value="${card.title}" required />
-        <input type="text" name="desc" value="${card.desc || ''}" placeholder="Paaiškinimas" />
-        <input type="text" name="tags" value="${card.tags || ''}" placeholder="Žymos" />
-        <label class="checkbox-row">
-          <input type="checkbox" name="featured" ${card.featured ? 'checked' : ''} />
-          Pagrindinė
-        </label>
-        <button class="btn btn-primary" type="submit">Išsaugoti</button>
-      </form>
-    </div>
   `;
 }
 
 function bindGuidelinesEvents() {
   const addForm = elements.stepView.querySelector('#guidelineAddForm');
-  const proposalForm = elements.stepView.querySelector('#guidelineProposalForm');
   const list = elements.stepView.querySelector('.card-list');
+  const slidePrev = elements.stepView.querySelector('#slidePrev');
+  const slideNext = elements.stepView.querySelector('#slideNext');
+
+  if (slidePrev) {
+    slidePrev.addEventListener('click', () => {
+      data.guideSlideIndex = Math.max(0, (data.guideSlideIndex || 0) - 1);
+      save();
+      render();
+    });
+  }
+
+  if (slideNext) {
+    slideNext.addEventListener('click', () => {
+      data.guideSlideIndex = Math.min(introSlides.length - 1, (data.guideSlideIndex || 0) + 1);
+      save();
+      render();
+    });
+  }
+
+  elements.stepView.querySelectorAll('[data-action="goto-slide"]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const idx = Number(el.dataset.index);
+      if (!Number.isInteger(idx)) return;
+      data.guideSlideIndex = Math.max(0, Math.min(introSlides.length - 1, idx));
+      save();
+      render();
+    });
+  });
 
   addForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const formData = new FormData(addForm);
-    const title = formData.get('title').trim();
+    const title = String(formData.get('title') || '').trim();
     if (!title) return;
     data.cards.guidelines.push({
       id: crypto.randomUUID(),
       title,
-      desc: formData.get('desc').trim(),
-      tags: formData.get('tags').trim(),
-      featured: Boolean(formData.get('featured')),
+      desc: String(formData.get('desc') || '').trim(),
+      featured: false,
       comments: [],
-      proposals: [],
-      initiatives: [],
       votesByUser: {}
     });
-    save();
-    render();
-  });
-
-  proposalForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const formData = new FormData(proposalForm);
-    const targetId = formData.get('target');
-    const text = formData.get('proposal').trim();
-    if (!targetId || !text) return;
-    const card = data.cards.guidelines.find((item) => item.id === targetId);
-    if (!card) return;
-    card.proposals = card.proposals || [];
-    card.proposals.push(text);
-    save();
-    render();
-  });
-
-  list.addEventListener('submit', (event) => {
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    const action = form.dataset.action;
-    const id = form.dataset.id;
-    if (!action || !id) return;
-    event.preventDefault();
-    const formData = new FormData(form);
-
-    const card = data.cards.guidelines.find((item) => item.id === id);
-    if (!card) return;
-
-    if (action === 'comment') {
-      const value = formData.get('comment').trim();
-      if (!value) return;
-      card.comments = card.comments || [];
-      card.comments.push(`${currentUserKey()}: ${value}`);
-    }
-
-    if (action === 'proposal') {
-      const value = formData.get('proposal').trim();
-      if (!value) return;
-      card.proposals = card.proposals || [];
-      card.proposals.push(`${currentUserKey()}: ${value}`);
-    }
-
-    if (action === 'initiative') {
-      const actionText = formData.get('action').trim();
-      if (!actionText) return;
-      const kpi = formData.get('kpi').trim();
-      card.initiatives = card.initiatives || [];
-      card.initiatives.push({
-        action: actionText,
-        kpi,
-        by: currentUserKey()
-      });
-    }
-
-    if (action === 'admin-edit' && isAdmin()) {
-      const title = formData.get('title').trim();
-      if (!title) return;
-      card.title = title;
-      card.desc = formData.get('desc').trim();
-      card.tags = formData.get('tags').trim();
-      card.featured = Boolean(formData.get('featured'));
-    }
-
     save();
     render();
   });
@@ -455,50 +338,49 @@ function bindGuidelinesEvents() {
     const action = target.dataset.action;
     const id = target.dataset.id;
     if (!action || !id) return;
-
     if (action === 'vote-plus' || action === 'vote-minus') {
       updateVote(id, action === 'vote-plus' ? 1 : -1);
     }
   });
 
-  if (isAdmin()) {
-    const publishBtn = elements.stepView.querySelector('#publishResults');
-    if (publishBtn) {
-      publishBtn.addEventListener('click', () => {
-        if (data.resultsPublished) return;
-        data.resultsPublished = true;
-        save();
-        render();
-      });
-    }
+  list.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    const action = form.dataset.action;
+    const id = form.dataset.id;
+    if (action !== 'comment' || !id) return;
+    event.preventDefault();
 
-    const editCodeBtn = elements.stepView.querySelector('#editAdminCode');
-    if (editCodeBtn) {
-      editCodeBtn.addEventListener('click', () => {
-        const next = window.prompt('Naujas admin kodas:', data.adminCode || adminCodeDefault);
-        if (!next) return;
-        data.adminCode = next.trim();
-        save();
-      });
-    }
-  }
+    const formData = new FormData(form);
+    const value = String(formData.get('comment') || '').trim();
+    if (!value) return;
+
+    const card = data.cards.guidelines.find((item) => item.id === id);
+    if (!card) return;
+    card.comments = card.comments || [];
+    card.comments.push(`${currentUserKey()}: ${value}`);
+    save();
+    render();
+  });
 }
 
 function updateVote(cardId, delta) {
   const userKey = currentUserKey();
   if (!userKey) return;
+  if (data.submittedUsers[userKey]) return;
+
   const card = data.cards.guidelines.find((item) => item.id === cardId);
   if (!card) return;
 
   const current = card.votesByUser?.[userKey] || 0;
   const budget = data.guidelineBudget || 10;
   const totalExcluding = data.cards.guidelines.reduce((sum, item) => {
-    if (item.id === cardId) return sum + (item.votesByUser?.[userKey] || 0) * 0;
+    if (item.id === cardId) return sum;
     return sum + (item.votesByUser?.[userKey] || 0);
   }, 0);
-
   const maxAllowed = Math.min(5, budget - totalExcluding);
   const next = Math.min(maxAllowed, Math.max(0, current + delta));
+
   card.votesByUser = card.votesByUser || {};
   card.votesByUser[userKey] = next;
   save();
@@ -506,31 +388,22 @@ function updateVote(cardId, delta) {
 }
 
 function buildSummary() {
-  let text = `Strategija: ${data.sessionName}\n\n`;
-
-  text += 'Gairės\n';
+  let text = `Strategija: ${data.sessionName}\n\nGaires\n`;
   const cards = data.cards.guidelines;
-  if (!cards.length) {
-    text += '- (nėra įrašų)\n\n';
-    return text;
-  }
+  if (!cards.length) return `${text}- (nera irasu)\n`;
 
   cards.forEach((card) => {
-    const tags = card.tags ? ` [${card.tags}]` : '';
     const total = Object.values(card.votesByUser || {}).reduce((sum, value) => sum + value, 0);
     const votes = data.resultsPublished ? `, bendras balas: ${total}` : '';
-    const extras = `\n  komentarai: ${(card.comments || []).join(' | ') || '-'}\n  papildymai: ${(card.proposals || []).join(' | ') || '-'}`;
-    const initiatives = (card.initiatives || []).map((item) => `${item.action} (KPI: ${item.kpi || '-'}, siūlė: ${item.by})`).join(' | ');
-
-    text += `- ${card.title}${tags}: ${card.desc || 'be aprašymo'}${votes}${extras}\n  iniciatyvos: ${initiatives || '-'}\n`;
+    const comments = (card.comments || []).join(' | ') || '-';
+    text += `- ${card.title}: ${card.desc || 'be paaiskinimo'}${votes}\n  komentarai: ${comments}\n`;
   });
 
   return text;
 }
 
 function exportSummary() {
-  const summary = buildSummary();
-  elements.summaryText.value = summary;
+  elements.summaryText.value = buildSummary();
   elements.exportPanel.hidden = false;
 }
 
@@ -554,9 +427,9 @@ function renderUserBar() {
   container.innerHTML = `
     <div class="user-chip">
       <span>${data.currentUser.name}</span>
-      <span class="tag ${isAdmin() ? 'tag-main' : ''}">${isAdmin() ? 'Admin' : 'Vartotojas'}</span>
+      <span class="tag">Vartotojas</span>
     </div>
-    <button id="switchUser" class="btn btn-ghost">Keisti vartotoją</button>
+    <button id="switchUser" class="btn btn-ghost">Keisti vartotoja</button>
   `;
 
   container.querySelector('#switchUser').addEventListener('click', () => {
@@ -584,14 +457,9 @@ function renderLoginOverlay() {
   overlay.innerHTML = `
     <div class="login-card">
       <h2>Prisijungimas</h2>
-      <p class="prompt">Įveskite vardą ir pasirinkite rolę.</p>
+      <p class="prompt">Iveskite varda, kad galetumete balsuoti.</p>
       <form id="loginForm" class="login-form">
-        <input type="text" name="name" placeholder="Vardas ir pavardė" required />
-        <select name="role">
-          <option value="user">Darbuotojas</option>
-          <option value="admin">Administratorius</option>
-        </select>
-        <input type="password" name="code" placeholder="Admin kodas" />
+        <input type="text" name="name" placeholder="Vardas ir pavarde" required />
         ${loginError ? `<div class="error">${loginError}</div>` : ''}
         <button class="btn btn-primary" type="submit">Prisijungti</button>
       </form>
@@ -601,23 +469,61 @@ function renderLoginOverlay() {
   overlay.querySelector('#loginForm').addEventListener('submit', (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const name = formData.get('name').trim();
-    const role = formData.get('role');
-    const code = formData.get('code').trim();
-
+    const name = String(formData.get('name') || '').trim();
     if (!name) return;
-
-    if (role === 'admin' && code !== (data.adminCode || adminCodeDefault)) {
-      loginError = 'Neteisingas admin kodas.';
+    if (data.blockedUsers[name]) {
+      loginError = 'Sis vartotojas uzblokuotas administratoriaus.';
       render();
       return;
     }
 
-    data.currentUser = { name, role };
+    data.currentUser = { name, role: 'user' };
+    if (!data.users.includes(name)) data.users.push(name);
     loginError = '';
     save();
     render();
   });
+}
+
+function renderVoteFloating() {
+  let floating = document.getElementById('voteFloating');
+  if (!floating) {
+    floating = document.createElement('div');
+    floating.id = 'voteFloating';
+    floating.className = 'vote-floating';
+    document.body.appendChild(floating);
+  }
+
+  const userKey = currentUserKey();
+  if (!userKey) {
+    floating.hidden = true;
+    return;
+  }
+
+  const budget = data.guidelineBudget || 10;
+  const used = data.cards.guidelines.reduce((sum, card) => sum + (card.votesByUser?.[userKey] || 0), 0);
+  const remaining = Math.max(0, budget - used);
+  const isLocked = Boolean(data.submittedUsers[userKey]);
+
+  floating.hidden = false;
+  floating.innerHTML = `
+    <div class="vote-floating-inner">
+      <div class="vote-floating-title">Liko balsu</div>
+      <div class="vote-floating-count">${remaining} / ${budget}</div>
+      <button id="confirmVotesBtn" class="btn btn-primary" ${isLocked ? 'disabled' : ''}>
+        ${isLocked ? 'Balsai patvirtinti' : 'Patvirtinti balsus'}
+      </button>
+    </div>
+  `;
+
+  const confirmBtn = floating.querySelector('#confirmVotesBtn');
+  if (confirmBtn && !isLocked) {
+    confirmBtn.addEventListener('click', () => {
+      data.submittedUsers[userKey] = new Date().toISOString();
+      save();
+      render();
+    });
+  }
 }
 
 function bindGlobal() {
@@ -629,20 +535,12 @@ function bindGlobal() {
   });
 
   document.getElementById('exportBtn').addEventListener('click', exportSummary);
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    data = structuredClone(defaultData);
-    save();
-    render();
-  });
-
   document.getElementById('closeExport').addEventListener('click', () => {
     elements.exportPanel.hidden = true;
   });
-
   document.getElementById('copySummary').addEventListener('click', async () => {
     await navigator.clipboard.writeText(elements.summaryText.value);
   });
-
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
 }
 
@@ -651,6 +549,7 @@ function render() {
   renderStepView();
   renderUserBar();
   renderLoginOverlay();
+  renderVoteFloating();
 }
 
 bindGlobal();
