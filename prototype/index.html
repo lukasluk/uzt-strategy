@@ -4,23 +4,31 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>digistrategija.lt</title>
+  <link rel="icon" type="image/svg+xml" href="assets/digistrategija-favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app">
-    <header class="topbar">
-      <div>
-        <p class="kicker">Skaitmenizacijos strategijos dirbtuvės</p>
-        <h1 id="sessionName" class="session-name">digistrategija.lt - tavo įstaigos strategijos kurimo dirbtuvės paprastai</h1>
+    <header class="site-header">
+      <div class="topbar">
+        <div>
+          <div class="brand-lockup">
+            <img src="assets/digistrategija-logo.svg" alt="digistrategija.lt logotipas" class="brand-logo" />
+          </div>
+          <p class="kicker">Skaitmenizacijos strategijos dirbtuvės</p>
+          <h1 id="sessionName" class="session-name">digistrategija.lt - tavo įstaigos strategijos kūrimo dirbtuvės paprastai</h1>
+        </div>
+        <div class="top-actions">
+          <button id="exportBtn" class="btn btn-primary">Eksportuoti santrauką</button>
+        </div>
       </div>
-      <div class="top-actions">
-        <button id="exportBtn" class="btn btn-primary">Eksportuoti santrauką</button>
-      </div>
+      <section id="introDeck" class="intro-shell"></section>
+      <section id="institutionPicker" class="institution-picker"></section>
     </header>
 
     <div class="user-bar" id="userBar"></div>
 
-    <div class="layout">
+    <div class="layout" id="mainLayout">
       <aside class="steps" id="steps"></aside>
       <main class="stage">
         <section class="step-view" id="stepView"></section>
@@ -40,6 +48,14 @@
         <textarea id="summaryText" class="summary"></textarea>
       </div>
     </section>
+
+    <footer class="app-disclaimer">
+      <p>
+        Tai eksperimentinis įrankis, skirtas padėti jūsų institucijai kurti skaitmenizacijos strategiją
+        skaidriai, viešai ir inovatyviai. Norėdami gauti prieigą, susisiekite:
+        <a href="mailto:lukas.lukosevicius@uzt.lt">lukas.lukosevicius@uzt.lt</a>.
+      </p>
+    </footer>
   </div>
 
   <script src="app.js"></script>

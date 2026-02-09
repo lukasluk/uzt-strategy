@@ -111,16 +111,16 @@ function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
     unauthorized: 'Reikia prisijungti kaip institucijos administratorius.',
-    'invalid token': 'Sesija nebegalioja. Prisijunkite is naujo.',
+    'invalid token': 'Sesija nebegalioja. Prisijunkite iš naujo.',
     'institution not found': `Institucija "${state.institutionSlug}" nerasta.`,
     'cycle not found': 'Aktyvus ciklas nerastas.',
-    forbidden: 'Veiksmas neleidziamas.',
-    'admin role required': 'Reikalingos administratoriaus teises.',
-    'cross-institution forbidden': 'Prieiga prie kitos institucijos duomenu neleidziama.',
+    forbidden: 'Veiksmas neleidžiamas.',
+    'admin role required': 'Reikalingos administratoriaus teisės.',
+    'cross-institution forbidden': 'Prieiga prie kitos institucijos duomenų neleidžiama.',
     'invalid credentials': 'Neteisingi prisijungimo duomenys.',
-    'email required': 'Nurodykite el. pasta.'
+    'email required': 'Nurodykite el. paštą.'
   };
-  return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
+  return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
 
 async function api(path, { method = 'GET', body = null, auth = true } = {}) {
@@ -232,11 +232,11 @@ function renderLogin() {
       <p class="prompt">Institucija: <strong>${escapeHtml(state.institutionSlug)}</strong></p>
       <div id="loginError" class="error" style="display:none;"></div>
       <form id="adminLoginForm" class="login-form">
-        <input type="text" name="email" placeholder="El. pastas" required />
-        <input type="password" name="password" placeholder="Slaptazodis" required />
+        <input type="text" name="email" placeholder="El. paštas" required />
+        <input type="password" name="password" placeholder="Slaptažodis" required />
         <button type="submit" class="btn btn-primary">Prisijungti</button>
       </form>
-      <p class="prompt" style="margin-top: 12px;">Narys? Grizkite i viesa puslapi: <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}">index</a></p>
+      <p class="prompt" style="margin-top: 12px;">Narys? Grįžkite į viešą puslapį: <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}">index</a></p>
     </section>
   `;
 
@@ -277,9 +277,9 @@ function renderDashboard() {
         <strong>Administratoriaus skydas</strong>
         <span class="tag">Institucija: ${escapeHtml(institution?.name || state.institutionSlug)}</span>
       </div>
-      <p class="prompt">Prisijunges: ${escapeHtml(userName)}</p>
+      <p class="prompt">Prisijungęs: ${escapeHtml(userName)}</p>
       <div class="inline-form">
-        <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Atgal i viesa puslapi</a>
+        <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Atgal į viešą puslapį</a>
         <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
       </div>
     </section>
@@ -288,7 +288,7 @@ function renderDashboard() {
       <section class="card" style="margin-bottom: 16px;">
         <strong>Klaida</strong>
         <p class="prompt">${escapeHtml(state.error)}</p>
-        <button id="retryBtn" class="btn btn-primary">Bandyti dar karta</button>
+        <button id="retryBtn" class="btn btn-primary">Bandyti dar kartą</button>
       </section>
     ` : ''}
 
@@ -303,16 +303,16 @@ function renderDashboard() {
         <strong>Ciklo valdymas</strong>
         <span class="tag">ID: ${escapeHtml(cycle?.id || '-')}</span>
       </div>
-      <p class="prompt">Busena valdo, ar nariai gali balsuoti ir komentuoti (Open/Review).</p>
+      <p class="prompt">Būsena valdo, ar nariai gali balsuoti ir komentuoti (Open/Review).</p>
       <div class="inline-form">
         <select id="cycleStateSelect" ${state.busy || !cycle?.id ? 'disabled' : ''}>
           ${['draft', 'open', 'review', 'final', 'archived'].map((item) => `<option value="${item}" ${item === cycleState ? 'selected' : ''}>${item.toUpperCase()}</option>`).join('')}
         </select>
-        <button id="saveCycleStateBtn" class="btn btn-primary" ${state.busy || !cycle?.id ? 'disabled' : ''}>Atnaujinti busena</button>
+        <button id="saveCycleStateBtn" class="btn btn-primary" ${state.busy || !cycle?.id ? 'disabled' : ''}>Atnaujinti būseną</button>
       </div>
       <div class="header-row" style="margin-top: 12px;">
-        <span class="tag ${resultsPublished ? 'tag-main' : ''}">${resultsPublished ? 'Rezultatai viesi' : 'Rezultatai neviesi'}</span>
-        <button id="toggleResultsBtn" class="btn btn-primary" ${state.busy || !cycle?.id ? 'disabled' : ''}>${resultsPublished ? 'Paslepti rezultatus' : 'Paskelbti rezultatus'}</button>
+        <span class="tag ${resultsPublished ? 'tag-main' : ''}">${resultsPublished ? 'Rezultatai vieši' : 'Rezultatai nevieši'}</span>
+        <button id="toggleResultsBtn" class="btn btn-primary" ${state.busy || !cycle?.id ? 'disabled' : ''}>${resultsPublished ? 'Paslėpti rezultatus' : 'Paskelbti rezultatus'}</button>
       </div>
     </section>
 
@@ -322,14 +322,14 @@ function renderDashboard() {
         <span class="tag">Invite-only</span>
       </div>
       <form id="inviteForm" class="inline-form">
-        <input type="text" name="email" placeholder="Nario el. pastas" required ${state.busy ? 'disabled' : ''} />
-        <button type="submit" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Sukurti kvietima</button>
+        <input type="text" name="email" placeholder="Nario el. paštas" required ${state.busy ? 'disabled' : ''} />
+        <button type="submit" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Sukurti kvietimą</button>
       </form>
       ${state.inviteToken ? `
         <div class="card" style="margin-top: 12px;">
-          <strong>Naujas kvietimo tokenas</strong>
+          <strong>Naujas kvietimo žetonas</strong>
           <p class="prompt" style="word-break: break-all;">${escapeHtml(state.inviteToken)}</p>
-          <button id="copyInviteTokenBtn" class="btn btn-ghost">Kopijuoti tokena</button>
+          <button id="copyInviteTokenBtn" class="btn btn-ghost">Kopijuoti žetoną</button>
         </div>
       ` : ''}
     </section>
@@ -345,30 +345,30 @@ function renderDashboard() {
               <li>
                 <strong>${escapeHtml(participant.display_name || participant.email)}</strong>
                 <span class="muted">${participant.has_voted ? 'Balsavo' : 'Nebalsavo'}</span>
-                <span class="tag">Taskai: ${Number(participant.total_score || 0)}</span>
+                <span class="tag">Taškai: ${Number(participant.total_score || 0)}</span>
               </li>
             `).join('')
-          : '<li>Nera dalyviu.</li>'}
+          : '<li>Nėra dalyvių.</li>'}
       </ul>
     </section>
 
     <section class="card" style="margin-bottom: 16px;">
       <div class="header-row">
-        <strong>Prideti gaires</strong>
+        <strong>Pridėti gaires</strong>
         <span class="tag">${state.guidelines.length} viso</span>
       </div>
       <form id="addGuidelineForm">
         <div class="form-row">
-          <input type="text" name="title" placeholder="Gaires pavadinimas" required ${state.busy || !cycle?.id ? 'disabled' : ''}/>
+          <input type="text" name="title" placeholder="Gairės pavadinimas" required ${state.busy || !cycle?.id ? 'disabled' : ''}/>
         </div>
-        <textarea name="description" placeholder="Trumpas paaiskinimas" ${state.busy || !cycle?.id ? 'disabled' : ''}></textarea>
-        <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy || !cycle?.id ? 'disabled' : ''}>Prideti gaire</button>
+        <textarea name="description" placeholder="Trumpas paaiškinimas" ${state.busy || !cycle?.id ? 'disabled' : ''}></textarea>
+        <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy || !cycle?.id ? 'disabled' : ''}>Pridėti gairę</button>
       </form>
     </section>
 
     <section class="card">
       <div class="header-row">
-        <strong>Gairiu redagavimas</strong>
+        <strong>Gairių redagavimas</strong>
         <span class="tag">${state.guidelines.length}</span>
       </div>
       <div class="card-list">
@@ -376,12 +376,12 @@ function renderDashboard() {
           <article class="card ${guideline.status === 'active' ? '' : 'admin-panel'}">
             <form class="admin-guideline-form" data-id="${escapeHtml(guideline.id)}">
               <input type="text" name="title" value="${escapeHtml(guideline.title)}" required ${state.busy ? 'disabled' : ''}/>
-              <textarea name="description" placeholder="Aprasymas" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideline.description || '')}</textarea>
+              <textarea name="description" placeholder="Aprašymas" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideline.description || '')}</textarea>
               <div class="inline-form">
                 <select name="status" ${state.busy ? 'disabled' : ''}>
                   ${['active', 'merged', 'hidden'].map((item) => `<option value="${item}" ${item === guideline.status ? 'selected' : ''}>${item}</option>`).join('')}
                 </select>
-                <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+                <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Išsaugoti</button>
               </div>
               <div class="header-stack">
                 <span class="tag">Balas: ${Number(guideline.totalScore || 0)}</span>
@@ -468,7 +468,7 @@ function bindDashboardEvents() {
     copyInviteTokenBtn.addEventListener('click', async () => {
       if (!state.inviteToken) return;
       await navigator.clipboard.writeText(state.inviteToken);
-      state.notice = 'Kvietimo tokenas nukopijuotas.';
+      state.notice = 'Kvietimo žetonas nukopijuotas.';
       render();
     });
   }

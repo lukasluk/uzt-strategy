@@ -30,6 +30,9 @@ body {
 .app {
   padding: 24px clamp(12px, 3vw, 40px) 60px;
 }
+.site-header {
+  margin-bottom: 18px;
+}
 
 .topbar {
   display: flex;
@@ -38,6 +41,20 @@ body {
   gap: 24px;
   margin-bottom: 28px;
   flex-wrap: wrap;
+}
+.topbar > div:first-child {
+  flex: 1 1 620px;
+  min-width: 0;
+}
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.brand-logo {
+  width: clamp(180px, 28vw, 280px);
+  height: auto;
+  display: block;
 }
 
 .kicker {
@@ -107,6 +124,8 @@ body {
   top: 16px;
   align-self: start;
   max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .step-pill {
@@ -217,6 +236,18 @@ textarea {
 .card p {
   font-size: 13px;
   color: var(--muted);
+}
+.card-section {
+  margin-top: 4px;
+}
+.mini-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  list-style-position: outside;
+}
+.mini-list li {
+  margin: 4px 0;
+  padding-left: 2px;
 }
 
 .tag {
@@ -342,6 +373,93 @@ textarea {
   display: none;
 }
 
+.app-disclaimer {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border: 1px solid #e6d8c6;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.app-disclaimer p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.app-disclaimer a {
+  color: #1f6e64;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.app-disclaimer a:hover {
+  text-decoration: underline;
+}
+.intro-shell {
+  margin-top: 6px;
+}
+.intro-shell-card {
+  margin: 0;
+}
+.institution-picker {
+  margin-top: 14px;
+}
+.institution-picker-card {
+  background: #fffaf4;
+  border: 1px solid #e4d4c0;
+  border-radius: 18px;
+  padding: 16px;
+}
+.institution-picker-card h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+}
+.institution-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.institution-card {
+  border: 1px solid #dcc9b3;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+  color: var(--ink);
+  text-decoration: none;
+  display: grid;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.institution-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(28, 26, 22, 0.1);
+  border-color: #bf4f2f;
+}
+.institution-card.active {
+  border-color: #2b8a7e;
+  box-shadow: 0 10px 22px rgba(43, 138, 126, 0.15);
+}
+.institution-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.institution-card-meta {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.institution-card-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f6e64;
+}
+
 .header-stack {
   display: flex;
   gap: 8px;
@@ -384,6 +502,7 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 14px;
+  margin-top: 4px;
 }
 .slide-nav {
   width: 38px;
@@ -523,7 +642,7 @@ textarea {
   align-items: center;
   gap: 12px;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin: 8px 0 14px;
   flex-wrap: wrap;
 }
 .user-chip {
@@ -550,6 +669,22 @@ textarea {
 }
 .admin-pill p {
   color: #6f6456;
+}
+.about-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e3d2be;
+  padding: 12px;
+  box-shadow: 0 6px 14px rgba(28, 26, 22, 0.06);
+}
+.about-card h4 {
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+.about-card p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
 }
 .tag-main {
   background: #bf4f2f;
@@ -614,7 +749,7 @@ textarea {
 
 @media (max-width: 640px) {
   .layout {
-    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-columns: 108px minmax(0, 1fr);
     gap: 10px;
   }
 
@@ -630,7 +765,15 @@ textarea {
     padding: 14px;
   }
 
+  .user-bar {
+    justify-content: flex-start;
+  }
+
   .card-list {
+    grid-template-columns: 1fr;
+  }
+
+  .institution-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -1,35 +1,44 @@
 const steps = [
   {
     id: 'guidelines',
-    title: 'Gaires',
+    title: 'Gairės',
     hint: 'Aptarimas, balsavimas, komentarai',
-    prompt: 'Kur link judesime ir kokia nauda kursime?'
+    prompt: 'Kur link judėsime ir kokią naudą kursime?'
   }
 ];
 
 const introSlides = [
   {
     title: '1. Kas tai per sistema',
-    body: 'Tai strategijos gairiu vertinimo ir komentavimo irankis. Kiekviena gaire vertinama atskirai, o komentarai kaupiami vienoje vietoje.'
+    body: 'Tai strategijos gairių vertinimo ir komentavimo įrankis. Kiekviena gairė vertinama atskirai, o komentarai kaupiami vienoje vietoje.'
   },
   {
     title: '2. Kaip vyksta balsavimas',
-    body: 'Kiekvienas narys turi 10 balsu ir gali paskirstyti juos tarp gairiu (0-5 vienai gairei). Balsavimas atidaromas pagal ciklo busena.'
+    body: 'Kiekvienas narys turi 10 balsų ir gali paskirstyti juos tarp gairių (0-5 vienai gairei). Balsavimas atidaromas pagal ciklo būseną.'
   },
   {
-    title: '3. Kaip uzdaromas etapas',
-    body: 'Balsuoti galima iki ciklo busenos Final. Viesai rodomi tik agreguoti balsu rezultatai ir viesi komentarai.'
+    title: '3. Kaip uždaromas etapas',
+    body: 'Balsuoti galima iki ciklo būsenos Final. Viešai rodomi tik agreguoti balsų rezultatai ir vieši komentarai.'
+  },
+  {
+    title: '4. Kaip veikia ciklai',
+    body: 'Strategija valdoma ciklais: Draft, Open, Review, Final ir Archived. Redagavimas ir balsavimas galimi Open/Review būsenose.'
   }
 ];
 
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
-const DEFAULT_INSTITUTION_SLUG = 'uzt';
+const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
-const BRAND_TITLE = 'digistrategija.lt - tavo įstaigos strategijos kurimo dirbtuvės paprastai';
+const BRAND_TITLE = 'digistrategija.lt - tavo įstaigos strategijos kūrimo dirbtuvės paprastai';
 
 const elements = {
   steps: document.getElementById('steps'),
   stepView: document.getElementById('stepView'),
+  introDeck: document.getElementById('introDeck'),
+  institutionPicker: document.getElementById('institutionPicker'),
+  mainLayout: document.getElementById('mainLayout'),
+  userBar: document.getElementById('userBar'),
+  exportBtn: document.getElementById('exportBtn'),
   sessionName: document.getElementById('sessionName'),
   exportPanel: document.getElementById('exportPanel'),
   summaryText: document.getElementById('summaryText')
@@ -43,6 +52,8 @@ const state = {
   busy: false,
   error: '',
   notice: '',
+  institutions: [],
+  institutionsLoaded: false,
   institution: null,
   cycle: null,
   summary: null,
@@ -64,16 +75,16 @@ function resolveInstitutionSlug() {
   if (querySlug) return querySlug;
 
   const parts = window.location.pathname.split('/').filter(Boolean);
-  if (!parts.length) return DEFAULT_INSTITUTION_SLUG;
+  if (!parts.length) return DEFAULT_INSTITUTION_SLUG || null;
 
   const last = parts[parts.length - 1];
   if (last === 'index.html') {
-    return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG;
+    return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG || null;
   }
   if (last === 'admin.html') {
-    return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG;
+    return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG || null;
   }
-  return normalizeSlug(last) || DEFAULT_INSTITUTION_SLUG;
+  return normalizeSlug(last) || DEFAULT_INSTITUTION_SLUG || null;
 }
 
 function normalizeSlug(value) {
@@ -169,23 +180,23 @@ function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
     unauthorized: 'Reikia prisijungti.',
-    'invalid token': 'Sesija nebegalioja. Prisijunkite is naujo.',
+    'invalid token': 'Sesija nebegalioja. Prisijunkite iš naujo.',
     'institution not found': `Institucija "${state.institutionSlug}" nerasta.`,
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
-    'cycle not writable': 'Ciklas nebeleidzia redaguoti (tik skaitymas).',
-    'vote budget exceeded': 'Virsytas balsu biudzetas.',
-    forbidden: 'Veiksmas neleidziamas.',
-    'membership inactive': 'Naryste neaktyvi.',
+    'cycle not writable': 'Ciklas nebeleidžia redaguoti (tik skaitymas).',
+    'vote budget exceeded': 'Viršytas balsų biudžetas.',
+    forbidden: 'Veiksmas neleidžiamas.',
+    'membership inactive': 'Narystė neaktyvi.',
     'invalid credentials': 'Neteisingi prisijungimo duomenys.',
     'invite not found': 'Kvietimas nerastas.',
     'invite expired': 'Kvietimas nebegalioja.',
-    'invite revoked': 'Kvietimas atsauktas.',
+    'invite revoked': 'Kvietimas atšauktas.',
     'invite already used': 'Kvietimas jau panaudotas.',
-    'guidelineId and score(0..5) required': 'Balsas turi buti tarp 0 ir 5.',
-    'name required': 'Nurodykite pavadinima.',
-    'token and displayName required': 'Nurodykite kvietimo tokena ir varda.'
+    'guidelineId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
+    'name required': 'Nurodykite pavadinimą.',
+    'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.'
   };
-  return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
+  return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
 
 async function api(path, { method = 'GET', body = null, auth = true } = {}) {
@@ -249,6 +260,12 @@ async function refreshSummary() {
   state.summary = payload.summary || state.summary;
 }
 
+async function loadInstitutions() {
+  const payload = await api('/api/v1/public/institutions', { auth: false });
+  state.institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
+  state.institutionsLoaded = true;
+}
+
 async function loadMemberContext() {
   const context = await api('/api/v1/me/context');
   if (!context?.institution?.slug) throw new Error('Nepavyko gauti naudotojo konteksto.');
@@ -280,6 +297,18 @@ async function bootstrap() {
   render();
 
   try {
+    await loadInstitutions();
+
+    if (!state.institutionSlug) {
+      clearSession();
+      state.institution = null;
+      state.cycle = null;
+      state.summary = null;
+      state.guidelines = [];
+      state.userVotes = {};
+      return;
+    }
+
     await loadPublicData();
     if (state.token) {
       try {
@@ -312,6 +341,69 @@ async function runBusy(task) {
   }
 }
 
+function formatInstitutionDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('lt-LT', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function renderInstitutionPicker() {
+  if (!elements.institutionPicker) return;
+
+  if (state.loading && !state.institutionsLoaded) {
+    elements.institutionPicker.innerHTML = `
+      <div class="institution-picker-card">
+        <h3>Institucijų strategijos</h3>
+        <p class="prompt">Kraunamas institucijų sąrašas...</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (!state.institutions.length) {
+    elements.institutionPicker.innerHTML = `
+      <div class="institution-picker-card">
+        <h3>Institucijų strategijos</h3>
+        <p class="prompt">Šiuo metu viešai paskelbtų institucijų dar nėra.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const cards = state.institutions.map((institution) => {
+    const slug = normalizeSlug(institution.slug);
+    const active = slug && slug === state.institutionSlug;
+    const created = formatInstitutionDate(institution.created_at);
+    const href = `index.html?institution=${encodeURIComponent(slug)}`;
+
+    return `
+      <a class="institution-card ${active ? 'active' : ''}" href="${href}">
+        <div class="institution-card-header">
+          <strong>${escapeHtml(institution.name || slug)}</strong>
+          ${active ? '<span class="tag tag-main">Atidaryta</span>' : ''}
+        </div>
+        <div class="institution-card-meta">
+          <span>Slug: ${escapeHtml(slug)}</span>
+          ${created ? `<span>Sukurta: ${escapeHtml(created)}</span>` : ''}
+        </div>
+        <span class="institution-card-link">Peržiūrėti viešas gaires</span>
+      </a>
+    `;
+  }).join('');
+
+  elements.institutionPicker.innerHTML = `
+    <div class="institution-picker-card">
+      <div class="header-row">
+        <h3>Institucijų strategijos</h3>
+        <span class="tag">${state.institutions.length} institucijos</span>
+      </div>
+      <p class="prompt">Pasirinkite instituciją ir peržiūrėkite jos viešą gairių puslapį.</p>
+      <div class="institution-grid">${cards}</div>
+    </div>
+  `;
+}
+
 function renderSteps() {
   elements.steps.innerHTML = '';
   steps.forEach((step) => {
@@ -321,11 +413,21 @@ function renderSteps() {
     elements.steps.appendChild(pill);
   });
 
-  const adminLink = document.createElement('a');
-  adminLink.className = 'step-pill admin-pill';
-  adminLink.href = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}`;
-  adminLink.innerHTML = '<h4>Admin</h4><p>Kvietimai, ciklas, rezultatai</p>';
-  elements.steps.appendChild(adminLink);
+  if (state.institutionSlug) {
+    const adminLink = document.createElement('a');
+    adminLink.className = 'step-pill admin-pill';
+    adminLink.href = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}`;
+    adminLink.innerHTML = '<h4>Admin</h4><p>Kvietimai, ciklas, rezultatai</p>';
+    elements.steps.appendChild(adminLink);
+  }
+
+  const aboutCard = document.createElement('section');
+  aboutCard.className = 'about-card';
+  aboutCard.innerHTML = `
+    <h4>Apie mus</h4>
+    <p>Čia bus aprašymas, kas čia per iniciatyva.</p>
+  `;
+  elements.steps.appendChild(aboutCard);
 }
 
 function renderSlideIllustration(index) {
@@ -365,12 +467,57 @@ function renderSlideIllustration(index) {
   `;
 }
 
+function renderIntroDeck() {
+  if (!elements.introDeck) return;
+  const slideIndex = clamp(state.guideSlideIndex || 0, 0, introSlides.length - 1);
+  const slide = introSlides[slideIndex];
+  const toggleLabel = state.introCollapsed ? 'Rodyti skaidres' : 'Suskleisti';
+
+  elements.introDeck.innerHTML = `
+    <div class="intro-card intro-shell-card ${state.introCollapsed ? 'collapsed' : ''}">
+      <div class="header-row">
+        <strong>${escapeHtml(slide.title)}</strong>
+        <div class="header-stack">
+          <span class="tag">Skaidrė ${slideIndex + 1} / ${introSlides.length}</span>
+          <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button">${toggleLabel}</button>
+        </div>
+      </div>
+      <div class="intro-collapse">
+        ${renderSlideIllustration(slideIndex)}
+        <p class="prompt" style="margin-bottom: 10px;">${escapeHtml(slide.body)}</p>
+        <div class="slide-controls">
+          <div class="slide-dots">
+            ${introSlides.map((_, idx) => `<button class="slide-dot ${idx === slideIndex ? 'active' : ''}" data-action="goto-slide" data-index="${idx}" aria-label="Skaidrė ${idx + 1}"></button>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const toggleIntroBtn = elements.introDeck.querySelector('#toggleIntroBtn');
+  if (toggleIntroBtn) {
+    toggleIntroBtn.addEventListener('click', () => {
+      state.introCollapsed = !state.introCollapsed;
+      renderIntroDeck();
+    });
+  }
+
+  elements.introDeck.querySelectorAll('[data-action="goto-slide"]').forEach((dot) => {
+    dot.addEventListener('click', () => {
+      const idx = Number(dot.dataset.index);
+      if (!Number.isInteger(idx)) return;
+      state.guideSlideIndex = clamp(idx, 0, introSlides.length - 1);
+      renderIntroDeck();
+    });
+  });
+}
+
 function renderGuidelineCard(guideline, options) {
   const userScore = Number(state.userVotes[guideline.id] || 0);
   const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
   const safeComments = comments.length
     ? comments.map((comment) => `<li>${escapeHtml(comment.body || '')}</li>`).join('')
-    : '<li>Dar nera komentaru.</li>';
+    : '<li>Dar nėra komentarų.</li>';
 
   const budget = voteBudget();
   const usedWithoutCurrent = usedVotesTotal() - userScore;
@@ -388,9 +535,9 @@ function renderGuidelineCard(guideline, options) {
         <div>
           <div class="title-row">
             <h4>${escapeHtml(guideline.title)}</h4>
-            <span class="tag">Balsuotoju: ${Number(guideline.voterCount || 0)}</span>
+            <span class="tag">Balsuotojų: ${Number(guideline.voterCount || 0)}</span>
           </div>
-          <p>${escapeHtml(guideline.description || 'Be paaiskinimo')}</p>
+          <p>${escapeHtml(guideline.description || 'Be paaiškinimo')}</p>
         </div>
         ${options.member ? `
           <div class="vote-panel">
@@ -404,7 +551,7 @@ function renderGuidelineCard(guideline, options) {
           </div>
         ` : `
           <div class="vote-panel">
-            <span class="vote-label">Viesas rezimas</span>
+            <span class="vote-label">Viešas režimas</span>
             <div class="vote-total"><strong>Bendras balas: ${Number(guideline.totalScore || 0)}</strong></div>
             <div class="vote-total">Rodomi tik agreguoti duomenys</div>
           </div>
@@ -415,16 +562,28 @@ function renderGuidelineCard(guideline, options) {
         <ul class="mini-list">${safeComments}</ul>
         ${options.member && options.writable ? `
           <form data-action="comment" data-id="${escapeHtml(guideline.id)}" class="inline-form">
-            <input type="text" name="comment" placeholder="Irasykite komentara" required ${state.busy ? 'disabled' : ''}/>
-            <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Prideti</button>
+            <input type="text" name="comment" placeholder="Įrašykite komentarą" required ${state.busy ? 'disabled' : ''}/>
+            <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Pridėti</button>
           </form>
-        ` : '<p class="prompt" style="margin: 8px 0 0;">Viesai rodomi komentarai. Prisijunkite, jei norite komentuoti.</p>'}
+        ` : '<p class="prompt" style="margin: 8px 0 0;">Viešai rodomi komentarai. Prisijunkite, jei norite komentuoti.</p>'}
       </div>
     </article>
   `;
 }
 
 function renderStepView() {
+  if (!state.institutionSlug) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Pasirinkite instituciją</strong>
+        <p class="prompt" style="margin: 8px 0 0;">
+          Viršuje matote institucijų sąrašą. Paspauskite instituciją, kad atvertumėte jos viešą gairių puslapį.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
   if (state.loading) {
     elements.stepView.innerHTML = '<div class="card"><strong>Kraunami duomenys...</strong></div>';
     return;
@@ -433,9 +592,9 @@ function renderStepView() {
   if (state.error) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Nepavyko ikelti duomenu</strong>
+        <strong>Nepavyko įkelti duomenų</strong>
         <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
-        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar karta</button>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar kartą</button>
       </div>
     `;
     const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
@@ -448,45 +607,21 @@ function renderStepView() {
   const budget = voteBudget();
   const used = member ? usedVotesTotal() : 0;
   const remaining = Math.max(0, budget - used);
-  const slideIndex = clamp(state.guideSlideIndex || 0, 0, introSlides.length - 1);
-  const slide = introSlides[slideIndex];
-  const introToggleLabel = state.introCollapsed ? 'Rodyti skaidres' : 'Suskleisti';
 
   const stats = [
-    `Busena: ${String(state.cycle?.state || '-').toUpperCase()}`,
-    `Gaires: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
+    `Būsena: ${String(state.cycle?.state || '-').toUpperCase()}`,
+    `Gairės: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
     `Komentarai: ${Number(state.summary?.comments_count || 0)}`,
     `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
   ];
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>Gaires</h2>
+      <h2>Gairės</h2>
       <div class="header-stack">
         <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
-        ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viesas rezimas</span>'}
-      </div>
-    </div>
-
-    <div class="card intro-card ${state.introCollapsed ? 'collapsed' : ''}" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>${escapeHtml(slide.title)}</strong>
-        <div class="header-stack">
-          <span class="tag">Skaidre ${slideIndex + 1} / ${introSlides.length}</span>
-          <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button">${introToggleLabel}</button>
-        </div>
-      </div>
-      <div class="intro-collapse">
-        ${renderSlideIllustration(slideIndex)}
-        <p class="prompt" style="margin-bottom: 10px;">${escapeHtml(slide.body)}</p>
-        <div class="slide-controls">
-          <button id="slidePrev" class="slide-nav" aria-label="Ankstesne skaidre" ${slideIndex === 0 ? 'disabled' : ''}>&lt;</button>
-          <div class="slide-dots">
-            ${introSlides.map((_, idx) => `<button class="slide-dot ${idx === slideIndex ? 'active' : ''}" data-action="goto-slide" data-index="${idx}" aria-label="Skaidre ${idx + 1}"></button>`).join('')}
-          </div>
-          <button id="slideNext" class="slide-nav" aria-label="Kita skaidre" ${slideIndex === introSlides.length - 1 ? 'disabled' : ''}>&gt;</button>
-        </div>
+        ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viešas režimas</span>'}
       </div>
     </div>
 
@@ -504,27 +639,27 @@ function renderStepView() {
     ${member ? (writable ? `
       <div class="card" style="margin-top: 16px;">
         <div class="header-row">
-          <strong>Nauja gaire</strong>
-          <span class="tag">Siulymas</span>
+          <strong>Nauja gairė</strong>
+          <span class="tag">Siūlymas</span>
         </div>
-        <p class="prompt" style="margin-bottom: 10px;">Siulykite papildomas gaires, kurios turetu buti itrauktos.</p>
+        <p class="prompt" style="margin-bottom: 10px;">Siūlykite papildomas gaires, kurios turėtų būti įtrauktos.</p>
         <form id="guidelineAddForm">
           <div class="form-row">
-            <input type="text" name="title" placeholder="Gaires pavadinimas" required ${state.busy ? 'disabled' : ''}/>
+            <input type="text" name="title" placeholder="Gairės pavadinimas" required ${state.busy ? 'disabled' : ''}/>
           </div>
-          <textarea name="desc" placeholder="Trumpas paaiskinimas" ${state.busy ? 'disabled' : ''}></textarea>
-          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Prideti gaire</button>
+          <textarea name="desc" placeholder="Trumpas paaiškinimas" ${state.busy ? 'disabled' : ''}></textarea>
+          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Pridėti gairę</button>
         </form>
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>Ciklas uzrakintas redagavimui</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Balsuoti ir komentuoti galima tik kai ciklo busena yra Open arba Review.</p>
+        <strong>Ciklas užrakintas redagavimui</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Balsuoti ir komentuoti galima tik kai ciklo būsena yra Open arba Review.</p>
       </div>
     `) : `
       <div class="card" style="margin-top: 16px;">
-        <strong>Prisijunkite, kad galetumete aktyviai dalyvauti</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Viesai matomi visi komentarai prie strategijos gairiu. Prisijungus galima siulyti gaires, komentuoti ir balsuoti.</p>
+        <strong>Prisijunkite, kad galėtumėte aktyviai dalyvauti</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Viešai matomi visi komentarai prie strategijos gairių. Prisijungus galima siūlyti gaires, komentuoti ir balsuoti.</p>
         <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
       </div>
     `}
@@ -534,40 +669,9 @@ function renderStepView() {
 }
 
 function bindStepEvents() {
-  const slidePrev = elements.stepView.querySelector('#slidePrev');
-  const slideNext = elements.stepView.querySelector('#slideNext');
-  const toggleIntroBtn = elements.stepView.querySelector('#toggleIntroBtn');
   const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
   const guidelineForm = elements.stepView.querySelector('#guidelineAddForm');
   const list = elements.stepView.querySelector('.card-list');
-
-  if (toggleIntroBtn) {
-    toggleIntroBtn.addEventListener('click', () => {
-      state.introCollapsed = !state.introCollapsed;
-      renderStepView();
-    });
-  }
-
-  if (slidePrev) {
-    slidePrev.addEventListener('click', () => {
-      state.guideSlideIndex = clamp(state.guideSlideIndex - 1, 0, introSlides.length - 1);
-      renderStepView();
-    });
-  }
-  if (slideNext) {
-    slideNext.addEventListener('click', () => {
-      state.guideSlideIndex = clamp(state.guideSlideIndex + 1, 0, introSlides.length - 1);
-      renderStepView();
-    });
-  }
-  elements.stepView.querySelectorAll('[data-action="goto-slide"]').forEach((dot) => {
-    dot.addEventListener('click', () => {
-      const idx = Number(dot.dataset.index);
-      if (!Number.isInteger(idx)) return;
-      state.guideSlideIndex = clamp(idx, 0, introSlides.length - 1);
-      renderStepView();
-    });
-  });
 
   if (openAuthFromStep) {
     openAuthFromStep.addEventListener('click', () => showAuthModal('login'));
@@ -657,7 +761,7 @@ function renderUserBar() {
   if (!isLoggedIn()) {
     container.innerHTML = `
       <div class="user-chip">
-        <span>Viesas rezimas</span>
+        <span>Viešas režimas</span>
         <span class="tag">Skaitymas</span>
       </div>
       <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
@@ -667,7 +771,7 @@ function renderUserBar() {
     return;
   }
 
-  const displayName = state.user?.displayName || state.user?.email || 'Prisijunges vartotojas';
+  const displayName = state.user?.displayName || state.user?.email || 'Prisijungęs vartotojas';
   const roleLabel = state.role === 'institution_admin' ? 'Administravimas' : 'Narys';
   container.innerHTML = `
     <div class="user-chip">
@@ -711,9 +815,9 @@ function renderVoteFloating() {
   floating.hidden = false;
   floating.innerHTML = `
     <div class="vote-floating-inner">
-      <div class="vote-floating-title">Balsu biudzetas</div>
+      <div class="vote-floating-title">Balsų biudžetas</div>
       <div class="vote-floating-count">${remaining} / ${budget}</div>
-      <div class="vote-total">${locked ? 'Ciklas uzrakintas' : 'Balsavimas aktyvus'}</div>
+      <div class="vote-total">${locked ? 'Ciklas užrakintas' : 'Balsavimas aktyvus'}</div>
     </div>
   `;
 }
@@ -722,25 +826,26 @@ function buildSummary() {
   const lines = [];
   lines.push(`Institucija: ${state.institution?.name || state.institutionSlug}`);
   lines.push(`Ciklas: ${state.cycle?.title || '-'}`);
-  lines.push(`Busena: ${state.cycle?.state || '-'}`);
+  lines.push(`Būsena: ${state.cycle?.state || '-'}`);
   lines.push('');
-  lines.push('Gaires:');
+  lines.push('Gairės:');
 
   if (!state.guidelines.length) {
-    lines.push('- Nera duomenu');
+    lines.push('- Nėra duomenų');
     return lines.join('\n');
   }
 
   state.guidelines.forEach((guideline) => {
     lines.push(`- ${guideline.title} (bendras balas: ${Number(guideline.totalScore || 0)})`);
-    lines.push(`  aprasymas: ${guideline.description || 'be paaiskinimo'}`);
-    lines.push(`  komentaru: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
+    lines.push(`  aprašymas: ${guideline.description || 'be paaiškinimo'}`);
+    lines.push(`  komentarų: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
   });
 
   return lines.join('\n');
 }
 
 function exportSummary() {
+  if (!state.institutionSlug) return;
   elements.summaryText.value = buildSummary();
   elements.exportPanel.hidden = false;
 }
@@ -772,6 +877,8 @@ function bindGlobal() {
 }
 
 function showAuthModal(initialMode) {
+  if (!state.institutionSlug) return;
+
   let overlay = document.getElementById('loginOverlay');
   if (overlay) overlay.remove();
 
@@ -781,25 +888,25 @@ function showAuthModal(initialMode) {
   overlay.innerHTML = `
     <div class="login-card">
       <div class="header-row" style="margin-bottom: 8px;">
-        <h2>${initialMode === 'invite' ? 'Kvietimo priemimas' : 'Prisijungimas'}</h2>
-        <button id="closeAuthModal" class="btn btn-ghost" type="button">Uzdaryti</button>
+        <h2>${initialMode === 'invite' ? 'Kvietimo priėmimas' : 'Prisijungimas'}</h2>
+        <button id="closeAuthModal" class="btn btn-ghost" type="button">Uždaryti</button>
       </div>
       <p class="prompt">Institucija: <strong>${escapeHtml(state.institutionSlug)}</strong></p>
       <div id="authError" class="error" style="display:none;"></div>
 
       <form id="loginForm" class="login-form">
-        <input type="text" name="email" placeholder="El. pastas" required />
-        <input type="password" name="password" placeholder="Slaptazodis" required />
+        <input type="text" name="email" placeholder="El. paštas" required />
+        <input type="password" name="password" placeholder="Slaptažodis" required />
         <button class="btn btn-primary" type="submit">Prisijungti</button>
       </form>
 
       <hr style="border: none; border-top: 1px solid #eadbc7; margin: 14px 0;">
 
       <form id="inviteForm" class="login-form">
-        <input type="text" name="token" placeholder="Kvietimo tokenas" required />
-        <input type="text" name="displayName" placeholder="Vardas ir pavarde" required />
-        <input type="password" name="password" placeholder="Sukurkite slaptazodi (min 8)" required />
-        <button class="btn btn-ghost" type="submit">Priimti kvietima</button>
+        <input type="text" name="token" placeholder="Kvietimo žetonas" required />
+        <input type="text" name="displayName" placeholder="Vardas ir pavardė" required />
+        <input type="password" name="password" placeholder="Sukurkite slaptažodį (min. 8)" required />
+        <button class="btn btn-ghost" type="submit">Priimti kvietimą</button>
       </form>
     </div>
   `;
@@ -875,9 +982,23 @@ function showAuthModal(initialMode) {
 
 function render() {
   elements.sessionName.textContent = BRAND_TITLE;
+  const hasInstitution = Boolean(state.institutionSlug);
 
   renderSteps();
+  renderIntroDeck();
+  renderInstitutionPicker();
   renderStepView();
   renderUserBar();
   renderVoteFloating();
+
+  if (elements.mainLayout) {
+    elements.mainLayout.hidden = !hasInstitution;
+  }
+  if (elements.userBar) {
+    elements.userBar.hidden = !hasInstitution;
+  }
+  if (elements.exportBtn) {
+    elements.exportBtn.disabled = !hasInstitution || state.loading || Boolean(state.error);
+  }
 }
+

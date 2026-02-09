@@ -26,16 +26,16 @@ function escapeHtml(value) {
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
-    forbidden: 'Neteisingas slaptazodis arba neleidziama operacija.',
-    'name required': 'Iveskite institucijos pavadinima.',
+    forbidden: 'Neteisingas slaptažodis arba neleidžiama operacija.',
+    'name required': 'Įveskite institucijos pavadinimą.',
     'invalid slug': 'Netinkamas slug.',
     'slug already exists': 'Toks institucijos slug jau egzistuoja.',
-    'institutionId and email required': 'Pasirinkite institucija ir ivesti el. pasta.',
-    'invalid role': 'Netinkama role.',
+    'institutionId and email required': 'Pasirinkite instituciją ir įveskite el. paštą.',
+    'invalid role': 'Netinkamas vaidmuo.',
     'userId and valid status required': 'Netinkami vartotojo statuso duomenys.',
-    'membershipId and valid status required': 'Netinkami narystes statuso duomenys.'
+    'membershipId and valid status required': 'Netinkami narystės statuso duomenys.'
   };
-  return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
+  return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
 
 async function api(path, { method = 'GET', body = null } = {}) {
@@ -128,10 +128,10 @@ function renderLogin() {
   root.innerHTML = `
     <section class="card" style="max-width: 620px; margin: 30px auto;">
       <h2 style="font-family: 'Fraunces', serif;">Meta Admin prisijungimas</h2>
-      <p class="prompt">Iveskite vienkartini slaptazodi, kad gautumete globalu priejima.</p>
+      <p class="prompt">Įveskite vienkartinį slaptažodį, kad gautumėte globalią prieigą.</p>
       ${state.error ? `<p class="error">${escapeHtml(state.error)}</p>` : ''}
       <form id="metaAdminLoginForm" class="login-form">
-        <input type="password" name="password" placeholder="Slaptazodis" required />
+        <input type="password" name="password" placeholder="Slaptažodis" required />
         <button type="submit" class="btn btn-primary">Prisijungti</button>
       </form>
     </section>
@@ -165,7 +165,7 @@ function renderLogin() {
 
 function renderUsers(users) {
   if (!users.length) {
-    return '<div class="card"><p class="prompt">Dar nera vartotoju.</p></div>';
+    return '<div class="card"><p class="prompt">Dar nėra vartotojų.</p></div>';
   }
 
   return users.map((user) => {
@@ -175,7 +175,7 @@ function renderUsers(users) {
         <span class="tag">${escapeHtml(membership.role)}</span>
         <span class="tag">${escapeHtml(membership.status)}</span>
         <button class="btn btn-ghost" data-action="toggle-membership-status" data-membership-id="${escapeHtml(membership.id)}" data-next-status="${membership.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
-          ${membership.status === 'active' ? 'Blokuoti naryste' : 'Aktyvuoti naryste'}
+          ${membership.status === 'active' ? 'Blokuoti narystę' : 'Aktyvuoti narystę'}
         </button>
       </li>
     `).join('');
@@ -189,12 +189,12 @@ function renderUsers(users) {
         <p class="prompt">${escapeHtml(user.email)}</p>
         <div class="inline-form">
           <button class="btn btn-ghost" data-action="toggle-user-status" data-user-id="${escapeHtml(user.id)}" data-next-status="${user.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
-            ${user.status === 'active' ? 'Blokuoti vartotoja' : 'Aktyvuoti vartotoja'}
+            ${user.status === 'active' ? 'Blokuoti vartotoją' : 'Aktyvuoti vartotoją'}
           </button>
         </div>
         <div class="card-section">
-          <strong>Narystes</strong>
-          <ul class="mini-list">${membershipRows || '<li>Nera narysciu.</li>'}</ul>
+          <strong>Narystės</strong>
+          <ul class="mini-list">${membershipRows || '<li>Nėra narysčių.</li>'}</ul>
         </div>
       </article>
     `;
@@ -212,7 +212,7 @@ function renderDashboard() {
         <strong>Meta Admin skydas</strong>
         <span class="tag">Globalus valdymas</span>
       </div>
-      <p class="prompt">Prieiga saugoma meta admin slaptazodziu.</p>
+      <p class="prompt">Prieiga saugoma meta admin slaptažodžiu.</p>
       <div class="inline-form">
         <button id="refreshOverviewBtn" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Atnaujinti duomenis</button>
         <button id="logoutMetaBtn" class="btn btn-ghost">Atsijungti</button>
@@ -230,19 +230,19 @@ function renderDashboard() {
           <input type="text" name="name" placeholder="Institucijos pavadinimas" required ${state.busy ? 'disabled' : ''}/>
           <input type="text" name="slug" placeholder="slug (pasirinktinai)" ${state.busy ? 'disabled' : ''}/>
         </div>
-        <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti institucija</button>
+        <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti instituciją</button>
       </form>
     </section>
 
     <section class="card" style="margin-bottom: 16px;">
       <div class="header-row">
-        <strong>Nauji zmones (invite)</strong>
+        <strong>Nauji žmonės (invite)</strong>
         <span class="tag">Invite-only</span>
       </div>
       <form id="createInviteForm">
         <div class="form-row">
           <select name="institutionId" required ${state.busy ? 'disabled' : ''}>
-            <option value="">Pasirinkite institucija</option>
+            <option value="">Pasirinkite instituciją</option>
             ${institutions.map((institution) => `<option value="${escapeHtml(institution.id)}">${escapeHtml(institution.name)} (${escapeHtml(institution.slug)})</option>`).join('')}
           </select>
           <select name="role" required ${state.busy ? 'disabled' : ''}>
@@ -251,15 +251,15 @@ function renderDashboard() {
           </select>
         </div>
         <div class="form-row">
-          <input type="text" name="email" placeholder="El. pastas" required ${state.busy ? 'disabled' : ''}/>
+          <input type="text" name="email" placeholder="El. paštas" required ${state.busy ? 'disabled' : ''}/>
         </div>
-        <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti kvietima</button>
+        <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti kvietimą</button>
       </form>
       ${state.lastInviteToken ? `
         <div class="card" style="margin-top: 12px;">
-          <strong>Naujausias invite token</strong>
+          <strong>Naujausias kvietimo žetonas</strong>
           <p class="prompt" style="word-break: break-all;">${escapeHtml(state.lastInviteToken)}</p>
-          <button id="copyInviteTokenBtn" class="btn btn-ghost">Kopijuoti tokena</button>
+          <button id="copyInviteTokenBtn" class="btn btn-ghost">Kopijuoti žetoną</button>
         </div>
       ` : ''}
     </section>
@@ -278,7 +278,7 @@ function renderDashboard() {
                 <span class="muted">${escapeHtml(invite.institutionName)} (${escapeHtml(invite.institutionSlug)})</span>
               </li>
             `).join('')
-          : '<li>Nera laukianciu kvietimu.</li>'}
+          : '<li>Nėra laukiančių kvietimų.</li>'}
       </ul>
     </section>
 
@@ -369,7 +369,7 @@ function bindDashboardEvents() {
     copyInviteTokenBtn.addEventListener('click', async () => {
       if (!state.lastInviteToken) return;
       await navigator.clipboard.writeText(state.lastInviteToken);
-      state.notice = 'Invite token nukopijuotas.';
+      state.notice = 'Kvietimo žetonas nukopijuotas.';
       render();
     });
   }
@@ -385,7 +385,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { status: nextStatus }
         });
-        state.notice = `Vartotojo statusas pakeistas i ${nextStatus}.`;
+        state.notice = `Vartotojo statusas pakeistas į ${nextStatus}.`;
         await loadOverview();
       });
     });
@@ -402,7 +402,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { status: nextStatus }
         });
-        state.notice = `Narystes statusas pakeistas i ${nextStatus}.`;
+        state.notice = `Narystės statusas pakeistas į ${nextStatus}.`;
         await loadOverview();
       });
     });
