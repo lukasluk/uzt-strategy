@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const { WebSocketServer } = require('ws');
 const { query } = require('./db');
+const { registerV1Routes } = require('./v1');
 require('dotenv').config();
 
 const app = express();
@@ -171,6 +172,8 @@ app.post('/api/admin/results', async (req, res) => {
   broadcast({ type: 'results', published: Boolean(published) });
   res.json({ ok: true });
 });
+
+registerV1Routes({ app, query, broadcast, uuid });
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
