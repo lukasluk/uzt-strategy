@@ -1,4 +1,4 @@
-﻿const steps = [
+const steps = [
   {
     id: 'guidelines',
     title: 'Gaires',
@@ -10,67 +10,21 @@
 const introSlides = [
   {
     title: '1. Kas tai per sistema',
-    body: 'Tai UZT skaitmenizacijos gairiu vertinimo ir komentavimo irankis. Kiekviena gaire vertinama atskirai, o komentarai kaupiami vienoje vietoje.'
+    body: 'Tai strategijos gairiu vertinimo ir komentavimo irankis. Kiekviena gaire vertinama atskirai, o komentarai kaupiami vienoje vietoje.'
   },
   {
     title: '2. Kaip vyksta balsavimas',
-    body: 'Kiekvienas vartotojas turi 10 balsu ir gali paskirstyti juos tarp gairiu (0-5 vienai gairei). Kaireje esantis floating blokas rodo, kiek balsu liko.'
+    body: 'Kiekvienas narys turi 10 balsu ir gali paskirstyti juos tarp gairiu (0-5 vienai gairei). Balsavimas atidaromas pagal ciklo busena.'
   },
   {
     title: '3. Kaip uzdaromas etapas',
-    body: 'Paspaudus Patvirtinti balsus, vartotojo balsai uzfiksuojami. Administravimas vyksta atskirame Admin puslapyje.'
+    body: 'Balsuoti galima iki ciklo busenos Final. Viesai rodomi tik agreguoti balsu rezultatai ir viesi komentarai.'
   }
 ];
 
-const storageKey = 'uzt-strategy-prototype';
-
-if (!crypto.randomUUID) {
-  crypto.randomUUID = () => {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0'));
-    return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
-  };
-}
-
-const guidelineSeed = [
-  { title: 'High quality products and services', desc: 'Klientu pasitenkinimo lygio matavimas NPS.', featured: true },
-  { title: 'AI with purpose', desc: 'DI sprendimai itraukiami i procesus tik ivertinus ju nauda.', featured: true },
-  { title: 'Data governance', desc: 'Duomenu valdymas uztikrina kokybe ir prieinamuma.', featured: true },
-  { title: 'Coherence (SADM, VSSA, VDA, NKSC)', desc: 'Suderinamumas su platesniu kontekstu.' },
-  { title: 'Robust IT infrastructure', desc: 'Patikima ir saugi IT infrastruktura.' },
-  { title: 'Simplicity', desc: 'Priimami kuo paprastesni ir elegantiski technologiniai sprendimai.' },
-  { title: 'EU centric', desc: 'Prioritetizuojami EU sukurti sprendimai.' },
-  { title: 'SME Leadership', desc: 'Veiklos specialistu itraukimas i sprendimu priemima.' },
-  { title: 'PES network', desc: 'PES tinklo isnaudojimas ir dalinimasis IT ziniomis.' },
-  { title: 'Inhouse development', desc: 'Balansas tarp perkamu ir savadarbiu sprendimu.' },
-  { title: 'Security', desc: 'Saugumui skiriama ypac didele svarba.' },
-  { title: 'Modern workstation', desc: 'Moderni darbo vieta ir iranga.' }
-];
-
-const defaultData = {
-  sessionName: 'UZT Skaitmenizacijos Strategija',
-  currentStep: 'guidelines',
-  guideSlideIndex: 0,
-  guidelineBudget: 10,
-  currentUser: null,
-  users: [],
-  blockedUsers: {},
-  submittedUsers: {},
-  resultsPublished: false,
-  cards: {
-    guidelines: guidelineSeed.map((item) => ({
-      id: crypto.randomUUID(),
-      title: item.title,
-      desc: item.desc,
-      featured: Boolean(item.featured),
-      comments: [],
-      votesByUser: {}
-    }))
-  }
-};
+const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
+const DEFAULT_INSTITUTION_SLUG = 'uzt';
+const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -80,67 +34,295 @@ const elements = {
   summaryText: document.getElementById('summaryText')
 };
 
-let data = load();
-let loginError = '';
+const state = {
+  institutionSlug: resolveInstitutionSlug(),
+  guideSlideIndex: 0,
+  loading: false,
+  busy: false,
+  error: '',
+  notice: '',
+  institution: null,
+  cycle: null,
+  summary: null,
+  guidelines: [],
+  token: null,
+  user: null,
+  role: null,
+  context: null,
+  userVotes: {}
+};
 
-function load() {
-  const raw = localStorage.getItem(storageKey);
-  if (!raw) return structuredClone(defaultData);
+hydrateAuthFromStorage();
+bindGlobal();
+bootstrap();
+
+function resolveInstitutionSlug() {
+  const params = new URLSearchParams(window.location.search);
+  const querySlug = normalizeSlug(params.get('institution'));
+  if (querySlug) return querySlug;
+
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  if (!parts.length) return DEFAULT_INSTITUTION_SLUG;
+
+  const last = parts[parts.length - 1];
+  if (last === 'index.html') {
+    return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG;
+  }
+  if (last === 'admin.html') {
+    return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG;
+  }
+  return normalizeSlug(last) || DEFAULT_INSTITUTION_SLUG;
+}
+
+function normalizeSlug(value) {
+  const slug = String(value || '').trim().toLowerCase();
+  if (!slug) return '';
+  return /^[a-z0-9-]+$/.test(slug) ? slug : '';
+}
+
+function hydrateAuthFromStorage() {
+  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) return;
   try {
     const parsed = JSON.parse(raw);
-    const merged = {
-      ...structuredClone(defaultData),
-      ...parsed,
-      cards: {
-        ...structuredClone(defaultData.cards),
-        ...parsed.cards
-      }
-    };
-    if (!merged.cards.guidelines || merged.cards.guidelines.length === 0) {
-      merged.cards.guidelines = structuredClone(defaultData.cards.guidelines);
-    }
-    merged.cards.guidelines = merged.cards.guidelines.map((g) => {
-      const copy = { ...g };
-      if ('tags' in copy) delete copy.tags;
-      return copy;
-    });
-    if (!Array.isArray(merged.users)) merged.users = [];
-    if (!merged.blockedUsers || typeof merged.blockedUsers !== 'object') merged.blockedUsers = {};
-    if (!merged.submittedUsers || typeof merged.submittedUsers !== 'object') merged.submittedUsers = {};
-    return merged;
+    if (!parsed || parsed.slug !== state.institutionSlug || !parsed.token) return;
+    state.token = parsed.token;
+    state.user = parsed.user || null;
+    state.role = parsed.role || null;
   } catch {
-    return structuredClone(defaultData);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   }
 }
 
-function save() {
-  localStorage.setItem(storageKey, JSON.stringify(data));
+function persistAuthToStorage() {
+  if (!state.token) {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    return;
+  }
+  localStorage.setItem(
+    AUTH_STORAGE_KEY,
+    JSON.stringify({
+      slug: state.institutionSlug,
+      token: state.token,
+      user: state.user,
+      role: state.role
+    })
+  );
 }
 
-function currentUserKey() {
-  return data.currentUser?.name?.trim() || '';
+function clearSession() {
+  state.token = null;
+  state.user = null;
+  state.role = null;
+  state.context = null;
+  state.userVotes = {};
+  localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
-function setStep(stepId) {
-  data.currentStep = stepId;
-  save();
+function setSession(payload) {
+  state.token = payload.token || null;
+  state.user = payload.user || null;
+  state.role = payload.role || null;
+  persistAuthToStorage();
+}
+
+function isLoggedIn() {
+  return Boolean(state.token && state.context);
+}
+
+function cycleIsWritable() {
+  return WRITABLE_CYCLE_STATES.has(String(state.cycle?.state || '').toLowerCase());
+}
+
+function voteBudget() {
+  return Number(state.context?.rules?.voteBudget || 10);
+}
+
+function minPerGuideline() {
+  return Number(state.context?.rules?.minPerGuideline ?? 0);
+}
+
+function maxPerGuideline() {
+  return Number(state.context?.rules?.maxPerGuideline ?? 5);
+}
+
+function usedVotesTotal() {
+  return Object.values(state.userVotes).reduce((sum, value) => sum + Number(value || 0), 0);
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function toUserMessage(error) {
+  const raw = String(error?.message || error || '').trim();
+  const map = {
+    unauthorized: 'Reikia prisijungti.',
+    'invalid token': 'Sesija nebegalioja. Prisijunkite is naujo.',
+    'institution not found': `Institucija "${state.institutionSlug}" nerasta.`,
+    'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
+    'cycle not writable': 'Ciklas nebeleidzia redaguoti (tik skaitymas).',
+    'vote budget exceeded': 'Virsytas balsu biudzetas.',
+    forbidden: 'Veiksmas neleidziamas.',
+    'membership inactive': 'Naryste neaktyvi.',
+    'invalid credentials': 'Neteisingi prisijungimo duomenys.',
+    'invite not found': 'Kvietimas nerastas.',
+    'invite expired': 'Kvietimas nebegalioja.',
+    'invite revoked': 'Kvietimas atsauktas.',
+    'invite already used': 'Kvietimas jau panaudotas.',
+    'guidelineId and score(0..5) required': 'Balsas turi buti tarp 0 ir 5.',
+    'name required': 'Nurodykite pavadinima.',
+    'token and displayName required': 'Nurodykite kvietimo tokena ir varda.'
+  };
+  return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
+}
+
+async function api(path, { method = 'GET', body = null, auth = true } = {}) {
+  const headers = {};
+  if (body !== null) headers['Content-Type'] = 'application/json';
+  if (auth) {
+    if (!state.token) throw new Error('unauthorized');
+    headers.Authorization = `Bearer ${state.token}`;
+  }
+
+  const response = await fetch(path, {
+    method,
+    headers,
+    body: body !== null ? JSON.stringify(body) : undefined
+  });
+
+  const raw = await response.text();
+  let payload = null;
+  if (raw) {
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `HTTP ${response.status}`);
+  }
+  return payload || {};
+}
+
+async function loadPublicData() {
+  const base = `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current`;
+  const [summaryPayload, guidelinesPayload] = await Promise.all([
+    api(`${base}/summary`, { auth: false }),
+    api(`${base}/guidelines`, { auth: false })
+  ]);
+
+  state.institution = guidelinesPayload.institution || summaryPayload.institution || null;
+  state.cycle = guidelinesPayload.cycle || summaryPayload.cycle || null;
+  state.summary = summaryPayload.summary || null;
+  state.guidelines = Array.isArray(guidelinesPayload.guidelines) ? guidelinesPayload.guidelines : [];
+}
+
+async function refreshGuidelines() {
+  const payload = await api(
+    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/guidelines`,
+    { auth: false }
+  );
+  state.institution = payload.institution || state.institution;
+  state.cycle = payload.cycle || state.cycle;
+  state.guidelines = Array.isArray(payload.guidelines) ? payload.guidelines : [];
+}
+
+async function refreshSummary() {
+  const payload = await api(
+    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/summary`,
+    { auth: false }
+  );
+  state.summary = payload.summary || state.summary;
+}
+
+async function loadMemberContext() {
+  const context = await api('/api/v1/me/context');
+  if (!context?.institution?.slug) throw new Error('Nepavyko gauti naudotojo konteksto.');
+
+  if (context.institution.slug !== state.institutionSlug) {
+    clearSession();
+    throw new Error(`Prisijungimas priklauso institucijai "${context.institution.slug}".`);
+  }
+
+  state.context = context;
+  state.role = context.membership?.role || state.role || 'member';
+  state.user = state.user || context.user || null;
+
+  if (context.cycle?.id) {
+    const votesPayload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycle.id)}/my-votes`);
+    const nextVotes = {};
+    (votesPayload.votes || []).forEach((vote) => {
+      nextVotes[vote.guidelineId] = Number(vote.score || 0);
+    });
+    state.userVotes = nextVotes;
+  } else {
+    state.userVotes = {};
+  }
+}
+
+async function bootstrap() {
+  state.loading = true;
+  state.error = '';
   render();
+
+  try {
+    await loadPublicData();
+    if (state.token) {
+      try {
+        await loadMemberContext();
+      } catch (error) {
+        clearSession();
+        throw error;
+      }
+    }
+  } catch (error) {
+    state.error = toUserMessage(error);
+  } finally {
+    state.loading = false;
+    render();
+  }
+}
+
+async function runBusy(task) {
+  if (state.busy) return;
+  state.busy = true;
+  state.notice = '';
+  render();
+  try {
+    await task();
+  } catch (error) {
+    state.notice = toUserMessage(error);
+  } finally {
+    state.busy = false;
+    render();
+  }
 }
 
 function renderSteps() {
   elements.steps.innerHTML = '';
   steps.forEach((step) => {
     const pill = document.createElement('button');
-    pill.className = 'step-pill' + (data.currentStep === step.id ? ' active' : '');
-    pill.innerHTML = `<h4>${step.title}</h4><p>${step.hint}</p>`;
-    pill.addEventListener('click', () => setStep(step.id));
+    pill.className = 'step-pill' + (step.id === 'guidelines' ? ' active' : '');
+    pill.innerHTML = `<h4>${escapeHtml(step.title)}</h4><p>${escapeHtml(step.hint)}</p>`;
     elements.steps.appendChild(pill);
   });
 
   const adminLink = document.createElement('a');
   adminLink.className = 'step-pill admin-pill';
-  adminLink.href = 'admin.html';
-  adminLink.innerHTML = '<h4>Admin</h4><p>Atskiras administravimo puslapis</p>';
+  adminLink.href = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}`;
+  adminLink.innerHTML = '<h4>Admin</h4><p>Kvietimai, ciklas, rezultatai</p>';
   elements.steps.appendChild(adminLink);
 }
 
@@ -181,308 +363,313 @@ function renderSlideIllustration(index) {
   `;
 }
 
-function renderStepView() {
-  const cards = data.cards.guidelines;
-  const userKey = currentUserKey();
-  const budget = data.guidelineBudget || 10;
-  const used = userKey ? cards.reduce((sum, card) => sum + (card.votesByUser?.[userKey] || 0), 0) : 0;
-  const remaining = Math.max(0, budget - used);
-  const slideIndex = Math.min(introSlides.length - 1, data.guideSlideIndex || 0);
-  const slide = introSlides[slideIndex];
+function renderGuidelineCard(guideline, options) {
+  const userScore = Number(state.userVotes[guideline.id] || 0);
+  const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
+  const safeComments = comments.length
+    ? comments.map((comment) => `<li>${escapeHtml(comment.body || '')}</li>`).join('')
+    : '<li>Dar nera komentaru.</li>';
 
-  elements.stepView.innerHTML = `
-    <div class="step-header">
-      <h2>Gaires</h2>
-      <div class="header-stack">
-        <span class="tag">Tavo balsai: ${remaining} / ${budget}</span>
-        ${data.resultsPublished ? '<span class="tag tag-main">Rezultatai paskelbti</span>' : ''}
-      </div>
-    </div>
-    <p class="prompt">Kur link judesime ir kokia nauda kursime?</p>
-
-    <div class="card intro-card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>${slide.title}</strong>
-        <span class="tag">Skaidre ${slideIndex + 1} / ${introSlides.length}</span>
-      </div>
-      ${renderSlideIllustration(slideIndex)}
-      <p class="prompt" style="margin-bottom: 10px;">${slide.body}</p>
-      <div class="slide-controls">
-        <button id="slidePrev" class="slide-nav" aria-label="Ankstesne skaidre" ${slideIndex === 0 ? 'disabled' : ''}>‹</button>
-        <div class="slide-dots">
-          ${introSlides.map((_, idx) => `<button class="slide-dot ${idx === slideIndex ? 'active' : ''}" data-action="goto-slide" data-index="${idx}" aria-label="Skaidre ${idx + 1}"></button>`).join('')}
-        </div>
-        <button id="slideNext" class="slide-nav" aria-label="Kita skaidre" ${slideIndex === introSlides.length - 1 ? 'disabled' : ''}>›</button>
-      </div>
-    </div>
-
-    <div class="card-list">
-      ${cards.map((card) => renderGuidelineCard(card)).join('')}
-    </div>
-
-    <div class="card" style="margin-top: 16px;">
-      <div class="header-row">
-        <strong>Nauja gaire</strong>
-        <span class="tag">Siulymas</span>
-      </div>
-      <p class="prompt" style="margin-bottom: 10px;">Siulykite papildomas gaires, kurios turetu buti itrauktos.</p>
-      <form id="guidelineAddForm">
-        <div class="form-row">
-          <input type="text" name="title" placeholder="Gaires pavadinimas" required />
-        </div>
-        <textarea name="desc" placeholder="Trumpas paaiskinimas"></textarea>
-        <button class="btn btn-primary" type="submit" style="margin-top: 12px;">Prideti gaire</button>
-      </form>
-    </div>
-  `;
-
-  bindGuidelinesEvents();
-}
-
-function renderGuidelineCard(card) {
-  const userKey = currentUserKey();
-  const userScore = userKey ? card.votesByUser?.[userKey] || 0 : 0;
-  const isLocked = userKey ? Boolean(data.submittedUsers[userKey]) : false;
-  const totalScore = Object.values(card.votesByUser || {}).reduce((sum, value) => sum + value, 0);
-  const comments = (card.comments || []).map((item) => `<li>${item}</li>`).join('');
-  const voteBreakdown = data.resultsPublished
-    ? `<ul class="mini-list">${Object.entries(card.votesByUser || {}).map(([name, score]) => `<li>${name}: ${score}</li>`).join('') || '<li>Nera balsu.</li>'}</ul>`
-    : '';
+  const budget = voteBudget();
+  const usedWithoutCurrent = usedVotesTotal() - userScore;
+  const maxAllowed = clamp(
+    Math.min(maxPerGuideline(), budget - usedWithoutCurrent),
+    minPerGuideline(),
+    maxPerGuideline()
+  );
+  const canMinus = options.member && options.writable && !state.busy && userScore > minPerGuideline();
+  const canPlus = options.member && options.writable && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card ${card.featured ? 'featured' : ''}">
+    <article class="card">
       <div class="card-title">
         <div>
           <div class="title-row">
-            <h4>${card.title}</h4>
-            ${card.featured ? '<span class="tag tag-main">Pagrindine</span>' : ''}
+            <h4>${escapeHtml(guideline.title)}</h4>
+            <span class="tag">Balsuotoju: ${Number(guideline.voterCount || 0)}</span>
           </div>
-          <p>${card.desc || 'Be paaiskinimo'}</p>
+          <p>${escapeHtml(guideline.description || 'Be paaiskinimo')}</p>
         </div>
-        <div class="vote-panel">
-          <span class="vote-label">Tavo balas</span>
-          <div class="vote-controls">
-            <button class="vote-btn" data-action="vote-minus" data-id="${card.id}" ${(userScore <= 0 || isLocked) ? 'disabled' : ''}>-</button>
-            <span class="vote-score">${userScore}</span>
-            <button class="vote-btn" data-action="vote-plus" data-id="${card.id}" ${(userScore >= 5 || isLocked) ? 'disabled' : ''}>+</button>
+        ${options.member ? `
+          <div class="vote-panel">
+            <span class="vote-label">Tavo balas</span>
+            <div class="vote-controls">
+              <button class="vote-btn" data-action="vote-minus" data-id="${escapeHtml(guideline.id)}" ${canMinus ? '' : 'disabled'}>-</button>
+              <span class="vote-score">${userScore}</span>
+              <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" ${canPlus ? '' : 'disabled'}>+</button>
+            </div>
+            <div class="vote-total">Bendras balas: <strong>${Number(guideline.totalScore || 0)}</strong></div>
           </div>
-          ${isLocked ? '<div class="vote-total"><strong>Balsai patvirtinti</strong></div>' : ''}
-          ${data.resultsPublished ? `<div class="vote-total">Bendras balas: <strong>${totalScore}</strong></div>` : ''}
-        </div>
+        ` : `
+          <div class="vote-panel">
+            <span class="vote-label">Viesas rezimas</span>
+            <div class="vote-total"><strong>Bendras balas: ${Number(guideline.totalScore || 0)}</strong></div>
+            <div class="vote-total">Rodomi tik agreguoti duomenys</div>
+          </div>
+        `}
       </div>
-      ${data.resultsPublished ? `<div class="card-section"><strong>Visu balsai</strong>${voteBreakdown}</div>` : ''}
       <div class="card-section">
         <strong>Komentarai</strong>
-        <ul class="mini-list">${comments || '<li>Dar nera komentaru.</li>'}</ul>
-        <form data-action="comment" data-id="${card.id}" class="inline-form">
-          <input type="text" name="comment" placeholder="Irasykite komentara" required />
-          <button class="btn btn-ghost" type="submit">Prideti</button>
-        </form>
+        <ul class="mini-list">${safeComments}</ul>
+        ${options.member && options.writable ? `
+          <form data-action="comment" data-id="${escapeHtml(guideline.id)}" class="inline-form">
+            <input type="text" name="comment" placeholder="Irasykite komentara" required ${state.busy ? 'disabled' : ''}/>
+            <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Prideti</button>
+          </form>
+        ` : '<p class="prompt" style="margin: 8px 0 0;">Viesai rodomi komentarai. Prisijunkite, jei norite komentuoti.</p>'}
       </div>
     </article>
   `;
 }
 
-function bindGuidelinesEvents() {
-  const addForm = elements.stepView.querySelector('#guidelineAddForm');
-  const list = elements.stepView.querySelector('.card-list');
+function renderStepView() {
+  if (state.loading) {
+    elements.stepView.innerHTML = '<div class="card"><strong>Kraunami duomenys...</strong></div>';
+    return;
+  }
+
+  if (state.error) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Nepavyko ikelti duomenu</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar karta</button>
+      </div>
+    `;
+    const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
+    if (retryBtn) retryBtn.addEventListener('click', bootstrap);
+    return;
+  }
+
+  const member = isLoggedIn();
+  const writable = member && cycleIsWritable();
+  const budget = voteBudget();
+  const used = member ? usedVotesTotal() : 0;
+  const remaining = Math.max(0, budget - used);
+  const slideIndex = clamp(state.guideSlideIndex || 0, 0, introSlides.length - 1);
+  const slide = introSlides[slideIndex];
+
+  const stats = [
+    `Busena: ${String(state.cycle?.state || '-').toUpperCase()}`,
+    `Gaires: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
+    `Komentarai: ${Number(state.summary?.comments_count || 0)}`,
+    `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
+  ];
+
+  elements.stepView.innerHTML = `
+    <div class="step-header">
+      <h2>Gaires</h2>
+      <div class="header-stack">
+        <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
+        ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viesas rezimas</span>'}
+      </div>
+    </div>
+    <p class="prompt">${escapeHtml(steps[0].prompt)}</p>
+    ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
+
+    <div class="header-stack" style="margin-bottom: 14px;">
+      ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
+    </div>
+
+    <div class="card intro-card" style="margin-bottom: 16px;">
+      <div class="header-row">
+        <strong>${escapeHtml(slide.title)}</strong>
+        <span class="tag">Skaidre ${slideIndex + 1} / ${introSlides.length}</span>
+      </div>
+      ${renderSlideIllustration(slideIndex)}
+      <p class="prompt" style="margin-bottom: 10px;">${escapeHtml(slide.body)}</p>
+      <div class="slide-controls">
+        <button id="slidePrev" class="slide-nav" aria-label="Ankstesne skaidre" ${slideIndex === 0 ? 'disabled' : ''}>&lt;</button>
+        <div class="slide-dots">
+          ${introSlides.map((_, idx) => `<button class="slide-dot ${idx === slideIndex ? 'active' : ''}" data-action="goto-slide" data-index="${idx}" aria-label="Skaidre ${idx + 1}"></button>`).join('')}
+        </div>
+        <button id="slideNext" class="slide-nav" aria-label="Kita skaidre" ${slideIndex === introSlides.length - 1 ? 'disabled' : ''}>&gt;</button>
+      </div>
+    </div>
+
+    <div class="card-list">
+      ${state.guidelines.map((guideline) => renderGuidelineCard(guideline, { member, writable })).join('')}
+    </div>
+
+    ${member ? (writable ? `
+      <div class="card" style="margin-top: 16px;">
+        <div class="header-row">
+          <strong>Nauja gaire</strong>
+          <span class="tag">Siulymas</span>
+        </div>
+        <p class="prompt" style="margin-bottom: 10px;">Siulykite papildomas gaires, kurios turetu buti itrauktos.</p>
+        <form id="guidelineAddForm">
+          <div class="form-row">
+            <input type="text" name="title" placeholder="Gaires pavadinimas" required ${state.busy ? 'disabled' : ''}/>
+          </div>
+          <textarea name="desc" placeholder="Trumpas paaiskinimas" ${state.busy ? 'disabled' : ''}></textarea>
+          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Prideti gaire</button>
+        </form>
+      </div>
+    ` : `
+      <div class="card" style="margin-top: 16px;">
+        <strong>Ciklas uzrakintas redagavimui</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Balsuoti ir komentuoti galima tik kai ciklo busena yra Open arba Review.</p>
+      </div>
+    `) : `
+      <div class="card" style="margin-top: 16px;">
+        <strong>Prisijunkite, kad galetumete aktyviai dalyvauti</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Viesai matomi visi komentarai prie strategijos gairiu. Prisijungus galima siulyti gaires, komentuoti ir balsuoti.</p>
+        <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
+      </div>
+    `}
+  `;
+
+  bindStepEvents();
+}
+
+function bindStepEvents() {
   const slidePrev = elements.stepView.querySelector('#slidePrev');
   const slideNext = elements.stepView.querySelector('#slideNext');
+  const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
+  const guidelineForm = elements.stepView.querySelector('#guidelineAddForm');
+  const list = elements.stepView.querySelector('.card-list');
 
   if (slidePrev) {
     slidePrev.addEventListener('click', () => {
-      data.guideSlideIndex = Math.max(0, (data.guideSlideIndex || 0) - 1);
-      save();
-      render();
+      state.guideSlideIndex = clamp(state.guideSlideIndex - 1, 0, introSlides.length - 1);
+      renderStepView();
     });
   }
-
   if (slideNext) {
     slideNext.addEventListener('click', () => {
-      data.guideSlideIndex = Math.min(introSlides.length - 1, (data.guideSlideIndex || 0) + 1);
-      save();
-      render();
+      state.guideSlideIndex = clamp(state.guideSlideIndex + 1, 0, introSlides.length - 1);
+      renderStepView();
+    });
+  }
+  elements.stepView.querySelectorAll('[data-action="goto-slide"]').forEach((dot) => {
+    dot.addEventListener('click', () => {
+      const idx = Number(dot.dataset.index);
+      if (!Number.isInteger(idx)) return;
+      state.guideSlideIndex = clamp(idx, 0, introSlides.length - 1);
+      renderStepView();
+    });
+  });
+
+  if (openAuthFromStep) {
+    openAuthFromStep.addEventListener('click', () => showAuthModal('login'));
+  }
+
+  if (guidelineForm) {
+    guidelineForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fd = new FormData(guidelineForm);
+      const title = String(fd.get('title') || '').trim();
+      const description = String(fd.get('desc') || '').trim();
+      if (!title) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/guidelines`, {
+          method: 'POST',
+          body: { title, description }
+        });
+        await Promise.all([refreshGuidelines(), refreshSummary()]);
+      });
     });
   }
 
-  elements.stepView.querySelectorAll('[data-action="goto-slide"]').forEach((el) => {
-    el.addEventListener('click', () => {
-      const idx = Number(el.dataset.index);
-      if (!Number.isInteger(idx)) return;
-      data.guideSlideIndex = Math.max(0, Math.min(introSlides.length - 1, idx));
-      save();
-      render();
+  if (list) {
+    list.addEventListener('click', async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const action = target.dataset.action;
+      const guidelineId = target.dataset.id;
+      if (!action || !guidelineId) return;
+
+      if (action === 'vote-plus' || action === 'vote-minus') {
+        const delta = action === 'vote-plus' ? 1 : -1;
+        await runBusy(async () => {
+          await changeVote(guidelineId, delta);
+        });
+      }
     });
-  });
 
-  addForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const formData = new FormData(addForm);
-    const title = String(formData.get('title') || '').trim();
-    if (!title) return;
-    data.cards.guidelines.push({
-      id: crypto.randomUUID(),
-      title,
-      desc: String(formData.get('desc') || '').trim(),
-      featured: false,
-      comments: [],
-      votesByUser: {}
+    list.addEventListener('submit', async (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      if (form.dataset.action !== 'comment') return;
+      event.preventDefault();
+
+      const guidelineId = form.dataset.id;
+      const value = String(new FormData(form).get('comment') || '').trim();
+      if (!guidelineId || !value) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/guidelines/${encodeURIComponent(guidelineId)}/comments`, {
+          method: 'POST',
+          body: { body: value }
+        });
+        await Promise.all([refreshGuidelines(), refreshSummary()]);
+      });
     });
-    save();
-    render();
-  });
-
-  list.addEventListener('click', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    const action = target.dataset.action;
-    const id = target.dataset.id;
-    if (!action || !id) return;
-    if (action === 'vote-plus' || action === 'vote-minus') {
-      updateVote(id, action === 'vote-plus' ? 1 : -1);
-    }
-  });
-
-  list.addEventListener('submit', (event) => {
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    const action = form.dataset.action;
-    const id = form.dataset.id;
-    if (action !== 'comment' || !id) return;
-    event.preventDefault();
-
-    const formData = new FormData(form);
-    const value = String(formData.get('comment') || '').trim();
-    if (!value) return;
-
-    const card = data.cards.guidelines.find((item) => item.id === id);
-    if (!card) return;
-    card.comments = card.comments || [];
-    card.comments.push(`${currentUserKey()}: ${value}`);
-    save();
-    render();
-  });
+  }
 }
 
-function updateVote(cardId, delta) {
-  const userKey = currentUserKey();
-  if (!userKey) return;
-  if (data.submittedUsers[userKey]) return;
+async function changeVote(guidelineId, delta) {
+  if (!isLoggedIn()) throw new Error('unauthorized');
+  if (!cycleIsWritable()) throw new Error('cycle not writable');
 
-  const card = data.cards.guidelines.find((item) => item.id === cardId);
-  if (!card) return;
+  const current = Number(state.userVotes[guidelineId] || 0);
+  const usedWithoutCurrent = usedVotesTotal() - current;
+  const maxAllowed = clamp(
+    Math.min(maxPerGuideline(), voteBudget() - usedWithoutCurrent),
+    minPerGuideline(),
+    maxPerGuideline()
+  );
+  const next = clamp(current + delta, minPerGuideline(), maxAllowed);
+  if (next === current) return;
 
-  const current = card.votesByUser?.[userKey] || 0;
-  const budget = data.guidelineBudget || 10;
-  const totalExcluding = data.cards.guidelines.reduce((sum, item) => {
-    if (item.id === cardId) return sum;
-    return sum + (item.votesByUser?.[userKey] || 0);
-  }, 0);
-  const maxAllowed = Math.min(5, budget - totalExcluding);
-  const next = Math.min(maxAllowed, Math.max(0, current + delta));
-
-  card.votesByUser = card.votesByUser || {};
-  card.votesByUser[userKey] = next;
-  save();
-  render();
-}
-
-function buildSummary() {
-  let text = `Strategija: ${data.sessionName}\n\nGaires\n`;
-  const cards = data.cards.guidelines;
-  if (!cards.length) return `${text}- (nera irasu)\n`;
-
-  cards.forEach((card) => {
-    const total = Object.values(card.votesByUser || {}).reduce((sum, value) => sum + value, 0);
-    const votes = data.resultsPublished ? `, bendras balas: ${total}` : '';
-    const comments = (card.comments || []).join(' | ') || '-';
-    text += `- ${card.title}: ${card.desc || 'be paaiskinimo'}${votes}\n  komentarai: ${comments}\n`;
+  const response = await api(`/api/v1/guidelines/${encodeURIComponent(guidelineId)}/vote`, {
+    method: 'PUT',
+    body: { score: next }
   });
-
-  return text;
-}
-
-function exportSummary() {
-  elements.summaryText.value = buildSummary();
-  elements.exportPanel.hidden = false;
-}
-
-function downloadJson() {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'uzt-strategy.json';
-  link.click();
-  URL.revokeObjectURL(link.href);
+  state.userVotes[guidelineId] = Number(response.score || next);
+  await Promise.all([refreshGuidelines(), refreshSummary()]);
 }
 
 function renderUserBar() {
   const container = document.getElementById('userBar');
   if (!container) return;
-  if (!data.currentUser) {
-    container.innerHTML = '';
+
+  if (!isLoggedIn()) {
+    container.innerHTML = `
+      <div class="user-chip">
+        <span>Viesas rezimas</span>
+        <span class="tag">Skaitymas</span>
+      </div>
+      <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
+    `;
+    const openBtn = container.querySelector('#openAuthBtn');
+    if (openBtn) openBtn.addEventListener('click', () => showAuthModal('login'));
     return;
   }
 
+  const displayName = state.user?.displayName || state.user?.email || 'Prisijunges vartotojas';
+  const roleLabel = state.role === 'institution_admin' ? 'Administravimas' : 'Narys';
   container.innerHTML = `
     <div class="user-chip">
-      <span>${data.currentUser.name}</span>
-      <span class="tag">Vartotojas</span>
+      <span>${escapeHtml(displayName)}</span>
+      <span class="tag">${escapeHtml(roleLabel)}</span>
     </div>
-    <button id="switchUser" class="btn btn-ghost">Keisti vartotoja</button>
+    ${state.role === 'institution_admin'
+      ? `<a href="admin.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Admin</a>`
+      : ''}
+    <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
   `;
 
-  container.querySelector('#switchUser').addEventListener('click', () => {
-    data.currentUser = null;
-    save();
-    render();
-  });
-}
-
-function renderLoginOverlay() {
-  let overlay = document.getElementById('loginOverlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'loginOverlay';
-    overlay.className = 'login-overlay';
-    document.body.appendChild(overlay);
+  const logoutBtn = container.querySelector('#logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      clearSession();
+      bootstrap();
+    });
   }
-
-  if (data.currentUser) {
-    overlay.hidden = true;
-    return;
-  }
-
-  overlay.hidden = false;
-  overlay.innerHTML = `
-    <div class="login-card">
-      <h2>Prisijungimas</h2>
-      <p class="prompt">Iveskite varda, kad galetumete balsuoti.</p>
-      <form id="loginForm" class="login-form">
-        <input type="text" name="name" placeholder="Vardas ir pavarde" required />
-        ${loginError ? `<div class="error">${loginError}</div>` : ''}
-        <button class="btn btn-primary" type="submit">Prisijungti</button>
-      </form>
-    </div>
-  `;
-
-  overlay.querySelector('#loginForm').addEventListener('submit', (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const name = String(formData.get('name') || '').trim();
-    if (!name) return;
-    if (data.blockedUsers[name]) {
-      loginError = 'Sis vartotojas uzblokuotas administratoriaus.';
-      render();
-      return;
-    }
-
-    data.currentUser = { name, role: 'user' };
-    if (!data.users.includes(name)) data.users.push(name);
-    loginError = '';
-    save();
-    render();
-  });
 }
 
 function renderVoteFloating() {
@@ -494,45 +681,70 @@ function renderVoteFloating() {
     document.body.appendChild(floating);
   }
 
-  const userKey = currentUserKey();
-  if (!userKey) {
+  if (!isLoggedIn()) {
     floating.hidden = true;
     return;
   }
 
-  const budget = data.guidelineBudget || 10;
-  const used = data.cards.guidelines.reduce((sum, card) => sum + (card.votesByUser?.[userKey] || 0), 0);
+  const budget = voteBudget();
+  const used = usedVotesTotal();
   const remaining = Math.max(0, budget - used);
-  const isLocked = Boolean(data.submittedUsers[userKey]);
+  const locked = !cycleIsWritable();
 
   floating.hidden = false;
   floating.innerHTML = `
     <div class="vote-floating-inner">
-      <div class="vote-floating-title">Liko balsu</div>
+      <div class="vote-floating-title">Balsu biudzetas</div>
       <div class="vote-floating-count">${remaining} / ${budget}</div>
-      <button id="confirmVotesBtn" class="btn btn-primary" ${isLocked ? 'disabled' : ''}>
-        ${isLocked ? 'Balsai patvirtinti' : 'Patvirtinti balsus'}
-      </button>
+      <div class="vote-total">${locked ? 'Ciklas uzrakintas' : 'Balsavimas aktyvus'}</div>
     </div>
   `;
+}
 
-  const confirmBtn = floating.querySelector('#confirmVotesBtn');
-  if (confirmBtn && !isLocked) {
-    confirmBtn.addEventListener('click', () => {
-      data.submittedUsers[userKey] = new Date().toISOString();
-      save();
-      render();
-    });
+function buildSummary() {
+  const lines = [];
+  lines.push(`Institucija: ${state.institution?.name || state.institutionSlug}`);
+  lines.push(`Ciklas: ${state.cycle?.title || '-'}`);
+  lines.push(`Busena: ${state.cycle?.state || '-'}`);
+  lines.push('');
+  lines.push('Gaires:');
+
+  if (!state.guidelines.length) {
+    lines.push('- Nera duomenu');
+    return lines.join('\n');
   }
+
+  state.guidelines.forEach((guideline) => {
+    lines.push(`- ${guideline.title} (bendras balas: ${Number(guideline.totalScore || 0)})`);
+    lines.push(`  aprasymas: ${guideline.description || 'be paaiskinimo'}`);
+    lines.push(`  komentaru: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
+  });
+
+  return lines.join('\n');
+}
+
+function exportSummary() {
+  elements.summaryText.value = buildSummary();
+  elements.exportPanel.hidden = false;
+}
+
+function downloadJson() {
+  const payload = {
+    institution: state.institution,
+    cycle: state.cycle,
+    summary: state.summary,
+    guidelines: state.guidelines
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `strategy-${state.institutionSlug}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 function bindGlobal() {
-  elements.exportPanel.hidden = true;
-
-  elements.sessionName.addEventListener('input', (event) => {
-    data.sessionName = event.target.value;
-    save();
-  });
+  elements.sessionName.readOnly = true;
 
   document.getElementById('exportBtn').addEventListener('click', exportSummary);
   document.getElementById('closeExport').addEventListener('click', () => {
@@ -544,13 +756,114 @@ function bindGlobal() {
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
 }
 
+function showAuthModal(initialMode) {
+  let overlay = document.getElementById('loginOverlay');
+  if (overlay) overlay.remove();
+
+  overlay = document.createElement('div');
+  overlay.id = 'loginOverlay';
+  overlay.className = 'login-overlay';
+  overlay.innerHTML = `
+    <div class="login-card">
+      <div class="header-row" style="margin-bottom: 8px;">
+        <h2>${initialMode === 'invite' ? 'Kvietimo priemimas' : 'Prisijungimas'}</h2>
+        <button id="closeAuthModal" class="btn btn-ghost" type="button">Uzdaryti</button>
+      </div>
+      <p class="prompt">Institucija: <strong>${escapeHtml(state.institutionSlug)}</strong></p>
+      <div id="authError" class="error" style="display:none;"></div>
+
+      <form id="loginForm" class="login-form">
+        <input type="text" name="email" placeholder="El. pastas" required />
+        <input type="password" name="password" placeholder="Slaptazodis" required />
+        <button class="btn btn-primary" type="submit">Prisijungti</button>
+      </form>
+
+      <hr style="border: none; border-top: 1px solid #eadbc7; margin: 14px 0;">
+
+      <form id="inviteForm" class="login-form">
+        <input type="text" name="token" placeholder="Kvietimo tokenas" required />
+        <input type="text" name="displayName" placeholder="Vardas ir pavarde" required />
+        <input type="password" name="password" placeholder="Sukurkite slaptazodi (min 8)" required />
+        <button class="btn btn-ghost" type="submit">Priimti kvietima</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeBtn = overlay.querySelector('#closeAuthModal');
+  const authError = overlay.querySelector('#authError');
+  const loginForm = overlay.querySelector('#loginForm');
+  const inviteForm = overlay.querySelector('#inviteForm');
+
+  function closeModal() {
+    const current = document.getElementById('loginOverlay');
+    if (current) current.remove();
+  }
+
+  function showError(message) {
+    authError.textContent = message;
+    authError.style.display = 'block';
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeModal();
+  });
+
+  loginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const fd = new FormData(loginForm);
+    const email = String(fd.get('email') || '').trim();
+    const password = String(fd.get('password') || '');
+    if (!email || !password) return;
+
+    try {
+      const payload = await api('/api/v1/auth/login', {
+        method: 'POST',
+        auth: false,
+        body: {
+          email,
+          password,
+          institutionSlug: state.institutionSlug
+        }
+      });
+      setSession(payload);
+      closeModal();
+      await bootstrap();
+    } catch (error) {
+      showError(toUserMessage(error));
+    }
+  });
+
+  inviteForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const fd = new FormData(inviteForm);
+    const token = String(fd.get('token') || '').trim();
+    const displayName = String(fd.get('displayName') || '').trim();
+    const password = String(fd.get('password') || '');
+    if (!token || !displayName || !password) return;
+
+    try {
+      const payload = await api('/api/v1/invites/accept', {
+        method: 'POST',
+        auth: false,
+        body: { token, displayName, password }
+      });
+      setSession(payload);
+      closeModal();
+      await bootstrap();
+    } catch (error) {
+      showError(toUserMessage(error));
+    }
+  });
+}
+
 function render() {
+  const displayTitle = state.cycle?.title || state.institution?.name || `Strategija (${state.institutionSlug})`;
+  elements.sessionName.value = displayTitle;
+
   renderSteps();
   renderStepView();
   renderUserBar();
-  renderLoginOverlay();
   renderVoteFloating();
 }
-
-bindGlobal();
-render();

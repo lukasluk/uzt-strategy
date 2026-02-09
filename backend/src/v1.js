@@ -386,6 +386,13 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     );
     if (institution.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
 
+    const userRes = await query(
+      'select id, email, display_name, status from platform_users where id = $1',
+      [req.auth.sub]
+    );
+    if (userRes.rowCount === 0) return res.status(404).json({ error: 'user not found' });
+    if (userRes.rows[0].status !== 'active') return res.status(403).json({ error: 'user inactive' });
+
     const cycle = await getCurrentCycle(query, req.auth.institutionId);
     const membership = await query(
       `select role, status from institution_memberships where institution_id = $1 and user_id = $2`,
@@ -394,7 +401,11 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     if (membership.rowCount === 0) return res.status(403).json({ error: 'membership not found' });
 
     res.json({
-      user: { id: req.auth.sub, email: req.auth.email },
+      user: {
+        id: userRes.rows[0].id,
+        email: userRes.rows[0].email,
+        displayName: userRes.rows[0].display_name
+      },
       institution: institution.rows[0],
       membership: membership.rows[0],
       cycle,
@@ -403,6 +414,41 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         minPerGuideline: 0,
         maxPerGuideline: 5
       }
+    });
+  });
+
+  app.get('/api/v1/cycles/:cycleId/my-votes', requireAuth, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+
+    const cycleRes = await query(
+      'select id, institution_id from strategy_cycles where id = $1',
+      [cycleId]
+    );
+    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
+    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
+      return res.status(403).json({ error: 'cross-institution forbidden' });
+    }
+
+    const votesRes = await query(
+      `select v.guideline_id, v.score
+       from strategy_votes v
+       join strategy_guidelines g on g.id = v.guideline_id
+       where g.cycle_id = $1 and v.voter_id = $2`,
+      [cycleId, req.auth.sub]
+    );
+
+    const votes = votesRes.rows.map((row) => ({
+      guidelineId: row.guideline_id,
+      score: row.score
+    }));
+    const totalUsed = votes.reduce((sum, row) => sum + row.score, 0);
+
+    res.json({
+      cycleId,
+      budget: VOTE_BUDGET,
+      totalUsed,
+      votes
     });
   });
 
@@ -589,8 +635,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
     const participants = await query(
       `select u.id, u.email, u.display_name,
-              coalesce(sum(v.score), 0)::int as total_score,
-              case when count(v.id) > 0 then true else false end as has_voted
+              coalesce(sum(case when g.id is not null then v.score else 0 end), 0)::int as total_score,
+              case when count(g.id) > 0 then true else false end as has_voted
        from institution_memberships m
        join platform_users u on u.id = m.user_id
        left join strategy_votes v on v.voter_id = u.id
@@ -602,6 +648,59 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     );
 
     res.json({ participants: participants.rows });
+  });
+
+  app.get('/api/v1/admin/cycles/:cycleId/guidelines', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+
+    const cycleRes = await query(
+      'select institution_id from strategy_cycles where id = $1',
+      [cycleId]
+    );
+    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
+    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
+      return res.status(403).json({ error: 'cross-institution forbidden' });
+    }
+
+    const guidelinesRes = await query(
+      `select g.id, g.title, g.description, g.status, g.created_at,
+              coalesce(v.total_score, 0)::int as total_score,
+              coalesce(v.voter_count, 0)::int as voter_count,
+              coalesce(c.comment_count, 0)::int as comment_count
+       from strategy_guidelines g
+       left join (
+         select guideline_id,
+                coalesce(sum(score), 0)::int as total_score,
+                count(distinct voter_id)::int as voter_count
+         from strategy_votes
+         group by guideline_id
+       ) v on v.guideline_id = g.id
+       left join (
+         select guideline_id,
+                count(*)::int as comment_count
+         from strategy_comments
+         where status = 'visible'
+         group by guideline_id
+       ) c on c.guideline_id = g.id
+       where g.cycle_id = $1
+       order by g.created_at asc`,
+      [cycleId]
+    );
+
+    res.json({
+      guidelines: guidelinesRes.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        createdAt: row.created_at,
+        totalScore: row.total_score,
+        voterCount: row.voter_count,
+        commentCount: row.comment_count
+      }))
+    });
   });
 
   app.put('/api/v1/admin/guidelines/:guidelineId', requireAuth, async (req, res) => {
@@ -630,4 +729,3 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 }
 
 module.exports = { registerV1Routes };
-
