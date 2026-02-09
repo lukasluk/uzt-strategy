@@ -591,8 +591,8 @@ function layoutStrategyMap() {
   const edges = [];
   const baseX = 140;
   const institutionNodeId = `inst-${institution.id}`;
-  const institutionX = toNumberOrNull(institution.cycle?.mapX) ?? baseX;
-  const institutionY = toNumberOrNull(institution.cycle?.mapY) ?? 48;
+  const institutionX = Math.max(24, toNumberOrNull(institution.cycle?.mapX) ?? baseX);
+  const institutionY = Math.max(24, toNumberOrNull(institution.cycle?.mapY) ?? 48);
   nodes.push({
     id: institutionNodeId,
     kind: 'institution',
@@ -636,8 +636,8 @@ function layoutStrategyMap() {
     const defaultY = nextY;
     nextY += 100;
 
-    const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
-    const nodeY = toNumberOrNull(guideline.mapY) ?? defaultY;
+    const nodeX = Math.max(24, toNumberOrNull(guideline.mapX) ?? defaultX);
+    const nodeY = Math.max(24, toNumberOrNull(guideline.mapY) ?? defaultY);
     nodes.push({
       id: nodeId,
       kind: 'guideline',
@@ -671,8 +671,10 @@ function layoutStrategyMap() {
     if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
   });
 
-  const width = Math.max(1800, institutionX + 1300);
-  const height = Math.max(920, maxY);
+  const maxRight = nodes.reduce((acc, node) => Math.max(acc, node.x + node.w), 0);
+  const maxBottom = nodes.reduce((acc, node) => Math.max(acc, node.y + node.h), 0);
+  const width = Math.max(1800, maxRight + 260);
+  const height = Math.max(920, Math.max(maxY, maxBottom + 200));
   return { nodes, edges, width, height, institution };
 }
 
@@ -772,8 +774,16 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (draggedNode) {
       const dx = (event.clientX - dragStartX) / state.mapTransform.scale;
       const dy = (event.clientY - dragStartY) / state.mapTransform.scale;
-      const nextX = Math.round(nodeOriginX + dx);
-      const nextY = Math.round(nodeOriginY + dy);
+      const nodeW = Number(draggedNode.dataset.w || 200);
+      const nodeH = Number(draggedNode.dataset.h || 100);
+      const worldWidth = Number(world.offsetWidth || 0);
+      const worldHeight = Number(world.offsetHeight || 0);
+      const minX = 16;
+      const minY = 16;
+      const maxX = Math.max(minX, worldWidth - nodeW - 16);
+      const maxY = Math.max(minY, worldHeight - nodeH - 16);
+      const nextX = Math.round(clamp(nodeOriginX + dx, minX, maxX));
+      const nextY = Math.round(clamp(nodeOriginY + dy, minY, maxY));
       draggedNode.dataset.x = String(nextX);
       draggedNode.dataset.y = String(nextY);
       draggedNode.style.left = `${nextX}px`;
