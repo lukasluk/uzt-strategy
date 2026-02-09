@@ -159,6 +159,12 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     return parent.id;
   }
 
+  function normalizeLineSide(value) {
+    const side = String(value || 'auto').trim().toLowerCase();
+    if (['auto', 'left', 'right', 'top', 'bottom'].includes(side)) return side;
+    return null;
+  }
+
   app.get('/api/v1/health', (_req, res) => {
     res.json({ ok: true, version: 'v1' });
   });
@@ -197,7 +203,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const voteByGuideline = {};
     if (cycleIds.length) {
       const guidelinesRes = await query(
-        `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, map_x, map_y, created_at
+        `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, line_side, map_x, map_y, created_at
          from strategy_guidelines
          where cycle_id = any($1::uuid[])
            and status in ('active', 'merged')
@@ -232,6 +238,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
           status: row.status,
           relationType: row.relation_type || 'orphan',
           parentGuidelineId: row.parent_guideline_id || null,
+          lineSide: normalizeLineSide(row.line_side) || 'auto',
           mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
           mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
           totalScore: voteByGuideline[row.id]?.totalScore || 0,
@@ -297,7 +304,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     if (!cycle) return res.status(404).json({ error: 'cycle not found' });
 
     const guidelines = await query(
-      `select id, title, description, status, relation_type, parent_guideline_id, created_at
+      `select id, title, description, status, relation_type, parent_guideline_id, line_side, created_at
        from strategy_guidelines
        where cycle_id = $1 and status = 'active'
        order by created_at asc`,
@@ -346,6 +353,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         description: g.description,
         relationType: g.relation_type || 'orphan',
         parentGuidelineId: g.parent_guideline_id || null,
+        lineSide: normalizeLineSide(g.line_side) || 'auto',
         totalScore: voteByGuideline[g.id]?.totalScore || 0,
         voterCount: voteByGuideline[g.id]?.voterCount || 0,
         comments: commentsByGuideline[g.id] || []
@@ -1038,7 +1046,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     }
 
     const guidelinesRes = await query(
-      `select g.id, g.title, g.description, g.status, g.relation_type, g.parent_guideline_id, g.created_at,
+      `select g.id, g.title, g.description, g.status, g.relation_type, g.parent_guideline_id, g.line_side, g.created_at,
               coalesce(v.total_score, 0)::int as total_score,
               coalesce(v.voter_count, 0)::int as voter_count,
               coalesce(c.comment_count, 0)::int as comment_count
@@ -1070,6 +1078,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         status: row.status,
         relationType: row.relation_type || 'orphan',
         parentGuidelineId: row.parent_guideline_id || null,
+        lineSide: normalizeLineSide(row.line_side) || 'auto',
         createdAt: row.created_at,
         totalScore: row.total_score,
         voterCount: row.voter_count,
@@ -1162,9 +1171,11 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const description = String(req.body?.description || '').trim();
     const status = String(req.body?.status || 'active').trim();
     const relationType = String(req.body?.relationType || 'orphan').trim().toLowerCase();
+    const lineSide = normalizeLineSide(req.body?.lineSide);
     const parentGuidelineIdRaw = req.body?.parentGuidelineId;
     if (!guidelineId || !title) return res.status(400).json({ error: 'guidelineId and title required' });
     if (!['active', 'merged', 'hidden'].includes(status)) return res.status(400).json({ error: 'invalid status' });
+    if (!lineSide) return res.status(400).json({ error: 'invalid line side' });
 
     const context = await loadGuidelineContext(guidelineId);
     if (!context) return res.status(404).json({ error: 'guideline not found' });
@@ -1201,9 +1212,10 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
            status = $3,
            relation_type = $4,
            parent_guideline_id = $5,
+           line_side = $6,
            updated_at = now()
-       where id = $6`,
-      [title, description || null, status, relationType, parentGuidelineId, guidelineId]
+       where id = $7`,
+      [title, description || null, status, relationType, parentGuidelineId, lineSide, guidelineId]
     );
 
     broadcast({ type: 'v1.guideline.updated', institutionId: req.auth.institutionId, guidelineId });

@@ -229,6 +229,66 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+const MAP_LINE_SIDES = new Set(['auto', 'left', 'right', 'top', 'bottom']);
+const MAP_VOTE_SQUARES_PER_ROW = 12;
+
+function normalizeLineSide(value) {
+  const side = String(value || 'auto').trim().toLowerCase();
+  return MAP_LINE_SIDES.has(side) ? side : 'auto';
+}
+
+function estimateGuidelineNodeHeight(voterCount) {
+  const voters = Math.max(0, Number(voterCount || 0));
+  const voteRows = Math.max(1, Math.ceil(voters / MAP_VOTE_SQUARES_PER_ROW));
+  return 104 + voteRows * 14;
+}
+
+function resolveAutoSide(fromNode, toNode) {
+  const fromCenterX = fromNode.x + fromNode.w / 2;
+  const fromCenterY = fromNode.y + fromNode.h / 2;
+  const toCenterX = toNode.x + toNode.w / 2;
+  const toCenterY = toNode.y + toNode.h / 2;
+  const dx = toCenterX - fromCenterX;
+  const dy = toCenterY - fromCenterY;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0 ? 'right' : 'left';
+  }
+  return dy >= 0 ? 'bottom' : 'top';
+}
+
+function oppositeSide(side) {
+  if (side === 'left') return 'right';
+  if (side === 'right') return 'left';
+  if (side === 'top') return 'bottom';
+  return 'top';
+}
+
+function anchorForSide(node, side) {
+  if (side === 'left') return { x: node.x, y: node.y + node.h / 2 };
+  if (side === 'right') return { x: node.x + node.w, y: node.y + node.h / 2 };
+  if (side === 'top') return { x: node.x + node.w / 2, y: node.y };
+  return { x: node.x + node.w / 2, y: node.y + node.h };
+}
+
+function controlPointForSide(point, side, offset = 86) {
+  if (side === 'left') return { x: point.x - offset, y: point.y };
+  if (side === 'right') return { x: point.x + offset, y: point.y };
+  if (side === 'top') return { x: point.x, y: point.y - offset };
+  return { x: point.x, y: point.y + offset };
+}
+
+function edgePath(fromNode, toNode, preferredSide) {
+  const sourceSide = normalizeLineSide(preferredSide) === 'auto'
+    ? resolveAutoSide(fromNode, toNode)
+    : normalizeLineSide(preferredSide);
+  const targetSide = oppositeSide(sourceSide);
+  const from = anchorForSide(fromNode, sourceSide);
+  const to = anchorForSide(toNode, targetSide);
+  const c1 = controlPointForSide(from, sourceSide);
+  const c2 = controlPointForSide(to, targetSide);
+  return `M ${from.x} ${from.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${to.x} ${to.y}`;
+}
+
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
@@ -465,6 +525,7 @@ function renderInstitutionPicker() {
 
 function institutionSelectMarkup() {
   const selectedSlug = normalizeSlug(state.institutionSlug);
+  const homeSlug = normalizeSlug(state.accountContext?.institution?.slug);
   const institutions = Array.isArray(state.institutions) ? state.institutions : [];
   const hasInstitutions = institutions.length > 0;
   const loading = state.loading && !state.institutionsLoaded;
@@ -474,7 +535,9 @@ function institutionSelectMarkup() {
     : '<option value="">Pasirinkite instituciją</option>';
   const options = institutions.map((institution) => {
     const slug = normalizeSlug(institution.slug);
-    const name = institution.name || slug || '-';
+    const isHome = Boolean(homeSlug && slug === homeSlug);
+    const marker = isHome ? ' (jūsų)' : '';
+    const name = `${institution.name || slug || '-'}${marker}`;
     const selected = slug === selectedSlug ? ' selected' : '';
     return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(name)}</option>`;
   }).join('');
@@ -502,8 +565,17 @@ function bindInstitutionSwitch(container) {
   });
 }
 
+function canOpenAdminView() {
+  return Boolean(
+    state.institutionSlug &&
+    isAuthenticated() &&
+    state.role === 'institution_admin' &&
+    state.accountContext?.institution?.slug === state.institutionSlug
+  );
+}
+
 function setActiveView(nextView) {
-  if (!['guidelines', 'map'].includes(nextView)) return;
+  if (!['guidelines', 'admin', 'map', 'about'].includes(nextView)) return;
   state.activeView = nextView;
   render();
 }
@@ -511,39 +583,31 @@ function setActiveView(nextView) {
 function renderSteps() {
   elements.steps.innerHTML = '';
 
-  const guidelinesStep = document.createElement('button');
-  guidelinesStep.className = 'step-pill' + (state.activeView === 'guidelines' ? ' active' : '');
-  guidelinesStep.innerHTML = `<h4>${escapeHtml(steps[0].title)}</h4><p>${escapeHtml(steps[0].hint)}</p>`;
-  guidelinesStep.addEventListener('click', () => setActiveView('guidelines'));
-  elements.steps.appendChild(guidelinesStep);
+  const canOpenAdmin = canOpenAdminView();
+  const items = [
+    { id: 'guidelines', icon: '◍', title: 'Gairės', hint: 'Aptarimas, balsavimas, komentarai', locked: false },
+    { id: 'admin', icon: '⚙', title: 'Admin', hint: 'Kvietimai, ciklas, rezultatai', locked: !canOpenAdmin },
+    { id: 'map', icon: '⌗', title: 'Strategijų žemėlapis', hint: 'Ryšiai ir gairių visuma', locked: false },
+    { id: 'about', icon: 'ℹ', title: 'Apie mus', hint: 'Iniciatyvos aprašymas', locked: false }
+  ];
 
-  const canOpenAdmin = Boolean(
-    state.institutionSlug &&
-    isAuthenticated() &&
-    state.role === 'institution_admin' &&
-    state.accountContext?.institution?.slug === state.institutionSlug
-  );
-  if (canOpenAdmin) {
-    const adminLink = document.createElement('a');
-    adminLink.className = 'step-pill admin-pill';
-    adminLink.href = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}`;
-    adminLink.innerHTML = '<h4>Admin</h4><p>Kvietimai, ciklas, rezultatai</p>';
-    elements.steps.appendChild(adminLink);
-  }
-
-  const aboutCard = document.createElement('section');
-  aboutCard.className = 'about-card';
-  aboutCard.innerHTML = `
-    <h4>Apie mus</h4>
-    <p>Čia bus aprašymas, kas čia per iniciatyva.</p>
-  `;
-  elements.steps.appendChild(aboutCard);
-
-  const mapStep = document.createElement('button');
-  mapStep.className = 'step-pill map-pill' + (state.activeView === 'map' ? ' active' : '');
-  mapStep.innerHTML = '<h4>Strategijų žemėlapis</h4><p>Tarpinstituciniai ryšiai, gairių visuma</p>';
-  mapStep.addEventListener('click', () => setActiveView('map'));
-  elements.steps.appendChild(mapStep);
+  items.forEach((item) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `step-pill${state.activeView === item.id ? ' active' : ''}${item.locked ? ' locked' : ''}`;
+    button.innerHTML = `
+      <div class="step-pill-head">
+        <span class="step-icon" aria-hidden="true">${item.icon}</span>
+        <h4>${escapeHtml(item.title)}</h4>
+      </div>
+      <p>${escapeHtml(item.hint)}</p>
+    `;
+    if (item.locked) {
+      button.title = 'Administravimas galimas tik savo institucijos administratoriui';
+    }
+    button.addEventListener('click', () => setActiveView(item.id));
+    elements.steps.appendChild(button);
+  });
 }
 
 function renderIntroDeck() {
@@ -670,7 +734,7 @@ function layoutStrategyMap() {
       x: nodeX,
       y: nodeY,
       w: 220,
-      h: 108,
+      h: estimateGuidelineNodeHeight(guideline.voterCount),
       institution,
       guideline
     });
@@ -709,6 +773,15 @@ function relationLabel(relationType) {
   return 'našlaitė';
 }
 
+function syncMapNodeBounds(world) {
+  world.querySelectorAll('.strategy-map-node[data-node-id]').forEach((node) => {
+    const width = Math.round(node.offsetWidth);
+    const height = Math.round(node.offsetHeight);
+    if (Number.isFinite(width) && width > 0) node.dataset.w = String(width);
+    if (Number.isFinite(height) && height > 0) node.dataset.h = String(height);
+  });
+}
+
 function refreshMapEdges(world) {
   const nodeElements = Array.from(world.querySelectorAll('.strategy-map-node[data-node-id]'));
   const nodeById = new Map();
@@ -726,13 +799,8 @@ function refreshMapEdges(world) {
     const toNode = nodeById.get(path.dataset.to);
     if (!fromNode || !toNode) return;
 
-    const fromX = fromNode.x + fromNode.w;
-    const fromY = fromNode.y + fromNode.h / 2;
-    const toX = toNode.x;
-    const toY = toNode.y + toNode.h / 2;
-    const c1x = fromX + 70;
-    const c2x = toX - 70;
-    path.setAttribute('d', `M ${fromX} ${fromY} C ${c1x} ${fromY}, ${c2x} ${toY}, ${toX} ${toY}`);
+    const lineSide = path.dataset.lineSide || 'auto';
+    path.setAttribute('d', edgePath(fromNode, toNode, lineSide));
   });
 }
 
@@ -935,24 +1003,15 @@ function renderMapView() {
   const editable = canEditMapLayout()
     && normalizeSlug(graph.institution.slug) === normalizeSlug(state.institutionSlug)
     && Boolean(graph.institution.cycle?.id);
-  const guidelineNodes = graph.nodes.filter((node) => node.kind === 'guideline');
-  const maxGuidelineScore = guidelineNodes.reduce(
-    (max, node) => Math.max(max, Number(node.guideline?.totalScore || 0)),
-    0
-  );
   const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
   const edgeMarkup = graph.edges.map((edge) => {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
     if (!fromNode || !toNode) return '';
-
-    const fromX = fromNode.x + fromNode.w;
-    const fromY = fromNode.y + fromNode.h / 2;
-    const toX = toNode.x;
-    const toY = toNode.y + toNode.h / 2;
-    const c1x = fromX + 70;
-    const c2x = toX - 70;
-    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" d="M ${fromX} ${fromY} C ${c1x} ${fromY}, ${c2x} ${toY}, ${toX} ${toY}"></path>`;
+    const lineSide = fromNode.kind === 'guideline'
+      ? normalizeLineSide(fromNode.guideline?.lineSide)
+      : 'auto';
+    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
   }).join('');
 
   const nodeMarkup = graph.nodes.map((node) => {
@@ -982,17 +1041,13 @@ function renderMapView() {
     const relation = String(node.guideline.relationType || 'orphan');
     const relationText = relationLabel(relation);
     const score = Number(node.guideline.totalScore || 0);
-    const voters = Number(node.guideline.voterCount || 0);
-    const level = maxGuidelineScore > 0
-      ? Math.max(1, Math.round((score / maxGuidelineScore) * 5))
-      : 0;
-    const dots = Array.from({ length: 5 }, (_, idx) => (
-      `<span class="map-vote-dot ${idx < level ? 'is-on' : ''}"></span>`
-    )).join('');
-    const topScoreClass = maxGuidelineScore > 0 && score === maxGuidelineScore ? ' top-score' : '';
+    const voters = Math.max(0, Number(node.guideline.voterCount || 0));
+    const voteSquares = voters
+      ? Array.from({ length: voters }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
+      : '<span class="map-vote-empty">Dar nebalsuota</span>';
 
     return `
-      <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)}${topScoreClass}"
+      <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)}"
                data-node-id="${escapeHtml(node.id)}"
                data-kind="guideline"
                data-entity-id="${escapeHtml(node.entityId)}"
@@ -1002,7 +1057,7 @@ function renderMapView() {
                data-w="${node.w}"
                data-h="${node.h}"
                data-draggable="${editable ? 'true' : 'false'}"
-               style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
+               style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
         <h4>${escapeHtml(node.guideline.title)}</h4>
         <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
         <div class="map-vote-row">
@@ -1014,9 +1069,8 @@ function renderMapView() {
             <span class="map-vote-icon" aria-hidden="true">◌</span>
             <strong>${voters}</strong>
           </span>
-          ${topScoreClass ? '<span class="map-vote-chip top" title="Daugiausiai balsų">★</span>' : ''}
         </div>
-        <div class="map-vote-dots" aria-hidden="true">${dots}</div>
+        <div class="map-vote-squares">${voteSquares}</div>
       </article>
     `;
   }).join('');
@@ -1045,6 +1099,8 @@ function renderMapView() {
   const world = elements.stepView.querySelector('#strategyMapWorld');
   const resetBtn = elements.stepView.querySelector('#mapResetBtn');
   if (viewport && world) {
+    syncMapNodeBounds(world);
+    refreshMapEdges(world);
     applyMapTransform(viewport, world);
     bindMapInteractions(viewport, world, { editable });
   }
@@ -1054,6 +1110,57 @@ function renderMapView() {
       applyMapTransform(viewport, world);
     });
   }
+}
+
+function renderAboutView() {
+  elements.stepView.innerHTML = `
+    <section class="about-window">
+      <div class="step-header">
+        <h2>Apie mus</h2>
+      </div>
+      <div class="card">
+        <p>Čia bus aprašymas kas čia per iniciatyva.</p>
+      </div>
+    </section>
+  `;
+}
+
+function renderAdminView() {
+  const allowed = canOpenAdminView();
+  if (!isAuthenticated()) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Administravimui reikia prisijungti</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Prisijunkite su institucijos administratoriaus paskyra.</p>
+        <button id="openAuthFromAdmin" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
+      </div>
+    `;
+    const openAuthBtn = elements.stepView.querySelector('#openAuthFromAdmin');
+    if (openAuthBtn) openAuthBtn.addEventListener('click', () => showAuthModal('login'));
+    return;
+  }
+
+  if (!allowed) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Administravimas nepasiekiamas</strong>
+        <p class="prompt" style="margin: 8px 0 0;">
+          Administravimo vaizdas prieinamas tik prisijungus kaip pasirinktos institucijos administratorius.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}`;
+  elements.stepView.innerHTML = `
+    <section class="admin-inline-shell">
+      <div class="step-header">
+        <h2>Admin</h2>
+      </div>
+      <iframe class="admin-inline-frame" src="${src}" title="Administravimo langas"></iframe>
+    </section>
+  `;
 }
 
 function renderGuidelineCard(guideline, options) {
@@ -1116,6 +1223,16 @@ function renderGuidelineCard(guideline, options) {
 }
 
 function renderStepView() {
+  if (state.activeView === 'about') {
+    renderAboutView();
+    return;
+  }
+
+  if (state.activeView === 'admin') {
+    renderAdminView();
+    return;
+  }
+
   if (state.activeView === 'map') {
     renderMapView();
     return;
@@ -1324,16 +1441,11 @@ function renderUserBar() {
   const container = document.getElementById('userBar');
   if (!container) return;
   const switcher = institutionSelectMarkup();
-  const viewingName = state.institution?.name || state.institutionSlug || 'Nepasirinkta';
 
   if (!state.institutionSlug) {
     container.innerHTML = `
       <div class="user-toolbar">
         ${switcher}
-        <div class="user-chip">
-          <span>Peržiūrima: ${escapeHtml(viewingName)}</span>
-          <span class="tag">Peržiūros režimas</span>
-        </div>
       </div>
     `;
     bindInstitutionSwitch(container);
@@ -1344,11 +1456,6 @@ function renderUserBar() {
     container.innerHTML = `
       <div class="user-toolbar">
         ${switcher}
-        <div class="user-chip">
-          <span>Viešas režimas</span>
-          <span class="tag">Skaitymas</span>
-        </div>
-        <span class="tag">Peržiūrima: ${escapeHtml(viewingName)}</span>
         <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
       </div>
     `;
@@ -1370,16 +1477,10 @@ function renderUserBar() {
       <div class="user-chip">
         <span>${escapeHtml(displayName)}</span>
         <span class="tag">${escapeHtml(roleLabel)}</span>
+        <span class="tag tag-home">Jūsų institucija: ${escapeHtml(homeName)}</span>
       </div>
-      <span class="tag">Peržiūrima: ${escapeHtml(viewingName)}</span>
-      ${viewingCurrentInstitution
-        ? '<span class="tag">Pilna prieiga</span>'
-        : `<span class="tag">Prisijungta: ${escapeHtml(homeName)}</span>`}
       ${viewingCurrentInstitution && state.role === 'institution_admin'
         ? `<a href="admin.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Admin</a>`
-        : ''}
-      ${!viewingCurrentInstitution && homeSlug
-        ? `<a href="index.html?institution=${encodeURIComponent(homeSlug)}" class="btn btn-ghost">Mano institucija</a>`
         : ''}
       <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
     </div>
@@ -1417,13 +1518,15 @@ function renderVoteFloating() {
   floating.hidden = false;
   floating.classList.toggle('collapsed', state.voteFloatingCollapsed);
   floating.innerHTML = `
-    <button id="toggleVoteFloatingBtn" class="vote-floating-toggle" type="button" aria-label="${state.voteFloatingCollapsed ? 'Rodyti balsų biudžetą' : 'Slėpti balsų biudžetą'}">
-      ${state.voteFloatingCollapsed ? '›' : '‹'}
-    </button>
     <div class="vote-floating-inner">
-      <div class="vote-floating-title">Balsų biudžetas</div>
-      <div class="vote-floating-count">${remaining} / ${budget}</div>
-      <div class="vote-total">${locked ? 'Ciklas užrakintas' : 'Balsavimas aktyvus'}</div>
+      <button id="toggleVoteFloatingBtn" class="vote-floating-toggle" type="button" aria-label="${state.voteFloatingCollapsed ? 'Rodyti balsų biudžetą' : 'Slėpti balsų biudžetą'}">
+        ${state.voteFloatingCollapsed ? '>' : '<'}
+      </button>
+      <div class="vote-floating-content">
+        <div class="vote-floating-title">Balsų biudžetas</div>
+        <div class="vote-floating-count">${remaining} / ${budget}</div>
+        <div class="vote-total">${locked ? 'Ciklas užrakintas' : 'Balsavimas aktyvus'}</div>
+      </div>
     </div>
   `;
 
@@ -1602,4 +1705,3 @@ function render() {
   renderUserBar();
   renderVoteFloating();
 }
-

@@ -59,6 +59,7 @@ create table if not exists strategy_guidelines (
   title text not null,
   description text,
   status text not null default 'active' check (status in ('active', 'merged', 'hidden')),
+  line_side text not null default 'auto',
   created_by uuid references platform_users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -123,3 +124,6 @@ alter table if exists strategy_guidelines
 
 alter table if exists strategy_guidelines
   add column if not exists map_y integer;
+
+alter table if exists strategy_guidelines
+  add column if not exists line_side text not null default 'auto';

@@ -132,7 +132,8 @@ function toUserMessage(error) {
     'parent must be in same cycle': 'Tėvinė gairė turi būti tame pačiame cikle.',
     'child cannot be parent of itself': 'Gairė negali būti pati sau tėvinė.',
     'parent guideline must be parent': 'Pasirinkta gairė nėra tėvinė.',
-    'cannot demote parent with children': 'Negalima keisti tėvinės gairės tipo, kol ji turi vaikinių gairių.'
+    'cannot demote parent with children': 'Negalima keisti tėvinės gairės tipo, kol ji turi vaikinių gairių.',
+    'invalid line side': 'Netinkama linijos išėjimo pusė.'
   };
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
@@ -433,6 +434,13 @@ function renderDashboard() {
                   <option value="">Pasirinkite tėvinę gairę</option>
                   ${parentOptions}
                 </select>
+                <select name="lineSide" ${state.busy ? 'disabled' : ''}>
+                  <option value="auto" ${(guideline.lineSide || 'auto') === 'auto' ? 'selected' : ''}>Linija: auto</option>
+                  <option value="left" ${guideline.lineSide === 'left' ? 'selected' : ''}>Linija: kairė</option>
+                  <option value="right" ${guideline.lineSide === 'right' ? 'selected' : ''}>Linija: dešinė</option>
+                  <option value="top" ${guideline.lineSide === 'top' ? 'selected' : ''}>Linija: viršus</option>
+                  <option value="bottom" ${guideline.lineSide === 'bottom' ? 'selected' : ''}>Linija: apačia</option>
+                </select>
                 <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Išsaugoti</button>
               </div>
               <div class="header-stack">
@@ -572,6 +580,7 @@ function bindDashboardEvents() {
       const status = String(fd.get('status') || 'active').trim();
       const relationType = String(fd.get('relationType') || 'orphan').trim();
       const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
+      const lineSide = String(fd.get('lineSide') || 'auto').trim().toLowerCase();
       if (!title) return;
 
       await runBusy(async () => {
@@ -582,6 +591,7 @@ function bindDashboardEvents() {
             description,
             status,
             relationType,
+            lineSide,
             parentGuidelineId: relationType === 'child' ? parentGuidelineId : null
           }
         });
