@@ -122,6 +122,10 @@ function toUserMessage(error) {
     'cross-institution forbidden': 'Prieiga prie kitos institucijos duomenų neleidžiama.',
     'invalid credentials': 'Neteisingi prisijungimo duomenys.',
     'email required': 'Nurodykite el. paštą.',
+    'userId and password(min 8) required': 'Slaptažodis turi būti bent 8 simbolių.',
+    'userId required': 'Nenurodytas vartotojo ID.',
+    'cannot delete self': 'Negalite ištrinti savo paskyros.',
+    'membership not found': 'Narystė nerasta.',
     'invalid relation type': 'Netinkamas gairės ryšio tipas.',
     'parent guideline required for child': 'Vaikinei gairei būtina parinkti tėvinę gairę.',
     'parent guideline not found': 'Tėvinė gairė nerasta.',
@@ -353,9 +357,31 @@ function renderDashboard() {
         ${state.participants.length
           ? state.participants.map((participant) => `
               <li>
-                <strong>${escapeHtml(participant.display_name || participant.email)}</strong>
-                <span class="muted">${participant.has_voted ? 'Balsavo' : 'Nebalsavo'}</span>
-                <span class="tag">Taškai: ${Number(participant.total_score || 0)}</span>
+                <div class="header-row" style="align-items: flex-start; gap: 8px;">
+                  <div>
+                    <strong>${escapeHtml(participant.display_name || participant.email)}</strong>
+                    <div class="prompt" style="margin-top: 4px;">El. paštas: ${escapeHtml(participant.email || '-')}</div>
+                  </div>
+                  <div class="header-stack" style="margin-left: auto;">
+                    <span class="muted">${participant.has_voted ? 'Balsavo' : 'Nebalsavo'}</span>
+                    <span class="tag">Taškai: ${Number(participant.total_score || 0)}</span>
+                  </div>
+                </div>
+                <div class="inline-form" style="margin-top: 8px;">
+                  <form class="participant-password-form inline-form" data-user-id="${escapeHtml(participant.id)}">
+                    <input type="password" name="password" placeholder="Naujas slaptažodis (min. 8)" minlength="8" required ${state.busy ? 'disabled' : ''} />
+                    <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Atnaujinti slaptažodį</button>
+                  </form>
+                  <button
+                    type="button"
+                    class="btn btn-ghost participant-delete-btn"
+                    data-user-id="${escapeHtml(participant.id)}"
+                    data-name="${escapeHtml(participant.display_name || participant.email || 'vartotojas')}"
+                    ${state.busy ? 'disabled' : ''}
+                  >
+                    Ištrinti vartotoją
+                  </button>
+                </div>
               </li>
             `).join('')
           : '<li>Nėra dalyvių.</li>'}
@@ -558,6 +584,39 @@ function bindDashboardEvents() {
             relationType,
             parentGuidelineId: relationType === 'child' ? parentGuidelineId : null
           }
+        });
+        await bootstrap();
+      });
+    });
+  });
+
+  root.querySelectorAll('.participant-password-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userId = String(form.dataset.userId || '').trim();
+      const password = String(new FormData(form).get('password') || '');
+      if (!userId || password.length < 8) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/admin/users/${encodeURIComponent(userId)}/password`, {
+          method: 'PUT',
+          body: { password }
+        });
+        state.notice = 'Slaptažodis atnaujintas.';
+      });
+    });
+  });
+
+  root.querySelectorAll('.participant-delete-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const userId = String(button.dataset.userId || '').trim();
+      const name = String(button.dataset.name || 'vartotojas');
+      if (!userId) return;
+      if (!window.confirm(`Ar tikrai norite ištrinti vartotoją: ${name}?`)) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/admin/users/${encodeURIComponent(userId)}`, {
+          method: 'DELETE'
         });
         await bootstrap();
       });

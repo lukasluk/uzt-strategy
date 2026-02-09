@@ -646,7 +646,7 @@ function layoutStrategyMap() {
       x: nodeX,
       y: nodeY,
       w: 220,
-      h: 76,
+      h: 108,
       institution,
       guideline
     });
@@ -901,6 +901,11 @@ function renderMapView() {
   const editable = canEditMapLayout()
     && normalizeSlug(graph.institution.slug) === normalizeSlug(state.institutionSlug)
     && Boolean(graph.institution.cycle?.id);
+  const guidelineNodes = graph.nodes.filter((node) => node.kind === 'guideline');
+  const maxGuidelineScore = guidelineNodes.reduce(
+    (max, node) => Math.max(max, Number(node.guideline?.totalScore || 0)),
+    0
+  );
   const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
   const edgeMarkup = graph.edges.map((edge) => {
     const fromNode = nodeById[edge.from];
@@ -942,8 +947,18 @@ function renderMapView() {
 
     const relation = String(node.guideline.relationType || 'orphan');
     const relationText = relationLabel(relation);
+    const score = Number(node.guideline.totalScore || 0);
+    const voters = Number(node.guideline.voterCount || 0);
+    const level = maxGuidelineScore > 0
+      ? Math.max(1, Math.round((score / maxGuidelineScore) * 5))
+      : 0;
+    const dots = Array.from({ length: 5 }, (_, idx) => (
+      `<span class="map-vote-dot ${idx < level ? 'is-on' : ''}"></span>`
+    )).join('');
+    const topScoreClass = maxGuidelineScore > 0 && score === maxGuidelineScore ? ' top-score' : '';
+
     return `
-      <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)}"
+      <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)}${topScoreClass}"
                data-node-id="${escapeHtml(node.id)}"
                data-kind="guideline"
                data-entity-id="${escapeHtml(node.entityId)}"
@@ -956,6 +971,18 @@ function renderMapView() {
                style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
         <h4>${escapeHtml(node.guideline.title)}</h4>
         <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
+        <div class="map-vote-row">
+          <span class="map-vote-chip" title="Bendras balas">
+            <span class="map-vote-icon" aria-hidden="true">◉</span>
+            <strong>${score}</strong>
+          </span>
+          <span class="map-vote-chip" title="Balsuotojai">
+            <span class="map-vote-icon" aria-hidden="true">◌</span>
+            <strong>${voters}</strong>
+          </span>
+          ${topScoreClass ? '<span class="map-vote-chip top" title="Daugiausiai balsų">★</span>' : ''}
+        </div>
+        <div class="map-vote-dots" aria-hidden="true">${dots}</div>
       </article>
     `;
   }).join('');

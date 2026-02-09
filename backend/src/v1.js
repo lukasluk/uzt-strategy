@@ -187,14 +187,14 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
           id, institution_id, title, state, finalized_at, created_at, map_x, map_y
        from strategy_cycles
        where institution_id = any($1::uuid[])
-         and state in ('final', 'archived')
-       order by institution_id, coalesce(finalized_at, created_at) desc`,
+       order by institution_id, created_at desc`,
       [institutionIds]
     );
     const cyclesByInstitution = Object.fromEntries(cyclesRes.rows.map((row) => [row.institution_id, row]));
     const cycleIds = cyclesRes.rows.map((row) => row.id);
 
     const guidelinesByCycle = {};
+    const voteByGuideline = {};
     if (cycleIds.length) {
       const guidelinesRes = await query(
         `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, map_x, map_y, created_at
@@ -204,6 +204,25 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
          order by created_at asc`,
         [cycleIds]
       );
+
+      const votesRes = await query(
+        `select g.id as guideline_id,
+                coalesce(sum(v.score), 0)::int as total_score,
+                count(distinct v.voter_id)::int as voter_count
+         from strategy_guidelines g
+         left join strategy_votes v on v.guideline_id = g.id
+         where g.cycle_id = any($1::uuid[])
+           and g.status in ('active', 'merged')
+         group by g.id`,
+        [cycleIds]
+      );
+      votesRes.rows.forEach((row) => {
+        voteByGuideline[row.guideline_id] = {
+          totalScore: Number(row.total_score || 0),
+          voterCount: Number(row.voter_count || 0)
+        };
+      });
+
       guidelinesRes.rows.forEach((row) => {
         if (!guidelinesByCycle[row.cycle_id]) guidelinesByCycle[row.cycle_id] = [];
         guidelinesByCycle[row.cycle_id].push({
@@ -215,6 +234,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
           parentGuidelineId: row.parent_guideline_id || null,
           mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
           mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
+          totalScore: voteByGuideline[row.id]?.totalScore || 0,
+          voterCount: voteByGuideline[row.id]?.voterCount || 0,
           createdAt: row.created_at
         });
       });
@@ -935,6 +956,71 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     );
 
     res.json({ participants: participants.rows });
+  });
+
+  app.put('/api/v1/admin/users/:userId/password', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const userId = String(req.params.userId || '').trim();
+    const password = String(req.body?.password || '');
+    if (!userId || password.length < 8) {
+      return res.status(400).json({ error: 'userId and password(min 8) required' });
+    }
+
+    const membershipRes = await query(
+      `select id
+       from institution_memberships
+       where institution_id = $1 and user_id = $2`,
+      [req.auth.institutionId, userId]
+    );
+    if (membershipRes.rowCount === 0) return res.status(404).json({ error: 'membership not found' });
+
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = hashPassword(password, salt);
+    await query(
+      `update platform_users
+       set password_salt = $1,
+           password_hash = $2
+       where id = $3`,
+      [salt, hash, userId]
+    );
+
+    res.json({ ok: true });
+  });
+
+  app.delete('/api/v1/admin/users/:userId', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const userId = String(req.params.userId || '').trim();
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    if (userId === req.auth.sub) return res.status(400).json({ error: 'cannot delete self' });
+
+    const membershipRes = await query(
+      `select id
+       from institution_memberships
+       where institution_id = $1 and user_id = $2`,
+      [req.auth.institutionId, userId]
+    );
+    if (membershipRes.rowCount === 0) return res.status(404).json({ error: 'membership not found' });
+
+    await query(
+      `delete from institution_memberships
+       where institution_id = $1 and user_id = $2`,
+      [req.auth.institutionId, userId]
+    );
+
+    const leftRes = await query(
+      `select count(*)::int as membership_count
+       from institution_memberships
+       where user_id = $1`,
+      [userId]
+    );
+    const membershipsLeft = Number(leftRes.rows[0]?.membership_count || 0);
+    let userDeleted = false;
+    if (membershipsLeft === 0) {
+      await query('delete from platform_users where id = $1', [userId]);
+      userDeleted = true;
+    }
+
+    res.json({ ok: true, userDeleted, membershipsLeft });
   });
 
   app.get('/api/v1/admin/cycles/:cycleId/guidelines', requireAuth, async (req, res) => {
