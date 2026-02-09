@@ -22,3 +22,7 @@ jobs:
         run: |
           rsync -az --delete -e "ssh" ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/srv/uzt-strategy-src
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "bash /srv/uzt-strategy-src/deploy/deploy.sh"
+
+      - name: Verify API on VM
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "curl -fsS http://127.0.0.1:3000/api/health"
