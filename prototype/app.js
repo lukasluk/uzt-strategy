@@ -25,6 +25,7 @@ const introSlides = [
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const DEFAULT_INSTITUTION_SLUG = 'uzt';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
+const BRAND_TITLE = 'digistrategija.lt - tavo įstaigos strategijos kurimo dirbtuvės paprastai';
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -37,6 +38,7 @@ const elements = {
 const state = {
   institutionSlug: resolveInstitutionSlug(),
   guideSlideIndex: 0,
+  introCollapsed: false,
   loading: false,
   busy: false,
   error: '',
@@ -448,6 +450,7 @@ function renderStepView() {
   const remaining = Math.max(0, budget - used);
   const slideIndex = clamp(state.guideSlideIndex || 0, 0, introSlides.length - 1);
   const slide = introSlides[slideIndex];
+  const introToggleLabel = state.introCollapsed ? 'Rodyti skaidres' : 'Suskleisti';
 
   const stats = [
     `Busena: ${String(state.cycle?.state || '-').toUpperCase()}`,
@@ -465,27 +468,33 @@ function renderStepView() {
         ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viesas rezimas</span>'}
       </div>
     </div>
+
+    <div class="card intro-card ${state.introCollapsed ? 'collapsed' : ''}" style="margin-bottom: 16px;">
+      <div class="header-row">
+        <strong>${escapeHtml(slide.title)}</strong>
+        <div class="header-stack">
+          <span class="tag">Skaidre ${slideIndex + 1} / ${introSlides.length}</span>
+          <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button">${introToggleLabel}</button>
+        </div>
+      </div>
+      <div class="intro-collapse">
+        ${renderSlideIllustration(slideIndex)}
+        <p class="prompt" style="margin-bottom: 10px;">${escapeHtml(slide.body)}</p>
+        <div class="slide-controls">
+          <button id="slidePrev" class="slide-nav" aria-label="Ankstesne skaidre" ${slideIndex === 0 ? 'disabled' : ''}>&lt;</button>
+          <div class="slide-dots">
+            ${introSlides.map((_, idx) => `<button class="slide-dot ${idx === slideIndex ? 'active' : ''}" data-action="goto-slide" data-index="${idx}" aria-label="Skaidre ${idx + 1}"></button>`).join('')}
+          </div>
+          <button id="slideNext" class="slide-nav" aria-label="Kita skaidre" ${slideIndex === introSlides.length - 1 ? 'disabled' : ''}>&gt;</button>
+        </div>
+      </div>
+    </div>
+
     <p class="prompt">${escapeHtml(steps[0].prompt)}</p>
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
 
     <div class="header-stack" style="margin-bottom: 14px;">
       ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
-    </div>
-
-    <div class="card intro-card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>${escapeHtml(slide.title)}</strong>
-        <span class="tag">Skaidre ${slideIndex + 1} / ${introSlides.length}</span>
-      </div>
-      ${renderSlideIllustration(slideIndex)}
-      <p class="prompt" style="margin-bottom: 10px;">${escapeHtml(slide.body)}</p>
-      <div class="slide-controls">
-        <button id="slidePrev" class="slide-nav" aria-label="Ankstesne skaidre" ${slideIndex === 0 ? 'disabled' : ''}>&lt;</button>
-        <div class="slide-dots">
-          ${introSlides.map((_, idx) => `<button class="slide-dot ${idx === slideIndex ? 'active' : ''}" data-action="goto-slide" data-index="${idx}" aria-label="Skaidre ${idx + 1}"></button>`).join('')}
-        </div>
-        <button id="slideNext" class="slide-nav" aria-label="Kita skaidre" ${slideIndex === introSlides.length - 1 ? 'disabled' : ''}>&gt;</button>
-      </div>
     </div>
 
     <div class="card-list">
@@ -527,9 +536,17 @@ function renderStepView() {
 function bindStepEvents() {
   const slidePrev = elements.stepView.querySelector('#slidePrev');
   const slideNext = elements.stepView.querySelector('#slideNext');
+  const toggleIntroBtn = elements.stepView.querySelector('#toggleIntroBtn');
   const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
   const guidelineForm = elements.stepView.querySelector('#guidelineAddForm');
   const list = elements.stepView.querySelector('.card-list');
+
+  if (toggleIntroBtn) {
+    toggleIntroBtn.addEventListener('click', () => {
+      state.introCollapsed = !state.introCollapsed;
+      renderStepView();
+    });
+  }
 
   if (slidePrev) {
     slidePrev.addEventListener('click', () => {
@@ -744,8 +761,6 @@ function downloadJson() {
 }
 
 function bindGlobal() {
-  elements.sessionName.readOnly = true;
-
   document.getElementById('exportBtn').addEventListener('click', exportSummary);
   document.getElementById('closeExport').addEventListener('click', () => {
     elements.exportPanel.hidden = true;
@@ -859,8 +874,7 @@ function showAuthModal(initialMode) {
 }
 
 function render() {
-  const displayTitle = state.cycle?.title || state.institution?.name || `Strategija (${state.institutionSlug})`;
-  elements.sessionName.value = displayTitle;
+  elements.sessionName.textContent = BRAND_TITLE;
 
   renderSteps();
   renderStepView();

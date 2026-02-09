@@ -24,18 +24,20 @@ body {
   background: radial-gradient(circle at top left, #fff7e6, var(--bg)) no-repeat;
   color: var(--ink);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .app {
-  padding: 32px 40px 60px;
+  padding: 24px clamp(12px, 3vw, 40px) 60px;
 }
 
 .topbar {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 28px;
+  flex-wrap: wrap;
 }
 
 .kicker {
@@ -48,19 +50,15 @@ body {
 
 .session-name {
   font-family: 'Fraunces', serif;
-  font-size: 32px;
+  font-size: clamp(20px, 3vw, 32px);
   font-weight: 700;
-  border: none;
-  background: transparent;
-  width: min(520px, 90vw);
+  width: min(760px, 100%);
+  max-width: 100%;
   border-bottom: 2px solid var(--accent-2);
   padding: 6px 2px;
   color: var(--ink);
-}
-
-.session-name:focus {
-  outline: none;
-  border-color: var(--accent);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .top-actions {
@@ -96,14 +94,19 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
   gap: 28px;
+  align-items: start;
 }
 
 .steps {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  max-height: calc(100vh - 24px);
 }
 
 .step-pill {
@@ -117,6 +120,7 @@ body {
   text-decoration: none;
   color: var(--ink);
   display: block;
+  width: 100%;
 }
 
 .step-pill.active {
@@ -142,6 +146,7 @@ body {
   box-shadow: 0 14px 30px rgba(28, 26, 22, 0.12);
   min-height: 520px;
   border: 1px solid #eadbc7;
+  min-width: 0;
 }
 
 .step-view {
@@ -189,7 +194,7 @@ textarea {
 
 .card-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin-top: 16px;
 }
@@ -299,7 +304,8 @@ textarea {
 
 @media (max-width: 900px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 14px;
   }
 
   .topbar {
@@ -309,6 +315,26 @@ textarea {
 
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .steps {
+    top: 10px;
+  }
+
+  .step-pill {
+    padding: 12px 10px;
+  }
+
+  .step-pill h4 {
+    font-size: 14px;
+  }
+
+  .step-pill p {
+    font-size: 11px;
+  }
+
+  .stage {
+    padding: 18px;
   }
 }
 
@@ -327,10 +353,25 @@ textarea {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .intro-card {
   border: 2px solid #ccb8a0;
   background: linear-gradient(160deg, #fffefb 0%, #f8efe2 100%);
+}
+.intro-toggle-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.intro-collapse {
+  max-height: 520px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+.intro-card.collapsed .intro-collapse {
+  max-height: 0;
+  opacity: 0;
 }
 .slide-illus {
   width: 100%;
@@ -483,6 +524,7 @@ textarea {
   gap: 12px;
   justify-content: flex-end;
   margin-top: 12px;
+  flex-wrap: wrap;
 }
 .user-chip {
   background: var(--bg-accent);
@@ -522,7 +564,7 @@ textarea {
 }
 .vote-floating {
   position: fixed;
-  left: 20px;
+  right: 20px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 25;
@@ -567,5 +609,28 @@ textarea {
   }
   .vote-floating-inner {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .layout {
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .step-pill p {
+    display: none;
+  }
+
+  .step-pill {
+    padding: 10px 8px;
+  }
+
+  .stage {
+    padding: 14px;
+  }
+
+  .card-list {
+    grid-template-columns: 1fr;
   }
 }
