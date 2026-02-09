@@ -986,7 +986,7 @@ function renderStepView() {
         <p class="prompt" style="margin: 8px 0 0;">Viešai matomi visi komentarai prie strategijos gairių. Prisijungus galima siūlyti gaires, komentuoti ir balsuoti.</p>
         <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
       </div>
-    `}
+    `)}
   `;
 
   bindStepEvents();
