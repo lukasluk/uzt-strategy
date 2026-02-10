@@ -1049,22 +1049,21 @@ function renderMapView() {
       const cycleTitle = node.institution.cycle?.title || 'Nėra patvirtinto ciklo';
       const cycleState = node.institution.cycle?.state || '-';
       return `
-        <a href="index.html?institution=${encodeURIComponent(node.institution.slug)}"
-           class="strategy-map-node institution-node ${node.institution.slug === state.institutionSlug ? 'active' : ''}"
-           data-node-id="${escapeHtml(node.id)}"
-           data-kind="institution"
-           data-entity-id="${escapeHtml(node.entityId)}"
-           data-cycle-id="${escapeHtml(node.cycleId || '')}"
-           data-x="${node.x}"
-           data-y="${node.y}"
-           data-w="${node.w}"
-           data-h="${node.h}"
-           data-draggable="${editable ? 'true' : 'false'}"
-           style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
+        <article class="strategy-map-node institution-node ${node.institution.slug === state.institutionSlug ? 'active' : ''}"
+                 data-node-id="${escapeHtml(node.id)}"
+                 data-kind="institution"
+                 data-entity-id="${escapeHtml(node.entityId)}"
+                 data-cycle-id="${escapeHtml(node.cycleId || '')}"
+                 data-x="${node.x}"
+                 data-y="${node.y}"
+                 data-w="${node.w}"
+                 data-h="${node.h}"
+                 data-draggable="${editable ? 'true' : 'false'}"
+                 style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
           <strong>${escapeHtml(node.institution.name)}</strong>
           <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
           <small>${escapeHtml(cycleTitle)}</small>
-        </a>
+        </article>
       `;
     }
 
