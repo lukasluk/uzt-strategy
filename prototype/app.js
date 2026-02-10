@@ -188,6 +188,11 @@ function isAuthenticated() {
   return Boolean(state.token && state.user);
 }
 
+function isEmbeddedContext() {
+  const params = new URLSearchParams(window.location.search);
+  return window.self !== window.top || params.get('frame') === 'admin';
+}
+
 function canEditMapLayout() {
   if (!isAuthenticated()) return false;
   if (state.role !== 'institution_admin') return false;
@@ -584,7 +589,15 @@ function renderSteps() {
     { id: 'about', icon: 'ℹ', title: 'Apie mus', hint: 'Iniciatyvos aprašymas', locked: false }
   ];
 
-  items.forEach((item) => {
+  const visibleItems = isEmbeddedContext()
+    ? items.filter((item) => item.id !== 'admin')
+    : items;
+
+  if (state.activeView === 'admin' && !visibleItems.some((item) => item.id === 'admin')) {
+    state.activeView = 'guidelines';
+  }
+
+  visibleItems.forEach((item) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `step-pill${state.activeView === item.id ? ' active' : ''}${item.locked ? ' locked' : ''}`;
@@ -609,47 +622,63 @@ function renderSteps() {
   });
 }
 
+function applyIntroGuideState() {
+  if (!elements.introDeck) return;
+  const guide = elements.introDeck.querySelector('.intro-guide');
+  const toggleIntroBtn = elements.introDeck.querySelector('#toggleIntroBtn');
+  if (guide) guide.classList.toggle('collapsed', state.introCollapsed);
+  if (toggleIntroBtn) {
+    toggleIntroBtn.textContent = state.introCollapsed ? 'Rodyti naudojimosi gidą' : 'Slėpti naudojimosi gidą';
+    toggleIntroBtn.setAttribute('aria-expanded', state.introCollapsed ? 'false' : 'true');
+  }
+}
+
 function renderIntroDeck() {
   if (!elements.introDeck) return;
-  const toggleLabel = state.introCollapsed ? 'Rodyti naudojimosi gidą' : 'Slėpti naudojimosi gidą';
-  const helpCards = introSlides.map((slide, idx) => `
-    <article class="guide-card">
-      <div class="guide-head">
-        <span class="guide-index">${idx + 1}</span>
-        <h4>${escapeHtml(String(slide.title || '').replace(/^\d+\.\s*/, ''))}</h4>
-      </div>
-      <p>${escapeHtml(slide.body || '')}</p>
-      ${Array.isArray(slide.points) && slide.points.length
-        ? `<ul class="guide-points">${slide.points.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
-        : ''}
-    </article>
-  `).join('');
 
-  elements.introDeck.innerHTML = `
-    <div class="intro-guide ${state.introCollapsed ? 'collapsed' : ''}">
-      <div class="intro-guide-header">
-        <div>
-          <p class="kicker">Kaip naudotis</p>
-          <h3>Naudojimosi gidas</h3>
+  const existingGuide = elements.introDeck.querySelector('.intro-guide');
+  if (!existingGuide) {
+    const helpCards = introSlides.map((slide, idx) => `
+      <article class="guide-card" style="--card-index:${idx};">
+        <div class="guide-head">
+          <span class="guide-index">${idx + 1}</span>
+          <h4>${escapeHtml(String(slide.title || '').replace(/^\d+\.\s*/, ''))}</h4>
         </div>
-        <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button">${toggleLabel}</button>
-      </div>
-      <div class="intro-guide-body">
-        <div class="guide-grid">
-          ${helpCards}
-        </div>
-      </div>
-    </div>
-  `;
+        <p>${escapeHtml(slide.body || '')}</p>
+        ${Array.isArray(slide.points) && slide.points.length
+          ? `<ul class="guide-points">${slide.points.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+          : ''}
+      </article>
+    `).join('');
 
-  const toggleIntroBtn = elements.introDeck.querySelector('#toggleIntroBtn');
-  if (toggleIntroBtn) {
-    toggleIntroBtn.addEventListener('click', () => {
-      state.introCollapsed = !state.introCollapsed;
-      persistIntroCollapsed();
-      renderIntroDeck();
-    });
+    elements.introDeck.innerHTML = `
+      <div class="intro-guide">
+        <div class="intro-guide-header">
+          <div>
+            <p class="kicker">Kaip naudotis</p>
+            <h3>Naudojimosi gidas</h3>
+          </div>
+          <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button" aria-expanded="true"></button>
+        </div>
+        <div class="intro-guide-body">
+          <div class="guide-grid">
+            ${helpCards}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const toggleIntroBtn = elements.introDeck.querySelector('#toggleIntroBtn');
+    if (toggleIntroBtn) {
+      toggleIntroBtn.addEventListener('click', () => {
+        state.introCollapsed = !state.introCollapsed;
+        persistIntroCollapsed();
+        applyIntroGuideState();
+      });
+    }
   }
+
+  applyIntroGuideState();
 }
 
 function applyMapTransform(viewport, world) {
@@ -1208,6 +1237,26 @@ function renderAboutView() {
 
 function renderAdminView() {
   const allowed = canOpenAdminView();
+
+  if (isEmbeddedContext()) {
+    const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}&frame=admin`;
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Admin langas negali būti įkeltas į kitą Admin langą</strong>
+        <p class="prompt" style="margin: 8px 0 0;">
+          Atidarykite administravimo puslapį atskirai, kad išvengtume admin > admin > admin ciklo.
+        </p>
+        <div class="header-stack" style="margin-top: 12px;">
+          <a class="btn btn-primary" href="${src}" target="_top" rel="noopener">Atidaryti administravimą</a>
+          <button id="backToGuidelinesFromNestedAdmin" class="btn btn-ghost" type="button">Grįžti į gaires</button>
+        </div>
+      </div>
+    `;
+    const backBtn = elements.stepView.querySelector('#backToGuidelinesFromNestedAdmin');
+    if (backBtn) backBtn.addEventListener('click', () => setActiveView('guidelines'));
+    return;
+  }
+
   if (!isAuthenticated()) {
     elements.stepView.innerHTML = `
       <div class="card">
@@ -1233,7 +1282,7 @@ function renderAdminView() {
     return;
   }
 
-  const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}`;
+  const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}&frame=admin`;
   elements.stepView.innerHTML = `
     <section class="admin-inline-shell">
       <div class="step-header">

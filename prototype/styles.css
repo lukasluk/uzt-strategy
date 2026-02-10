@@ -586,6 +586,12 @@ textarea {
   background: linear-gradient(160deg, #fffef9 0%, #f7ecde 100%);
   border-radius: 18px;
   padding: 14px 16px;
+  box-shadow: 0 8px 18px rgba(28, 26, 22, 0.08);
+  transition: box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
+}
+.intro-guide:hover {
+  border-color: #d9c3a6;
+  box-shadow: 0 12px 24px rgba(28, 26, 22, 0.1);
 }
 .intro-guide-header {
   display: flex;
@@ -608,14 +614,23 @@ textarea {
   overflow: hidden;
   opacity: 1;
   transform: translateY(0);
-  transition: max-height 0.34s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.24s ease, margin-top 0.34s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+  clip-path: inset(0 0 0 0 round 14px);
+  transform-origin: top;
+  will-change: max-height, opacity, transform, margin-top, clip-path;
+  transition:
+    max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    margin-top 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    clip-path 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   margin-top: 10px;
 }
 .intro-guide.collapsed .intro-guide-body {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
-  transform: translateY(-8px);
+  transform: translateY(-10px) scaleY(0.98);
+  clip-path: inset(0 0 100% 0 round 14px);
   pointer-events: none;
 }
 .guide-grid {
@@ -636,9 +651,23 @@ textarea {
   opacity: 1;
   transition: transform 0.28s ease, opacity 0.2s ease;
 }
+.intro-guide:not(.collapsed) .guide-card {
+  animation: guideCardIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--card-index, 0) * 28ms);
+}
 .intro-guide.collapsed .guide-card {
   transform: translateY(-6px);
   opacity: 0;
+}
+@keyframes guideCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 .guide-head {
   display: flex;
