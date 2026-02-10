@@ -265,7 +265,7 @@ textarea {
 
 .card-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
   margin-top: 16px;
 }
@@ -811,8 +811,9 @@ textarea {
 }
 .card-title {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 220px);
   gap: 16px;
+  align-items: start;
 }
 .title-row {
   display: flex;
@@ -1117,6 +1118,16 @@ textarea {
   }
   .vote-floating-inner {
     width: min(190px, calc(100vw - 20px));
+  }
+}
+
+@media (max-width: 1280px) {
+  .card-title {
+    grid-template-columns: 1fr;
+  }
+
+  .vote-panel {
+    width: 100%;
   }
 }
 

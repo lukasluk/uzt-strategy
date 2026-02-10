@@ -125,7 +125,7 @@ function persistIntroCollapsed() {
 }
 
 function hydrateVoteFloatingCollapsed() {
-  return localStorage.getItem(VOTE_FLOATING_COLLAPSED_KEY) === '1';
+  return false;
 }
 
 function persistVoteFloatingCollapsed() {
@@ -654,6 +654,43 @@ function applyMapTransform(viewport, world) {
   viewport.style.setProperty('--grid-y', `${y % gridSize}px`);
 }
 
+function fitMapToCurrentNodes(viewport, world) {
+  const nodes = Array.from(world.querySelectorAll('.strategy-map-node[data-node-id]')).map((node) => ({
+    x: Number(node.dataset.x || 0),
+    y: Number(node.dataset.y || 0),
+    w: Number(node.dataset.w || node.offsetWidth || 0),
+    h: Number(node.dataset.h || node.offsetHeight || 0)
+  }));
+  if (!nodes.length) {
+    state.mapTransform = { x: 120, y: 80, scale: 1 };
+    applyMapTransform(viewport, world);
+    return;
+  }
+
+  const minX = nodes.reduce((acc, node) => Math.min(acc, node.x), Infinity);
+  const minY = nodes.reduce((acc, node) => Math.min(acc, node.y), Infinity);
+  const maxX = nodes.reduce((acc, node) => Math.max(acc, node.x + node.w), -Infinity);
+  const maxY = nodes.reduce((acc, node) => Math.max(acc, node.y + node.h), -Infinity);
+
+  const width = Math.max(1, maxX - minX);
+  const height = Math.max(1, maxY - minY);
+  const pad = 72;
+  const viewportW = Math.max(1, viewport.clientWidth);
+  const viewportH = Math.max(1, viewport.clientHeight);
+  const scale = clamp(
+    Math.min((viewportW - pad) / width, (viewportH - pad) / height),
+    0.45,
+    1.8
+  );
+
+  state.mapTransform = {
+    scale,
+    x: (viewportW - width * scale) / 2 - minX * scale,
+    y: (viewportH - height * scale) / 2 - minY * scale
+  };
+  applyMapTransform(viewport, world);
+}
+
 function layoutStrategyMap() {
   const institutions = Array.isArray(state.mapData?.institutions) ? state.mapData.institutions : [];
   const selectedSlug = normalizeSlug(state.institutionSlug);
@@ -671,8 +708,8 @@ function layoutStrategyMap() {
   const edges = [];
   const baseX = 140;
   const institutionNodeId = `inst-${institution.id}`;
-  const institutionX = Math.max(24, toNumberOrNull(institution.cycle?.mapX) ?? baseX);
-  const institutionY = Math.max(24, toNumberOrNull(institution.cycle?.mapY) ?? 48);
+  const institutionX = toNumberOrNull(institution.cycle?.mapX) ?? baseX;
+  const institutionY = toNumberOrNull(institution.cycle?.mapY) ?? 48;
   nodes.push({
     id: institutionNodeId,
     kind: 'institution',
@@ -706,7 +743,6 @@ function layoutStrategyMap() {
 
   const visited = new Set();
   let nextY = institutionY + 170;
-  let maxY = institutionY + 240;
   const placeNodeTree = (guideline, depth, parentNodeId) => {
     if (visited.has(guideline.id)) return;
     visited.add(guideline.id);
@@ -716,8 +752,8 @@ function layoutStrategyMap() {
     const defaultY = nextY;
     nextY += 100;
 
-    const nodeX = Math.max(24, toNumberOrNull(guideline.mapX) ?? defaultX);
-    const nodeY = Math.max(24, toNumberOrNull(guideline.mapY) ?? defaultY);
+    const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
+    const nodeY = toNumberOrNull(guideline.mapY) ?? defaultY;
     nodes.push({
       id: nodeId,
       kind: 'guideline',
@@ -731,7 +767,6 @@ function layoutStrategyMap() {
       guideline
     });
 
-    maxY = Math.max(maxY, nodeY + 220);
     if (parentNodeId) {
       edges.push({ from: parentNodeId, to: nodeId, type: 'child' });
     } else {
@@ -751,10 +786,21 @@ function layoutStrategyMap() {
     if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
   });
 
+  const minLeft = nodes.reduce((acc, node) => Math.min(acc, node.x), Infinity);
+  const minTop = nodes.reduce((acc, node) => Math.min(acc, node.y), Infinity);
+  const shiftX = Number.isFinite(minLeft) && minLeft < 24 ? 24 - minLeft : 0;
+  const shiftY = Number.isFinite(minTop) && minTop < 24 ? 24 - minTop : 0;
+  if (shiftX !== 0 || shiftY !== 0) {
+    nodes.forEach((node) => {
+      node.x += shiftX;
+      node.y += shiftY;
+    });
+  }
+
   const maxRight = nodes.reduce((acc, node) => Math.max(acc, node.x + node.w), 0);
   const maxBottom = nodes.reduce((acc, node) => Math.max(acc, node.y + node.h), 0);
   const width = Math.max(1800, maxRight + 260);
-  const height = Math.max(920, Math.max(maxY, maxBottom + 200));
+  const height = Math.max(920, maxBottom + 200);
   return { nodes, edges, width, height, institution };
 }
 
@@ -858,16 +904,8 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (draggedNode) {
       const dx = (event.clientX - dragStartX) / state.mapTransform.scale;
       const dy = (event.clientY - dragStartY) / state.mapTransform.scale;
-      const nodeW = Number(draggedNode.dataset.w || 200);
-      const nodeH = Number(draggedNode.dataset.h || 100);
-      const worldWidth = Number(world.offsetWidth || 0);
-      const worldHeight = Number(world.offsetHeight || 0);
-      const minX = 16;
-      const minY = 16;
-      const maxX = Math.max(minX, worldWidth - nodeW - 16);
-      const maxY = Math.max(minY, worldHeight - nodeH - 16);
-      const nextX = Math.round(clamp(nodeOriginX + dx, minX, maxX));
-      const nextY = Math.round(clamp(nodeOriginY + dy, minY, maxY));
+      const nextX = Math.round(nodeOriginX + dx);
+      const nextY = Math.round(nodeOriginY + dy);
       draggedNode.dataset.x = String(nextX);
       draggedNode.dataset.y = String(nextY);
       draggedNode.style.left = `${nextX}px`;
@@ -1099,8 +1137,7 @@ function renderMapView() {
   }
   if (resetBtn && viewport && world) {
     resetBtn.addEventListener('click', () => {
-      state.mapTransform = { x: 120, y: 80, scale: 1 };
-      applyMapTransform(viewport, world);
+      fitMapToCurrentNodes(viewport, world);
     });
   }
 }
