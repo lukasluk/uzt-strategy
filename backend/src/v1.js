@@ -498,6 +498,24 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     res.status(201).json({ inviteId, inviteToken, email, role });
   });
 
+  app.put('/api/v1/meta-admin/institutions/:institutionId', requireMetaAdmin, async (req, res) => {
+    const institutionId = String(req.params.institutionId || '').trim();
+    const name = String(req.body?.name || '').trim();
+    if (!institutionId || !name) {
+      return res.status(400).json({ error: 'institutionId and name required' });
+    }
+
+    const result = await query(
+      `update institutions
+       set name = $1
+       where id = $2`,
+      [name, institutionId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
+
+    res.json({ ok: true, institutionId, name });
+  });
+
   app.put('/api/v1/meta-admin/users/:userId/status', requireMetaAdmin, async (req, res) => {
     const userId = String(req.params.userId || '').trim();
     const status = String(req.body?.status || '').trim();

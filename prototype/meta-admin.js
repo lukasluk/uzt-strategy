@@ -28,6 +28,7 @@ function toUserMessage(error) {
   const map = {
     forbidden: 'Neteisingas slaptažodis arba neleidžiama operacija.',
     'name required': 'Įveskite institucijos pavadinimą.',
+    'institutionId and name required': 'Pasirinkite instituciją ir įveskite naują pavadinimą.',
     'invalid slug': 'Netinkamas slug.',
     'slug already exists': 'Toks institucijos slug jau egzistuoja.',
     'institutionId and email required': 'Pasirinkite instituciją ir įveskite el. paštą.',
@@ -236,6 +237,36 @@ function renderDashboard() {
 
     <section class="card" style="margin-bottom: 16px;">
       <div class="header-row">
+        <strong>Esamos institucijos</strong>
+        <span class="tag">${institutions.length}</span>
+      </div>
+      <div class="card-list">
+        ${institutions.length
+          ? institutions.map((institution) => `
+              <article class="card">
+                <div class="header-row">
+                  <strong>${escapeHtml(institution.name)}</strong>
+                  <span class="tag">${escapeHtml(institution.slug)}</span>
+                </div>
+                <form class="institution-rename-form inline-form" data-institution-id="${escapeHtml(institution.id)}">
+                  <input
+                    type="text"
+                    name="name"
+                    value="${escapeHtml(institution.name)}"
+                    placeholder="Naujas institucijos pavadinimas"
+                    required
+                    ${state.busy ? 'disabled' : ''}
+                  />
+                  <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Išsaugoti</button>
+                </form>
+              </article>
+            `).join('')
+          : '<article class="card"><p class="prompt">Institucijų dar nėra.</p></article>'}
+      </div>
+    </section>
+
+    <section class="card" style="margin-bottom: 16px;">
+      <div class="header-row">
         <strong>Nauji žmonės (invite)</strong>
         <span class="tag">Invite-only</span>
       </div>
@@ -403,6 +434,24 @@ function bindDashboardEvents() {
           body: { status: nextStatus }
         });
         state.notice = `Narystės statusas pakeistas į ${nextStatus}.`;
+        await loadOverview();
+      });
+    });
+  });
+
+  root.querySelectorAll('.institution-rename-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const institutionId = String(form.dataset.institutionId || '').trim();
+      const name = String(new FormData(form).get('name') || '').trim();
+      if (!institutionId || !name) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/meta-admin/institutions/${encodeURIComponent(institutionId)}`, {
+          method: 'PUT',
+          body: { name }
+        });
+        state.notice = 'Institucijos pavadinimas atnaujintas.';
         await loadOverview();
       });
     });
