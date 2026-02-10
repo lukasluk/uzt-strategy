@@ -141,7 +141,9 @@ function toUserMessage(error) {
     'child cannot be parent of itself': 'Gairė negali būti pati sau tėvinė.',
     'parent guideline must be parent': 'Pasirinkta gairė nėra tėvinė.',
     'cannot demote parent with children': 'Negalima keisti tėvinės gairės tipo, kol ji turi vaikinių gairių.',
-    'invalid line side': 'Netinkama linijos išėjimo pusė.'
+    'invalid line side': 'Netinkama linijos išėjimo pusė.',
+    'guidelineId required': 'Nenurodytas gairės ID.',
+    'guideline not found': 'Gairė nerasta.'
   };
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
@@ -429,7 +431,7 @@ function renderDashboard() {
               <textarea name="description" placeholder="Aprašymas" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideline.description || '')}</textarea>
               <div class="inline-form">
                 <select name="status" ${state.busy ? 'disabled' : ''}>
-                  ${['active', 'merged', 'hidden'].map((item) => `<option value="${item}" ${item === guideline.status ? 'selected' : ''}>${item}</option>`).join('')}
+                  ${['active', 'disabled', 'merged', 'hidden'].map((item) => `<option value="${item}" ${item === guideline.status ? 'selected' : ''}>${item}</option>`).join('')}
                 </select>
                 <select name="relationType" ${state.busy ? 'disabled' : ''}>
                   <option value="orphan" ${relationType === 'orphan' ? 'selected' : ''}>Našlaitė</option>
@@ -448,6 +450,15 @@ function renderDashboard() {
                   <option value="bottom" ${guideline.lineSide === 'bottom' ? 'selected' : ''}>Linija: apačia</option>
                 </select>
                 <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Išsaugoti</button>
+                <button
+                  class="btn btn-danger guideline-delete-btn"
+                  type="button"
+                  data-guideline-id="${escapeHtml(guideline.id)}"
+                  data-guideline-title="${escapeHtml(guideline.title)}"
+                  ${state.busy ? 'disabled' : ''}
+                >
+                  Ištrinti
+                </button>
               </div>
               <div class="header-stack">
                 <span class="tag">Balas: ${Number(guideline.totalScore || 0)}</span>
@@ -611,6 +622,23 @@ function bindDashboardEvents() {
             parentGuidelineId: relationType === 'child' ? parentGuidelineId : null
           }
         });
+        await bootstrap();
+      });
+    });
+  });
+
+  root.querySelectorAll('.guideline-delete-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const guidelineId = String(button.dataset.guidelineId || '').trim();
+      const guidelineTitle = String(button.dataset.guidelineTitle || 'šią gairę');
+      if (!guidelineId) return;
+      if (!window.confirm(`Ar tikrai norite ištrinti gairę „${guidelineTitle}“?`)) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/admin/guidelines/${encodeURIComponent(guidelineId)}`, {
+          method: 'DELETE'
+        });
+        state.notice = 'Gairė ištrinta.';
         await bootstrap();
       });
     });

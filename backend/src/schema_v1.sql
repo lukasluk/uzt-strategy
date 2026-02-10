@@ -127,3 +127,10 @@ alter table if exists strategy_guidelines
 
 alter table if exists strategy_guidelines
   add column if not exists line_side text not null default 'auto';
+
+alter table if exists strategy_guidelines
+  drop constraint if exists strategy_guidelines_status_check;
+
+alter table if exists strategy_guidelines
+  add constraint strategy_guidelines_status_check
+  check (status in ('active', 'disabled', 'merged', 'hidden'));

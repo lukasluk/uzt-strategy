@@ -332,6 +332,7 @@ function toUserMessage(error) {
     'institution not found': `Institucija "${state.institutionSlug}" nerasta.`,
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
     'cycle not writable': 'Ciklas nebeleidžia redaguoti (tik skaitymas).',
+    'guideline voting disabled': 'Ši gairė išjungta: balsuoti negalima.',
     'vote budget exceeded': 'Viršytas balsų biudžetas.',
     forbidden: 'Veiksmas neleidžiamas.',
     'membership inactive': 'Narystė neaktyvi.',
@@ -1150,7 +1151,7 @@ function renderMapView() {
       : '<span class="map-vote-empty">Dar nebalsuota</span>';
 
     return `
-      <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)}"
+      <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}"
                data-node-id="${escapeHtml(node.id)}"
                data-kind="guideline"
                data-entity-id="${escapeHtml(node.entityId)}"
@@ -1393,6 +1394,8 @@ function renderGuidelineCard(guideline, options) {
     : '<li class="comment-item comment-item-empty">Dar nėra komentarų.</li>';
   const relation = relationLabel(guideline.relationType);
   const relationTag = relation.charAt(0).toUpperCase() + relation.slice(1);
+  const guidelineStatus = String(guideline.status || 'active').toLowerCase();
+  const votingDisabled = guidelineStatus === 'disabled';
 
   const budget = voteBudget();
   const usedWithoutCurrent = usedVotesTotal() - userScore;
@@ -1401,15 +1404,16 @@ function renderGuidelineCard(guideline, options) {
     minPerGuideline(),
     maxPerGuideline()
   );
-  const canMinus = options.member && options.writable && !state.busy && userScore > minPerGuideline();
-  const canPlus = options.member && options.writable && !state.busy && userScore < maxAllowed;
+  const canMinus = options.member && options.writable && !votingDisabled && !state.busy && userScore > minPerGuideline();
+  const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card">
+    <article class="card ${votingDisabled ? 'guideline-disabled' : ''}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(guideline.title)}</h4>
           <span class="tag">${escapeHtml(relationTag)}</span>
+          ${votingDisabled ? '<span class="tag tag-disabled">Išjungta</span>' : ''}
         </div>
         <p>${escapeHtml(guideline.description || 'Be paaiškinimo')}</p>
       </div>
@@ -1426,6 +1430,7 @@ function renderGuidelineCard(guideline, options) {
               <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" aria-label="Pridėti balsą" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
             <div class="vote-total">Bendras balas: <strong>${Number(guideline.totalScore || 0)}</strong></div>
+            ${votingDisabled ? '<div class="vote-total">Balsavimas išjungtas administratoriaus</div>' : ''}
           </div>
         </div>
       ` : `

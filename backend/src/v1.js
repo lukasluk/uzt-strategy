@@ -206,7 +206,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, line_side, map_x, map_y, created_at
          from strategy_guidelines
          where cycle_id = any($1::uuid[])
-           and status in ('active', 'merged')
+           and status in ('active', 'disabled', 'merged')
          order by created_at asc`,
         [cycleIds]
       );
@@ -218,7 +218,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
          from strategy_guidelines g
          left join strategy_votes v on v.guideline_id = g.id
          where g.cycle_id = any($1::uuid[])
-           and g.status in ('active', 'merged')
+           and g.status in ('active', 'disabled', 'merged')
          group by g.id`,
         [cycleIds]
       );
@@ -283,7 +283,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
     const stats = await query(
       `select
-         (select count(*) from strategy_guidelines g where g.cycle_id = $1 and g.status = 'active') as guidelines_count,
+         (select count(*) from strategy_guidelines g where g.cycle_id = $1 and g.status in ('active', 'disabled')) as guidelines_count,
          (select count(*) from strategy_comments c join strategy_guidelines g on g.id = c.guideline_id where g.cycle_id = $1 and c.status = 'visible') as comments_count,
          (select count(distinct v.voter_id) from strategy_votes v join strategy_guidelines g on g.id = v.guideline_id where g.cycle_id = $1) as participant_count`,
       [cycle.id]
@@ -306,7 +306,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const guidelines = await query(
       `select id, title, description, status, relation_type, parent_guideline_id, line_side, created_at
        from strategy_guidelines
-       where cycle_id = $1 and status = 'active'
+       where cycle_id = $1 and status in ('active', 'disabled')
        order by created_at asc`,
       [cycle.id]
     );
@@ -317,7 +317,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
               count(distinct v.voter_id)::int as voter_count
        from strategy_guidelines g
        left join strategy_votes v on v.guideline_id = g.id
-       where g.cycle_id = $1 and g.status = 'active'
+       where g.cycle_id = $1 and g.status in ('active', 'disabled')
        group by g.id`,
       [cycle.id]
     );
@@ -356,6 +356,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         id: g.id,
         title: g.title,
         description: g.description,
+        status: g.status,
         relationType: g.relation_type || 'orphan',
         parentGuidelineId: g.parent_guideline_id || null,
         lineSide: normalizeLineSide(g.line_side) || 'auto',
@@ -850,6 +851,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     if (!context) return res.status(404).json({ error: 'guideline not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
     if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
+    if (context.guideline_status !== 'active') return res.status(409).json({ error: 'guideline voting disabled' });
 
     const commentId = uuid();
     await query(
@@ -1197,7 +1199,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const lineSide = normalizeLineSide(req.body?.lineSide);
     const parentGuidelineIdRaw = req.body?.parentGuidelineId;
     if (!guidelineId || !title) return res.status(400).json({ error: 'guidelineId and title required' });
-    if (!['active', 'merged', 'hidden'].includes(status)) return res.status(400).json({ error: 'invalid status' });
+    if (!['active', 'disabled', 'merged', 'hidden'].includes(status)) return res.status(400).json({ error: 'invalid status' });
     if (!lineSide) return res.status(400).json({ error: 'invalid line side' });
 
     const context = await loadGuidelineContext(guidelineId);
@@ -1243,6 +1245,34 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
     broadcast({ type: 'v1.guideline.updated', institutionId: req.auth.institutionId, guidelineId });
     res.json({ ok: true });
+  });
+
+  app.delete('/api/v1/admin/guidelines/:guidelineId', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const guidelineId = String(req.params.guidelineId || '').trim();
+    if (!guidelineId) return res.status(400).json({ error: 'guidelineId required' });
+
+    const context = await loadGuidelineContext(guidelineId);
+    if (!context) return res.status(404).json({ error: 'guideline not found' });
+    if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+
+    await query(
+      `update strategy_guidelines
+       set relation_type = 'orphan',
+           parent_guideline_id = null,
+           updated_at = now()
+       where parent_guideline_id = $1`,
+      [guidelineId]
+    );
+
+    await query(
+      `delete from strategy_guidelines
+       where id = $1 and cycle_id = $2`,
+      [guidelineId, context.cycle_id]
+    );
+
+    broadcast({ type: 'v1.guideline.deleted', institutionId: req.auth.institutionId, guidelineId });
+    res.json({ ok: true, guidelineId });
   });
 }
 

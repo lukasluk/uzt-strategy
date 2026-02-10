@@ -149,6 +149,16 @@ body {
   color: var(--ink);
 }
 
+.btn-danger {
+  background: #d44f3b;
+  color: #fff;
+  border-color: #b84534;
+}
+
+.btn-danger:hover {
+  box-shadow: 0 6px 16px rgba(212, 79, 59, 0.26);
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
@@ -397,6 +407,23 @@ textarea {
   flex-direction: column;
   gap: 10px;
   box-shadow: 0 4px 10px rgba(28, 26, 22, 0.05);
+}
+.guideline-disabled {
+  background: #f2f2f2;
+  border-color: #d8d3cb;
+}
+.guideline-disabled .card-top p,
+.guideline-disabled .comment-meta,
+.guideline-disabled .vote-total {
+  color: #70695f;
+}
+.guideline-disabled .vote-panel {
+  background: #ece6dc;
+}
+.tag-disabled {
+  background: #e0dbd2;
+  color: #4f4a43;
+  font-weight: 700;
 }
 
 .card h4 {
@@ -987,6 +1014,11 @@ textarea {
 }
 .guideline-node.relation-orphan {
   border-left: 5px solid #d86b4b;
+}
+.guideline-node.status-disabled {
+  background: #f1f1f1;
+  border-color: #ccc3b7;
+  opacity: 0.85;
 }
 .map-vote-row {
   display: flex;
