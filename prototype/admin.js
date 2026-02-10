@@ -1,6 +1,7 @@
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const DEFAULT_INSTITUTION_SLUG = 'uzt';
 const root = document.getElementById('adminRoot');
+const IS_EMBEDDED_ADMIN = detectEmbeddedAdmin();
 
 const state = {
   institutionSlug: resolveInstitutionSlug(),
@@ -19,10 +20,22 @@ const state = {
 };
 
 hydrateAuthFromStorage();
+applyEmbeddedAdminMode();
 syncTopbarBackLink();
 bootstrap();
 
+function detectEmbeddedAdmin() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('frame') === 'admin' || window.self !== window.top;
+}
+
+function applyEmbeddedAdminMode() {
+  if (!IS_EMBEDDED_ADMIN) return;
+  document.body.classList.add('embedded-admin');
+}
+
 function syncTopbarBackLink() {
+  if (IS_EMBEDDED_ADMIN) return;
   const backLink = document.querySelector('.top-actions a[href="index.html"]');
   if (!backLink) return;
   backLink.setAttribute('href', `index.html?institution=${encodeURIComponent(state.institutionSlug)}`);
@@ -240,6 +253,10 @@ async function runBusy(task) {
 }
 
 function renderLogin() {
+  const backToPublic = IS_EMBEDDED_ADMIN
+    ? ''
+    : `<p class="prompt" style="margin-top: 12px;">Narys? Grįžkite į viešą puslapį: <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}">index</a></p>`;
+
   root.innerHTML = `
     <section class="card" style="max-width: 560px; margin: 30px auto;">
       <h2 style="font-family: 'Fraunces', serif;">Admin prisijungimas</h2>
@@ -251,7 +268,7 @@ function renderLogin() {
         <input type="password" name="password" placeholder="Slaptažodis" required />
         <button type="submit" class="btn btn-primary">Prisijungti</button>
       </form>
-      <p class="prompt" style="margin-top: 12px;">Narys? Grįžkite į viešą puslapį: <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}">index</a></p>
+      ${backToPublic}
     </section>
   `;
 
@@ -286,6 +303,13 @@ function renderDashboard() {
   const cycleState = String(cycle?.state || 'draft');
   const userName = state.user?.displayName || state.user?.email || 'Administratorius';
 
+  const dashboardActions = IS_EMBEDDED_ADMIN
+    ? `<button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>`
+    : `
+        <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Atgal į viešą puslapį</a>
+        <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
+      `;
+
   root.innerHTML = `
     <section class="card" style="margin-bottom: 16px;">
       <div class="header-row">
@@ -294,8 +318,7 @@ function renderDashboard() {
       </div>
       <p class="prompt">Prisijungęs: ${escapeHtml(userName)}</p>
       <div class="inline-form">
-        <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Atgal į viešą puslapį</a>
-        <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
+        ${dashboardActions}
       </div>
     </section>
 
