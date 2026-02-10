@@ -753,8 +753,8 @@ function layoutStrategyMap() {
     cycleId: institution.cycle?.id || null,
     x: institutionX,
     y: institutionY,
-    w: 300,
-    h: 114,
+    w: 390,
+    h: 220,
     institution
   });
 
@@ -1088,7 +1088,6 @@ function renderMapView() {
 
   const nodeMarkup = graph.nodes.map((node) => {
     if (node.kind === 'institution') {
-      const cycleTitle = node.institution.cycle?.title || 'Nėra patvirtinto ciklo';
       const cycleState = node.institution.cycle?.state || '-';
       return `
         <article class="strategy-map-node institution-node ${node.institution.slug === state.institutionSlug ? 'active' : ''}"
@@ -1105,7 +1104,7 @@ function renderMapView() {
           <strong>${escapeHtml(node.institution.name)}</strong>
           <small class="institution-subtitle">Skaitmenizacijos strategija</small>
           <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
-          <small>${escapeHtml(cycleTitle)}</small>
+          <small class="institution-cycle-label">Strategijos ciklo būsena</small>
         </article>
       `;
     }
