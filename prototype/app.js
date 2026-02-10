@@ -125,7 +125,7 @@ function persistIntroCollapsed() {
 }
 
 function hydrateVoteFloatingCollapsed() {
-  return false;
+  return localStorage.getItem(VOTE_FLOATING_COLLAPSED_KEY) === '1';
 }
 
 function persistVoteFloatingCollapsed() {
@@ -788,19 +788,25 @@ function layoutStrategyMap() {
 
   const minLeft = nodes.reduce((acc, node) => Math.min(acc, node.x), Infinity);
   const minTop = nodes.reduce((acc, node) => Math.min(acc, node.y), Infinity);
-  const shiftX = Number.isFinite(minLeft) && minLeft < 24 ? 24 - minLeft : 0;
-  const shiftY = Number.isFinite(minTop) && minTop < 24 ? 24 - minTop : 0;
-  if (shiftX !== 0 || shiftY !== 0) {
-    nodes.forEach((node) => {
-      node.x += shiftX;
-      node.y += shiftY;
-    });
-  }
+  const maxRight = nodes.reduce((acc, node) => Math.max(acc, node.x + node.w), -Infinity);
+  const maxBottom = nodes.reduce((acc, node) => Math.max(acc, node.y + node.h), -Infinity);
 
-  const maxRight = nodes.reduce((acc, node) => Math.max(acc, node.x + node.w), 0);
-  const maxBottom = nodes.reduce((acc, node) => Math.max(acc, node.y + node.h), 0);
-  const width = Math.max(1800, maxRight + 260);
-  const height = Math.max(920, maxBottom + 200);
+  const pad = 320;
+  const shiftX = Number.isFinite(minLeft) ? pad - minLeft : 0;
+  const shiftY = Number.isFinite(minTop) ? pad - minTop : 0;
+  nodes.forEach((node) => {
+    node.x += shiftX;
+    node.y += shiftY;
+  });
+
+  const rawWidth = Number.isFinite(maxRight) && Number.isFinite(minLeft)
+    ? (maxRight - minLeft) + pad * 2
+    : 1800;
+  const rawHeight = Number.isFinite(maxBottom) && Number.isFinite(minTop)
+    ? (maxBottom - minTop) + pad * 2
+    : 920;
+  const width = Math.max(1800, rawWidth);
+  const height = Math.max(920, rawHeight);
   return { nodes, edges, width, height, institution };
 }
 
@@ -1061,6 +1067,7 @@ function renderMapView() {
                  data-draggable="${editable ? 'true' : 'false'}"
                  style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
           <strong>${escapeHtml(node.institution.name)}</strong>
+          <small class="institution-subtitle">Skaitmenizacijos strategija</small>
           <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
           <small>${escapeHtml(cycleTitle)}</small>
         </article>
@@ -1148,7 +1155,45 @@ function renderAboutView() {
         <h2>Apie mus</h2>
       </div>
       <div class="card">
-        <p>Čia bus aprašymas kas čia per iniciatyva.</p>
+        <p>
+          Lietuvos viešajame sektoriuje skaitmenizacija vis dažniau suvokiama ne kaip pavienių IT projektų rinkinys,
+          o kaip sisteminis pokytis, apimantis paslaugų kokybę, duomenų valdymą ir naujų technologijų taikymą.
+          Todėl vis didesnę reikšmę įgyja ne tik technologiniai sprendimai, bet ir aiškios, įgyvendinamos
+          skaitmenizacijos strategijos (arba IT plėtros planai).
+        </p>
+        <p>
+          Praktika rodo, kad tradiciniai, didelės apimties strateginiai dokumentai dažnai tampa sunkiai pritaikomi
+          greitai besikeičiančioje aplinkoje. Dėl to vis daugiau dėmesio skiriama lanksčioms, įtraukioms ir
+          duomenimis grįstoms strategijų formavimo praktikoms, kurios leidžia greičiau susitarti dėl prioritetų ir krypties.
+        </p>
+        <p>Vienas iš būdų tai pasiekti – aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:</p>
+        <ul class="about-list">
+          <li>Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).</li>
+          <li>Duomenų kokybė ir duomenų valdymas (data governance).</li>
+          <li>Tikslingas dirbtinio intelekto taikymas (AI with purpose).</li>
+        </ul>
+        <p>
+          Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas – jis turi būti suprantamas, įtraukiantis
+          ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys
+          dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina
+          skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.
+        </p>
+        <p>
+          Šiame kontekste atsirado <strong>www.digistrategija.lt</strong> – eksperimentinis, atviras įrankis,
+          skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti.
+          Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo
+          abstrakčių idėjų prie aiškių sprendimų krypčių.
+        </p>
+        <p>
+          Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas – veikiau praktinis eksperimentas,
+          skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti
+          veikiančius, naudotojams suprantamus įrankius.
+        </p>
+        <p>
+          Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos,
+          kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę
+          judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.
+        </p>
       </div>
     </section>
   `;
