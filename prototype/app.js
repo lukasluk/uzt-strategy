@@ -568,6 +568,7 @@ function canOpenAdminView() {
 
 function setActiveView(nextView) {
   if (!['guidelines', 'admin', 'map', 'about'].includes(nextView)) return;
+  if (state.activeView === nextView) return;
   state.activeView = nextView;
   render();
 }
@@ -597,7 +598,13 @@ function renderSteps() {
     if (item.locked) {
       button.title = 'Administravimas galimas tik savo institucijos administratoriui';
     }
-    button.addEventListener('click', () => setActiveView(item.id));
+    const isActive = state.activeView === item.id;
+    if (isActive) {
+      button.disabled = true;
+      button.setAttribute('aria-current', 'page');
+    } else {
+      button.addEventListener('click', () => setActiveView(item.id));
+    }
     elements.steps.appendChild(button);
   });
 }
