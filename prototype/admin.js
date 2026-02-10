@@ -21,7 +21,6 @@ const state = {
 
 hydrateAuthFromStorage();
 applyEmbeddedAdminMode();
-syncTopbarBackLink();
 bootstrap();
 
 function detectEmbeddedAdmin() {
@@ -34,13 +33,6 @@ function applyEmbeddedAdminMode() {
   document.body.classList.add('embedded-admin');
   const topbar = document.querySelector('.topbar');
   if (topbar) topbar.remove();
-}
-
-function syncTopbarBackLink() {
-  if (IS_EMBEDDED_ADMIN) return;
-  const backLink = document.querySelector('.top-actions a[href="index.html"]');
-  if (!backLink) return;
-  backLink.setAttribute('href', `index.html?institution=${encodeURIComponent(state.institutionSlug)}`);
 }
 
 function resolveInstitutionSlug() {
@@ -299,31 +291,11 @@ function renderLogin() {
 }
 
 function renderDashboard() {
-  const institution = state.context?.institution;
   const cycle = state.cycle;
   const resultsPublished = Boolean(cycle?.results_published);
   const cycleState = String(cycle?.state || 'draft');
-  const userName = state.user?.displayName || state.user?.email || 'Administratorius';
-
-  const topSummaryCard = IS_EMBEDDED_ADMIN
-    ? ''
-    : `
-      <section class="card" style="margin-bottom: 16px;">
-        <div class="header-row">
-          <strong>Administratoriaus skydas</strong>
-          <span class="tag">Institucija: ${escapeHtml(institution?.name || state.institutionSlug)}</span>
-        </div>
-        <p class="prompt">Prisijungęs: ${escapeHtml(userName)}</p>
-        <div class="inline-form">
-          <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Atgal į viešą puslapį</a>
-          <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
-        </div>
-      </section>
-    `;
 
   root.innerHTML = `
-    ${topSummaryCard}
-
     ${state.error ? `
       <section class="card" style="margin-bottom: 16px;">
         <strong>Klaida</strong>
@@ -489,17 +461,6 @@ function bindDashboardEvents() {
   const retryBtn = document.getElementById('retryBtn');
   if (retryBtn) {
     retryBtn.addEventListener('click', bootstrap);
-  }
-
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      clearSession();
-      state.notice = '';
-      state.error = '';
-      state.inviteToken = '';
-      render();
-    });
   }
 
   const saveCycleStateBtn = document.getElementById('saveCycleStateBtn');
