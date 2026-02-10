@@ -323,9 +323,12 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     );
 
     const comments = await query(
-      `select c.id, c.guideline_id, c.body, c.created_at
+      `select c.id, c.guideline_id, c.body, c.created_at,
+              u.display_name as author_display_name,
+              u.email as author_email
        from strategy_comments c
        join strategy_guidelines g on g.id = c.guideline_id
+       left join platform_users u on u.id = c.author_id
        where g.cycle_id = $1 and c.status = 'visible'
        order by c.created_at asc`,
       [cycle.id]
@@ -339,6 +342,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
       acc[row.guideline_id].push({
         id: row.id,
         body: row.body,
+        authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
+        authorEmail: row.author_email || null,
         createdAt: row.created_at
       });
       return acc;

@@ -1293,44 +1293,74 @@ function renderAdminView() {
   `;
 }
 
-const GUIDELINE_GROUP_DEFS = [
-  {
-    key: 'parent',
-    title: 'Tėvinės gairės',
-    hint: 'Pagrindinės kryptys, prie kurių gali būti jungiamos vaikinės gairės.'
-  },
-  {
-    key: 'child',
-    title: 'Vaikinės gairės',
-    hint: 'Detalizuojančios gairės, susietos su tėvinėmis gairėmis.'
-  },
-  {
-    key: 'orphan',
-    title: 'Našlaitinės gairės',
-    hint: 'Savarankiškos gairės, kurios nėra priskirtos tėvinei gairei.'
-  }
-];
-
 function normalizeGuidelineRelation(value) {
   const relation = String(value || 'orphan').trim().toLowerCase();
   if (relation === 'parent' || relation === 'child' || relation === 'orphan') return relation;
   return 'orphan';
 }
 
-function groupGuidelinesByRelation(guidelines) {
-  const grouped = { parent: [], child: [], orphan: [] };
-  (Array.isArray(guidelines) ? guidelines : []).forEach((guideline) => {
-    grouped[normalizeGuidelineRelation(guideline.relationType)].push(guideline);
+function formatCommentDateTime(value) {
+  if (!value) return 'Data nenurodyta';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Data nenurodyta';
+  return new Intl.DateTimeFormat('lt-LT', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function renderCommentItem(comment) {
+  const author = String(comment?.authorName || comment?.authorEmail || 'Nežinomas autorius').trim();
+  const timestamp = formatCommentDateTime(comment?.createdAt);
+  return `
+    <li class="comment-item">
+      <div class="comment-body">${escapeHtml(comment?.body || '')}</div>
+      <div class="comment-meta">${escapeHtml(author)} · ${escapeHtml(timestamp)}</div>
+    </li>
+  `;
+}
+
+function buildGuidelineRelationshipGroups(guidelines) {
+  const list = Array.isArray(guidelines) ? guidelines : [];
+  const byId = Object.fromEntries(list.map((guideline) => [guideline.id, guideline]));
+  const childrenByParent = {};
+
+  list.forEach((guideline) => {
+    if (normalizeGuidelineRelation(guideline.relationType) !== 'child') return;
+    const parentId = guideline.parentGuidelineId;
+    const parent = parentId ? byId[parentId] : null;
+    if (!parent || normalizeGuidelineRelation(parent.relationType) !== 'parent') return;
+    if (!childrenByParent[parent.id]) childrenByParent[parent.id] = [];
+    childrenByParent[parent.id].push(guideline);
   });
-  return grouped;
+
+  const groupedChildIds = new Set();
+  const parentGroups = list
+    .filter((guideline) => normalizeGuidelineRelation(guideline.relationType) === 'parent')
+    .map((parent) => {
+      const children = childrenByParent[parent.id] || [];
+      children.forEach((child) => groupedChildIds.add(child.id));
+      return { parent, children };
+    });
+
+  const orphanGuidelines = list.filter((guideline) => normalizeGuidelineRelation(guideline.relationType) === 'orphan');
+  const unassignedChildren = list.filter((guideline) => {
+    if (normalizeGuidelineRelation(guideline.relationType) !== 'child') return false;
+    return !groupedChildIds.has(guideline.id);
+  });
+
+  return { parentGroups, orphanGuidelines, unassignedChildren };
 }
 
 function renderGuidelineCard(guideline, options) {
   const userScore = Number(state.userVotes[guideline.id] || 0);
   const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
   const safeComments = comments.length
-    ? comments.map((comment) => `<li>${escapeHtml(comment.body || '')}</li>`).join('')
-    : '<li>Dar nėra komentarų.</li>';
+    ? comments.map((comment) => renderCommentItem(comment)).join('')
+    : '<li class="comment-item comment-item-empty">Dar nėra komentarų.</li>';
   const relation = relationLabel(guideline.relationType);
   const relationTag = relation.charAt(0).toUpperCase() + relation.slice(1);
 
@@ -1361,9 +1391,9 @@ function renderGuidelineCard(guideline, options) {
           </div>
           <div class="vote-panel-body">
             <div class="vote-controls">
-              <button class="vote-btn" data-action="vote-minus" data-id="${escapeHtml(guideline.id)}" ${canMinus ? '' : 'disabled'}>-</button>
+              <button class="vote-btn" data-action="vote-minus" data-id="${escapeHtml(guideline.id)}" aria-label="Atimti balsą" ${canMinus ? '' : 'disabled'}>−</button>
               <span class="vote-score">${userScore}</span>
-              <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" ${canPlus ? '' : 'disabled'}>+</button>
+              <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" aria-label="Pridėti balsą" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
             <div class="vote-total">Bendras balas: <strong>${Number(guideline.totalScore || 0)}</strong></div>
           </div>
@@ -1393,7 +1423,6 @@ function renderGuidelineCard(guideline, options) {
     </article>
   `;
 }
-
 function renderStepView() {
   if (state.activeView === 'about') {
     renderAboutView();
@@ -1453,7 +1482,7 @@ function renderStepView() {
     `Komentarai: ${Number(state.summary?.comments_count || 0)}`,
     `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
   ];
-  const groupedGuidelines = groupGuidelinesByRelation(state.guidelines);
+  const relationGroups = buildGuidelineRelationshipGroups(state.guidelines);
 
   elements.stepView.innerHTML = `
     <div class="step-header">
@@ -1474,26 +1503,63 @@ function renderStepView() {
     </div>
 
     <div id="guidelineGroups" class="guideline-groups">
-      ${GUIDELINE_GROUP_DEFS.map((group) => `
+      <section class="guideline-group">
+        <div class="guideline-group-header">
+          <h3>Susietos gairės</h3>
+          <span class="tag">${relationGroups.parentGroups.length}</span>
+        </div>
+        <p class="prompt">Tėvinės gairės rodomos kartu su joms priskirtomis vaikinėmis gairėmis.</p>
+        ${relationGroups.parentGroups.length
+          ? relationGroups.parentGroups.map((group) => `
+              <div class="relationship-cluster">
+                <div class="relationship-cluster-head">
+                  <span class="tag tag-main">Tėvinė</span>
+                  <strong>${escapeHtml(group.parent.title)}</strong>
+                  <span class="tag">Vaikinių: ${group.children.length}</span>
+                </div>
+                <div class="card-list relationship-cluster-cards">
+                  ${renderGuidelineCard(group.parent, { member, writable })}
+                  ${group.children.map((child) => renderGuidelineCard(child, { member, writable })).join('')}
+                </div>
+              </div>
+            `).join('')
+          : `<div class="card guideline-empty">
+              <strong>Kol kas nėra tėvinių gairių su ryšiais</strong>
+              <p class="prompt" style="margin: 6px 0 0;">Sukūrus ryšius, tėvinės ir vaikinės gairės bus rodomos viename bloke.</p>
+            </div>`
+        }
+      </section>
+
+      ${relationGroups.unassignedChildren.length ? `
         <section class="guideline-group">
           <div class="guideline-group-header">
-            <h3>${group.title}</h3>
-            <span class="tag">${groupedGuidelines[group.key].length}</span>
+            <h3>Vaikinės be tėvinės</h3>
+            <span class="tag">${relationGroups.unassignedChildren.length}</span>
           </div>
-          <p class="prompt">${group.hint}</p>
-          ${groupedGuidelines[group.key].length
-            ? `<div class="card-list">
-                ${groupedGuidelines[group.key].map((guideline) => renderGuidelineCard(guideline, { member, writable })).join('')}
-              </div>`
-            : `<div class="card guideline-empty">
-                <strong>Kol kas šio tipo gairių nėra</strong>
-                <p class="prompt" style="margin: 6px 0 0;">Kai bus pridėta, ji atsiras šiame bloke.</p>
-              </div>`
-          }
+          <p class="prompt">Šios vaikinės gairės dar neturi teisingai priskirtos tėvinės gairės.</p>
+          <div class="card-list">
+            ${relationGroups.unassignedChildren.map((guideline) => renderGuidelineCard(guideline, { member, writable })).join('')}
+          </div>
         </section>
-      `).join('')}
-    </div>
+      ` : ''}
 
+      <section class="guideline-group">
+        <div class="guideline-group-header">
+          <h3>Našlaitinės gairės</h3>
+          <span class="tag">${relationGroups.orphanGuidelines.length}</span>
+        </div>
+        <p class="prompt">Savarankiškos gairės, kurios nėra priskirtos tėvinei gairei.</p>
+        ${relationGroups.orphanGuidelines.length
+          ? `<div class="card-list">
+              ${relationGroups.orphanGuidelines.map((guideline) => renderGuidelineCard(guideline, { member, writable })).join('')}
+            </div>`
+          : `<div class="card guideline-empty">
+              <strong>Našlaitinių gairių nėra</strong>
+              <p class="prompt" style="margin: 6px 0 0;">Visos gairės jau susietos su tėvinėmis arba pažymėtos kitaip.</p>
+            </div>`
+        }
+      </section>
+    </div>
     ${member ? (writable ? `
       <div class="card" style="margin-top: 16px;">
         <div class="header-row">
