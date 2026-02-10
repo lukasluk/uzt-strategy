@@ -471,7 +471,9 @@ function applyAdminTabVisibility() {
   const activeTab = ['cycle', 'users', 'guidelines'].includes(state.adminTab) ? state.adminTab : 'cycle';
   state.adminTab = activeTab;
   root.querySelectorAll('[data-admin-section]').forEach((section) => {
-    section.hidden = section.dataset.adminSection !== activeTab;
+    const shouldShow = section.dataset.adminSection === activeTab;
+    section.hidden = !shouldShow;
+    section.style.display = shouldShow ? '' : 'none';
   });
 }
 
