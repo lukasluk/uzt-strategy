@@ -9,6 +9,7 @@ const state = {
   busy: false,
   error: '',
   notice: '',
+  adminTab: 'cycle',
   token: null,
   user: null,
   role: null,
@@ -310,7 +311,15 @@ function renderDashboard() {
       </section>
     ` : ''}
 
-    <section class="card" style="margin-bottom: 16px;">
+    <section class="card admin-tabs-card" style="margin-bottom: 16px;">
+      <div class="admin-tabs" role="tablist" aria-label="Admin sekcijos">
+        <button type="button" class="admin-tab-btn ${state.adminTab === 'cycle' ? 'active' : ''}" data-admin-tab="cycle" role="tab" aria-selected="${state.adminTab === 'cycle' ? 'true' : 'false'}">Ciklas</button>
+        <button type="button" class="admin-tab-btn ${state.adminTab === 'users' ? 'active' : ''}" data-admin-tab="users" role="tab" aria-selected="${state.adminTab === 'users' ? 'true' : 'false'}">Vartotojai</button>
+        <button type="button" class="admin-tab-btn ${state.adminTab === 'guidelines' ? 'active' : ''}" data-admin-tab="guidelines" role="tab" aria-selected="${state.adminTab === 'guidelines' ? 'true' : 'false'}">Gairės</button>
+      </div>
+    </section>
+
+    <section class="card" data-admin-section="cycle" style="margin-bottom: 16px;">
       <div class="header-row">
         <strong>Ciklo valdymas</strong>
         <span class="tag">ID: ${escapeHtml(cycle?.id || '-')}</span>
@@ -328,7 +337,7 @@ function renderDashboard() {
       </div>
     </section>
 
-    <section class="card" style="margin-bottom: 16px;">
+    <section class="card" data-admin-section="users" style="margin-bottom: 16px;">
       <div class="header-row">
         <strong>Kvietimai nariams</strong>
         <span class="tag">Invite-only</span>
@@ -346,7 +355,7 @@ function renderDashboard() {
       ` : ''}
     </section>
 
-    <section class="card" style="margin-bottom: 16px;">
+    <section class="card" data-admin-section="users" style="margin-bottom: 16px;">
       <div class="header-row">
         <strong>Dalyviai</strong>
         <span class="tag">${state.participants.length}</span>
@@ -386,7 +395,7 @@ function renderDashboard() {
       </ul>
     </section>
 
-    <section class="card" style="margin-bottom: 16px;">
+    <section class="card" data-admin-section="guidelines" style="margin-bottom: 16px;">
       <div class="header-row">
         <strong>Pridėti gaires</strong>
         <span class="tag">${state.guidelines.length} viso</span>
@@ -400,7 +409,7 @@ function renderDashboard() {
       </form>
     </section>
 
-    <section class="card">
+    <section class="card" data-admin-section="guidelines">
       <div class="header-row">
         <strong>Gairių redagavimas</strong>
         <span class="tag">${state.guidelines.length}</span>
@@ -454,10 +463,29 @@ function renderDashboard() {
     </section>
   `;
 
+  applyAdminTabVisibility();
   bindDashboardEvents();
 }
 
+function applyAdminTabVisibility() {
+  const activeTab = ['cycle', 'users', 'guidelines'].includes(state.adminTab) ? state.adminTab : 'cycle';
+  state.adminTab = activeTab;
+  root.querySelectorAll('[data-admin-section]').forEach((section) => {
+    section.hidden = section.dataset.adminSection !== activeTab;
+  });
+}
+
 function bindDashboardEvents() {
+  root.querySelectorAll('[data-admin-tab]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const nextTab = String(button.dataset.adminTab || '').trim();
+      if (!['cycle', 'users', 'guidelines'].includes(nextTab)) return;
+      if (nextTab === state.adminTab) return;
+      state.adminTab = nextTab;
+      render();
+    });
+  });
+
   const retryBtn = document.getElementById('retryBtn');
   if (retryBtn) {
     retryBtn.addEventListener('click', bootstrap);

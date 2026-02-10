@@ -50,6 +50,7 @@ const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
 const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
+const ALLOWED_VIEWS = new Set(['guidelines', 'admin', 'map', 'about']);
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -64,7 +65,7 @@ const elements = {
 
 const state = {
   institutionSlug: resolveInstitutionSlug(),
-  activeView: 'guidelines',
+  activeView: resolveInitialView(),
   introCollapsed: hydrateIntroCollapsed(),
   loading: false,
   busy: false,
@@ -108,6 +109,35 @@ function resolveInstitutionSlug() {
     return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG || null;
   }
   return normalizeSlug(last) || DEFAULT_INSTITUTION_SLUG || null;
+}
+
+function resolveInitialView() {
+  const params = new URLSearchParams(window.location.search);
+  const view = String(params.get('view') || '').trim().toLowerCase();
+  return ALLOWED_VIEWS.has(view) ? view : 'guidelines';
+}
+
+function buildCurrentPageHref({ slug = state.institutionSlug, view = state.activeView } = {}) {
+  const params = new URLSearchParams(window.location.search);
+  const nextSlug = normalizeSlug(slug);
+  const nextView = ALLOWED_VIEWS.has(view) ? view : 'guidelines';
+
+  if (nextSlug) params.set('institution', nextSlug);
+  else params.delete('institution');
+
+  if (nextView !== 'guidelines') params.set('view', nextView);
+  else params.delete('view');
+
+  const query = params.toString();
+  return `${window.location.pathname}${query ? `?${query}` : ''}`;
+}
+
+function syncRouteState() {
+  const nextHref = buildCurrentPageHref();
+  const currentHref = `${window.location.pathname}${window.location.search}`;
+  if (nextHref !== currentHref) {
+    window.history.replaceState(null, '', nextHref);
+  }
 }
 
 function normalizeSlug(value) {
@@ -557,7 +587,7 @@ function bindInstitutionSwitch(container) {
   select.addEventListener('change', () => {
     const slug = normalizeSlug(select.value);
     if (slug === normalizeSlug(state.institutionSlug)) return;
-    const href = slug ? `index.html?institution=${encodeURIComponent(slug)}` : 'index.html';
+    const href = buildCurrentPageHref({ slug, view: state.activeView });
     window.location.href = href;
   });
 }
@@ -572,9 +602,10 @@ function canOpenAdminView() {
 }
 
 function setActiveView(nextView) {
-  if (!['guidelines', 'admin', 'map', 'about'].includes(nextView)) return;
+  if (!ALLOWED_VIEWS.has(nextView)) return;
   if (state.activeView === nextView) return;
   state.activeView = nextView;
+  syncRouteState();
   render();
 }
 
@@ -1947,6 +1978,7 @@ function showAuthModal(initialMode) {
 
 function render() {
   renderSteps();
+  syncRouteState();
   renderIntroDeck();
   renderInstitutionPicker();
   renderStepView();
