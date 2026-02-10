@@ -1244,12 +1244,46 @@ function renderAdminView() {
   `;
 }
 
+const GUIDELINE_GROUP_DEFS = [
+  {
+    key: 'parent',
+    title: 'Tėvinės gairės',
+    hint: 'Pagrindinės kryptys, prie kurių gali būti jungiamos vaikinės gairės.'
+  },
+  {
+    key: 'child',
+    title: 'Vaikinės gairės',
+    hint: 'Detalizuojančios gairės, susietos su tėvinėmis gairėmis.'
+  },
+  {
+    key: 'orphan',
+    title: 'Našlaitinės gairės',
+    hint: 'Savarankiškos gairės, kurios nėra priskirtos tėvinei gairei.'
+  }
+];
+
+function normalizeGuidelineRelation(value) {
+  const relation = String(value || 'orphan').trim().toLowerCase();
+  if (relation === 'parent' || relation === 'child' || relation === 'orphan') return relation;
+  return 'orphan';
+}
+
+function groupGuidelinesByRelation(guidelines) {
+  const grouped = { parent: [], child: [], orphan: [] };
+  (Array.isArray(guidelines) ? guidelines : []).forEach((guideline) => {
+    grouped[normalizeGuidelineRelation(guideline.relationType)].push(guideline);
+  });
+  return grouped;
+}
+
 function renderGuidelineCard(guideline, options) {
   const userScore = Number(state.userVotes[guideline.id] || 0);
   const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
   const safeComments = comments.length
     ? comments.map((comment) => `<li>${escapeHtml(comment.body || '')}</li>`).join('')
     : '<li>Dar nėra komentarų.</li>';
+  const relation = relationLabel(guideline.relationType);
+  const relationTag = relation.charAt(0).toUpperCase() + relation.slice(1);
 
   const budget = voteBudget();
   const usedWithoutCurrent = usedVotesTotal() - userScore;
@@ -1263,17 +1297,20 @@ function renderGuidelineCard(guideline, options) {
 
   return `
     <article class="card">
-      <div class="card-title">
-        <div>
-          <div class="title-row">
-            <h4>${escapeHtml(guideline.title)}</h4>
+      <div class="card-top">
+        <div class="title-row">
+          <h4>${escapeHtml(guideline.title)}</h4>
+          <span class="tag">${escapeHtml(relationTag)}</span>
+        </div>
+        <p>${escapeHtml(guideline.description || 'Be paaiškinimo')}</p>
+      </div>
+      ${options.member ? `
+        <div class="vote-panel">
+          <div class="vote-panel-head">
+            <span class="vote-label">Tavo balas</span>
             <span class="tag">Balsuotojų: ${Number(guideline.voterCount || 0)}</span>
           </div>
-          <p>${escapeHtml(guideline.description || 'Be paaiškinimo')}</p>
-        </div>
-        ${options.member ? `
-          <div class="vote-panel">
-            <span class="vote-label">Tavo balas</span>
+          <div class="vote-panel-body">
             <div class="vote-controls">
               <button class="vote-btn" data-action="vote-minus" data-id="${escapeHtml(guideline.id)}" ${canMinus ? '' : 'disabled'}>-</button>
               <span class="vote-score">${userScore}</span>
@@ -1281,14 +1318,19 @@ function renderGuidelineCard(guideline, options) {
             </div>
             <div class="vote-total">Bendras balas: <strong>${Number(guideline.totalScore || 0)}</strong></div>
           </div>
-        ` : `
-          <div class="vote-panel">
+        </div>
+      ` : `
+        <div class="vote-panel">
+          <div class="vote-panel-head">
             <span class="vote-label">Viešas režimas</span>
+            <span class="tag">Balsuotojų: ${Number(guideline.voterCount || 0)}</span>
+          </div>
+          <div class="vote-panel-body">
             <div class="vote-total"><strong>Bendras balas: ${Number(guideline.totalScore || 0)}</strong></div>
             <div class="vote-total">Rodomi tik agreguoti duomenys</div>
           </div>
-        `}
-      </div>
+        </div>
+      `}
       <div class="card-section">
         <strong>Komentarai</strong>
         <ul class="mini-list">${safeComments}</ul>
@@ -1362,6 +1404,7 @@ function renderStepView() {
     `Komentarai: ${Number(state.summary?.comments_count || 0)}`,
     `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
   ];
+  const groupedGuidelines = groupGuidelinesByRelation(state.guidelines);
 
   elements.stepView.innerHTML = `
     <div class="step-header">
@@ -1381,8 +1424,25 @@ function renderStepView() {
       ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
     </div>
 
-    <div class="card-list">
-      ${state.guidelines.map((guideline) => renderGuidelineCard(guideline, { member, writable })).join('')}
+    <div id="guidelineGroups" class="guideline-groups">
+      ${GUIDELINE_GROUP_DEFS.map((group) => `
+        <section class="guideline-group">
+          <div class="guideline-group-header">
+            <h3>${group.title}</h3>
+            <span class="tag">${groupedGuidelines[group.key].length}</span>
+          </div>
+          <p class="prompt">${group.hint}</p>
+          ${groupedGuidelines[group.key].length
+            ? `<div class="card-list">
+                ${groupedGuidelines[group.key].map((guideline) => renderGuidelineCard(guideline, { member, writable })).join('')}
+              </div>`
+            : `<div class="card guideline-empty">
+                <strong>Kol kas šio tipo gairių nėra</strong>
+                <p class="prompt" style="margin: 6px 0 0;">Kai bus pridėta, ji atsiras šiame bloke.</p>
+              </div>`
+          }
+        </section>
+      `).join('')}
     </div>
 
     ${member ? (writable ? `
@@ -1428,7 +1488,7 @@ function bindStepEvents() {
   const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
   const exportBtnInline = elements.stepView.querySelector('#exportBtnInline');
   const guidelineForm = elements.stepView.querySelector('#guidelineAddForm');
-  const list = elements.stepView.querySelector('.card-list');
+  const list = elements.stepView.querySelector('#guidelineGroups');
 
   if (openAuthFromStep) {
     openAuthFromStep.addEventListener('click', () => showAuthModal('login'));

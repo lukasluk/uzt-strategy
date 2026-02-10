@@ -283,6 +283,32 @@ textarea {
   gap: 16px;
   margin-top: 16px;
 }
+.guideline-groups {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+}
+.guideline-group {
+  display: grid;
+  gap: 8px;
+}
+.guideline-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.guideline-group h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.guideline-group > .prompt {
+  margin-bottom: 2px;
+}
+.guideline-empty {
+  margin-top: 4px;
+}
 
 .card {
   background: #fff;
@@ -305,6 +331,13 @@ textarea {
 }
 .card-section {
   margin-top: 4px;
+}
+.card-top {
+  display: grid;
+  gap: 6px;
+}
+.card-top p {
+  margin: 0;
 }
 .mini-list {
   margin: 8px 0 0;
@@ -862,10 +895,22 @@ textarea {
   background: #fdf3e7;
   border-radius: 16px;
   padding: 10px 14px;
-  min-width: 150px;
+  width: 100%;
+  min-width: 0;
   display: grid;
   gap: 8px;
   align-content: start;
+}
+.vote-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vote-panel-body {
+  display: grid;
+  gap: 6px;
 }
 .vote-label {
   font-size: 12px;
