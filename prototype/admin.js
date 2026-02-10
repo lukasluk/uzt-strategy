@@ -32,6 +32,8 @@ function detectEmbeddedAdmin() {
 function applyEmbeddedAdminMode() {
   if (!IS_EMBEDDED_ADMIN) return;
   document.body.classList.add('embedded-admin');
+  const topbar = document.querySelector('.topbar');
+  if (topbar) topbar.remove();
 }
 
 function syncTopbarBackLink() {
@@ -303,24 +305,24 @@ function renderDashboard() {
   const cycleState = String(cycle?.state || 'draft');
   const userName = state.user?.displayName || state.user?.email || 'Administratorius';
 
-  const dashboardActions = IS_EMBEDDED_ADMIN
-    ? `<button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>`
+  const topSummaryCard = IS_EMBEDDED_ADMIN
+    ? ''
     : `
-        <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Atgal į viešą puslapį</a>
-        <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
-      `;
+      <section class="card" style="margin-bottom: 16px;">
+        <div class="header-row">
+          <strong>Administratoriaus skydas</strong>
+          <span class="tag">Institucija: ${escapeHtml(institution?.name || state.institutionSlug)}</span>
+        </div>
+        <p class="prompt">Prisijungęs: ${escapeHtml(userName)}</p>
+        <div class="inline-form">
+          <a href="index.html?institution=${encodeURIComponent(state.institutionSlug)}" class="btn btn-ghost">Atgal į viešą puslapį</a>
+          <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
+        </div>
+      </section>
+    `;
 
   root.innerHTML = `
-    <section class="card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>Administratoriaus skydas</strong>
-        <span class="tag">Institucija: ${escapeHtml(institution?.name || state.institutionSlug)}</span>
-      </div>
-      <p class="prompt">Prisijungęs: ${escapeHtml(userName)}</p>
-      <div class="inline-form">
-        ${dashboardActions}
-      </div>
-    </section>
+    ${topSummaryCard}
 
     ${state.error ? `
       <section class="card" style="margin-bottom: 16px;">
