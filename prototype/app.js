@@ -1307,11 +1307,13 @@ function bindMapInteractions(viewport, world, { editable }) {
   };
 
   viewport.addEventListener('pointerdown', (event) => {
-    const target = event.target;
+    const rawTarget = event.target;
+    const target = rawTarget instanceof Element ? rawTarget : rawTarget?.parentElement;
     if (event.button !== 0) return;
-    if (target instanceof HTMLElement && target.closest('button, a, input, textarea, select, [data-map-interactive="true"]')) return;
+    if (!target) return;
+    if (target.closest('button, a, input, textarea, select, [data-map-interactive="true"]')) return;
 
-    if (editable && target instanceof HTMLElement) {
+    if (editable) {
       const node = target.closest('.strategy-map-node');
       if (node instanceof HTMLElement && isNodeDraggableInCurrentLayer(node)) {
         event.preventDefault();
@@ -1328,7 +1330,7 @@ function bindMapInteractions(viewport, world, { editable }) {
       }
     }
 
-    if (target instanceof HTMLElement && target.closest('.strategy-map-node')) return;
+    if (target.closest('.strategy-map-node')) return;
 
     dragActive = true;
     dragStartX = event.clientX;
