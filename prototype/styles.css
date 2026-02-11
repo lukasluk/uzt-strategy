@@ -2069,8 +2069,8 @@ select:focus {
 }
 
 .guideline-card {
-  border-color: #b9d8f0;
-  background: linear-gradient(180deg, #ffffff 0%, #f2f9ff 100%);
+  border-color: #d2e3f7;
+  background: #ffffff;
 }
 .guideline-card .card-top {
   border-left: 4px solid #2f88ba;
@@ -2078,6 +2078,27 @@ select:focus {
 }
 .guideline-card .vote-panel {
   background: #e9f5ff;
+}
+.guideline-card.guideline-relation-parent {
+  border-color: #bcd9f2;
+  background: linear-gradient(180deg, #ffffff 0%, #f4faff 100%);
+}
+.guideline-card.guideline-relation-parent .card-top {
+  border-left-color: #2f88ba;
+}
+.guideline-card.guideline-relation-child {
+  border-color: var(--pastel-soft-border);
+  background: linear-gradient(180deg, #ffffff 0%, var(--pastel-soft) 100%);
+}
+.guideline-card.guideline-relation-child .card-top {
+  border-left-color: #6d67b8;
+}
+.guideline-card.guideline-relation-orphan {
+  border-color: #c8e8e3;
+  background: linear-gradient(180deg, #ffffff 0%, #f1fbf9 100%);
+}
+.guideline-card.guideline-relation-orphan .card-top {
+  border-left-color: #3f9b8a;
 }
 
 .initiative-card {
@@ -2174,10 +2195,10 @@ select:focus {
 }
 .strategy-map-viewport {
   border-color: #c5d8f2;
-  background-color: #f9fcff;
+  background-color: #fbfdff;
   background-image:
-    linear-gradient(rgba(131, 162, 206, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(131, 162, 206, 0.12) 1px, transparent 1px);
+    linear-gradient(rgba(131, 162, 206, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(131, 162, 206, 0.06) 1px, transparent 1px);
 }
 .strategy-map-edge.edge-root {
   stroke: #2b6fbe;
@@ -2224,12 +2245,18 @@ select:focus {
 }
 
 .guideline-node.relation-parent {
+  background: linear-gradient(180deg, #ffffff 0%, #f4faff 100%);
+  border-color: #bcd9f2;
   border-left-color: #2b6fbe;
 }
 .guideline-node.relation-child {
+  background: linear-gradient(180deg, #ffffff 0%, var(--pastel-soft) 100%);
+  border-color: var(--pastel-soft-border);
   border-left-color: #1f4f84;
 }
 .guideline-node.relation-orphan {
+  background: linear-gradient(180deg, #ffffff 0%, #f1fbf9 100%);
+  border-color: #c8e8e3;
   border-left-color: #6b95cc;
 }
 .guideline-node.top-score {

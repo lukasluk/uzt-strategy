@@ -1873,6 +1873,7 @@ function renderGuidelineCard(guideline, options) {
     ? comments.map((comment) => renderCommentItem(comment)).join('')
     : '<li class="comment-item comment-item-empty">Dar nėra komentarų.</li>';
   const relation = relationLabel(guideline.relationType);
+  const relationKey = normalizeGuidelineRelation(guideline.relationType);
   const relationTag = relation.charAt(0).toUpperCase() + relation.slice(1);
   const guidelineStatus = String(guideline.status || 'active').toLowerCase();
   const votingDisabled = guidelineStatus === 'disabled';
@@ -1888,7 +1889,7 @@ function renderGuidelineCard(guideline, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card guideline-card ${votingDisabled ? 'guideline-disabled' : ''}">
+    <article class="card guideline-card guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(guideline.title)}</h4>
