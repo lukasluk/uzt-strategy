@@ -670,8 +670,8 @@ function triggerVoteBurstAt(origin, delta) {
   burst.style.top = `${origin.y}px`;
 
   const colors = delta > 0
-    ? ['#2b8a7e', '#1f6e64', '#d86b4b', '#f0b873']
-    : ['#d86b4b', '#bf4f2f', '#2b8a7e', '#f0b873'];
+    ? ['#2b6fbe', '#1f4f84', '#3f8fe6', '#8fc2ff']
+    : ['#235896', '#1f4f84', '#2b6fbe', '#8fc2ff'];
 
   for (let i = 0; i < 10; i += 1) {
     const dot = document.createElement('span');
@@ -1561,8 +1561,8 @@ function renderMapView() {
         <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
           <defs>
             <linearGradient id="mapInitiativeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#2b8a7e" />
-              <stop offset="100%" stop-color="#2a6bb2" />
+              <stop offset="0%" stop-color="#2b6fbe" />
+              <stop offset="100%" stop-color="#1f4f84" />
             </linearGradient>
           </defs>
           ${initiativeEdgeMarkup}
