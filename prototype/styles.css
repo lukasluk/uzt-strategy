@@ -897,34 +897,57 @@ textarea {
   border: 1px solid #e0cfb9;
   background: linear-gradient(160deg, #fffef9 0%, #f7ecde 100%);
   border-radius: 18px;
-  padding: 14px 16px;
+  padding: 10px 14px;
   box-shadow: 0 8px 18px rgba(28, 26, 22, 0.08);
   transition: box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
+  cursor: pointer;
 }
 .intro-guide:hover {
   border-color: #d9c3a6;
   box-shadow: 0 12px 24px rgba(28, 26, 22, 0.1);
 }
+.intro-guide:focus-visible {
+  outline: 2px solid rgba(43, 111, 190, 0.45);
+  outline-offset: 2px;
+}
 .intro-guide-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 10px;
+  flex-wrap: nowrap;
 }
 .intro-guide-header h3 {
   font-family: 'Fraunces', serif;
-  font-size: 24px;
-  line-height: 1.2;
+  font-size: 22px;
+  line-height: 1.15;
 }
 .intro-toggle-btn {
-  padding: 8px 12px;
-  font-size: 12px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 999px;
+  padding: 0;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.intro-toggle-btn span {
+  display: inline-block;
+  transform: translateY(-1px);
 }
 .intro-toggle-btn.pulse {
   animation: introTogglePulse 0.28s ease-in-out 5;
   border-color: #2d73cb;
   box-shadow: 0 0 0 3px rgba(45, 115, 203, 0.2);
+}
+.intro-guide.collapsed .kicker {
+  display: none;
+}
+.intro-guide.collapsed .intro-guide-header h3 {
+  font-size: 24px;
 }
 @keyframes introTogglePulse {
   0% {

@@ -823,10 +823,15 @@ function applyIntroGuideState() {
   if (!elements.introDeck) return;
   const guide = elements.introDeck.querySelector('.intro-guide');
   const toggleIntroBtn = elements.introDeck.querySelector('#toggleIntroBtn');
-  if (guide) guide.classList.toggle('collapsed', state.introCollapsed);
+  if (guide) {
+    guide.classList.toggle('collapsed', state.introCollapsed);
+    guide.setAttribute('aria-expanded', state.introCollapsed ? 'false' : 'true');
+  }
   if (toggleIntroBtn) {
-    toggleIntroBtn.textContent = state.introCollapsed ? 'Rodyti naudojimosi gidą' : 'Slėpti naudojimosi gidą';
+    toggleIntroBtn.innerHTML = `<span aria-hidden="true">${state.introCollapsed ? '▾' : '▴'}</span>`;
     toggleIntroBtn.setAttribute('aria-expanded', state.introCollapsed ? 'false' : 'true');
+    toggleIntroBtn.setAttribute('aria-label', state.introCollapsed ? 'Išskleisti naudojimosi gidą' : 'Suskleisti naudojimosi gidą');
+    toggleIntroBtn.title = state.introCollapsed ? 'Išskleisti naudojimosi gidą' : 'Suskleisti naudojimosi gidą';
     toggleIntroBtn.classList.toggle('pulse', state.introTogglePulse);
   }
 }
@@ -871,7 +876,7 @@ function renderIntroDeck() {
     `).join('');
 
     elements.introDeck.innerHTML = `
-      <div class="intro-guide">
+      <div class="intro-guide" role="button" tabindex="0" aria-expanded="true">
         <div class="intro-guide-header">
           <div>
             <p class="kicker">Kaip naudotis</p>
@@ -930,12 +935,28 @@ function renderIntroDeck() {
       </div>
     `;
 
+    const introGuide = elements.introDeck.querySelector('.intro-guide');
     const toggleIntroBtn = elements.introDeck.querySelector('#toggleIntroBtn');
+    const toggleGuide = () => {
+      state.introCollapsed = !state.introCollapsed;
+      persistIntroCollapsed();
+      applyIntroGuideState();
+    };
+    if (introGuide) {
+      introGuide.addEventListener('click', () => {
+        toggleGuide();
+      });
+      introGuide.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleGuide();
+      });
+    }
     if (toggleIntroBtn) {
-      toggleIntroBtn.addEventListener('click', () => {
-        state.introCollapsed = !state.introCollapsed;
-        persistIntroCollapsed();
-        applyIntroGuideState();
+      toggleIntroBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleGuide();
       });
     }
   }
