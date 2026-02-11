@@ -891,13 +891,13 @@ function renderIntroDeck() {
             </div>
             <div class="guide-structure-track" role="list">
               <article class="structure-step" role="listitem">
-                <span class="structure-label">Vizija</span>
-                <p>Ilgalaikė kryptis ir siekiama pokyčio būsena.</p>
+                <span class="structure-label">Misija</span>
+                <p>Organizacijos paskirtis ir vertės kūrimo logika.</p>
               </article>
               <span class="structure-arrow" aria-hidden="true">→</span>
               <article class="structure-step" role="listitem">
-                <span class="structure-label">Misija</span>
-                <p>Organizacijos paskirtis ir vertės kūrimo logika.</p>
+                <span class="structure-label">Vizija</span>
+                <p>Ilgalaikė kryptis ir siekiama pokyčio būsena.</p>
               </article>
               <span class="structure-arrow" aria-hidden="true">→</span>
               <article class="structure-step structure-step-layer" role="listitem">
@@ -1794,7 +1794,7 @@ function renderMapView() {
             <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
           </div>
           <div class="map-overlay-actions">
-            <button type="button" data-map-reset-btn class="btn btn-ghost">Atkurti vaizdą</button>
+            <button type="button" data-map-reset-btn class="btn btn-ghost">Centruoti vaizdą</button>
             <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="Įjungti pilno ekrano režimą" title="Įjungti pilno ekrano režimą"></button>
           </div>
         </div>
@@ -1812,6 +1812,9 @@ function renderMapView() {
             ${initiativeEdgeMarkup}
           </svg>
           ${nodeMarkup}
+        </div>
+        <div class="map-fullscreen-watermark" aria-hidden="true">
+          <img src="assets/digistrategija-logo.svg" alt="" />
         </div>
       </section>
     </section>

@@ -1203,6 +1203,27 @@ textarea {
   left: 14px;
   right: 14px;
 }
+.map-fullscreen-watermark {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  z-index: 14;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.map-fullscreen-watermark img {
+  width: clamp(150px, 16vw, 260px);
+  height: auto;
+  display: block;
+  filter: grayscale(0.05);
+}
+.step-view:fullscreen .map-fullscreen-watermark,
+.step-view:-webkit-full-screen .map-fullscreen-watermark {
+  opacity: 0.18;
+  transform: translateY(0);
+}
 .strategy-map-viewport.dragging {
   cursor: grabbing;
 }
