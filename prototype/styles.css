@@ -275,14 +275,8 @@ body {
   min-height: 0;
 }
 
-.admin-inline-frame {
-  width: 100%;
-  height: 960px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  display: block;
+.admin-inline-host {
+  min-height: 320px;
 }
 
 body.embedded-admin {

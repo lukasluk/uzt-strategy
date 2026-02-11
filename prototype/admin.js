@@ -1,6 +1,7 @@
-﻿const AUTH_STORAGE_KEY='uzt-strategy-v1-auth';
+(() => {
+const AUTH_STORAGE_KEY='uzt-strategy-v1-auth';
 const DEFAULT_INSTITUTION_SLUG='uzt';
-const root=document.getElementById('adminRoot');
+let root=null;
 const IS_EMBEDDED_ADMIN=(()=>{const p=new URLSearchParams(window.location.search);return p.get('frame')==='admin'||window.self!==window.top;})();
 const ADMIN_FRAME_HEIGHT_EVENT='uzt-admin-height';
 
@@ -9,15 +10,17 @@ const state={institutionSlug:resolveInstitutionSlug(),loading:false,busy:false,e
 hydrateAuthFromStorage();
 if(IS_EMBEDDED_ADMIN)document.body.classList.add('embedded-admin');
 setupEmbeddedHeightReporter();
-bootstrap();
+mountAdminApp();
 
 function resolveInstitutionSlug(){const p=new URLSearchParams(window.location.search);const q=normalizeSlug(p.get('institution'));if(q)return q;const parts=window.location.pathname.split('/').filter(Boolean);if(!parts.length)return DEFAULT_INSTITUTION_SLUG;const last=parts[parts.length-1];if(last==='admin.html'||last==='index.html')return normalizeSlug(parts[parts.length-2])||DEFAULT_INSTITUTION_SLUG;return normalizeSlug(last)||DEFAULT_INSTITUTION_SLUG;}
 function normalizeSlug(v){const s=String(v||'').trim().toLowerCase();return s&&/^[a-z0-9-]+$/.test(s)?s:'';}
+function mountAdminApp(options={}){const nextRoot=options.root||document.getElementById('adminRoot');if(!nextRoot)return false;root=nextRoot;const nextSlug=normalizeSlug(options.institutionSlug);if(nextSlug&&nextSlug!==state.institutionSlug){state.institutionSlug=nextSlug;state.error='';state.notice='';state.context=null;state.cycle=null;state.participants=[];state.guidelines=[];state.initiatives=[];state.availableGuidelines=[];state.inviteToken='';}if(options.forceAuthSync)hydrateAuthFromStorage();bootstrap();return true;}
+window.DigiAdminApp={mount:mountAdminApp};
 
 function hydrateAuthFromStorage(){const raw=localStorage.getItem(AUTH_STORAGE_KEY);if(!raw)return;try{const p=JSON.parse(raw);if(!p?.token)return;const slug=normalizeSlug(p.slug||p.homeSlug);if(slug&&slug!==state.institutionSlug)return;state.token=p.token;state.user=p.user||null;state.role=p.role||null;}catch{localStorage.removeItem(AUTH_STORAGE_KEY);}}
 function persistAuthToStorage(){if(!state.token){localStorage.removeItem(AUTH_STORAGE_KEY);return;}localStorage.setItem(AUTH_STORAGE_KEY,JSON.stringify({slug:state.institutionSlug,homeSlug:state.institutionSlug,token:state.token,user:state.user,role:state.role}));}
-function clearSession(){state.token=null;state.user=null;state.role=null;state.context=null;state.cycle=null;localStorage.removeItem(AUTH_STORAGE_KEY);}
-function setSession(payload){state.token=payload.token||null;state.user=payload.user||null;state.role=payload.role||null;persistAuthToStorage();}
+function clearSession(){state.token=null;state.user=null;state.role=null;state.context=null;state.cycle=null;localStorage.removeItem(AUTH_STORAGE_KEY);window.dispatchEvent(new CustomEvent('uzt-auth-changed'));}
+function setSession(payload){state.token=payload.token||null;state.user=payload.user||null;state.role=payload.role||null;persistAuthToStorage();window.dispatchEvent(new CustomEvent('uzt-auth-changed'));}
 
 let resizeRaf=0;let resizeTimer=0;
 function postEmbeddedHeight(){if(!IS_EMBEDDED_ADMIN)return;const b=document.body;const d=document.documentElement;const h=Math.max(Number(b?.scrollHeight||0),Number(b?.offsetHeight||0),Number(d?.scrollHeight||0),Number(d?.offsetHeight||0));window.parent.postMessage({type:ADMIN_FRAME_HEIGHT_EVENT,height:h},'*');}
@@ -34,7 +37,7 @@ async function loadContext(){const c=await api('/api/v1/me/context');if(!c?.inst
 
 async function loadAdminData(){if(!state.cycle?.id){state.participants=[];state.guidelines=[];state.initiatives=[];state.availableGuidelines=[];return;}const [pp,gp,ip]=await Promise.all([api(`/api/v1/admin/cycles/${encodeURIComponent(state.cycle.id)}/participants`),api(`/api/v1/admin/cycles/${encodeURIComponent(state.cycle.id)}/guidelines`),api(`/api/v1/admin/cycles/${encodeURIComponent(state.cycle.id)}/initiatives`)]);state.participants=Array.isArray(pp.participants)?pp.participants:[];state.guidelines=Array.isArray(gp.guidelines)?gp.guidelines:[];state.initiatives=Array.isArray(ip.initiatives)?ip.initiatives:[];state.availableGuidelines=Array.isArray(ip.guidelines)?ip.guidelines:state.guidelines.map(g=>({id:g.id,title:g.title,status:g.status}));}
 
-async function bootstrap(){if(!state.token){render();return;}state.loading=true;state.error='';render();try{await loadContext();await loadAdminData();}catch(error){state.error=toUserMessage(error);if(String(error?.message||'')==='invalid token'||String(error?.message||'')==='unauthorized')clearSession();}finally{state.loading=false;render();}}
+async function bootstrap(){root=root||document.getElementById('adminRoot');if(!root)return;if(!state.token){render();return;}state.loading=true;state.error='';render();try{await loadContext();await loadAdminData();}catch(error){state.error=toUserMessage(error);if(String(error?.message||'')==='invalid token'||String(error?.message||'')==='unauthorized')clearSession();}finally{state.loading=false;render();}}
 async function runBusy(task){if(state.busy)return;state.busy=true;state.notice='';render();try{await task();}catch(error){state.notice=toUserMessage(error);}finally{state.busy=false;render();}}
 
 function selectedValues(selectElement){if(!(selectElement instanceof HTMLSelectElement))return[];return Array.from(selectElement.options).filter(o=>o.selected).map(o=>String(o.value||'').trim()).filter(Boolean);}
@@ -68,4 +71,5 @@ root.querySelectorAll('.comment-status-btn').forEach(button=>{button.addEventLis
 root.querySelectorAll('.participant-password-form').forEach(form=>{form.addEventListener('submit',async e=>{e.preventDefault();const userId=String(form.dataset.userId||'').trim();const password=String(new FormData(form).get('password')||'');if(!userId||password.length<8)return;await runBusy(async()=>{await api(`/api/v1/admin/users/${encodeURIComponent(userId)}/password`,{method:'PUT',body:{password}});state.notice='Slaptazodis atnaujintas.';});});});
 root.querySelectorAll('.participant-delete-btn').forEach(button=>{button.addEventListener('click',async()=>{const userId=String(button.dataset.userId||'').trim();const name=String(button.dataset.name||'vartotojas');if(!userId)return;if(!window.confirm(`Ar tikrai norite istrinti vartotoja: ${name}?`))return;await runBusy(async()=>{await api(`/api/v1/admin/users/${encodeURIComponent(userId)}`,{method:'DELETE'});await bootstrap();});});});}
 
-function render(){if(!state.token){renderLogin();queueEmbeddedHeightPost();return;}if(state.loading){root.innerHTML='<section class="card"><strong>Kraunami administravimo duomenys...</strong></section>';queueEmbeddedHeightPost();return;}if(state.error&&!state.context){root.innerHTML=`<section class="card"><strong>Prieiga negauta</strong><p class="prompt">${escapeHtml(state.error)}</p><button id="clearSessionBtn" class="btn btn-ghost">Atsijungti</button></section>`;const clearBtn=document.getElementById('clearSessionBtn');if(clearBtn){clearBtn.addEventListener('click',()=>{clearSession();render();});}queueEmbeddedHeightPost();return;}renderDashboard();queueEmbeddedHeightPost();}
+function render(){if(!root)return;if(!state.token){renderLogin();queueEmbeddedHeightPost();return;}if(state.loading){root.innerHTML='<section class="card"><strong>Kraunami administravimo duomenys...</strong></section>';queueEmbeddedHeightPost();return;}if(state.error&&!state.context){root.innerHTML=`<section class="card"><strong>Prieiga negauta</strong><p class="prompt">${escapeHtml(state.error)}</p><button id="clearSessionBtn" class="btn btn-ghost">Atsijungti</button></section>`;const clearBtn=document.getElementById('clearSessionBtn');if(clearBtn){clearBtn.addEventListener('click',()=>{clearSession();render();});}queueEmbeddedHeightPost();return;}renderDashboard();queueEmbeddedHeightPost();}
+})();

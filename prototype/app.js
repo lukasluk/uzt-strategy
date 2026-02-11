@@ -57,7 +57,6 @@ const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
 const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'about']);
-const ADMIN_FRAME_HEIGHT_EVENT = 'uzt-admin-height';
 const ADMIN_CACHE_BUST_PARAM = 't';
 
 const elements = {
@@ -98,55 +97,54 @@ const state = {
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapTransform: { x: 120, y: 80, scale: 1 }
 };
+let adminAppLoadPromise = null;
 
 hydrateAuthFromStorage();
 bindGlobal();
 bootstrap();
 
-function applyAdminInlineFrameHeight(frame, rawHeight) {
-  if (!frame) return;
-  const nextHeight = Number(rawHeight || 0);
-  if (!Number.isFinite(nextHeight) || nextHeight <= 0) return;
-  frame.style.height = `${Math.max(960, Math.ceil(nextHeight))}px`;
-}
-
-function readAdminFrameContentHeight(frame) {
-  try {
-    const doc = frame?.contentDocument;
-    if (!doc) return 0;
-    const body = doc.body;
-    const root = doc.documentElement;
-    return Math.max(
-      Number(body?.scrollHeight || 0),
-      Number(body?.offsetHeight || 0),
-      Number(root?.scrollHeight || 0),
-      Number(root?.offsetHeight || 0)
-    );
-  } catch {
-    return 0;
-  }
-}
-
-function startAdminFrameAutoResize(frame) {
-  if (!frame) return;
-  if (frame.__autoResizeTimer) {
-    window.clearInterval(frame.__autoResizeTimer);
-    frame.__autoResizeTimer = null;
+function ensureAdminAppLoaded() {
+  if (window.DigiAdminApp && typeof window.DigiAdminApp.mount === 'function') {
+    return Promise.resolve(window.DigiAdminApp);
   }
 
-  const sync = () => {
-    const measuredHeight = readAdminFrameContentHeight(frame);
-    if (measuredHeight > 0) applyAdminInlineFrameHeight(frame, measuredHeight);
-  };
+  if (adminAppLoadPromise) return adminAppLoadPromise;
 
-  // Immediate + short burst handles async rendering/layout shifts.
-  sync();
-  window.setTimeout(sync, 120);
-  window.setTimeout(sync, 300);
-  window.setTimeout(sync, 650);
-  window.setTimeout(sync, 1200);
+  adminAppLoadPromise = new Promise((resolve, reject) => {
+    const existing = document.getElementById('adminScriptLoader');
+    if (existing) {
+      const onLoad = () => {
+        if (window.DigiAdminApp && typeof window.DigiAdminApp.mount === 'function') {
+          resolve(window.DigiAdminApp);
+        } else {
+          reject(new Error('Admin scenarijus neinicijuotas.'));
+        }
+      };
+      const onError = () => reject(new Error('Nepavyko įkelti admin.js'));
+      existing.addEventListener('load', onLoad, { once: true });
+      existing.addEventListener('error', onError, { once: true });
+      return;
+    }
 
-  frame.__autoResizeTimer = window.setInterval(sync, 1000);
+    const script = document.createElement('script');
+    script.id = 'adminScriptLoader';
+    script.async = true;
+    script.src = `admin.js?${ADMIN_CACHE_BUST_PARAM}=${Date.now()}`;
+    script.onload = () => {
+      if (window.DigiAdminApp && typeof window.DigiAdminApp.mount === 'function') {
+        resolve(window.DigiAdminApp);
+      } else {
+        reject(new Error('Admin scenarijus neinicijuotas.'));
+      }
+    };
+    script.onerror = () => reject(new Error('Nepavyko įkelti admin.js'));
+    document.body.appendChild(script);
+  }).catch((error) => {
+    adminAppLoadPromise = null;
+    throw error;
+  });
+
+  return adminAppLoadPromise;
 }
 
 function resolveInstitutionSlug() {
@@ -265,6 +263,45 @@ function setSession(payload) {
   state.role = payload.role || null;
   state.accountContext = null;
   persistAuthToStorage();
+}
+
+function syncAuthStateFromStorage() {
+  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) {
+    state.token = null;
+    state.user = null;
+    state.role = null;
+    state.accountContext = null;
+    state.context = null;
+    state.userVotes = {};
+    return;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.token) {
+      state.token = null;
+      state.user = null;
+      state.role = null;
+      state.accountContext = null;
+      state.context = null;
+      state.userVotes = {};
+      return;
+    }
+    state.token = parsed.token;
+    state.user = parsed.user || null;
+    state.role = parsed.role || null;
+    state.accountContext = null;
+    state.context = null;
+    state.userVotes = {};
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    state.token = null;
+    state.user = null;
+    state.role = null;
+    state.accountContext = null;
+    state.context = null;
+    state.userVotes = {};
+  }
 }
 
 function isLoggedIn() {
@@ -697,25 +734,10 @@ function canOpenAdminView() {
 
 function setActiveView(nextView) {
   if (!ALLOWED_VIEWS.has(nextView)) return;
-  if (nextView === 'admin') {
-    const target = buildAdminPageHref();
-    window.location.href = target;
-    return;
-  }
   if (state.activeView === nextView) return;
   state.activeView = nextView;
   syncRouteState();
   render();
-}
-
-function buildAdminPageHref() {
-  const slug = normalizeSlug(state.institutionSlug);
-  const params = new URLSearchParams();
-  if (slug) params.set('institution', slug);
-  params.set('from', 'index');
-  params.set(ADMIN_CACHE_BUST_PARAM, String(Date.now()));
-  const query = params.toString();
-  return `admin.html${query ? `?${query}` : ''}`;
 }
 
 function renderSteps() {
@@ -1648,22 +1670,55 @@ function renderAboutView() {
 }
 
 function renderAdminView() {
-  const target = buildAdminPageHref();
   elements.stepView.innerHTML = `
-    <div class="card">
-      <strong>Nukreipiama į administravimo puslapį</strong>
-      <p class="prompt" style="margin: 8px 0 0;">
-        Atidaromas atskiras administravimo puslapis be vidinio iframe, kad visada užsikrautų patikimai.
-      </p>
-      <div class="header-stack" style="margin-top: 12px;">
-        <a class="btn btn-primary" href="${target}">Atidaryti administravimą</a>
-        <button id="backToGuidelinesFromAdminRedirect" class="btn btn-ghost" type="button">Grįžti į gaires</button>
+    <section class="admin-inline-shell">
+      <div class="step-header">
+        <h2>Admin</h2>
       </div>
-    </div>
+      <div id="adminRoot" class="admin-inline-host">
+        <section class="card">
+          <strong>Kraunamas administravimo langas...</strong>
+        </section>
+      </div>
+    </section>
   `;
-  const backBtn = elements.stepView.querySelector('#backToGuidelinesFromAdminRedirect');
-  if (backBtn) backBtn.addEventListener('click', () => setActiveView('guidelines'));
-  window.location.href = target;
+
+  const adminRoot = document.getElementById('adminRoot');
+  if (!adminRoot) return;
+
+  ensureAdminAppLoaded()
+    .then((adminApp) => {
+      if (state.activeView !== 'admin') return;
+      const mountPoint = document.getElementById('adminRoot');
+      if (!mountPoint) return;
+      const mounted = adminApp?.mount?.({
+        root: mountPoint,
+        institutionSlug: state.institutionSlug,
+        forceAuthSync: true
+      });
+      if (!mounted) {
+        mountPoint.innerHTML = `
+          <section class="card">
+            <strong>Nepavyko inicijuoti administravimo lango.</strong>
+          </section>
+        `;
+      }
+    })
+    .catch((error) => {
+      const mountPoint = document.getElementById('adminRoot');
+      if (!mountPoint) return;
+      mountPoint.innerHTML = `
+        <section class="card">
+          <strong>Nepavyko įkelti administravimo lango</strong>
+          <p class="prompt" style="margin-top:8px;">${escapeHtml(toUserMessage(error))}</p>
+        </section>
+      `;
+    });
+}
+
+function handleAuthChanged() {
+  syncAuthStateFromStorage();
+  bootstrap();
 }
 
 function normalizeGuidelineRelation(value) {
@@ -2533,14 +2588,7 @@ function bindGlobal() {
     await navigator.clipboard.writeText(elements.summaryText.value);
   });
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
-  window.addEventListener('message', (event) => {
-    const data = event?.data;
-    if (!data || data.type !== ADMIN_FRAME_HEIGHT_EVENT) return;
-    const frame = document.getElementById('adminInlineFrame');
-    if (!frame || !frame.contentWindow) return;
-    if (event.source !== frame.contentWindow) return;
-    applyAdminInlineFrameHeight(frame, data.height);
-  });
+  window.addEventListener('uzt-auth-changed', handleAuthChanged);
 }
 
 function showAuthModal(initialMode) {
