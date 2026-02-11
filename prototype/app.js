@@ -903,11 +903,13 @@ function applyMapTransform(viewport, world) {
 }
 
 function updateMapFullscreenButtonLabel() {
-  const fullscreenBtn = document.getElementById('mapFullscreenBtn');
-  if (!fullscreenBtn) return;
+  const fullscreenButtons = document.querySelectorAll('[data-map-fullscreen-btn]');
+  if (!fullscreenButtons.length) return;
   const isFullscreen = document.fullscreenElement === elements.stepView;
-  fullscreenBtn.textContent = isFullscreen ? 'Uždaryti pilną ekraną' : 'Pilnas ekranas';
-  fullscreenBtn.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
+  fullscreenButtons.forEach((button) => {
+    button.textContent = isFullscreen ? 'Išeiti iš pilno ekrano' : 'Pilnas ekranas';
+    button.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
+  });
 }
 
 function fitMapToCurrentNodes(viewport, world) {
@@ -1539,36 +1541,42 @@ function renderMapView() {
   }).join('');
 
   elements.stepView.innerHTML = `
-    <div class="step-header">
-      <h2>Strategiju zemelapis</h2>
-      <div class="header-stack step-header-actions">
-        <div class="map-layer-toggle">
-          <button id="mapLayerGuidelinesBtn" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">Gairės</button>
-          <button id="mapLayerInitiativesBtn" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
+    <section class="map-view-shell">
+      <div class="step-header">
+        <h2>Strategiju zemelapis</h2>
+        <div class="header-stack step-header-actions">
+          <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
+          ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvu' : 'gairiu'} korteles</span>` : ''}
         </div>
-        <button id="mapResetBtn" class="btn btn-ghost">Atstatyti vaizda</button>
-        <button id="mapFullscreenBtn" class="btn btn-ghost" type="button">Pilnas ekranas</button>
-        <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
-        ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvu' : 'gairiu'} korteles</span>` : ''}
       </div>
-    </div>
-    <p class="prompt">Perziurekite pasirinktos institucijos strategijos sluoksnius. Iniciatyvu sluoksnyje gairiu korteles lieka matomos, bet uzrakintos.</p>
-    <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer}">
-      <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
-        <svg class="strategy-map-lines guideline-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
-          ${guidelineEdgeMarkup}
-        </svg>
-        <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="mapInitiativeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#2b6fbe" />
-              <stop offset="100%" stop-color="#1f4f84" />
-            </linearGradient>
-          </defs>
-          ${initiativeEdgeMarkup}
-        </svg>
-        ${nodeMarkup}
-      </div>
+      <p class="prompt">Perziurekite pasirinktos institucijos strategijos sluoksnius. Iniciatyvu sluoksnyje gairiu korteles lieka matomos, bet uzrakintos.</p>
+      <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer}">
+        <div class="map-overlay-toolbar">
+          <div class="map-layer-toggle map-overlay-layer-toggle">
+            <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">Gairės</button>
+            <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
+          </div>
+          <div class="map-overlay-actions">
+            <button type="button" data-map-reset-btn class="btn btn-ghost">Atstatyti vaizda</button>
+            <button type="button" data-map-fullscreen-btn class="btn btn-ghost">Pilnas ekranas</button>
+          </div>
+        </div>
+        <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
+          <svg class="strategy-map-lines guideline-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
+            ${guidelineEdgeMarkup}
+          </svg>
+          <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="mapInitiativeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2b6fbe" />
+                <stop offset="100%" stop-color="#1f4f84" />
+              </linearGradient>
+            </defs>
+            ${initiativeEdgeMarkup}
+          </svg>
+          ${nodeMarkup}
+        </div>
+      </section>
     </section>
     <section id="mapCommentModal" class="map-comment-modal" hidden>
       <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uzdaryti"></button>
@@ -1586,8 +1594,8 @@ function renderMapView() {
 
   const viewport = elements.stepView.querySelector('#strategyMapViewport');
   const world = elements.stepView.querySelector('#strategyMapWorld');
-  const resetBtn = elements.stepView.querySelector('#mapResetBtn');
-  const fullscreenBtn = elements.stepView.querySelector('#mapFullscreenBtn');
+  const resetButtons = Array.from(elements.stepView.querySelectorAll('[data-map-reset-btn]'));
+  const fullscreenButtons = Array.from(elements.stepView.querySelectorAll('[data-map-fullscreen-btn]'));
   const commentModal = elements.stepView.querySelector('#mapCommentModal');
   const commentTitle = elements.stepView.querySelector('#mapCommentTitle');
   const commentDescription = elements.stepView.querySelector('#mapCommentDescription');
@@ -1641,22 +1649,22 @@ function renderMapView() {
     });
   });
 
-  const layerGuidelinesBtn = elements.stepView.querySelector('#mapLayerGuidelinesBtn');
-  const layerInitiativesBtn = elements.stepView.querySelector('#mapLayerInitiativesBtn');
-  if (layerGuidelinesBtn) {
-    layerGuidelinesBtn.addEventListener('click', () => {
+  const layerGuidelinesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="guidelines"]'));
+  const layerInitiativesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="initiatives"]'));
+  layerGuidelinesButtons.forEach((button) => {
+    button.addEventListener('click', () => {
       if (state.mapLayer === 'guidelines') return;
       state.mapLayer = 'guidelines';
       renderStepView();
     });
-  }
-  if (layerInitiativesBtn) {
-    layerInitiativesBtn.addEventListener('click', () => {
+  });
+  layerInitiativesButtons.forEach((button) => {
+    button.addEventListener('click', () => {
       if (state.mapLayer === 'initiatives') return;
       state.mapLayer = 'initiatives';
       renderStepView();
     });
-  }
+  });
 
   if (viewport && world) {
     syncMapNodeBounds(world);
@@ -1664,27 +1672,31 @@ function renderMapView() {
     fitMapToCurrentNodes(viewport, world);
     bindMapInteractions(viewport, world, { editable });
   }
-  if (resetBtn && viewport && world) {
-    resetBtn.addEventListener('click', () => {
-      fitMapToCurrentNodes(viewport, world);
+  if (resetButtons.length && viewport && world) {
+    resetButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        fitMapToCurrentNodes(viewport, world);
+      });
     });
   }
-  if (fullscreenBtn) {
+  if (fullscreenButtons.length) {
     updateMapFullscreenButtonLabel();
-    fullscreenBtn.addEventListener('click', async () => {
-      try {
-        if (document.fullscreenElement === elements.stepView) {
-          await document.exitFullscreen();
-        } else if (elements.stepView && typeof elements.stepView.requestFullscreen === 'function') {
-          await elements.stepView.requestFullscreen();
+    fullscreenButtons.forEach((button) => {
+      button.addEventListener('click', async () => {
+        try {
+          if (document.fullscreenElement === elements.stepView) {
+            await document.exitFullscreen();
+          } else if (elements.stepView && typeof elements.stepView.requestFullscreen === 'function') {
+            await elements.stepView.requestFullscreen();
+          }
+        } catch (error) {
+          state.notice = toUserMessage(error);
+          render();
+          return;
         }
-      } catch (error) {
-        state.notice = toUserMessage(error);
-        render();
-        return;
-      }
-      updateMapFullscreenButtonLabel();
-      if (viewport && world) fitMapToCurrentNodes(viewport, world);
+        updateMapFullscreenButtonLabel();
+        if (viewport && world) fitMapToCurrentNodes(viewport, world);
+      });
     });
   }
 }

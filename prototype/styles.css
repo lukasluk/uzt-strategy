@@ -13,6 +13,8 @@
   --accent: #2b6fbe;
   --accent-2: #3f8fe6;
   --accent-3: #1f4f84;
+  --pastel-soft: #f3efff;
+  --pastel-soft-border: #d8ceef;
   --border-soft: #c8d8ee;
   --border-strong: #9fb9dd;
   --surface-soft: #eef5ff;
@@ -261,20 +263,36 @@ body {
   animation: fadeIn 0.4s ease;
 }
 .step-view:fullscreen {
-  background: #f8f2e7;
-  padding: 16px;
-  overflow: auto;
+  background: #f6fbff;
+  padding: 0;
+  overflow: hidden;
 }
 .step-view:fullscreen .strategy-map-viewport {
-  min-height: calc(100vh - 210px);
+  min-height: 100vh;
+  height: 100vh;
+  border-radius: 0;
+  border-width: 0;
 }
 .step-view:-webkit-full-screen {
-  background: #f8f2e7;
-  padding: 16px;
-  overflow: auto;
+  background: #f6fbff;
+  padding: 0;
+  overflow: hidden;
 }
 .step-view:-webkit-full-screen .strategy-map-viewport {
-  min-height: calc(100vh - 210px);
+  min-height: 100vh;
+  height: 100vh;
+  border-radius: 0;
+  border-width: 0;
+}
+.step-view:fullscreen .map-view-shell,
+.step-view:-webkit-full-screen .map-view-shell {
+  height: 100vh;
+}
+.step-view:fullscreen .map-view-shell > .step-header,
+.step-view:fullscreen .map-view-shell > .prompt,
+.step-view:-webkit-full-screen .map-view-shell > .step-header,
+.step-view:-webkit-full-screen .map-view-shell > .prompt {
+  display: none;
 }
 
 .about-window .card p {
@@ -1077,6 +1095,44 @@ textarea {
   background-position: var(--grid-x) var(--grid-y);
   cursor: grab;
   isolation: isolate;
+}
+.map-view-shell {
+  display: grid;
+  gap: 0;
+}
+.map-overlay-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 16;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+}
+.map-overlay-layer-toggle,
+.map-overlay-actions {
+  pointer-events: auto;
+}
+.map-overlay-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.map-overlay-toolbar .btn-ghost {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--border-soft);
+  backdrop-filter: blur(4px);
+}
+.step-view:fullscreen .map-overlay-toolbar,
+.step-view:-webkit-full-screen .map-overlay-toolbar {
+  top: 14px;
+  left: 14px;
+  right: 14px;
 }
 .strategy-map-viewport.dragging {
   cursor: grabbing;
