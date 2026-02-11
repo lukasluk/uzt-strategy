@@ -697,10 +697,25 @@ function canOpenAdminView() {
 
 function setActiveView(nextView) {
   if (!ALLOWED_VIEWS.has(nextView)) return;
+  if (nextView === 'admin') {
+    const target = buildAdminPageHref();
+    window.location.href = target;
+    return;
+  }
   if (state.activeView === nextView) return;
   state.activeView = nextView;
   syncRouteState();
   render();
+}
+
+function buildAdminPageHref() {
+  const slug = normalizeSlug(state.institutionSlug);
+  const params = new URLSearchParams();
+  if (slug) params.set('institution', slug);
+  params.set('from', 'index');
+  params.set(ADMIN_CACHE_BUST_PARAM, String(Date.now()));
+  const query = params.toString();
+  return `admin.html${query ? `?${query}` : ''}`;
 }
 
 function renderSteps() {
@@ -1633,80 +1648,22 @@ function renderAboutView() {
 }
 
 function renderAdminView() {
-  const previousFrame = document.getElementById('adminInlineFrame');
-  if (previousFrame?.__autoResizeTimer) {
-    window.clearInterval(previousFrame.__autoResizeTimer);
-    previousFrame.__autoResizeTimer = null;
-  }
-
-  const allowed = canOpenAdminView();
-
-  if (isEmbeddedContext()) {
-    const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}&frame=admin&${ADMIN_CACHE_BUST_PARAM}=${Date.now()}`;
-    elements.stepView.innerHTML = `
-      <div class="card">
-        <strong>Admin langas negali būti įkeltas į kitą Admin langą</strong>
-        <p class="prompt" style="margin: 8px 0 0;">
-          Atidarykite administravimo puslapį atskirai, kad išvengtume admin > admin > admin ciklo.
-        </p>
-        <div class="header-stack" style="margin-top: 12px;">
-          <a class="btn btn-primary" href="${src}" target="_top" rel="noopener">Atidaryti administravimą</a>
-          <button id="backToGuidelinesFromNestedAdmin" class="btn btn-ghost" type="button">Grįžti į gaires</button>
-        </div>
-      </div>
-    `;
-    const backBtn = elements.stepView.querySelector('#backToGuidelinesFromNestedAdmin');
-    if (backBtn) backBtn.addEventListener('click', () => setActiveView('guidelines'));
-    return;
-  }
-
-  if (!isAuthenticated()) {
-    elements.stepView.innerHTML = `
-      <div class="card">
-        <strong>Administravimui reikia prisijungti</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Prisijunkite su institucijos administratoriaus paskyra.</p>
-        <button id="openAuthFromAdmin" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
-      </div>
-    `;
-    const openAuthBtn = elements.stepView.querySelector('#openAuthFromAdmin');
-    if (openAuthBtn) openAuthBtn.addEventListener('click', () => showAuthModal('login'));
-    return;
-  }
-
-  if (!allowed) {
-    elements.stepView.innerHTML = `
-      <div class="card">
-        <strong>Administravimas nepasiekiamas</strong>
-        <p class="prompt" style="margin: 8px 0 0;">
-          Administravimo vaizdas prieinamas tik prisijungus kaip pasirinktos institucijos administratorius.
-        </p>
-      </div>
-    `;
-    return;
-  }
-
-  const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}&frame=admin&${ADMIN_CACHE_BUST_PARAM}=${Date.now()}`;
+  const target = buildAdminPageHref();
   elements.stepView.innerHTML = `
-    <section class="admin-inline-shell">
-      <div class="step-header">
-        <h2>Admin</h2>
+    <div class="card">
+      <strong>Nukreipiama į administravimo puslapį</strong>
+      <p class="prompt" style="margin: 8px 0 0;">
+        Atidaromas atskiras administravimo puslapis be vidinio iframe, kad visada užsikrautų patikimai.
+      </p>
+      <div class="header-stack" style="margin-top: 12px;">
+        <a class="btn btn-primary" href="${target}">Atidaryti administravimą</a>
+        <button id="backToGuidelinesFromAdminRedirect" class="btn btn-ghost" type="button">Grįžti į gaires</button>
       </div>
-      <iframe
-        id="adminInlineFrame"
-        class="admin-inline-frame"
-        src="${src}"
-        title="Administravimo langas"
-        scrolling="no"
-      ></iframe>
-    </section>
+    </div>
   `;
-  const frame = document.getElementById('adminInlineFrame');
-  if (frame) {
-    frame.addEventListener('load', () => {
-      applyAdminInlineFrameHeight(frame, frame.offsetHeight || 960);
-      startAdminFrameAutoResize(frame);
-    });
-  }
+  const backBtn = elements.stepView.querySelector('#backToGuidelinesFromAdminRedirect');
+  if (backBtn) backBtn.addEventListener('click', () => setActiveView('guidelines'));
+  window.location.href = target;
 }
 
 function normalizeGuidelineRelation(value) {
