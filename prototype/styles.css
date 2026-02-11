@@ -250,6 +250,22 @@ body {
 .step-view {
   animation: fadeIn 0.4s ease;
 }
+.step-view:fullscreen {
+  background: #f8f2e7;
+  padding: 16px;
+  overflow: auto;
+}
+.step-view:fullscreen .strategy-map-viewport {
+  min-height: calc(100vh - 210px);
+}
+.step-view:-webkit-full-screen {
+  background: #f8f2e7;
+  padding: 16px;
+  overflow: auto;
+}
+.step-view:-webkit-full-screen .strategy-map-viewport {
+  min-height: calc(100vh - 210px);
+}
 
 .about-window .card p {
   font-size: 15px;
@@ -1050,6 +1066,7 @@ textarea {
   background-size: var(--grid-size) var(--grid-size);
   background-position: var(--grid-x) var(--grid-y);
   cursor: grab;
+  isolation: isolate;
 }
 .strategy-map-viewport.dragging {
   cursor: grabbing;
@@ -1071,6 +1088,7 @@ textarea {
   pointer-events: none;
   overflow: visible;
   transition: opacity 0.18s ease;
+  z-index: 1;
 }
 .strategy-map-edge {
   fill: none;
@@ -1098,6 +1116,7 @@ textarea {
   color: var(--ink);
   box-shadow: 0 8px 16px rgba(28, 26, 22, 0.08);
   transition: opacity 0.18s ease, filter 0.18s ease;
+  z-index: 3;
 }
 .strategy-map-node[data-draggable="true"] {
   cursor: move;
@@ -1350,11 +1369,18 @@ textarea {
   opacity: 0.32;
   pointer-events: none;
   filter: saturate(0.7);
+  z-index: 2;
 }
 .strategy-map-viewport.map-layer-initiatives .initiative-lines,
 .strategy-map-viewport.map-layer-initiatives .initiative-node {
   opacity: 1;
   pointer-events: auto;
+}
+.strategy-map-viewport.map-layer-initiatives .initiative-lines {
+  z-index: 7;
+}
+.strategy-map-viewport.map-layer-initiatives .initiative-node {
+  z-index: 6;
 }
 .map-vote-row {
   display: flex;

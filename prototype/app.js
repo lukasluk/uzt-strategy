@@ -902,6 +902,14 @@ function applyMapTransform(viewport, world) {
   viewport.style.setProperty('--grid-y', `${y % gridSize}px`);
 }
 
+function updateMapFullscreenButtonLabel() {
+  const fullscreenBtn = document.getElementById('mapFullscreenBtn');
+  if (!fullscreenBtn) return;
+  const isFullscreen = document.fullscreenElement === elements.stepView;
+  fullscreenBtn.textContent = isFullscreen ? 'Uždaryti pilną ekraną' : 'Pilnas ekranas';
+  fullscreenBtn.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
+}
+
 function fitMapToCurrentNodes(viewport, world) {
   const nodes = Array.from(world.querySelectorAll('.strategy-map-node[data-node-id]')).map((node) => ({
     x: Number(node.dataset.x || 0),
@@ -1539,6 +1547,7 @@ function renderMapView() {
           <button id="mapLayerInitiativesBtn" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
         </div>
         <button id="mapResetBtn" class="btn btn-ghost">Atstatyti vaizda</button>
+        <button id="mapFullscreenBtn" class="btn btn-ghost" type="button">Pilnas ekranas</button>
         <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
         ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvu' : 'gairiu'} korteles</span>` : ''}
       </div>
@@ -1578,6 +1587,7 @@ function renderMapView() {
   const viewport = elements.stepView.querySelector('#strategyMapViewport');
   const world = elements.stepView.querySelector('#strategyMapWorld');
   const resetBtn = elements.stepView.querySelector('#mapResetBtn');
+  const fullscreenBtn = elements.stepView.querySelector('#mapFullscreenBtn');
   const commentModal = elements.stepView.querySelector('#mapCommentModal');
   const commentTitle = elements.stepView.querySelector('#mapCommentTitle');
   const commentDescription = elements.stepView.querySelector('#mapCommentDescription');
@@ -1657,6 +1667,24 @@ function renderMapView() {
   if (resetBtn && viewport && world) {
     resetBtn.addEventListener('click', () => {
       fitMapToCurrentNodes(viewport, world);
+    });
+  }
+  if (fullscreenBtn) {
+    updateMapFullscreenButtonLabel();
+    fullscreenBtn.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement === elements.stepView) {
+          await document.exitFullscreen();
+        } else if (elements.stepView && typeof elements.stepView.requestFullscreen === 'function') {
+          await elements.stepView.requestFullscreen();
+        }
+      } catch (error) {
+        state.notice = toUserMessage(error);
+        render();
+        return;
+      }
+      updateMapFullscreenButtonLabel();
+      if (viewport && world) fitMapToCurrentNodes(viewport, world);
     });
   }
 }
@@ -2172,6 +2200,10 @@ function renderInitiativesView() {
 }
 
 function renderStepView() {
+  if (state.activeView !== 'map' && document.fullscreenElement === elements.stepView) {
+    document.exitFullscreen().catch(() => {});
+  }
+
   if (state.activeView === 'about') {
     renderAboutView();
     return;
@@ -2632,6 +2664,14 @@ function bindGlobal() {
   });
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
   window.addEventListener('uzt-auth-changed', handleAuthChanged);
+  document.addEventListener('fullscreenchange', () => {
+    updateMapFullscreenButtonLabel();
+    if (state.activeView !== 'map') return;
+    const viewport = document.getElementById('strategyMapViewport');
+    const world = document.getElementById('strategyMapWorld');
+    if (!viewport || !world) return;
+    fitMapToCurrentNodes(viewport, world);
+  });
 }
 
 function showAuthModal(initialMode) {
