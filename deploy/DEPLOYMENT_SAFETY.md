@@ -28,7 +28,10 @@ sudo bash deploy/deploy.sh
 
 What it does:
 - Prevents concurrent deploys (`flock` lock).
-- Validates required env vars (`DATABASE_URL`, `AUTH_SECRET`, `SUPERADMIN_CODE`, `META_ADMIN_PASSWORD`).
+- Validates required env vars (`DATABASE_URL`, `AUTH_SECRET`, `SUPERADMIN_CODE`, `META_ADMIN_SESSION_SECRET`).
+- Requires secure meta-admin auth configuration:
+  - preferred: `META_ADMIN_PASSWORD_HASH`
+  - temporary legacy mode: `ALLOW_LEGACY_META_ADMIN_PASSWORD=1` + `META_ADMIN_PASSWORD`
 - Creates a **database backup** before deployment (unless `SKIP_DB_BACKUP=1`).
 - Saves previous frontend/backend + nginx/service snapshots for rollback.
 - Deploys code and restarts services.
@@ -40,7 +43,14 @@ Optional variables:
 - `HEALTH_URL` to override health endpoint.
 - `RETENTION_DAYS` to control backup/snapshot retention (default `14`).
 - `CORS_ORIGINS` to restrict allowed browser origins for API access.
-- `META_ADMIN_SESSION_SECRET` to sign HttpOnly meta-admin session cookies.
+- `ENABLE_LEGACY_SUPERADMIN=1` to temporarily keep old `x-superadmin-code` endpoints enabled.
+
+Generate `META_ADMIN_PASSWORD_HASH`:
+
+```bash
+cd /srv/uzt-strategy-src
+node backend/scripts/generate-meta-admin-hash.js "YOUR_STRONG_META_ADMIN_PASSWORD"
+```
 
 ## 3) Manual rollback notes
 

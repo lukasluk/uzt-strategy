@@ -125,17 +125,36 @@ DATABASE_URL="$(read_env_var DATABASE_URL "$ENV_FILE")"
 AUTH_SECRET="$(read_env_var AUTH_SECRET "$ENV_FILE")"
 SUPERADMIN_CODE="$(read_env_var SUPERADMIN_CODE "$ENV_FILE")"
 META_ADMIN_PASSWORD="$(read_env_var META_ADMIN_PASSWORD "$ENV_FILE")"
+META_ADMIN_PASSWORD_HASH="$(read_env_var META_ADMIN_PASSWORD_HASH "$ENV_FILE")"
+META_ADMIN_SESSION_SECRET="$(read_env_var META_ADMIN_SESSION_SECRET "$ENV_FILE")"
+ALLOW_LEGACY_META_ADMIN_PASSWORD="$(read_env_var ALLOW_LEGACY_META_ADMIN_PASSWORD "$ENV_FILE")"
 
-for var in DATABASE_URL AUTH_SECRET SUPERADMIN_CODE META_ADMIN_PASSWORD; do
+for var in DATABASE_URL AUTH_SECRET SUPERADMIN_CODE META_ADMIN_SESSION_SECRET; do
   if [ -z "${!var:-}" ]; then
     echo "ERROR: required env var is missing in $APP_DIR/backend/.env: $var"
     exit 1
   fi
 done
 
-for var in AUTH_SECRET SUPERADMIN_CODE META_ADMIN_PASSWORD; do
+if [ -z "$META_ADMIN_PASSWORD_HASH" ]; then
+  if [ "${ALLOW_LEGACY_META_ADMIN_PASSWORD:-1}" = "1" ] && [ -n "$META_ADMIN_PASSWORD" ]; then
+    echo "WARNING: using legacy META_ADMIN_PASSWORD flow. Set META_ADMIN_PASSWORD_HASH for stronger security."
+    case "$META_ADMIN_PASSWORD" in
+      change-me|change-me-too|change-me-superadmin|meta-admin-change-me|ilga_reiksme_be_tarpu|visa_reiksme_be_tarpu|Bedarbystės-ratas-sukasi|BedarbystÄ—s-ratas-sukasi)
+        echo "ERROR: insecure placeholder value detected for META_ADMIN_PASSWORD (legacy mode)"
+        exit 1
+        ;;
+    esac
+  else
+    echo "ERROR: set META_ADMIN_PASSWORD_HASH in $APP_DIR/backend/.env"
+    echo "       (or set ALLOW_LEGACY_META_ADMIN_PASSWORD=1 with META_ADMIN_PASSWORD for temporary legacy mode)"
+    exit 1
+  fi
+fi
+
+for var in AUTH_SECRET SUPERADMIN_CODE META_ADMIN_SESSION_SECRET; do
   case "${!var}" in
-    change-me|change-me-superadmin|meta-admin-change-me|ilga_reiksme_be_tarpu|visa_reiksme_be_tarpu|Bedarbystės-ratas-sukasi|BedarbystÄ—s-ratas-sukasi)
+    change-me|change-me-too|change-me-superadmin|meta-admin-change-me|ilga_reiksme_be_tarpu|visa_reiksme_be_tarpu|Bedarbystės-ratas-sukasi|BedarbystÄ—s-ratas-sukasi)
       echo "ERROR: insecure placeholder value detected for $var"
       exit 1
       ;;

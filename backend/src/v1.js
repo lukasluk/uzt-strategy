@@ -1,123 +1,15 @@
 const crypto = require('crypto');
-
-function sha256(value) {
-  return crypto.createHash('sha256').update(value).digest('hex');
-}
-
-function normalizeEmail(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
-function slugify(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function hashPassword(password, salt) {
-  return crypto.pbkdf2Sync(password, salt, 120000, 64, 'sha512').toString('hex');
-}
-
-function createAuthToken(payload, secret) {
-  const body = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
-  const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url');
-  return `${body}.${sig}`;
-}
-
-function readAuthToken(token, secret) {
-  const [body, sig] = String(token || '').split('.');
-  if (!body || !sig) return null;
-  const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url');
-  if (!timingSafeEqual(expected, sig)) return null;
-  try {
-    const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-    if (!parsed.exp || Date.now() > parsed.exp) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function timingSafeEqual(a, b) {
-  const left = Buffer.from(String(a || ''), 'utf8');
-  const right = Buffer.from(String(b || ''), 'utf8');
-  if (left.length !== right.length) return false;
-  return crypto.timingSafeEqual(left, right);
-}
-
-function parseCookies(req) {
-  const source = String(req.headers.cookie || '');
-  if (!source) return {};
-  return source.split(';').reduce((acc, part) => {
-    const [rawKey, ...rawValue] = part.split('=');
-    const key = String(rawKey || '').trim();
-    if (!key) return acc;
-    const value = rawValue.join('=').trim();
-    try {
-      acc[key] = decodeURIComponent(value || '');
-    } catch {
-      acc[key] = value || '';
-    }
-    return acc;
-  }, {});
-}
-
-function getCookie(req, name) {
-  const cookies = parseCookies(req);
-  return cookies[name] || '';
-}
-
-function resolveClientIp(req) {
-  const forwarded = String(req.headers['x-forwarded-for'] || '');
-  const firstForwarded = forwarded.split(',').map((item) => item.trim()).find(Boolean);
-  return firstForwarded || req.ip || req.socket?.remoteAddress || 'unknown';
-}
-
-function shouldUseSecureCookie(req) {
-  const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
-    .split(',')
-    .map((item) => item.trim())
-    .find(Boolean);
-  return Boolean(req.secure || forwardedProto === 'https');
-}
-
-function createRateLimiter({ windowMs, max, keyPrefix = 'rl', keyFn = null }) {
-  const hits = new Map();
-
-  return function rateLimit(req, res, next) {
-    const now = Date.now();
-    const keyValue = keyFn ? keyFn(req) : resolveClientIp(req);
-    const key = `${keyPrefix}:${String(keyValue || 'unknown')}`;
-    const current = hits.get(key);
-
-    if (!current || current.resetAt <= now) {
-      hits.set(key, { count: 1, resetAt: now + windowMs });
-    } else if (current.count >= max) {
-      const retryAfter = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
-      res.set('Retry-After', String(retryAfter));
-      return res.status(429).json({ error: 'too many requests' });
-    } else {
-      current.count += 1;
-      hits.set(key, current);
-    }
-
-    if (hits.size > 2000) {
-      for (const [storedKey, entry] of hits.entries()) {
-        if (entry.resetAt <= now) hits.delete(storedKey);
-      }
-    }
-
-    return next();
-  };
-}
-
-function parseBearer(req) {
-  const header = req.headers.authorization || '';
-  if (!header.toLowerCase().startsWith('bearer ')) return null;
-  return header.slice(7).trim();
-}
+const {
+  createAuthToken,
+  createRateLimiter,
+  hashPassword,
+  normalizeEmail,
+  parseBearer,
+  readAuthToken,
+  resolveClientIp,
+  sha256
+} = require('./security');
+const { registerMetaAdminRoutes } = require('./metaAdminRoutes');
 
 async function getInstitutionBySlug(query, slug) {
   const res = await query(
@@ -140,19 +32,13 @@ async function getCurrentCycle(query, institutionId) {
 }
 
 function registerV1Routes({ app, query, broadcast, uuid }) {
-  const SUPERADMIN_CODE = process.env.SUPERADMIN_CODE || 'change-me';
   const AUTH_SECRET = process.env.AUTH_SECRET || 'change-me-too';
-  const META_ADMIN_PASSWORD = process.env.META_ADMIN_PASSWORD || 'meta-admin-change-me';
-  const META_ADMIN_SESSION_SECRET = process.env.META_ADMIN_SESSION_SECRET || AUTH_SECRET;
-  const META_ADMIN_SESSION_COOKIE = process.env.META_ADMIN_SESSION_COOKIE || 'uzt_meta_admin_session';
-  const META_ADMIN_SESSION_TTL_HOURS = Number(process.env.META_ADMIN_SESSION_TTL_HOURS || 2);
   const VOTE_BUDGET = Math.max(20, Number(process.env.VOTE_BUDGET || 20));
   const INVITE_TTL_HOURS = Number(process.env.INVITE_TTL_HOURS || 72);
   const AUTH_TTL_HOURS = Number(process.env.AUTH_TTL_HOURS || 12);
   const AUTH_WINDOW_MS = Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
   const LOGIN_MAX_ATTEMPTS = Number(process.env.LOGIN_RATE_LIMIT_MAX || 20);
   const INVITE_ACCEPT_MAX_ATTEMPTS = Number(process.env.INVITE_ACCEPT_RATE_LIMIT_MAX || 20);
-  const META_ADMIN_AUTH_MAX_ATTEMPTS = Number(process.env.META_ADMIN_AUTH_RATE_LIMIT_MAX || 8);
 
   const loginRateLimit = createRateLimiter({
     windowMs: AUTH_WINDOW_MS,
@@ -167,61 +53,6 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     keyPrefix: 'invite-accept',
     keyFn: (req) => resolveClientIp(req)
   });
-
-  const metaAdminAuthRateLimit = createRateLimiter({
-    windowMs: AUTH_WINDOW_MS,
-    max: META_ADMIN_AUTH_MAX_ATTEMPTS,
-    keyPrefix: 'meta-admin-auth',
-    keyFn: (req) => resolveClientIp(req)
-  });
-
-  function requireSuperAdmin(req, res, next) {
-    const code = String(req.headers['x-superadmin-code'] || '').trim();
-    if (!code || !timingSafeEqual(code, SUPERADMIN_CODE)) {
-      return res.status(403).json({ error: 'forbidden' });
-    }
-    next();
-  }
-
-  function requireMetaAdminSession(req, res, next) {
-    const token = getCookie(req, META_ADMIN_SESSION_COOKIE);
-    const payload = readAuthToken(token, META_ADMIN_SESSION_SECRET);
-    if (!payload || payload.scope !== 'meta_admin') {
-      return res.status(403).json({ error: 'forbidden' });
-    }
-    req.metaAdmin = payload;
-    next();
-  }
-
-  function decodePasswordCandidate(value) {
-    const candidate = String(value || '').trim();
-    if (!candidate) return '';
-    try {
-      return decodeURIComponent(candidate);
-    } catch {
-      return candidate;
-    }
-  }
-
-  function setMetaAdminCookie(req, res, token) {
-    const maxAgeMs = Math.max(5 * 60 * 1000, META_ADMIN_SESSION_TTL_HOURS * 60 * 60 * 1000);
-    res.cookie(META_ADMIN_SESSION_COOKIE, token, {
-      maxAge: maxAgeMs,
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: shouldUseSecureCookie(req),
-      path: '/api/v1/meta-admin'
-    });
-  }
-
-  function clearMetaAdminCookie(req, res) {
-    res.clearCookie(META_ADMIN_SESSION_COOKIE, {
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: shouldUseSecureCookie(req),
-      path: '/api/v1/meta-admin'
-    });
-  }
 
   function requireAuth(req, res, next) {
     const token = parseBearer(req);
@@ -362,6 +193,15 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
   app.get('/api/v1/health', (_req, res) => {
     res.json({ ok: true, version: 'v1' });
+  });
+
+  registerMetaAdminRoutes({
+    app,
+    query,
+    uuid,
+    authSecret: AUTH_SECRET,
+    inviteTtlHours: INVITE_TTL_HOURS,
+    authWindowMs: AUTH_WINDOW_MS
   });
 
   app.get('/api/v1/public/institutions', async (_req, res) => {
@@ -775,251 +615,6 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         comments: commentsByInitiative[row.id] || []
       }))
     });
-  });
-
-  app.post('/api/v1/meta-admin/auth', metaAdminAuthRateLimit, (req, res) => {
-    const password = decodePasswordCandidate(req.body?.password);
-    if (!password || !timingSafeEqual(password, META_ADMIN_PASSWORD)) {
-      return res.status(403).json({ error: 'forbidden' });
-    }
-    const payload = {
-      scope: 'meta_admin',
-      exp: Date.now() + Math.max(5 * 60 * 1000, META_ADMIN_SESSION_TTL_HOURS * 60 * 60 * 1000)
-    };
-    const token = createAuthToken(payload, META_ADMIN_SESSION_SECRET);
-    setMetaAdminCookie(req, res, token);
-    res.json({ ok: true });
-  });
-
-  app.post('/api/v1/meta-admin/logout', (req, res) => {
-    clearMetaAdminCookie(req, res);
-    res.json({ ok: true });
-  });
-
-  app.get('/api/v1/meta-admin/overview', requireMetaAdminSession, async (_req, res) => {
-    const institutionsRes = await query(
-      'select id, name, slug, status, created_at from institutions order by created_at desc'
-    );
-    const usersRes = await query(
-      'select id, email, display_name, status, created_at from platform_users order by created_at desc'
-    );
-    const membershipsRes = await query(
-      `select m.id, m.user_id, m.institution_id, m.role, m.status, m.created_at,
-              i.name as institution_name, i.slug as institution_slug
-       from institution_memberships m
-       join institutions i on i.id = m.institution_id
-       order by m.created_at desc`
-    );
-    const invitesRes = await query(
-      `select inv.id, inv.institution_id, inv.email, inv.role, inv.expires_at, inv.used_at, inv.revoked_at, inv.created_at,
-              i.name as institution_name, i.slug as institution_slug
-       from institution_invites inv
-       join institutions i on i.id = inv.institution_id
-       order by inv.created_at desc
-       limit 300`
-    );
-
-    const membershipsByUser = membershipsRes.rows.reduce((acc, row) => {
-      if (!acc[row.user_id]) acc[row.user_id] = [];
-      acc[row.user_id].push({
-        id: row.id,
-        institutionId: row.institution_id,
-        institutionName: row.institution_name,
-        institutionSlug: row.institution_slug,
-        role: row.role,
-        status: row.status,
-        createdAt: row.created_at
-      });
-      return acc;
-    }, {});
-
-    const pendingInvites = invitesRes.rows
-      .filter((row) => !row.used_at && !row.revoked_at && new Date(row.expires_at).getTime() > Date.now())
-      .map((row) => ({
-        id: row.id,
-        institutionId: row.institution_id,
-        institutionName: row.institution_name,
-        institutionSlug: row.institution_slug,
-        email: row.email,
-        role: row.role,
-        expiresAt: row.expires_at,
-        createdAt: row.created_at
-      }));
-
-    res.json({
-      institutions: institutionsRes.rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        status: row.status,
-        createdAt: row.created_at
-      })),
-      users: usersRes.rows.map((row) => ({
-        id: row.id,
-        email: row.email,
-        displayName: row.display_name,
-        status: row.status,
-        createdAt: row.created_at,
-        memberships: membershipsByUser[row.id] || []
-      })),
-      pendingInvites
-    });
-  });
-
-  app.post('/api/v1/meta-admin/institutions', requireMetaAdminSession, async (req, res) => {
-    const name = String(req.body?.name || '').trim();
-    const slugInput = String(req.body?.slug || '').trim();
-    if (!name) return res.status(400).json({ error: 'name required' });
-
-    const slug = slugify(slugInput || name);
-    if (!slug) return res.status(400).json({ error: 'invalid slug' });
-
-    const existing = await query('select id from institutions where slug = $1', [slug]);
-    if (existing.rowCount > 0) return res.status(409).json({ error: 'slug already exists' });
-
-    const institutionId = uuid();
-    const cycleId = uuid();
-    await query(
-      `insert into institutions (id, name, slug, status)
-       values ($1, $2, $3, 'active')`,
-      [institutionId, name, slug]
-    );
-    await query(
-      `insert into strategy_cycles (id, institution_id, title, state, results_published, starts_at)
-       values ($1, $2, $3, 'open', false, now())`,
-      [cycleId, institutionId, `${name} strategijos ciklas`]
-    );
-
-    res.status(201).json({
-      institutionId,
-      cycleId,
-      slug
-    });
-  });
-
-  app.post('/api/v1/meta-admin/institutions/:institutionId/invites', requireMetaAdminSession, async (req, res) => {
-    const institutionId = String(req.params.institutionId || '').trim();
-    const email = normalizeEmail(req.body?.email);
-    const role = String(req.body?.role || 'member').trim();
-    if (!institutionId || !email) return res.status(400).json({ error: 'institutionId and email required' });
-    if (!['institution_admin', 'member'].includes(role)) return res.status(400).json({ error: 'invalid role' });
-
-    const exists = await query('select id from institutions where id = $1', [institutionId]);
-    if (exists.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
-
-    const inviteToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = sha256(inviteToken);
-    const inviteId = uuid();
-
-    await query(
-      `insert into institution_invites (id, institution_id, email, role, token_hash, expires_at)
-       values ($1, $2, $3, $4, $5, now() + ($6 || ' hours')::interval)`,
-      [inviteId, institutionId, email, role, tokenHash, String(INVITE_TTL_HOURS)]
-    );
-
-    res.status(201).json({ inviteId, inviteToken, email, role });
-  });
-
-  app.put('/api/v1/meta-admin/institutions/:institutionId', requireMetaAdminSession, async (req, res) => {
-    const institutionId = String(req.params.institutionId || '').trim();
-    const name = String(req.body?.name || '').trim();
-    if (!institutionId || !name) {
-      return res.status(400).json({ error: 'institutionId and name required' });
-    }
-
-    const result = await query(
-      `update institutions
-       set name = $1
-       where id = $2`,
-      [name, institutionId]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
-
-    res.json({ ok: true, institutionId, name });
-  });
-
-  app.put('/api/v1/meta-admin/users/:userId/status', requireMetaAdminSession, async (req, res) => {
-    const userId = String(req.params.userId || '').trim();
-    const status = String(req.body?.status || '').trim();
-    if (!userId || !['active', 'blocked'].includes(status)) {
-      return res.status(400).json({ error: 'userId and valid status required' });
-    }
-
-    const result = await query(
-      'update platform_users set status = $1 where id = $2',
-      [status, userId]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'user not found' });
-    res.json({ ok: true, status });
-  });
-
-  app.put('/api/v1/meta-admin/memberships/:membershipId/status', requireMetaAdminSession, async (req, res) => {
-    const membershipId = String(req.params.membershipId || '').trim();
-    const status = String(req.body?.status || '').trim();
-    if (!membershipId || !['active', 'blocked'].includes(status)) {
-      return res.status(400).json({ error: 'membershipId and valid status required' });
-    }
-
-    const result = await query(
-      'update institution_memberships set status = $1 where id = $2',
-      [status, membershipId]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'membership not found' });
-    res.json({ ok: true, status });
-  });
-
-  app.post('/api/v1/superadmin/institutions', requireSuperAdmin, async (req, res) => {
-    const name = String(req.body?.name || '').trim();
-    const slugInput = String(req.body?.slug || '').trim();
-    if (!name) return res.status(400).json({ error: 'name required' });
-
-    const slug = slugify(slugInput || name);
-    if (!slug) return res.status(400).json({ error: 'invalid slug' });
-
-    const existing = await query('select id from institutions where slug = $1', [slug]);
-    if (existing.rowCount > 0) return res.status(409).json({ error: 'slug already exists' });
-
-    const institutionId = uuid();
-    const cycleId = uuid();
-    await query(
-      `insert into institutions (id, name, slug, status)
-       values ($1, $2, $3, 'active')`,
-      [institutionId, name, slug]
-    );
-    await query(
-      `insert into strategy_cycles (id, institution_id, title, state, results_published, starts_at)
-       values ($1, $2, $3, 'open', false, now())`,
-      [cycleId, institutionId, `${name} strategijos ciklas`]
-    );
-
-    res.status(201).json({
-      institutionId,
-      cycleId,
-      slug
-    });
-  });
-
-  app.post('/api/v1/superadmin/institutions/:institutionId/invites', requireSuperAdmin, async (req, res) => {
-    const institutionId = String(req.params.institutionId || '').trim();
-    const email = normalizeEmail(req.body?.email);
-    const role = String(req.body?.role || 'institution_admin').trim();
-    if (!institutionId || !email) return res.status(400).json({ error: 'institutionId and email required' });
-    if (!['institution_admin', 'member'].includes(role)) return res.status(400).json({ error: 'invalid role' });
-
-    const exists = await query('select id from institutions where id = $1', [institutionId]);
-    if (exists.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
-
-    const inviteToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = sha256(inviteToken);
-    const inviteId = uuid();
-
-    await query(
-      `insert into institution_invites (id, institution_id, email, role, token_hash, expires_at)
-       values ($1, $2, $3, $4, $5, now() + ($6 || ' hours')::interval)`,
-      [inviteId, institutionId, email, role, tokenHash, String(INVITE_TTL_HOURS)]
-    );
-
-    res.status(201).json({ inviteId, inviteToken, email, role });
   });
 
   app.post('/api/v1/invites/accept', inviteAcceptRateLimit, async (req, res) => {
