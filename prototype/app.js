@@ -1876,7 +1876,7 @@ function renderGuidelineCard(guideline, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card ${votingDisabled ? 'guideline-disabled' : ''}">
+    <article class="card guideline-card ${votingDisabled ? 'guideline-disabled' : ''}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(guideline.title)}</h4>
@@ -1961,7 +1961,7 @@ function renderInitiativeCard(initiative, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card ${votingDisabled ? 'guideline-disabled' : ''}">
+    <article class="card initiative-card ${votingDisabled ? 'guideline-disabled' : ''}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(initiative.title)}</h4>
