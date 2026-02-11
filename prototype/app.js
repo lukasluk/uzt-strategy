@@ -36,8 +36,8 @@ const introSlides = [
   },
   {
     title: '5. Ciklo būsenos',
-    body: 'Strategija keliauja per būsenas: Draft, Open, Review, Final ir Archived. Nuo būsenos priklauso, ar galima aktyviai dalyvauti.',
-    points: ['Open/Review: galima balsuoti ir komentuoti.', 'Final/Archived: peržiūra ir rezultatų analizė.']
+    body: 'Strategija turi dvi būsenas: Open ir Closed. Nuo būsenos priklauso, ar galima aktyviai dalyvauti.',
+    points: ['Open: galima balsuoti ir komentuoti.', 'Closed: balsavimas ir komentavimas uždaromi.']
   },
   {
     title: '6. Strategijų žemėlapis',
@@ -46,7 +46,7 @@ const introSlides = [
   },
   {
     title: '7. Kaip užbaigti etapą',
-    body: 'Etapo pabaigoje administratorius užfiksuoja ciklo būseną ir, jei reikia, paskelbia rezultatus viešam peržiūrėjimui.',
+    body: 'Etapo pabaigoje administratorius pakeičia ciklo būseną į Closed, kai diskusijos ir balsavimas jau užbaigti.',
     points: ['Prieš uždarymą verta peržiūrėti komentarus ir balsus.', 'Santrauką galima eksportuoti į tekstą ir JSON.']
   }
 ];
@@ -55,7 +55,7 @@ const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
 const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
-const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
+const WRITABLE_CYCLE_STATES = new Set(['open']);
 const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'about']);
 const ADMIN_CACHE_BUST_PARAM = 't';
 

@@ -58,7 +58,7 @@ async function getCurrentCycle(query, institutionId) {
   const res = await query(
     `select id, institution_id, title, state, results_published, starts_at, ends_at, finalized_at, created_at
      from strategy_cycles
-     where institution_id = $1 and state <> 'archived'
+     where institution_id = $1 and state in ('open', 'closed')
      order by created_at desc
      limit 1`,
     [institutionId]
@@ -178,7 +178,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   }
 
   function isCycleWritable(state) {
-    return state === 'open' || state === 'review';
+    return state === 'open';
   }
 
   async function validateGuidelineRelationship({ guidelineId, cycleId, relationType, parentGuidelineId }) {
@@ -1384,7 +1384,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const cycleId = String(req.params.cycleId || '').trim();
     const state = String(req.body?.state || '').trim();
-    if (!['draft', 'open', 'review', 'final', 'archived'].includes(state)) {
+    if (!['open', 'closed'].includes(state)) {
       return res.status(400).json({ error: 'invalid state' });
     }
 
@@ -1399,7 +1399,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     await query(
       `update strategy_cycles
        set state = $1,
-           finalized_at = case when $1 = 'final' then now() else finalized_at end
+           finalized_at = case when $1 = 'closed' then now() else null end
        where id = $2`,
       [state, cycleId]
     );

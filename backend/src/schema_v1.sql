@@ -45,7 +45,7 @@ create table if not exists strategy_cycles (
   id uuid primary key,
   institution_id uuid not null references institutions(id) on delete cascade,
   title text not null,
-  state text not null default 'draft' check (state in ('draft', 'open', 'review', 'final', 'archived')),
+  state text not null default 'open' check (state in ('open', 'closed')),
   results_published boolean not null default false,
   starts_at timestamptz,
   ends_at timestamptz,
@@ -197,3 +197,22 @@ alter table if exists strategy_initiatives
 alter table if exists strategy_initiatives
   add constraint strategy_initiatives_status_check
   check (status in ('active', 'disabled', 'merged', 'hidden'));
+
+alter table if exists strategy_cycles
+  drop constraint if exists strategy_cycles_state_check;
+
+update strategy_cycles
+set state = case
+  when state = 'open' then 'open'
+  when state = 'closed' then 'closed'
+  else 'closed'
+end
+where state not in ('open', 'closed')
+   or state is null;
+
+alter table if exists strategy_cycles
+  alter column state set default 'open';
+
+alter table if exists strategy_cycles
+  add constraint strategy_cycles_state_check
+  check (state in ('open', 'closed'));

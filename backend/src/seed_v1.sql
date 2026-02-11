@@ -17,6 +17,5 @@ where i.slug = 'uzt'
     select 1
     from strategy_cycles c
     where c.institution_id = i.id
-      and c.state <> 'archived'
+      and c.state in ('open', 'closed')
   );
-
