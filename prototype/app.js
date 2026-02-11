@@ -99,6 +99,8 @@ const state = {
   userVotes: {},
   mapLayer: 'guidelines',
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
+  mapInitiativeFocusId: '',
+  mapInitiativeHoverId: '',
   mapTransform: { x: 120, y: 80, scale: 1 }
 };
 let adminAppLoadPromise = null;
@@ -765,6 +767,9 @@ function canOpenAdminView() {
 function setActiveView(nextView) {
   if (!ALLOWED_VIEWS.has(nextView)) return;
   if (state.activeView === nextView) return;
+  if (nextView !== 'map') {
+    resetMapInitiativeFocusState();
+  }
   state.activeView = nextView;
   syncRouteState();
   render();
@@ -1221,6 +1226,150 @@ function refreshMapEdges(world) {
   });
 }
 
+function resetMapInitiativeFocusState() {
+  state.mapInitiativeFocusId = '';
+  state.mapInitiativeHoverId = '';
+}
+
+function applyInitiativeLayerFocusState(viewport, world) {
+  if (!(viewport instanceof HTMLElement) || !(world instanceof HTMLElement)) return;
+
+  const initiativeNodes = Array.from(world.querySelectorAll('.strategy-map-node[data-kind="initiative"]'));
+  const guidelineNodes = Array.from(world.querySelectorAll('.strategy-map-node[data-kind="guideline"]'));
+  const institutionNode = world.querySelector('.strategy-map-node[data-kind="institution"]');
+  const initiativeEdges = Array.from(world.querySelectorAll('.strategy-map-edge.edge-initiative-layer'));
+  const initiativesLayer = viewport.classList.contains('map-layer-initiatives');
+
+  viewport.classList.remove('map-initiative-focus-active', 'map-initiative-focus-selected');
+  initiativeNodes.forEach((node) => {
+    node.classList.remove('map-initiative-selected', 'map-initiative-hovered', 'map-initiative-dimmed');
+  });
+  guidelineNodes.forEach((node) => {
+    node.classList.remove('map-guideline-related', 'map-guideline-dimmed');
+  });
+  if (institutionNode) institutionNode.classList.remove('map-institution-dimmed-strong');
+  initiativeEdges.forEach((edge) => edge.classList.remove('map-edge-active'));
+
+  if (!initiativesLayer) return;
+
+  const initiativeByEntityId = new Map(
+    initiativeNodes.map((node) => [String(node.dataset.entityId || '').trim(), node])
+  );
+
+  let focusEntityId = String(state.mapInitiativeFocusId || '').trim();
+  if (focusEntityId && !initiativeByEntityId.has(focusEntityId)) {
+    focusEntityId = '';
+    state.mapInitiativeFocusId = '';
+  }
+
+  let hoverEntityId = String(state.mapInitiativeHoverId || '').trim();
+  if (hoverEntityId && !initiativeByEntityId.has(hoverEntityId)) {
+    hoverEntityId = '';
+    state.mapInitiativeHoverId = '';
+  }
+
+  const activeEntityId = focusEntityId || hoverEntityId;
+  if (!activeEntityId) return;
+
+  const activeNode = initiativeByEntityId.get(activeEntityId);
+  if (!activeNode) return;
+  const activeNodeId = String(activeNode.dataset.nodeId || '').trim();
+  if (!activeNodeId) return;
+
+  viewport.classList.add('map-initiative-focus-active');
+  if (focusEntityId) viewport.classList.add('map-initiative-focus-selected');
+  if (institutionNode) institutionNode.classList.add('map-institution-dimmed-strong');
+
+  const relatedGuidelineNodeIds = new Set();
+  initiativeEdges.forEach((edge) => {
+    const isActive = String(edge.dataset.from || '').trim() === activeNodeId;
+    edge.classList.toggle('map-edge-active', isActive);
+    if (isActive) {
+      relatedGuidelineNodeIds.add(String(edge.dataset.to || '').trim());
+    }
+  });
+
+  initiativeNodes.forEach((node) => {
+    const nodeId = String(node.dataset.nodeId || '').trim();
+    const isActiveNode = nodeId === activeNodeId;
+    const isSelected = focusEntityId && String(node.dataset.entityId || '').trim() === focusEntityId;
+    const isHovered = !focusEntityId && hoverEntityId && String(node.dataset.entityId || '').trim() === hoverEntityId;
+
+    node.classList.toggle('map-initiative-selected', Boolean(isSelected));
+    node.classList.toggle('map-initiative-hovered', Boolean(isHovered));
+    node.classList.toggle('map-initiative-dimmed', !isActiveNode);
+  });
+
+  guidelineNodes.forEach((node) => {
+    const nodeId = String(node.dataset.nodeId || '').trim();
+    const isRelated = relatedGuidelineNodeIds.has(nodeId);
+    node.classList.toggle('map-guideline-related', isRelated);
+    node.classList.toggle('map-guideline-dimmed', !isRelated);
+  });
+}
+
+function bindInitiativeLayerFocusInteractions(viewport, world) {
+  if (!(viewport instanceof HTMLElement) || !(world instanceof HTMLElement)) return;
+
+  const initiativeNodes = Array.from(world.querySelectorAll('.strategy-map-node[data-kind="initiative"]'));
+  if (!initiativeNodes.length) return;
+
+  const applyState = () => applyInitiativeLayerFocusState(viewport, world);
+
+  initiativeNodes.forEach((node) => {
+    node.addEventListener('mouseenter', () => {
+      if (state.mapLayer !== 'initiatives') return;
+      if (state.mapInitiativeFocusId) return;
+      state.mapInitiativeHoverId = String(node.dataset.entityId || '').trim();
+      applyState();
+    });
+
+    node.addEventListener('mouseleave', () => {
+      if (state.mapLayer !== 'initiatives') return;
+      if (state.mapInitiativeFocusId) return;
+      const entityId = String(node.dataset.entityId || '').trim();
+      if (!entityId || entityId !== String(state.mapInitiativeHoverId || '').trim()) return;
+      state.mapInitiativeHoverId = '';
+      applyState();
+    });
+
+    node.addEventListener('click', (event) => {
+      if (state.mapLayer !== 'initiatives') return;
+      if (!(event.currentTarget instanceof HTMLElement)) return;
+      if (event.currentTarget.dataset.justDragged === '1') return;
+      if (viewport.dataset.justPanned === '1') return;
+      if (event.target instanceof Element && event.target.closest('[data-map-interactive="true"]')) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const entityId = String(event.currentTarget.dataset.entityId || '').trim();
+      if (!entityId) return;
+      if (String(state.mapInitiativeFocusId || '').trim() === entityId) {
+        resetMapInitiativeFocusState();
+      } else {
+        state.mapInitiativeFocusId = entityId;
+        state.mapInitiativeHoverId = '';
+      }
+      applyState();
+    });
+  });
+
+  viewport.addEventListener('click', (event) => {
+    if (state.mapLayer !== 'initiatives') return;
+    if (!state.mapInitiativeFocusId) return;
+    if (viewport.dataset.justPanned === '1') return;
+
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    if (target.closest('.strategy-map-node[data-kind="initiative"]')) return;
+    if (target.closest('[data-map-interactive="true"]')) return;
+
+    resetMapInitiativeFocusState();
+    applyState();
+  });
+}
+
 async function persistMapNodePosition(nodeElement) {
   if (!nodeElement) return;
   const cycleId = String(nodeElement.dataset.cycleId || '').trim();
@@ -1294,6 +1443,8 @@ function bindMapInteractions(viewport, world, { editable }) {
   let draggedNode = null;
   let nodeOriginX = 0;
   let nodeOriginY = 0;
+  let movedDuringDrag = false;
+  let dragMode = '';
   const isNodeDraggableInCurrentLayer = (nodeElement) => {
     if (!editable || !(nodeElement instanceof HTMLElement)) return false;
     const kind = String(nodeElement.dataset.kind || '').trim().toLowerCase();
@@ -1306,6 +1457,9 @@ function bindMapInteractions(viewport, world, { editable }) {
 
   const onPointerMove = (event) => {
     if (!dragActive) return;
+    if (Math.abs(event.clientX - dragStartX) > 2 || Math.abs(event.clientY - dragStartY) > 2) {
+      movedDuringDrag = true;
+    }
     if (draggedNode) {
       const dx = (event.clientX - dragStartX) / state.mapTransform.scale;
       const dy = (event.clientY - dragStartY) / state.mapTransform.scale;
@@ -1328,14 +1482,32 @@ function bindMapInteractions(viewport, world, { editable }) {
 
   const endDrag = () => {
     const droppedNode = draggedNode;
+    const didMove = movedDuringDrag;
+    const completedDragMode = dragMode;
     dragActive = false;
     draggedNode = null;
+    movedDuringDrag = false;
+    dragMode = '';
     viewport.classList.remove('dragging');
     viewport.classList.remove('node-dragging');
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', endDrag);
 
-    if (!droppedNode || !editable) return;
+    if (didMove) {
+      if (droppedNode instanceof HTMLElement) {
+        droppedNode.dataset.justDragged = '1';
+        window.setTimeout(() => {
+          if (droppedNode.dataset.justDragged === '1') delete droppedNode.dataset.justDragged;
+        }, 220);
+      } else if (completedDragMode === 'pan') {
+        viewport.dataset.justPanned = '1';
+        window.setTimeout(() => {
+          if (viewport.dataset.justPanned === '1') delete viewport.dataset.justPanned;
+        }, 220);
+      }
+    }
+
+    if (!droppedNode || !editable || !didMove) return;
     persistMapNodePosition(droppedNode).catch((error) => {
       state.notice = toUserMessage(error);
       render();
@@ -1355,6 +1527,8 @@ function bindMapInteractions(viewport, world, { editable }) {
         event.preventDefault();
         dragActive = true;
         draggedNode = node;
+        dragMode = 'node';
+        movedDuringDrag = false;
         dragStartX = event.clientX;
         dragStartY = event.clientY;
         nodeOriginX = Number(node.dataset.x || 0);
@@ -1369,6 +1543,8 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (target.closest('.strategy-map-node')) return;
 
     dragActive = true;
+    dragMode = 'pan';
+    movedDuringDrag = false;
     dragStartX = event.clientX;
     dragStartY = event.clientY;
     originX = state.mapTransform.x;
@@ -1446,6 +1622,9 @@ function renderMapView() {
     state.mapLayer = 'guidelines';
   }
   const activeLayer = state.mapLayer;
+  if (activeLayer !== 'initiatives') {
+    resetMapInitiativeFocusState();
+  }
 
   const editable = canEditMapLayout()
     && normalizeSlug(graph.institution.slug) === normalizeSlug(state.institutionSlug)
@@ -1714,6 +1893,7 @@ function renderMapView() {
     button.addEventListener('click', () => {
       if (state.mapLayer === 'guidelines') return;
       state.mapLayer = 'guidelines';
+      resetMapInitiativeFocusState();
       renderStepView();
     });
   });
@@ -1721,6 +1901,7 @@ function renderMapView() {
     button.addEventListener('click', () => {
       if (state.mapLayer === 'initiatives') return;
       state.mapLayer = 'initiatives';
+      resetMapInitiativeFocusState();
       renderStepView();
     });
   });
@@ -1751,6 +1932,8 @@ function renderMapView() {
     refreshMapEdges(world);
     fitMapToCurrentNodes(viewport, world);
     bindMapInteractions(viewport, world, { editable });
+    bindInitiativeLayerFocusInteractions(viewport, world);
+    applyInitiativeLayerFocusState(viewport, world);
   }
   if (resetButtons.length && viewport && world) {
     resetButtons.forEach((button) => {
