@@ -57,11 +57,18 @@ run_healthcheck() {
   local sleep_seconds="${2:-2}"
   local i
   for ((i = 1; i <= attempts; i++)); do
-    if curl -fsS "$HEALTH_URL" >/dev/null; then
+    if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
+      if [ "$i" -gt 1 ]; then
+        echo "Health check passed on attempt $i/$attempts."
+      fi
       return 0
+    fi
+    if [ "$i" -eq 1 ]; then
+      echo "Waiting for API to become healthy..."
     fi
     sleep "$sleep_seconds"
   done
+  echo "ERROR: post-deploy health check failed after $attempts attempts."
   return 1
 }
 
