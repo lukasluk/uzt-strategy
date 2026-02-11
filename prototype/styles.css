@@ -406,14 +406,14 @@ textarea {
   margin-top: 16px;
 }
 .admin-guideline-grid {
-  grid-template-columns: repeat(auto-fit, minmax(700px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(860px, 1fr));
   gap: 18px;
 }
 .admin-guideline-grid .card {
   padding: 18px;
 }
 .admin-initiative-grid {
-  grid-template-columns: repeat(auto-fit, minmax(760px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(860px, 1fr));
 }
 .admin-global-comment-list {
   margin-top: 8px;
@@ -448,7 +448,7 @@ textarea {
 }
 .admin-comment-list {
   margin-top: 2px;
-  max-height: 260px;
+  max-height: 340px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -479,6 +479,40 @@ textarea {
   margin-top: 7px;
   display: flex;
   justify-content: flex-end;
+}
+.admin-edit-form {
+  display: grid;
+  gap: 12px;
+}
+.admin-edit-head {
+  display: grid;
+}
+.admin-edit-title {
+  width: 100%;
+}
+.admin-edit-description {
+  min-height: 140px;
+  line-height: 1.45;
+}
+.admin-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.admin-edit-grid-initiative {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.admin-edit-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.admin-edit-label {
+  margin: 0;
+}
+.admin-add-form {
+  display: grid;
+  gap: 10px;
 }
 .guideline-groups {
   display: grid;
@@ -2427,9 +2461,9 @@ select:focus {
 
 @media (max-width: 1600px) {
   .admin-guideline-grid {
-    grid-template-columns: repeat(auto-fit, minmax(620px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(760px, 1fr));
   }
   .admin-initiative-grid {
-    grid-template-columns: repeat(auto-fit, minmax(620px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(760px, 1fr));
   }
 }
