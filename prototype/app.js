@@ -780,11 +780,11 @@ function renderSteps() {
 
   const canOpenAdmin = canOpenAdminView();
   const items = [
-    { id: 'guidelines', icon: '◍', title: 'Gairės', hint: 'Aptarimas, balsavimas, komentarai', locked: false },
-    { id: 'initiatives', icon: '✦', title: 'Iniciatyvos', hint: 'Veiksmai, balsai, komentarai', locked: false },
-    { id: 'admin', icon: '⚙', title: 'Admin', hint: 'Kvietimai, ciklas, rezultatai', locked: !canOpenAdmin },
-    { id: 'map', icon: '⌗', title: 'Strategijų žemėlapis', hint: 'Ryšiai ir gairių visuma', locked: false },
-    { id: 'about', icon: 'ℹ', title: 'Apie mus', hint: 'Iniciatyvos aprašymas', locked: false }
+    { id: 'guidelines', icon: '◍', title: 'Gairės', locked: false },
+    { id: 'initiatives', icon: '✦', title: 'Iniciatyvos', locked: false },
+    { id: 'admin', icon: '⚙', title: 'Admin', locked: !canOpenAdmin },
+    { id: 'map', icon: '⌗', title: 'Strategijų žemėlapis', locked: false },
+    { id: 'about', icon: 'ℹ', title: 'Apie mus', locked: false }
   ];
 
   const visibleItems = isEmbeddedContext()
@@ -804,7 +804,6 @@ function renderSteps() {
         <span class="step-icon" aria-hidden="true">${item.icon}</span>
         <h4>${escapeHtml(item.title)}</h4>
       </div>
-      <p>${escapeHtml(item.hint)}</p>
     `;
     if (item.locked) {
       button.title = 'Administravimas galimas tik savo institucijos administratoriui';

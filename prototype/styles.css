@@ -197,22 +197,26 @@ body {
 .steps {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   position: sticky;
   top: 16px;
   align-self: start;
   max-height: calc(100vh - 24px);
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f9fcff 0%, #f2f8ff 100%);
+  box-shadow: 0 10px 24px rgba(27, 73, 136, 0.08);
 }
 
 .step-pill {
-  background: linear-gradient(160deg, #edf4ff 0%, #e2eeff 100%);
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid var(--border-soft);
+  background: transparent;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   text-align: left;
   text-decoration: none;
   color: var(--ink);
@@ -223,8 +227,8 @@ body {
 .step-pill-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 10px;
+  margin-bottom: 0;
 }
 
 .step-icon {
@@ -243,12 +247,18 @@ body {
 
 .step-pill.active {
   border-color: var(--accent);
-  background: #fff;
-  box-shadow: 0 10px 24px rgba(25, 64, 122, 0.15);
+  background: linear-gradient(180deg, #f0f7ff 0%, #e6f1ff 100%);
+  box-shadow: inset 0 0 0 1px rgba(43, 111, 190, 0.12);
+}
+
+.step-pill:hover:not(:disabled) {
+  border-color: #c1d7f5;
+  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+  transform: translateX(2px);
 }
 
 .step-pill.locked {
-  opacity: 0.72;
+  opacity: 0.62;
 }
 
 .step-pill:disabled {
@@ -257,12 +267,8 @@ body {
 
 .step-pill h4 {
   font-size: 16px;
-  margin-bottom: 6px;
-}
-
-.step-pill p {
-  font-size: 12px;
-  color: var(--muted);
+  margin: 0;
+  line-height: 1.2;
 }
 
 .stage {
@@ -754,18 +760,15 @@ textarea {
 
   .steps {
     top: 10px;
+    padding: 6px;
   }
 
   .step-pill {
-    padding: 12px 10px;
+    padding: 11px 9px;
   }
 
   .step-pill h4 {
     font-size: 14px;
-  }
-
-  .step-pill p {
-    font-size: 11px;
   }
 
   .stage {
@@ -2478,12 +2481,8 @@ select:focus {
     gap: 10px;
   }
 
-  .step-pill p {
-    display: none;
-  }
-
   .step-pill {
-    padding: 10px 8px;
+    padding: 10px 7px;
   }
 
   .stage {
