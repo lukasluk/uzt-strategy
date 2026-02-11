@@ -129,7 +129,7 @@ async function getInstitutionBySlug(query, slug) {
 
 async function getCurrentCycle(query, institutionId) {
   const res = await query(
-    `select id, institution_id, title, state, results_published, starts_at, ends_at, finalized_at, created_at
+    `select id, institution_id, title, state, results_published, starts_at, ends_at, finalized_at, mission_text, vision_text, created_at
      from strategy_cycles
      where institution_id = $1 and state in ('open', 'closed')
      order by created_at desc
@@ -385,7 +385,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const institutionIds = institutions.map((row) => row.id);
     const cyclesRes = await query(
       `select distinct on (institution_id)
-          id, institution_id, title, state, finalized_at, created_at, map_x, map_y
+          id, institution_id, title, state, finalized_at, mission_text, vision_text, created_at, map_x, map_y
        from strategy_cycles
        where institution_id = any($1::uuid[])
        order by institution_id, created_at desc`,
@@ -572,6 +572,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
                 title: cycle.title,
                 state: cycle.state,
                 finalizedAt: cycle.finalized_at,
+                missionText: cycle.mission_text || null,
+                visionText: cycle.vision_text || null,
                 createdAt: cycle.created_at,
                 mapX: Number.isFinite(Number(cycle.map_x)) ? Number(cycle.map_x) : null,
                 mapY: Number.isFinite(Number(cycle.map_y)) ? Number(cycle.map_y) : null
@@ -1518,6 +1520,49 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
     broadcast({ type: 'v1.cycle.state', institutionId: req.auth.institutionId, cycleId, state });
     res.json({ ok: true, state });
+  });
+
+  app.put('/api/v1/admin/cycles/:cycleId/settings', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+
+    const body = req.body || {};
+    const missionProvided = Object.prototype.hasOwnProperty.call(body, 'missionText');
+    const visionProvided = Object.prototype.hasOwnProperty.call(body, 'visionText');
+    if (!missionProvided && !visionProvided) {
+      return res.status(400).json({ error: 'missionText or visionText required' });
+    }
+
+    const missionText = missionProvided ? (String(body.missionText || '').trim() || null) : null;
+    const visionText = visionProvided ? (String(body.visionText || '').trim() || null) : null;
+
+    const cycleRes = await query('select institution_id from strategy_cycles where id = $1', [cycleId]);
+    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
+    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
+      return res.status(403).json({ error: 'cross-institution forbidden' });
+    }
+
+    const updated = await query(
+      `update strategy_cycles
+       set mission_text = case when $1::boolean then $2 else mission_text end,
+           vision_text = case when $3::boolean then $4 else vision_text end
+       where id = $5
+       returning mission_text, vision_text`,
+      [missionProvided, missionText, visionProvided, visionText, cycleId]
+    );
+
+    broadcast({
+      type: 'v1.cycle.settings',
+      institutionId: req.auth.institutionId,
+      cycleId
+    });
+
+    res.json({
+      ok: true,
+      missionText: updated.rows[0]?.mission_text || null,
+      visionText: updated.rows[0]?.vision_text || null
+    });
   });
 
   app.post('/api/v1/admin/cycles/:cycleId/results', requireAuth, async (req, res) => {

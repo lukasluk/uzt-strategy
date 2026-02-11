@@ -50,6 +50,8 @@ create table if not exists strategy_cycles (
   starts_at timestamptz,
   ends_at timestamptz,
   finalized_at timestamptz,
+  mission_text text,
+  vision_text text,
   created_at timestamptz not null default now()
 );
 
@@ -165,6 +167,12 @@ alter table if exists strategy_cycles
 
 alter table if exists strategy_cycles
   add column if not exists map_y integer;
+
+alter table if exists strategy_cycles
+  add column if not exists mission_text text;
+
+alter table if exists strategy_cycles
+  add column if not exists vision_text text;
 
 alter table if exists strategy_guidelines
   add column if not exists map_x integer;

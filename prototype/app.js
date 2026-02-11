@@ -51,6 +51,9 @@ const introSlides = [
   }
 ];
 
+const DEFAULT_MISSION_TEXT = 'Organizacijos paskirtis ir vertės kūrimo logika.';
+const DEFAULT_VISION_TEXT = 'Ilgalaikė kryptis ir siekiama pokyčio būsena.';
+
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
 const INTRO_VISITED_KEY = 'uzt-strategy-v1-intro-visited';
@@ -367,6 +370,18 @@ function maxPerInitiative() {
 
 function usedVotesTotal() {
   return Object.values(state.userVotes).reduce((sum, value) => sum + Number(value || 0), 0);
+}
+
+function cycleMissionText() {
+  const raw = state.cycle?.mission_text ?? state.cycle?.missionText ?? '';
+  const text = String(raw || '').trim();
+  return text || DEFAULT_MISSION_TEXT;
+}
+
+function cycleVisionText() {
+  const raw = state.cycle?.vision_text ?? state.cycle?.visionText ?? '';
+  const text = String(raw || '').trim();
+  return text || DEFAULT_VISION_TEXT;
 }
 
 function escapeHtml(value) {
@@ -857,6 +872,14 @@ function maybeAutoCollapseIntroOnFirstScroll() {
   pulseIntroToggleButton();
 }
 
+function refreshIntroNarrativeTexts() {
+  if (!elements.introDeck) return;
+  const missionNode = elements.introDeck.querySelector('[data-guide-mission]');
+  const visionNode = elements.introDeck.querySelector('[data-guide-vision]');
+  if (missionNode) missionNode.textContent = cycleMissionText();
+  if (visionNode) visionNode.textContent = cycleVisionText();
+}
+
 function renderIntroDeck() {
   if (!elements.introDeck) return;
 
@@ -894,14 +917,14 @@ function renderIntroDeck() {
               <p>Nuo krypties iki konkrečių veiklų.</p>
             </div>
             <div class="guide-structure-track" role="list">
-              <article class="structure-step" role="listitem">
+              <article class="structure-step structure-step-strategic" role="listitem">
                 <span class="structure-label">Misija</span>
-                <p>Organizacijos paskirtis ir vertės kūrimo logika.</p>
+                <p data-guide-mission>${escapeHtml(cycleMissionText())}</p>
               </article>
               <span class="structure-arrow" aria-hidden="true">→</span>
-              <article class="structure-step" role="listitem">
+              <article class="structure-step structure-step-strategic" role="listitem">
                 <span class="structure-label">Vizija</span>
-                <p>Ilgalaikė kryptis ir siekiama pokyčio būsena.</p>
+                <p data-guide-vision>${escapeHtml(cycleVisionText())}</p>
               </article>
               <span class="structure-arrow" aria-hidden="true">→</span>
               <article class="structure-step structure-step-layer" role="listitem">
@@ -961,6 +984,7 @@ function renderIntroDeck() {
     }
   }
 
+  refreshIntroNarrativeTexts();
   applyIntroGuideState();
 }
 

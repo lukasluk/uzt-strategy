@@ -1106,6 +1106,10 @@ textarea {
   gap: 6px;
   min-height: 126px;
 }
+.structure-step-strategic {
+  flex-basis: 320px;
+  min-height: 142px;
+}
 .structure-label {
   display: inline-flex;
   align-self: start;
@@ -1123,6 +1127,10 @@ textarea {
   font-size: 12px;
   line-height: 1.4;
   color: #5e5348;
+}
+.structure-step-strategic p {
+  font-size: 13px;
+  line-height: 1.5;
 }
 .structure-step-layer {
   border-color: #92c8c0;
@@ -1171,6 +1179,10 @@ textarea {
   .structure-step {
     flex-basis: 200px;
     min-height: 118px;
+  }
+  .structure-step-strategic {
+    flex-basis: 250px;
+    min-height: 126px;
   }
 }
 .strategy-map-viewport {
@@ -2213,6 +2225,10 @@ select:focus {
 .structure-step p {
   font-size: 14px;
   line-height: 1.5;
+}
+.structure-step-strategic p {
+  font-size: 15px;
+  line-height: 1.55;
 }
 .card h4,
 .guide-card h4 {
