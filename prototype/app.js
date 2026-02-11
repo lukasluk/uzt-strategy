@@ -53,6 +53,7 @@ const introSlides = [
 
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
+const INTRO_VISITED_KEY = 'uzt-strategy-v1-intro-visited';
 const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open']);
@@ -73,7 +74,10 @@ const elements = {
 const state = {
   institutionSlug: resolveInstitutionSlug(),
   activeView: resolveInitialView(),
+  introFirstVisit: hydrateIntroFirstVisit(),
   introCollapsed: hydrateIntroCollapsed(),
+  introTogglePulse: false,
+  introScrollAutoCollapsed: false,
   loading: false,
   busy: false,
   error: '',
@@ -100,6 +104,7 @@ const state = {
 let adminAppLoadPromise = null;
 
 hydrateAuthFromStorage();
+markIntroVisited();
 bindGlobal();
 bootstrap();
 
@@ -145,6 +150,14 @@ function ensureAdminAppLoaded() {
   });
 
   return adminAppLoadPromise;
+}
+
+function hydrateIntroFirstVisit() {
+  return localStorage.getItem(INTRO_VISITED_KEY) !== '1';
+}
+
+function markIntroVisited() {
+  localStorage.setItem(INTRO_VISITED_KEY, '1');
 }
 
 function resolveInstitutionSlug() {
@@ -201,6 +214,7 @@ function normalizeSlug(value) {
 }
 
 function hydrateIntroCollapsed() {
+  if (localStorage.getItem(INTRO_VISITED_KEY) === '1') return true;
   return localStorage.getItem(INTRO_COLLAPSED_KEY) === '1';
 }
 
@@ -809,7 +823,29 @@ function applyIntroGuideState() {
   if (toggleIntroBtn) {
     toggleIntroBtn.textContent = state.introCollapsed ? 'Rodyti naudojimosi gidą' : 'Slėpti naudojimosi gidą';
     toggleIntroBtn.setAttribute('aria-expanded', state.introCollapsed ? 'false' : 'true');
+    toggleIntroBtn.classList.toggle('pulse', state.introTogglePulse);
   }
+}
+
+function pulseIntroToggleButton() {
+  state.introTogglePulse = true;
+  applyIntroGuideState();
+  window.setTimeout(() => {
+    state.introTogglePulse = false;
+    applyIntroGuideState();
+  }, 1500);
+}
+
+function maybeAutoCollapseIntroOnFirstScroll() {
+  if (!state.introFirstVisit) return;
+  if (state.introScrollAutoCollapsed || state.introCollapsed) return;
+  if (window.scrollY < 40) return;
+
+  state.introScrollAutoCollapsed = true;
+  state.introCollapsed = true;
+  persistIntroCollapsed();
+  applyIntroGuideState();
+  pulseIntroToggleButton();
 }
 
 function renderIntroDeck() {
@@ -2731,6 +2767,7 @@ function bindGlobal() {
     if (!viewport || !world) return;
     fitMapToCurrentNodes(viewport, world);
   });
+  window.addEventListener('scroll', maybeAutoCollapseIntroOnFirstScroll, { passive: true });
 }
 
 function showAuthModal(initialMode) {
