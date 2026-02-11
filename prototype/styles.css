@@ -1172,6 +1172,9 @@ textarea {
   transition: opacity 0.18s ease;
   z-index: 1;
 }
+.strategy-map-lines * {
+  pointer-events: none !important;
+}
 .strategy-map-edge {
   fill: none;
   stroke-width: 2.3;
@@ -1465,7 +1468,7 @@ textarea {
   cursor: move;
 }
 .strategy-map-viewport.map-layer-initiatives .initiative-lines {
-  z-index: 7;
+  z-index: 5;
 }
 .strategy-map-viewport.map-layer-initiatives .initiative-node {
   z-index: 6;
