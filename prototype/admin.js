@@ -354,6 +354,14 @@ function renderDashboard() {
   const cycle = state.cycle;
   const resultsPublished = Boolean(cycle?.results_published);
   const cycleState = String(cycle?.state || 'draft');
+  const moderationComments = state.guidelines.flatMap((guideline) => {
+    const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
+    return comments.map((comment) => ({
+      guidelineId: guideline.id,
+      guidelineTitle: guideline.title,
+      ...comment
+    }));
+  });
 
   root.innerHTML = `
     ${state.error ? `
@@ -466,6 +474,46 @@ function renderDashboard() {
         <textarea name="description" placeholder="Trumpas paaiškinimas" ${state.busy || !cycle?.id ? 'disabled' : ''}></textarea>
         <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy || !cycle?.id ? 'disabled' : ''}>Pridėti gairę</button>
       </form>
+    </section>
+
+    <section class="card" data-admin-section="guidelines" style="margin-bottom: 16px;">
+      <div class="header-row">
+        <strong>Komentaru moderavimas</strong>
+        <span class="tag">${moderationComments.length}</span>
+      </div>
+      ${moderationComments.length
+        ? `<ul class="mini-list admin-global-comment-list">
+            ${moderationComments.map((comment) => {
+              const commentStatus = String(comment.status || 'visible').toLowerCase();
+              const nextStatus = commentStatus === 'hidden' ? 'visible' : 'hidden';
+              const toggleText = commentStatus === 'hidden' ? 'Rodyti' : 'Slepti';
+              return `
+                <li class="admin-global-comment-item ${commentStatus === 'hidden' ? 'is-hidden' : ''}">
+                  <div class="admin-global-comment-head">
+                    <strong>${escapeHtml(comment.guidelineTitle || 'Gaire')}</strong>
+                    <span class="tag">${escapeHtml(commentStatus)}</span>
+                  </div>
+                  <div class="admin-comment-body">${escapeHtml(comment.body || '')}</div>
+                  <div class="admin-comment-meta">
+                    ${escapeHtml(comment.authorName || comment.authorEmail || 'Nezinomas autorius')}
+                    � ${escapeHtml(formatDateTime(comment.createdAt))}
+                  </div>
+                  <div class="admin-comment-actions">
+                    <button
+                      type="button"
+                      class="btn btn-ghost comment-status-btn"
+                      data-comment-id="${escapeHtml(comment.id)}"
+                      data-next-status="${escapeHtml(nextStatus)}"
+                      ${state.busy ? 'disabled' : ''}
+                    >
+                      ${toggleText}
+                    </button>
+                  </div>
+                </li>
+              `;
+            }).join('')}
+          </ul>`
+        : '<p class="prompt">Komentaru siam ciklui dar nera.</p>'}
     </section>
 
     <section class="card" data-admin-section="guidelines">
