@@ -1444,6 +1444,9 @@ textarea {
   opacity: 0;
   pointer-events: none;
 }
+.strategy-map-viewport.map-editable.map-layer-guidelines .guideline-node {
+  cursor: move;
+}
 .strategy-map-viewport.map-layer-initiatives .guideline-lines {
   opacity: 0.26;
 }
@@ -1457,6 +1460,9 @@ textarea {
 .strategy-map-viewport.map-layer-initiatives .initiative-node {
   opacity: 1;
   pointer-events: auto;
+}
+.strategy-map-viewport.map-editable.map-layer-initiatives .initiative-node {
+  cursor: move;
 }
 .strategy-map-viewport.map-layer-initiatives .initiative-lines {
   z-index: 7;

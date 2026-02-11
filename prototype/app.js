@@ -1483,7 +1483,7 @@ function renderMapView() {
                  data-y="${node.y}"
                  data-w="${node.w}"
                  data-h="${node.h}"
-                 data-draggable="${editable && activeLayer === 'guidelines' ? 'true' : 'false'}"
+                 data-draggable="${editable ? 'true' : 'false'}"
                  style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
           <div class="map-node-head">
             <h4>${escapeHtml(node.guideline.title)}</h4>
@@ -1535,7 +1535,7 @@ function renderMapView() {
                data-y="${node.y}"
                data-w="${node.w}"
                data-h="${node.h}"
-               data-draggable="${editable && activeLayer === 'initiatives' ? 'true' : 'false'}"
+               data-draggable="${editable ? 'true' : 'false'}"
                style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
         <div class="map-node-head">
           <h4>${escapeHtml(node.initiative.title)}</h4>
@@ -1573,7 +1573,7 @@ function renderMapView() {
         </div>
       </div>
       <p class="prompt">Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.</p>
-      <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer}">
+      <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer} ${editable ? 'map-editable' : ''}">
         <div class="map-overlay-toolbar">
           <div class="map-layer-toggle map-overlay-layer-toggle">
             <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">Gairės</button>
