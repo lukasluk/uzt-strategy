@@ -14,6 +14,7 @@ TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 RELEASE_BACKUP_DIR="$BACKUP_ROOT/releases/$TIMESTAMP"
 DB_BACKUP_DIR="$BACKUP_ROOT/database"
 DB_BACKUP_FILE=""
+ENV_FILE="$APP_DIR/backend/.env"
 
 require_command() {
   local cmd="$1"
@@ -21,6 +22,34 @@ require_command() {
     echo "ERROR: required command not found: $cmd"
     exit 1
   fi
+}
+
+read_env_var() {
+  local key="$1"
+  local file="$2"
+  local value
+
+  value="$(
+    awk -v key="$key" '
+      match($0, "^[[:space:]]*(export[[:space:]]+)?" key "[[:space:]]*=") {
+        line = $0
+        sub("^[[:space:]]*(export[[:space:]]+)?" key "[[:space:]]*=[[:space:]]*", "", line)
+        print line
+      }
+    ' "$file" | tail -n1
+  )"
+
+  value="${value%$'\r'}"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+
+  if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+    value="${value:1:-1}"
+  elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+    value="${value:1:-1}"
+  fi
+
+  printf '%s' "$value"
 }
 
 run_healthcheck() {
@@ -79,16 +108,15 @@ if ! flock -n 9; then
   exit 1
 fi
 
-if [ ! -f "$APP_DIR/backend/.env" ]; then
+if [ ! -f "$ENV_FILE" ]; then
   echo "ERROR: missing $APP_DIR/backend/.env"
   echo "Create it from $APP_DIR/backend/.env.example before deploying."
   exit 1
 fi
 
-# shellcheck disable=SC1090
-set -a
-source "$APP_DIR/backend/.env"
-set +a
+DATABASE_URL="$(read_env_var DATABASE_URL "$ENV_FILE")"
+AUTH_SECRET="$(read_env_var AUTH_SECRET "$ENV_FILE")"
+SUPERADMIN_CODE="$(read_env_var SUPERADMIN_CODE "$ENV_FILE")"
 
 for var in DATABASE_URL AUTH_SECRET SUPERADMIN_CODE; do
   if [ -z "${!var:-}" ]; then
