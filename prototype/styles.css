@@ -1524,6 +1524,9 @@ textarea {
   opacity: 1;
   pointer-events: auto;
 }
+.strategy-map-viewport.map-layer-initiatives .initiative-node * {
+  pointer-events: auto;
+}
 .strategy-map-viewport.map-editable.map-layer-initiatives .initiative-node {
   cursor: move;
 }

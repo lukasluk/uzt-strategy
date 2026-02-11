@@ -1238,7 +1238,7 @@ function applyInitiativeLayerFocusState(viewport, world) {
   const guidelineNodes = Array.from(world.querySelectorAll('.strategy-map-node[data-kind="guideline"]'));
   const institutionNode = world.querySelector('.strategy-map-node[data-kind="institution"]');
   const initiativeEdges = Array.from(world.querySelectorAll('.strategy-map-edge.edge-initiative-layer'));
-  const initiativesLayer = viewport.classList.contains('map-layer-initiatives');
+  const initiativesLayer = state.mapLayer === 'initiatives';
 
   viewport.classList.remove('map-initiative-focus-active', 'map-initiative-focus-selected');
   initiativeNodes.forEach((node) => {
@@ -1449,7 +1449,7 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (!editable || !(nodeElement instanceof HTMLElement)) return false;
     const kind = String(nodeElement.dataset.kind || '').trim().toLowerCase();
     if (kind === 'institution') return true;
-    const initiativesLayer = viewport.classList.contains('map-layer-initiatives');
+    const initiativesLayer = state.mapLayer === 'initiatives';
     if (kind === 'initiative') return initiativesLayer;
     if (kind === 'guideline') return !initiativesLayer;
     return nodeElement.dataset.draggable === 'true';
@@ -1524,7 +1524,6 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (editable) {
       const node = target.closest('.strategy-map-node');
       if (node instanceof HTMLElement && isNodeDraggableInCurrentLayer(node)) {
-        event.preventDefault();
         dragActive = true;
         draggedNode = node;
         dragMode = 'node';
@@ -1907,7 +1906,7 @@ function renderMapView() {
   });
 
   if (world) {
-    const initiativesLayer = viewport?.classList.contains('map-layer-initiatives');
+    const initiativesLayer = state.mapLayer === 'initiatives';
     world.querySelectorAll('.strategy-map-node[data-node-id]').forEach((node) => {
       const kind = String(node.dataset.kind || '').toLowerCase();
       if (kind === 'institution') {
