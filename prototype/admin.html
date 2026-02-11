@@ -22,6 +22,12 @@
     <main class="stage" id="adminRoot"></main>
   </div>
 
-  <script src="admin.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const cacheBust = params.get('t') || Date.now().toString();
+    const script = document.createElement('script');
+    script.src = `admin.js?t=${encodeURIComponent(cacheBust)}`;
+    document.body.appendChild(script);
+  </script>
 </body>
 </html>

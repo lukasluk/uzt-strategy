@@ -58,6 +58,7 @@ const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
 const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'about']);
 const ADMIN_FRAME_HEIGHT_EVENT = 'uzt-admin-height';
+const ADMIN_CACHE_BUST_PARAM = 't';
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -1641,7 +1642,7 @@ function renderAdminView() {
   const allowed = canOpenAdminView();
 
   if (isEmbeddedContext()) {
-    const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}&frame=admin`;
+    const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}&frame=admin&${ADMIN_CACHE_BUST_PARAM}=${Date.now()}`;
     elements.stepView.innerHTML = `
       <div class="card">
         <strong>Admin langas negali būti įkeltas į kitą Admin langą</strong>
@@ -1684,7 +1685,7 @@ function renderAdminView() {
     return;
   }
 
-  const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}&frame=admin`;
+  const src = `admin.html?institution=${encodeURIComponent(state.institutionSlug)}&frame=admin&${ADMIN_CACHE_BUST_PARAM}=${Date.now()}`;
   elements.stepView.innerHTML = `
     <section class="admin-inline-shell">
       <div class="step-header">
