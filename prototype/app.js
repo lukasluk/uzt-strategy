@@ -827,6 +827,49 @@ function renderIntroDeck() {
           <div class="guide-grid">
             ${helpCards}
           </div>
+          <section class="guide-structure" aria-label="Strategijos struktūra">
+            <div class="guide-structure-head">
+              <h4>Strategijos struktūra</h4>
+              <p>Nuo krypties iki konkrečių veiklų.</p>
+            </div>
+            <div class="guide-structure-track" role="list">
+              <article class="structure-step" role="listitem">
+                <span class="structure-label">Vizija</span>
+                <p>Ilgalaikė kryptis ir siekiama pokyčio būsena.</p>
+              </article>
+              <span class="structure-arrow" aria-hidden="true">→</span>
+              <article class="structure-step" role="listitem">
+                <span class="structure-label">Nisija (misija)</span>
+                <p>Organizacijos paskirtis ir vertės kūrimo logika.</p>
+              </article>
+              <span class="structure-arrow" aria-hidden="true">→</span>
+              <article class="structure-step structure-step-layer" role="listitem">
+                <span class="structure-label">Gairės</span>
+                <p>Kryptys arba tikslai, atvaizduojami dviem kortelių lygiais.</p>
+                <div class="structure-mini-cards" aria-hidden="true">
+                  <span>Tėvinės</span>
+                  <span>Vaikinės</span>
+                </div>
+                <span class="structure-badge">www.digistrategija.lt</span>
+              </article>
+              <span class="structure-arrow" aria-hidden="true">→</span>
+              <article class="structure-step structure-step-layer" role="listitem">
+                <span class="structure-label">Iniciatyvos</span>
+                <p>Uždaviniai, kurie išpildo gaires ir kuria apčiuopiamą rezultatą.</p>
+                <div class="structure-mini-cards" aria-hidden="true">
+                  <span>Veiksmų idėjos</span>
+                  <span>Prioritetai</span>
+                </div>
+                <span class="structure-badge">www.digistrategija.lt</span>
+              </article>
+              <span class="structure-arrow" aria-hidden="true">→</span>
+              <article class="structure-step" role="listitem">
+                <span class="structure-label">Įgyvendinimo planas</span>
+                <p>Perkėlimas į konkrečias veiklas, terminus ir atsakomybes.</p>
+              </article>
+            </div>
+            <p class="structure-note">Platformos apimtis: „Gairės“ ir „Iniciatyvos“ etapai.</p>
+          </section>
         </div>
       </div>
     `;
