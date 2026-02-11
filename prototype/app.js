@@ -1258,6 +1258,15 @@ function bindMapInteractions(viewport, world, { editable }) {
   let draggedNode = null;
   let nodeOriginX = 0;
   let nodeOriginY = 0;
+  const isNodeDraggableInCurrentLayer = (nodeElement) => {
+    if (!editable || !(nodeElement instanceof HTMLElement)) return false;
+    const kind = String(nodeElement.dataset.kind || '').trim().toLowerCase();
+    if (kind === 'institution') return true;
+    const initiativesLayer = viewport.classList.contains('map-layer-initiatives');
+    if (kind === 'initiative') return initiativesLayer;
+    if (kind === 'guideline') return !initiativesLayer;
+    return nodeElement.dataset.draggable === 'true';
+  };
 
   const onPointerMove = (event) => {
     if (!dragActive) return;
@@ -1304,7 +1313,7 @@ function bindMapInteractions(viewport, world, { editable }) {
 
     if (editable && target instanceof HTMLElement) {
       const node = target.closest('.strategy-map-node');
-      if (node instanceof HTMLElement && node.dataset.draggable === 'true') {
+      if (node instanceof HTMLElement && isNodeDraggableInCurrentLayer(node)) {
         event.preventDefault();
         dragActive = true;
         draggedNode = node;
