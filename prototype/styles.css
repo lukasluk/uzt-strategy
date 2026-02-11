@@ -277,11 +277,12 @@ body {
 
 .admin-inline-frame {
   width: 100%;
-  min-height: 700px;
+  height: 720px;
   border: none;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  display: block;
 }
 
 body.embedded-admin {

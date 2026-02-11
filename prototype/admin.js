@@ -2,6 +2,7 @@ const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const DEFAULT_INSTITUTION_SLUG = 'uzt';
 const root = document.getElementById('adminRoot');
 const IS_EMBEDDED_ADMIN = detectEmbeddedAdmin();
+const ADMIN_FRAME_HEIGHT_EVENT = 'uzt-admin-height';
 
 const state = {
   institutionSlug: resolveInstitutionSlug(),
@@ -22,6 +23,7 @@ const state = {
 
 hydrateAuthFromStorage();
 applyEmbeddedAdminMode();
+setupEmbeddedHeightReporter();
 bootstrap();
 
 function detectEmbeddedAdmin() {
@@ -34,6 +36,45 @@ function applyEmbeddedAdminMode() {
   document.body.classList.add('embedded-admin');
   const topbar = document.querySelector('.topbar');
   if (topbar) topbar.remove();
+}
+
+let embeddedHeightRaf = 0;
+
+function postEmbeddedHeight() {
+  if (!IS_EMBEDDED_ADMIN) return;
+  const body = document.body;
+  const rootEl = document.documentElement;
+  const height = Math.max(
+    Number(body?.scrollHeight || 0),
+    Number(body?.offsetHeight || 0),
+    Number(rootEl?.scrollHeight || 0),
+    Number(rootEl?.offsetHeight || 0)
+  );
+  window.parent.postMessage({ type: ADMIN_FRAME_HEIGHT_EVENT, height }, '*');
+}
+
+function queueEmbeddedHeightPost() {
+  if (!IS_EMBEDDED_ADMIN) return;
+  if (embeddedHeightRaf) window.cancelAnimationFrame(embeddedHeightRaf);
+  embeddedHeightRaf = window.requestAnimationFrame(() => {
+    embeddedHeightRaf = 0;
+    postEmbeddedHeight();
+  });
+}
+
+function setupEmbeddedHeightReporter() {
+  if (!IS_EMBEDDED_ADMIN) return;
+  window.addEventListener('load', queueEmbeddedHeightPost);
+  window.addEventListener('resize', queueEmbeddedHeightPost);
+  if (document.body) {
+    const observer = new MutationObserver(queueEmbeddedHeightPost);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: false
+    });
+  }
 }
 
 function resolveInstitutionSlug() {
@@ -681,11 +722,13 @@ function bindDashboardEvents() {
 function render() {
   if (!state.token) {
     renderLogin();
+    queueEmbeddedHeightPost();
     return;
   }
 
   if (state.loading) {
     root.innerHTML = '<section class="card"><strong>Kraunami administravimo duomenys...</strong></section>';
+    queueEmbeddedHeightPost();
     return;
   }
 
@@ -704,8 +747,10 @@ function render() {
         render();
       });
     }
+    queueEmbeddedHeightPost();
     return;
   }
 
   renderDashboard();
+  queueEmbeddedHeightPost();
 }

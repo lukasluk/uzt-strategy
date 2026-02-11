@@ -51,6 +51,7 @@ const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
 const ALLOWED_VIEWS = new Set(['guidelines', 'admin', 'map', 'about']);
+const ADMIN_FRAME_HEIGHT_EVENT = 'uzt-admin-height';
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -92,6 +93,13 @@ const state = {
 hydrateAuthFromStorage();
 bindGlobal();
 bootstrap();
+
+function applyAdminInlineFrameHeight(frame, rawHeight) {
+  if (!frame) return;
+  const nextHeight = Number(rawHeight || 0);
+  if (!Number.isFinite(nextHeight) || nextHeight <= 0) return;
+  frame.style.height = `${Math.max(720, Math.ceil(nextHeight))}px`;
+}
 
 function resolveInstitutionSlug() {
   const params = new URLSearchParams(window.location.search);
@@ -1319,9 +1327,21 @@ function renderAdminView() {
       <div class="step-header">
         <h2>Admin</h2>
       </div>
-      <iframe class="admin-inline-frame" src="${src}" title="Administravimo langas"></iframe>
+      <iframe
+        id="adminInlineFrame"
+        class="admin-inline-frame"
+        src="${src}"
+        title="Administravimo langas"
+        scrolling="no"
+      ></iframe>
     </section>
   `;
+  const frame = document.getElementById('adminInlineFrame');
+  if (frame) {
+    frame.addEventListener('load', () => {
+      applyAdminInlineFrameHeight(frame, frame.offsetHeight || 720);
+    });
+  }
 }
 
 function normalizeGuidelineRelation(value) {
@@ -1875,6 +1895,14 @@ function bindGlobal() {
     await navigator.clipboard.writeText(elements.summaryText.value);
   });
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
+  window.addEventListener('message', (event) => {
+    const data = event?.data;
+    if (!data || data.type !== ADMIN_FRAME_HEIGHT_EVENT) return;
+    const frame = document.getElementById('adminInlineFrame');
+    if (!frame || !frame.contentWindow) return;
+    if (event.source !== frame.contentWindow) return;
+    applyAdminInlineFrameHeight(frame, data.height);
+  });
 }
 
 function showAuthModal(initialMode) {
