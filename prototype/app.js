@@ -374,6 +374,16 @@ const MAP_COMMENT_ICON_SVG = `
     <path d="M8 10.2h8M8 13.2h5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
   </svg>
 `;
+const MAP_FULLSCREEN_ICON_ENTER = `
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+    <path d="M7 14H5v5h5v-2H7v-3Zm0-4h2V7h3V5H5v5Zm10 7h-3v2h5v-5h-2v3Zm-3-12v2h3v3h2V5h-5Z" fill="currentColor"/>
+  </svg>
+`;
+const MAP_FULLSCREEN_ICON_EXIT = `
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+    <path d="M5 16h3v3h2v-5H5v2Zm3-8H5v2h5V5H8v3Zm6 11h2v-3h3v-2h-5v5Zm2-11V5h-2v5h5V8h-3Z" fill="currentColor"/>
+  </svg>
+`;
 
 function normalizeLineSide(value) {
   const side = String(value || 'auto').trim().toLowerCase();
@@ -447,7 +457,7 @@ function toUserMessage(error) {
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
     'cycle not writable': 'Ciklas nebeleidžia redaguoti (tik skaitymas).',
     'guideline voting disabled': 'Ši gairė išjungta: balsuoti negalima.',
-    'initiative voting disabled': 'Si iniciatyva isjungta: balsuoti negalima.',
+    'initiative voting disabled': 'Ši iniciatyva išjungta: balsuoti negalima.',
     'vote budget exceeded': 'Viršytas balsų biudžetas.',
     forbidden: 'Veiksmas neleidžiamas.',
     'membership inactive': 'Narystė neaktyvi.',
@@ -457,13 +467,13 @@ function toUserMessage(error) {
     'invite revoked': 'Kvietimas atšauktas.',
     'invite already used': 'Kvietimas jau panaudotas.',
     'guidelineId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
-    'initiativeId and score(0..5) required': 'Balsas turi buti tarp 0 ir 5.',
-    'initiativeId and body required': 'Komentaras negali buti tuscias.',
+    'initiativeId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
+    'initiativeId and body required': 'Komentaras negali būti tuščias.',
     'layout payload required': 'Nepateikti žemėlapio išdėstymo duomenys.',
     'guideline not in cycle': 'Gairė nepriklauso šiam ciklui.',
-    'initiative not in cycle': 'Iniciatyva nepriklauso siam ciklui.',
+    'initiative not in cycle': 'Iniciatyva nepriklauso šiam ciklui.',
     'initiative not found': 'Iniciatyva nerasta.',
-    'at least one guideline required': 'Iniciatyva turi buti priskirta bent vienai gairei.',
+    'at least one guideline required': 'Iniciatyva turi būti priskirta bent vienai gairei.',
     'name required': 'Nurodykite pavadinimą.',
     'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.'
   };
@@ -845,7 +855,7 @@ function renderIntroDeck() {
               </article>
               <span class="structure-arrow" aria-hidden="true">→</span>
               <article class="structure-step" role="listitem">
-                <span class="structure-label">Nisija (misija)</span>
+                <span class="structure-label">Misija</span>
                 <p>Organizacijos paskirtis ir vertės kūrimo logika.</p>
               </article>
               <span class="structure-arrow" aria-hidden="true">→</span>
@@ -907,7 +917,9 @@ function updateMapFullscreenButtonLabel() {
   if (!fullscreenButtons.length) return;
   const isFullscreen = document.fullscreenElement === elements.stepView;
   fullscreenButtons.forEach((button) => {
-    button.textContent = isFullscreen ? 'Išeiti iš pilno ekrano' : 'Pilnas ekranas';
+    button.innerHTML = isFullscreen ? MAP_FULLSCREEN_ICON_EXIT : MAP_FULLSCREEN_ICON_ENTER;
+    button.setAttribute('aria-label', isFullscreen ? 'Išjungti pilno ekrano režimą' : 'Įjungti pilno ekrano režimą');
+    button.setAttribute('title', isFullscreen ? 'Išjungti pilno ekrano režimą' : 'Įjungti pilno ekrano režimą');
     button.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
   });
 }
@@ -1341,7 +1353,7 @@ function bindMapInteractions(viewport, world, { editable }) {
 
 function renderMapView() {
   if (state.loading && !state.mapData) {
-    elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategiju zemelapis...</strong></div>';
+    elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategijų žemėlapis...</strong></div>';
     return;
   }
 
@@ -1361,8 +1373,8 @@ function renderMapView() {
   if (!Array.isArray(state.mapData?.institutions) || !state.mapData.institutions.length) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Strategiju zemelapis dar tuscias</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Kai institucijos tures strategijas, jos atsiras siame zemelapyje.</p>
+        <strong>Strategijų žemėlapis dar tuščias</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Kai institucijos turės strategijas, jos atsiras šiame žemėlapyje.</p>
       </div>
     `;
     return;
@@ -1372,8 +1384,8 @@ function renderMapView() {
   if (!graph.institution) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Pasirinkite institucija</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Zemelapyje rodoma tik virsuje pasirinktos institucijos strategija.</p>
+        <strong>Pasirinkite instituciją</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Žemėlapyje rodoma tik viršuje pasirinktos institucijos strategija.</p>
       </div>
     `;
     return;
@@ -1429,7 +1441,7 @@ function renderMapView() {
           <strong>${escapeHtml(node.institution.name)}</strong>
           <small class="institution-subtitle">Skaitmenizacijos strategija</small>
           <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
-          <small class="institution-cycle-label">Strategijos ciklo busena</small>
+          <small class="institution-cycle-label">Strategijos ciklo būsena</small>
         </article>
       `;
     }
@@ -1470,8 +1482,8 @@ function renderMapView() {
               data-map-comment-kind="guideline"
               data-map-comment-id="${escapeHtml(node.guideline.id)}"
               data-map-interactive="true"
-              aria-label="Rodyti aprasyma ir komentarus"
-              title="Rodyti aprasyma ir komentarus"
+              aria-label="Rodyti aprašymą ir komentarus"
+              title="Rodyti aprašymą ir komentarus"
             >
               <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
               <span class="map-comment-count">${mapCommentCount}</span>
@@ -1522,14 +1534,14 @@ function renderMapView() {
             data-map-comment-kind="initiative"
             data-map-comment-id="${escapeHtml(node.initiative.id)}"
             data-map-interactive="true"
-            aria-label="Rodyti aprasyma ir komentarus"
-            title="Rodyti aprasyma ir komentarus"
+              aria-label="Rodyti aprašymą ir komentarus"
+              title="Rodyti aprašymą ir komentarus"
           >
             <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
             <span class="map-comment-count">${mapCommentCount}</span>
           </button>
         </div>
-        <small>Iniciatyva · Susieta su gairių: ${linkedCount}</small>
+        <small>Iniciatyva · Susieta su gairėmis: ${linkedCount}</small>
         <div class="map-vote-row">
           <span class="map-vote-chip" title="Bendras balas">
             <strong>${score}</strong>
@@ -1543,13 +1555,13 @@ function renderMapView() {
   elements.stepView.innerHTML = `
     <section class="map-view-shell">
       <div class="step-header">
-        <h2>Strategiju zemelapis</h2>
+        <h2>Strategijų žemėlapis</h2>
         <div class="header-stack step-header-actions">
           <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
-          ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvu' : 'gairiu'} korteles</span>` : ''}
+          ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvų' : 'gairių'} korteles</span>` : ''}
         </div>
       </div>
-      <p class="prompt">Perziurekite pasirinktos institucijos strategijos sluoksnius. Iniciatyvu sluoksnyje gairiu korteles lieka matomos, bet uzrakintos.</p>
+      <p class="prompt">Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.</p>
       <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer}">
         <div class="map-overlay-toolbar">
           <div class="map-layer-toggle map-overlay-layer-toggle">
@@ -1557,8 +1569,8 @@ function renderMapView() {
             <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
           </div>
           <div class="map-overlay-actions">
-            <button type="button" data-map-reset-btn class="btn btn-ghost">Atstatyti vaizda</button>
-            <button type="button" data-map-fullscreen-btn class="btn btn-ghost">Pilnas ekranas</button>
+            <button type="button" data-map-reset-btn class="btn btn-ghost">Atkurti vaizdą</button>
+            <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="Įjungti pilno ekrano režimą" title="Įjungti pilno ekrano režimą"></button>
           </div>
         </div>
         <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
@@ -1579,11 +1591,11 @@ function renderMapView() {
       </section>
     </section>
     <section id="mapCommentModal" class="map-comment-modal" hidden>
-      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uzdaryti"></button>
+      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uždaryti"></button>
       <article class="map-comment-card" role="dialog" aria-modal="true" aria-labelledby="mapCommentTitle">
         <div class="header-row">
           <h3 id="mapCommentTitle">Elementas</h3>
-          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uzdaryti</button>
+          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uždaryti</button>
         </div>
         <p id="mapCommentDescription" class="prompt map-comment-description"></p>
         <strong>Komentarai</strong>
@@ -1604,15 +1616,15 @@ function renderMapView() {
   graph.nodes.forEach((node) => {
     if (node.kind === 'guideline' && node.guideline?.id) {
       mapCommentItems.set(`guideline:${node.guideline.id}`, {
-        title: node.guideline.title || 'Gaire',
-        description: node.guideline.description || 'Aprasymas nepateiktas.',
+        title: node.guideline.title || 'Gairė',
+        description: node.guideline.description || 'Aprašymas nepateiktas.',
         comments: Array.isArray(node.guideline.comments) ? node.guideline.comments : []
       });
     }
     if (node.kind === 'initiative' && node.initiative?.id) {
       mapCommentItems.set(`initiative:${node.initiative.id}`, {
         title: node.initiative.title || 'Iniciatyva',
-        description: node.initiative.description || 'Aprasymas nepateiktas.',
+        description: node.initiative.description || 'Aprašymas nepateiktas.',
         comments: Array.isArray(node.initiative.comments) ? node.initiative.comments : []
       });
     }
@@ -1632,7 +1644,7 @@ function renderMapView() {
     commentDescription.textContent = payload.description;
     commentList.innerHTML = comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : '<li class="comment-item comment-item-empty">Komentaru dar nera.</li>';
+      : '<li class="comment-item comment-item-empty">Komentarų dar nėra.</li>';
     commentModal.hidden = false;
   };
 
@@ -1958,7 +1970,7 @@ function renderInitiativeCard(initiative, options) {
   const comments = Array.isArray(initiative.comments) ? initiative.comments : [];
   const safeComments = comments.length
     ? comments.map((comment) => renderCommentItem(comment)).join('')
-    : '<li class="comment-item comment-item-empty">Dar nera komentaru.</li>';
+    : '<li class="comment-item comment-item-empty">Dar nėra komentarų.</li>';
   const initiativeStatus = String(initiative.status || 'active').toLowerCase();
   const votingDisabled = initiativeStatus === 'disabled';
   const linkedNames = resolveInitiativeGuidelineNames(initiative);
@@ -1979,36 +1991,36 @@ function renderInitiativeCard(initiative, options) {
         <div class="title-row">
           <h4>${escapeHtml(initiative.title)}</h4>
           <span class="tag">Iniciatyva</span>
-          ${votingDisabled ? '<span class="tag tag-disabled">Isjungta</span>' : ''}
+          ${votingDisabled ? '<span class="tag tag-disabled">Išjungta</span>' : ''}
         </div>
-        <p>${escapeHtml(initiative.description || 'Be paaiskinimo')}</p>
+        <p>${escapeHtml(initiative.description || 'Be paaiškinimo')}</p>
         <div class="header-stack">
           ${(linkedNames.length
             ? linkedNames.map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join('')
-            : '<span class="tag">Nepriskirta gairiu</span>')}
+            : '<span class="tag">Nepriskirta gairių</span>')}
         </div>
       </div>
       ${options.member ? `
         <div class="vote-panel">
           <div class="vote-panel-head">
             <span class="vote-label">Tavo balas</span>
-            <span class="tag">Balsuotoju: ${Number(initiative.voterCount || 0)}</span>
+            <span class="tag">Balsuotojų: ${Number(initiative.voterCount || 0)}</span>
           </div>
           <div class="vote-panel-body">
             <div class="vote-controls">
-              <button class="vote-btn" data-action="initiative-vote-minus" data-id="${escapeHtml(initiative.id)}" aria-label="Atimti balsa" ${canMinus ? '' : 'disabled'}>−</button>
+              <button class="vote-btn" data-action="initiative-vote-minus" data-id="${escapeHtml(initiative.id)}" aria-label="Atimti balsą" ${canMinus ? '' : 'disabled'}>−</button>
               <span class="vote-score">${userScore}</span>
-              <button class="vote-btn" data-action="initiative-vote-plus" data-id="${escapeHtml(initiative.id)}" aria-label="Prideti balsa" ${canPlus ? '' : 'disabled'}>+</button>
+              <button class="vote-btn" data-action="initiative-vote-plus" data-id="${escapeHtml(initiative.id)}" aria-label="Pridėti balsą" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
             <div class="vote-total">Bendras balas: <strong>${Number(initiative.totalScore || 0)}</strong></div>
-            ${votingDisabled ? '<div class="vote-total">Balsavimas isjungtas administratoriaus</div>' : ''}
+            ${votingDisabled ? '<div class="vote-total">Balsavimas išjungtas administratoriaus</div>' : ''}
           </div>
         </div>
       ` : `
         <div class="vote-panel">
           <div class="vote-panel-head">
-            <span class="vote-label">Viesas rezimas</span>
-            <span class="tag">Balsuotoju: ${Number(initiative.voterCount || 0)}</span>
+            <span class="vote-label">Viešas režimas</span>
+            <span class="tag">Balsuotojų: ${Number(initiative.voterCount || 0)}</span>
           </div>
           <div class="vote-panel-body">
             <div class="vote-total"><strong>Bendras balas: ${Number(initiative.totalScore || 0)}</strong></div>
@@ -2021,10 +2033,10 @@ function renderInitiativeCard(initiative, options) {
         <ul class="mini-list">${safeComments}</ul>
         ${options.member && options.writable ? `
           <form data-action="initiative-comment" data-id="${escapeHtml(initiative.id)}" class="inline-form">
-            <input type="text" name="comment" placeholder="Irasykite komentara" required ${state.busy ? 'disabled' : ''}/>
-            <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Prideti</button>
+            <input type="text" name="comment" placeholder="Įrašykite komentarą" required ${state.busy ? 'disabled' : ''}/>
+            <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Pridėti</button>
           </form>
-        ` : '<p class="prompt" style="margin: 8px 0 0;">Viesai rodomi komentarai. Prisijunkite, jei norite komentuoti.</p>'}
+        ` : '<p class="prompt" style="margin: 8px 0 0;">Viešai rodomi komentarai. Prisijunkite, jei norite komentuoti.</p>'}
       </div>
     </article>
   `;
@@ -2034,7 +2046,7 @@ function renderInitiativesView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Pasirinkite institucija</strong>
+        <strong>Pasirinkite instituciją</strong>
       </div>
     `;
     return;
@@ -2048,9 +2060,9 @@ function renderInitiativesView() {
   if (state.error) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Nepavyko ikelti duomenu</strong>
+        <strong>Nepavyko įkelti duomenų</strong>
         <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
-        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar karta</button>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar kartą</button>
       </div>
     `;
     const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
@@ -2071,7 +2083,7 @@ function renderInitiativesView() {
   });
 
   const stats = [
-    `Busena: ${String(state.cycle?.state || '-').toUpperCase()}`,
+    `Būsena: ${String(state.cycle?.state || '-').toUpperCase()}`,
     `Iniciatyvos: ${Number(state.summary?.initiatives_count || initiatives.length || 0)}`,
     `Komentarai: ${Number(state.summary?.initiative_comments_count || 0)}`,
     `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
@@ -2081,10 +2093,10 @@ function renderInitiativesView() {
     <div class="step-header">
       <h2>Iniciatyvos</h2>
       <div class="header-stack step-header-actions">
-        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Eksportuoti santrauka</button>
+        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Eksportuoti santrauką</button>
         <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
-        ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viesas rezimas</span>'}
+        ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viešas režimas</span>'}
       </div>
     </div>
 
@@ -2101,8 +2113,8 @@ function renderInitiativesView() {
             ${initiatives.map((initiative) => renderInitiativeCard(initiative, { member, writable })).join('')}
           </div>`
         : `<div class="card guideline-empty">
-            <strong>Iniciatyvu dar nera</strong>
-            <p class="prompt" style="margin: 6px 0 0;">Sioje institucijoje kol kas nera sukurtu iniciatyvu.</p>
+            <strong>Iniciatyvų dar nėra</strong>
+            <p class="prompt" style="margin: 6px 0 0;">Šioje institucijoje kol kas nėra sukurtų iniciatyvų.</p>
           </div>`
       }
     </section>
@@ -2111,25 +2123,25 @@ function renderInitiativesView() {
       <div class="card" style="margin-top: 16px;">
         <div class="header-row">
           <strong>Nauja iniciatyva</strong>
-          <span class="tag">Pasiulymas</span>
+          <span class="tag">Pasiūlymas</span>
         </div>
-        <p class="prompt" style="margin-bottom: 10px;">Iniciatyva turi buti priskirta bent vienai gairei.</p>
+        <p class="prompt" style="margin-bottom: 10px;">Iniciatyva turi būti priskirta bent vienai gairei.</p>
         <form id="initiativeAddForm">
           <div class="form-row">
             <input type="text" name="title" placeholder="Iniciatyvos pavadinimas" required ${state.busy ? 'disabled' : ''}/>
           </div>
-          <textarea name="desc" placeholder="Trumpas paaiskinimas" ${state.busy ? 'disabled' : ''}></textarea>
-          <label class="prompt" style="display:block;margin:10px 0 6px;">Priskirtos gaires</label>
+          <textarea name="desc" placeholder="Trumpas paaiškinimas" ${state.busy ? 'disabled' : ''}></textarea>
+          <label class="prompt" style="display:block;margin:10px 0 6px;">Priskirtos gairės</label>
           <select name="guidelineIds" multiple size="${Math.min(Math.max(eligibleGuidelines.length, 4), 10)}" ${state.busy ? 'disabled' : ''}>
             ${eligibleGuidelines.map((guideline) => `<option value="${escapeHtml(guideline.id)}">${escapeHtml(guideline.title)}</option>`).join('')}
           </select>
-          <p class="prompt" style="margin: 8px 0 0;">Laikykite Ctrl (arba Cmd), jei norite pazymeti kelias gaires.</p>
-          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Prideti iniciatyva</button>
+          <p class="prompt" style="margin: 8px 0 0;">Laikykite Ctrl (arba Cmd), jei norite pažymėti kelias gaires.</p>
+          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Pridėti iniciatyvą</button>
         </form>
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>Ciklas uzrakintas redagavimui</strong>
+        <strong>Ciklas užrakintas redagavimui</strong>
       </div>
     `) : (authenticated ? `
       <div class="card" style="margin-top: 16px;">
@@ -2137,7 +2149,7 @@ function renderInitiativesView() {
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>Prisijunkite, kad galetumete aktyviai dalyvauti</strong>
+        <strong>Prisijunkite, kad galėtumėte aktyviai dalyvauti</strong>
         <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
       </div>
     `)}
@@ -2376,7 +2388,7 @@ function renderStepView() {
     ` : `
       <div class="card" style="margin-top: 16px;">
         <strong>Ciklas užrakintas redagavimui</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Balsuoti ir komentuoti galima tik kai ciklo būsena yra Open arba Review.</p>
+        <p class="prompt" style="margin: 8px 0 0;">Balsuoti ir komentuoti galima tik kai ciklo būsena yra Open.</p>
       </div>
     `) : (authenticated ? `
       <div class="card" style="margin-top: 16px;">
@@ -2632,14 +2644,14 @@ function buildSummary() {
   lines.push('');
   lines.push('Iniciatyvos:');
   if (!state.initiatives.length) {
-    lines.push('- Nera duomenu');
+    lines.push('- Nėra duomenų');
   } else {
     state.initiatives.forEach((initiative) => {
       const linkedNames = resolveInitiativeGuidelineNames(initiative);
       lines.push(`- ${initiative.title} (bendras balas: ${Number(initiative.totalScore || 0)})`);
-      lines.push(`  aprasymas: ${initiative.description || 'be paaiskinimo'}`);
-      lines.push(`  susietos gaires: ${linkedNames.length ? linkedNames.join(', ') : 'nera'}`);
-      lines.push(`  komentaru: ${Array.isArray(initiative.comments) ? initiative.comments.length : 0}`);
+      lines.push(`  aprašymas: ${initiative.description || 'be paaiškinimo'}`);
+      lines.push(`  susietos gairės: ${linkedNames.length ? linkedNames.join(', ') : 'nėra'}`);
+      lines.push(`  komentarų: ${Array.isArray(initiative.comments) ? initiative.comments.length : 0}`);
     });
   }
 
