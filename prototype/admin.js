@@ -39,6 +39,7 @@ function applyEmbeddedAdminMode() {
 }
 
 let embeddedHeightRaf = 0;
+let embeddedHeightHeartbeat = 0;
 
 function postEmbeddedHeight() {
   if (!IS_EMBEDDED_ADMIN) return;
@@ -75,6 +76,8 @@ function setupEmbeddedHeightReporter() {
       characterData: false
     });
   }
+  if (embeddedHeightHeartbeat) window.clearInterval(embeddedHeightHeartbeat);
+  embeddedHeightHeartbeat = window.setInterval(queueEmbeddedHeightPost, 900);
 }
 
 function resolveInstitutionSlug() {

@@ -98,7 +98,46 @@ function applyAdminInlineFrameHeight(frame, rawHeight) {
   if (!frame) return;
   const nextHeight = Number(rawHeight || 0);
   if (!Number.isFinite(nextHeight) || nextHeight <= 0) return;
-  frame.style.height = `${Math.max(720, Math.ceil(nextHeight))}px`;
+  frame.style.height = `${Math.max(960, Math.ceil(nextHeight))}px`;
+}
+
+function readAdminFrameContentHeight(frame) {
+  try {
+    const doc = frame?.contentDocument;
+    if (!doc) return 0;
+    const body = doc.body;
+    const root = doc.documentElement;
+    return Math.max(
+      Number(body?.scrollHeight || 0),
+      Number(body?.offsetHeight || 0),
+      Number(root?.scrollHeight || 0),
+      Number(root?.offsetHeight || 0)
+    );
+  } catch {
+    return 0;
+  }
+}
+
+function startAdminFrameAutoResize(frame) {
+  if (!frame) return;
+  if (frame.__autoResizeTimer) {
+    window.clearInterval(frame.__autoResizeTimer);
+    frame.__autoResizeTimer = null;
+  }
+
+  const sync = () => {
+    const measuredHeight = readAdminFrameContentHeight(frame);
+    if (measuredHeight > 0) applyAdminInlineFrameHeight(frame, measuredHeight);
+  };
+
+  // Immediate + short burst handles async rendering/layout shifts.
+  sync();
+  window.setTimeout(sync, 120);
+  window.setTimeout(sync, 300);
+  window.setTimeout(sync, 650);
+  window.setTimeout(sync, 1200);
+
+  frame.__autoResizeTimer = window.setInterval(sync, 1000);
 }
 
 function resolveInstitutionSlug() {
@@ -1348,6 +1387,12 @@ function renderAboutView() {
 }
 
 function renderAdminView() {
+  const previousFrame = document.getElementById('adminInlineFrame');
+  if (previousFrame?.__autoResizeTimer) {
+    window.clearInterval(previousFrame.__autoResizeTimer);
+    previousFrame.__autoResizeTimer = null;
+  }
+
   const allowed = canOpenAdminView();
 
   if (isEmbeddedContext()) {
@@ -1412,7 +1457,8 @@ function renderAdminView() {
   const frame = document.getElementById('adminInlineFrame');
   if (frame) {
     frame.addEventListener('load', () => {
-      applyAdminInlineFrameHeight(frame, frame.offsetHeight || 720);
+      applyAdminInlineFrameHeight(frame, frame.offsetHeight || 960);
+      startAdminFrameAutoResize(frame);
     });
   }
 }
