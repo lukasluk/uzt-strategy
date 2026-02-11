@@ -30,7 +30,7 @@ function readAuthToken(token, secret) {
   const [body, sig] = String(token || '').split('.');
   if (!body || !sig) return null;
   const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url');
-  if (expected !== sig) return null;
+  if (!timingSafeEqual(expected, sig)) return null;
   try {
     const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
     if (!parsed.exp || Date.now() > parsed.exp) return null;
@@ -38,6 +38,79 @@ function readAuthToken(token, secret) {
   } catch {
     return null;
   }
+}
+
+function timingSafeEqual(a, b) {
+  const left = Buffer.from(String(a || ''), 'utf8');
+  const right = Buffer.from(String(b || ''), 'utf8');
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
+function parseCookies(req) {
+  const source = String(req.headers.cookie || '');
+  if (!source) return {};
+  return source.split(';').reduce((acc, part) => {
+    const [rawKey, ...rawValue] = part.split('=');
+    const key = String(rawKey || '').trim();
+    if (!key) return acc;
+    const value = rawValue.join('=').trim();
+    try {
+      acc[key] = decodeURIComponent(value || '');
+    } catch {
+      acc[key] = value || '';
+    }
+    return acc;
+  }, {});
+}
+
+function getCookie(req, name) {
+  const cookies = parseCookies(req);
+  return cookies[name] || '';
+}
+
+function resolveClientIp(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '');
+  const firstForwarded = forwarded.split(',').map((item) => item.trim()).find(Boolean);
+  return firstForwarded || req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function shouldUseSecureCookie(req) {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
+    .split(',')
+    .map((item) => item.trim())
+    .find(Boolean);
+  return Boolean(req.secure || forwardedProto === 'https');
+}
+
+function createRateLimiter({ windowMs, max, keyPrefix = 'rl', keyFn = null }) {
+  const hits = new Map();
+
+  return function rateLimit(req, res, next) {
+    const now = Date.now();
+    const keyValue = keyFn ? keyFn(req) : resolveClientIp(req);
+    const key = `${keyPrefix}:${String(keyValue || 'unknown')}`;
+    const current = hits.get(key);
+
+    if (!current || current.resetAt <= now) {
+      hits.set(key, { count: 1, resetAt: now + windowMs });
+    } else if (current.count >= max) {
+      const retryAfter = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+      res.set('Retry-After', String(retryAfter));
+      return res.status(429).json({ error: 'too many requests' });
+    } else {
+      current.count += 1;
+      hits.set(key, current);
+    }
+
+    if (hits.size > 2000) {
+      for (const [storedKey, entry] of hits.entries()) {
+        if (entry.resetAt <= now) hits.delete(storedKey);
+      }
+    }
+
+    return next();
+  };
 }
 
 function parseBearer(req) {
@@ -69,26 +142,54 @@ async function getCurrentCycle(query, institutionId) {
 function registerV1Routes({ app, query, broadcast, uuid }) {
   const SUPERADMIN_CODE = process.env.SUPERADMIN_CODE || 'change-me';
   const AUTH_SECRET = process.env.AUTH_SECRET || 'change-me-too';
-  const META_ADMIN_PASSWORD = process.env.META_ADMIN_PASSWORD || 'Bedarbystės-ratas-sukasi';
+  const META_ADMIN_PASSWORD = process.env.META_ADMIN_PASSWORD || 'meta-admin-change-me';
+  const META_ADMIN_SESSION_SECRET = process.env.META_ADMIN_SESSION_SECRET || AUTH_SECRET;
+  const META_ADMIN_SESSION_COOKIE = process.env.META_ADMIN_SESSION_COOKIE || 'uzt_meta_admin_session';
+  const META_ADMIN_SESSION_TTL_HOURS = Number(process.env.META_ADMIN_SESSION_TTL_HOURS || 2);
   const VOTE_BUDGET = Math.max(20, Number(process.env.VOTE_BUDGET || 20));
   const INVITE_TTL_HOURS = Number(process.env.INVITE_TTL_HOURS || 72);
   const AUTH_TTL_HOURS = Number(process.env.AUTH_TTL_HOURS || 12);
+  const AUTH_WINDOW_MS = Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
+  const LOGIN_MAX_ATTEMPTS = Number(process.env.LOGIN_RATE_LIMIT_MAX || 20);
+  const INVITE_ACCEPT_MAX_ATTEMPTS = Number(process.env.INVITE_ACCEPT_RATE_LIMIT_MAX || 20);
+  const META_ADMIN_AUTH_MAX_ATTEMPTS = Number(process.env.META_ADMIN_AUTH_RATE_LIMIT_MAX || 8);
+
+  const loginRateLimit = createRateLimiter({
+    windowMs: AUTH_WINDOW_MS,
+    max: LOGIN_MAX_ATTEMPTS,
+    keyPrefix: 'auth-login',
+    keyFn: (req) => `${resolveClientIp(req)}:${normalizeEmail(req.body?.email)}`
+  });
+
+  const inviteAcceptRateLimit = createRateLimiter({
+    windowMs: AUTH_WINDOW_MS,
+    max: INVITE_ACCEPT_MAX_ATTEMPTS,
+    keyPrefix: 'invite-accept',
+    keyFn: (req) => resolveClientIp(req)
+  });
+
+  const metaAdminAuthRateLimit = createRateLimiter({
+    windowMs: AUTH_WINDOW_MS,
+    max: META_ADMIN_AUTH_MAX_ATTEMPTS,
+    keyPrefix: 'meta-admin-auth',
+    keyFn: (req) => resolveClientIp(req)
+  });
 
   function requireSuperAdmin(req, res, next) {
     const code = String(req.headers['x-superadmin-code'] || '').trim();
-    if (!code || code !== SUPERADMIN_CODE) {
+    if (!code || !timingSafeEqual(code, SUPERADMIN_CODE)) {
       return res.status(403).json({ error: 'forbidden' });
     }
     next();
   }
 
-  function requireMetaAdmin(req, res, next) {
-    const rawHeaderPassword = String(req.headers['x-meta-admin-password'] || '').trim();
-    const rawBodyPassword = String(req.body?.password || '').trim();
-    const password = decodePasswordCandidate(rawHeaderPassword) || decodePasswordCandidate(rawBodyPassword);
-    if (!password || password !== META_ADMIN_PASSWORD) {
+  function requireMetaAdminSession(req, res, next) {
+    const token = getCookie(req, META_ADMIN_SESSION_COOKIE);
+    const payload = readAuthToken(token, META_ADMIN_SESSION_SECRET);
+    if (!payload || payload.scope !== 'meta_admin') {
       return res.status(403).json({ error: 'forbidden' });
     }
+    req.metaAdmin = payload;
     next();
   }
 
@@ -100,6 +201,26 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     } catch {
       return candidate;
     }
+  }
+
+  function setMetaAdminCookie(req, res, token) {
+    const maxAgeMs = Math.max(5 * 60 * 1000, META_ADMIN_SESSION_TTL_HOURS * 60 * 60 * 1000);
+    res.cookie(META_ADMIN_SESSION_COOKIE, token, {
+      maxAge: maxAgeMs,
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: shouldUseSecureCookie(req),
+      path: '/api/v1/meta-admin'
+    });
+  }
+
+  function clearMetaAdminCookie(req, res) {
+    res.clearCookie(META_ADMIN_SESSION_COOKIE, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: shouldUseSecureCookie(req),
+      path: '/api/v1/meta-admin'
+    });
   }
 
   function requireAuth(req, res, next) {
@@ -654,15 +775,26 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     });
   });
 
-  app.post('/api/v1/meta-admin/auth', (req, res) => {
+  app.post('/api/v1/meta-admin/auth', metaAdminAuthRateLimit, (req, res) => {
     const password = decodePasswordCandidate(req.body?.password);
-    if (!password || password !== META_ADMIN_PASSWORD) {
+    if (!password || !timingSafeEqual(password, META_ADMIN_PASSWORD)) {
       return res.status(403).json({ error: 'forbidden' });
     }
+    const payload = {
+      scope: 'meta_admin',
+      exp: Date.now() + Math.max(5 * 60 * 1000, META_ADMIN_SESSION_TTL_HOURS * 60 * 60 * 1000)
+    };
+    const token = createAuthToken(payload, META_ADMIN_SESSION_SECRET);
+    setMetaAdminCookie(req, res, token);
     res.json({ ok: true });
   });
 
-  app.get('/api/v1/meta-admin/overview', requireMetaAdmin, async (_req, res) => {
+  app.post('/api/v1/meta-admin/logout', (req, res) => {
+    clearMetaAdminCookie(req, res);
+    res.json({ ok: true });
+  });
+
+  app.get('/api/v1/meta-admin/overview', requireMetaAdminSession, async (_req, res) => {
     const institutionsRes = await query(
       'select id, name, slug, status, created_at from institutions order by created_at desc'
     );
@@ -732,7 +864,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     });
   });
 
-  app.post('/api/v1/meta-admin/institutions', requireMetaAdmin, async (req, res) => {
+  app.post('/api/v1/meta-admin/institutions', requireMetaAdminSession, async (req, res) => {
     const name = String(req.body?.name || '').trim();
     const slugInput = String(req.body?.slug || '').trim();
     if (!name) return res.status(400).json({ error: 'name required' });
@@ -763,7 +895,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     });
   });
 
-  app.post('/api/v1/meta-admin/institutions/:institutionId/invites', requireMetaAdmin, async (req, res) => {
+  app.post('/api/v1/meta-admin/institutions/:institutionId/invites', requireMetaAdminSession, async (req, res) => {
     const institutionId = String(req.params.institutionId || '').trim();
     const email = normalizeEmail(req.body?.email);
     const role = String(req.body?.role || 'member').trim();
@@ -786,7 +918,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     res.status(201).json({ inviteId, inviteToken, email, role });
   });
 
-  app.put('/api/v1/meta-admin/institutions/:institutionId', requireMetaAdmin, async (req, res) => {
+  app.put('/api/v1/meta-admin/institutions/:institutionId', requireMetaAdminSession, async (req, res) => {
     const institutionId = String(req.params.institutionId || '').trim();
     const name = String(req.body?.name || '').trim();
     if (!institutionId || !name) {
@@ -804,7 +936,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     res.json({ ok: true, institutionId, name });
   });
 
-  app.put('/api/v1/meta-admin/users/:userId/status', requireMetaAdmin, async (req, res) => {
+  app.put('/api/v1/meta-admin/users/:userId/status', requireMetaAdminSession, async (req, res) => {
     const userId = String(req.params.userId || '').trim();
     const status = String(req.body?.status || '').trim();
     if (!userId || !['active', 'blocked'].includes(status)) {
@@ -819,7 +951,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     res.json({ ok: true, status });
   });
 
-  app.put('/api/v1/meta-admin/memberships/:membershipId/status', requireMetaAdmin, async (req, res) => {
+  app.put('/api/v1/meta-admin/memberships/:membershipId/status', requireMetaAdminSession, async (req, res) => {
     const membershipId = String(req.params.membershipId || '').trim();
     const status = String(req.body?.status || '').trim();
     if (!membershipId || !['active', 'blocked'].includes(status)) {
@@ -888,7 +1020,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     res.status(201).json({ inviteId, inviteToken, email, role });
   });
 
-  app.post('/api/v1/invites/accept', async (req, res) => {
+  app.post('/api/v1/invites/accept', inviteAcceptRateLimit, async (req, res) => {
     const token = String(req.body?.token || '').trim();
     const displayName = String(req.body?.displayName || '').trim();
     const password = String(req.body?.password || '');
@@ -953,7 +1085,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     });
   });
 
-  app.post('/api/v1/auth/login', async (req, res) => {
+  app.post('/api/v1/auth/login', loginRateLimit, async (req, res) => {
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
     const institutionSlug = String(req.body?.institutionSlug || '').trim();
@@ -1569,7 +1701,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
           id: row.id,
           body: row.body,
           status: row.status || 'visible',
-          authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
+          authorName: row.author_display_name || row.author_email || 'NeÅ¾inomas autorius',
           authorEmail: row.author_email || null,
           createdAt: row.created_at
         });
@@ -1674,7 +1806,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
           id: row.id,
           body: row.body,
           status: row.status || 'visible',
-          authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
+          authorName: row.author_display_name || row.author_email || 'NeÅ¾inomas autorius',
           authorEmail: row.author_email || null,
           createdAt: row.created_at
         });
@@ -2027,3 +2159,4 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 }
 
 module.exports = { registerV1Routes };
+

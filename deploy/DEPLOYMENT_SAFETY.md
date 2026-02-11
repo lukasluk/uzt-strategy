@@ -28,7 +28,7 @@ sudo bash deploy/deploy.sh
 
 What it does:
 - Prevents concurrent deploys (`flock` lock).
-- Validates required env vars (`DATABASE_URL`, `AUTH_SECRET`, `SUPERADMIN_CODE`).
+- Validates required env vars (`DATABASE_URL`, `AUTH_SECRET`, `SUPERADMIN_CODE`, `META_ADMIN_PASSWORD`).
 - Creates a **database backup** before deployment (unless `SKIP_DB_BACKUP=1`).
 - Saves previous frontend/backend + nginx/service snapshots for rollback.
 - Deploys code and restarts services.
@@ -39,6 +39,8 @@ Optional variables:
 - `SKIP_DB_BACKUP=1` to skip DB backup for non-production deploys.
 - `HEALTH_URL` to override health endpoint.
 - `RETENTION_DAYS` to control backup/snapshot retention (default `14`).
+- `CORS_ORIGINS` to restrict allowed browser origins for API access.
+- `META_ADMIN_SESSION_SECRET` to sign HttpOnly meta-admin session cookies.
 
 ## 3) Manual rollback notes
 

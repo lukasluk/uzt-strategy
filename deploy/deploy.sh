@@ -117,17 +117,18 @@ fi
 DATABASE_URL="$(read_env_var DATABASE_URL "$ENV_FILE")"
 AUTH_SECRET="$(read_env_var AUTH_SECRET "$ENV_FILE")"
 SUPERADMIN_CODE="$(read_env_var SUPERADMIN_CODE "$ENV_FILE")"
+META_ADMIN_PASSWORD="$(read_env_var META_ADMIN_PASSWORD "$ENV_FILE")"
 
-for var in DATABASE_URL AUTH_SECRET SUPERADMIN_CODE; do
+for var in DATABASE_URL AUTH_SECRET SUPERADMIN_CODE META_ADMIN_PASSWORD; do
   if [ -z "${!var:-}" ]; then
     echo "ERROR: required env var is missing in $APP_DIR/backend/.env: $var"
     exit 1
   fi
 done
 
-for var in AUTH_SECRET SUPERADMIN_CODE; do
+for var in AUTH_SECRET SUPERADMIN_CODE META_ADMIN_PASSWORD; do
   case "${!var}" in
-    change-me|ilga_reiksme_be_tarpu|visa_reiksme_be_tarpu)
+    change-me|change-me-superadmin|meta-admin-change-me|ilga_reiksme_be_tarpu|visa_reiksme_be_tarpu|Bedarbystės-ratas-sukasi|BedarbystÄ—s-ratas-sukasi)
       echo "ERROR: insecure placeholder value detected for $var"
       exit 1
       ;;

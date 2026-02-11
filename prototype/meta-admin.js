@@ -1,8 +1,6 @@
-const META_ADMIN_STORAGE_KEY = 'uzt-strategy-meta-admin-password';
 const root = document.getElementById('metaAdminRoot');
 
 const state = {
-  password: sessionStorage.getItem(META_ADMIN_STORAGE_KEY) || '',
   authenticated: false,
   loading: false,
   busy: false,
@@ -26,6 +24,9 @@ function escapeHtml(value) {
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
+    unauthorized: 'Sesija negalioja. Prisijunkite iš naujo.',
+    'invalid token': 'Sesija negalioja. Prisijunkite iš naujo.',
+    'too many requests': 'Per daug bandymų. Pabandykite po kelių minučių.',
     forbidden: 'Neteisingas slaptažodis arba neleidžiama operacija.',
     'name required': 'Įveskite institucijos pavadinimą.',
     'institutionId and name required': 'Pasirinkite instituciją ir įveskite naują pavadinimą.',
@@ -40,15 +41,13 @@ function toUserMessage(error) {
 }
 
 async function api(path, { method = 'GET', body = null } = {}) {
-  if (!state.password) throw new Error('forbidden');
-  const headers = {
-    'x-meta-admin-password': encodeURIComponent(state.password)
-  };
+  const headers = {};
   if (body !== null) headers['Content-Type'] = 'application/json';
 
   const response = await fetch(path, {
     method,
     headers,
+    credentials: 'same-origin',
     body: body !== null ? JSON.stringify(body) : undefined
   });
 
@@ -72,6 +71,7 @@ async function authenticate(password) {
   const response = await fetch('/api/v1/meta-admin/auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     body: JSON.stringify({ password })
   });
   const payload = await response.json().catch(() => ({}));
@@ -86,24 +86,19 @@ async function loadOverview() {
 }
 
 async function bootstrap() {
-  if (!state.password) {
-    render();
-    return;
-  }
-
   state.loading = true;
   state.error = '';
   render();
   try {
-    await authenticate(state.password);
-    state.authenticated = true;
     await loadOverview();
+    state.authenticated = true;
   } catch (error) {
     state.authenticated = false;
     state.overview = null;
-    state.error = toUserMessage(error);
-    sessionStorage.removeItem(META_ADMIN_STORAGE_KEY);
-    state.password = '';
+    const raw = String(error?.message || '').trim();
+    if (raw && raw !== 'forbidden' && raw !== 'unauthorized' && raw !== 'invalid token') {
+      state.error = toUserMessage(error);
+    }
   } finally {
     state.loading = false;
     render();
@@ -149,8 +144,6 @@ function renderLogin() {
     render();
     try {
       await authenticate(password);
-      state.password = password;
-      sessionStorage.setItem(META_ADMIN_STORAGE_KEY, password);
       state.authenticated = true;
       await loadOverview();
     } catch (error) {
@@ -343,13 +336,16 @@ function bindDashboardEvents() {
   }
 
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      state.password = '';
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await api('/api/v1/meta-admin/logout', { method: 'POST' });
+      } catch {
+        // ignore logout errors client-side
+      }
       state.authenticated = false;
       state.overview = null;
       state.error = '';
       state.notice = '';
-      sessionStorage.removeItem(META_ADMIN_STORAGE_KEY);
       render();
     });
   }
