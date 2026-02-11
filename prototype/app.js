@@ -1428,7 +1428,6 @@ function renderMapView() {
       const relation = String(node.guideline.relationType || 'orphan');
       const relationText = relationLabel(relation);
       const score = Number(node.guideline.totalScore || 0);
-      const voters = Math.max(0, Number(node.guideline.voterCount || 0));
       const mapCommentCount = Math.max(
         0,
         Array.isArray(node.guideline.comments)
@@ -1465,19 +1464,13 @@ function renderMapView() {
               title="Rodyti aprasyma ir komentarus"
             >
               <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
-              <span class="map-comment-label">Aprašymai ir komentarai</span>
               <span class="map-comment-count">${mapCommentCount}</span>
             </button>
           </div>
           <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
           <div class="map-vote-row">
             <span class="map-vote-chip" title="Bendras balas">
-              <span class="map-vote-icon" aria-hidden="true">?</span>
               <strong>${score}</strong>
-            </span>
-            <span class="map-vote-chip" title="Balsuotojai">
-              <span class="map-vote-icon" aria-hidden="true">?</span>
-              <strong>${voters}</strong>
             </span>
           </div>
           <div class="map-vote-squares">${voteSquares}</div>
@@ -1486,7 +1479,6 @@ function renderMapView() {
     }
 
     const score = Number(node.initiative.totalScore || 0);
-    const voters = Math.max(0, Number(node.initiative.voterCount || 0));
     const mapCommentCount = Math.max(
       0,
       Array.isArray(node.initiative.comments)
@@ -1524,19 +1516,13 @@ function renderMapView() {
             title="Rodyti aprasyma ir komentarus"
           >
             <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
-            <span class="map-comment-label">Aprašymai ir komentarai</span>
             <span class="map-comment-count">${mapCommentCount}</span>
           </button>
         </div>
         <small>Iniciatyva · Susieta su gairių: ${linkedCount}</small>
         <div class="map-vote-row">
           <span class="map-vote-chip" title="Bendras balas">
-            <span class="map-vote-icon" aria-hidden="true">?</span>
             <strong>${score}</strong>
-          </span>
-          <span class="map-vote-chip" title="Balsuotojai">
-            <span class="map-vote-icon" aria-hidden="true">?</span>
-            <strong>${voters}</strong>
           </span>
         </div>
         <div class="map-vote-squares">${voteSquares}</div>
@@ -1564,6 +1550,12 @@ function renderMapView() {
           ${guidelineEdgeMarkup}
         </svg>
         <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="mapInitiativeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#2b8a7e" />
+              <stop offset="100%" stop-color="#2a6bb2" />
+            </linearGradient>
+          </defs>
           ${initiativeEdgeMarkup}
         </svg>
         ${nodeMarkup}

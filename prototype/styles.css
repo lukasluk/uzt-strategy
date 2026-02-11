@@ -1088,8 +1088,8 @@ textarea {
   stroke-dasharray: 6 6;
 }
 .strategy-map-edge.edge-initiative {
-  stroke: #2a6bb2;
-  stroke-dasharray: 5 6;
+  stroke: url(#mapInitiativeGradient);
+  stroke-width: 3.2;
 }
 .strategy-map-node {
   position: absolute;
@@ -1199,13 +1199,13 @@ textarea {
   background: linear-gradient(180deg, #fff9f2 0%, #f8ead9 100%);
   color: #3d342a;
   border-radius: 999px;
-  padding: 5px 10px 5px 6px;
+  padding: 4px 8px 4px 5px;
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   white-space: nowrap;
   box-shadow:
@@ -1240,18 +1240,10 @@ textarea {
 .map-comment-icon svg {
   display: block;
 }
-.map-comment-label {
-  font-size: 10.5px;
-  letter-spacing: 0.01em;
-  max-width: 106px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .map-comment-count {
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
   border-radius: 999px;
   background: #ffffff;
   border: 1px solid #d7c1a9;
@@ -1373,23 +1365,22 @@ textarea {
 .map-vote-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   border-radius: 999px;
   border: 1px solid #dbc8b2;
-  padding: 2px 7px;
+  padding: 2px 9px;
   font-size: 11px;
   background: #fff8ef;
   color: #55493e;
+}
+.map-vote-chip strong {
+  font-size: 13px;
+  line-height: 1;
 }
 .map-vote-chip.top {
   border-color: #d86b4b;
   background: #fff0e3;
   color: #b6482d;
   font-weight: 700;
-}
-.map-vote-icon {
-  font-size: 10px;
-  line-height: 1;
 }
 .map-vote-squares {
   display: flex;
