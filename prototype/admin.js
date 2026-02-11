@@ -158,7 +158,18 @@ function escapeHtml(value) {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 }
-
+function formatDateTime(value) {
+  if (!value) return 'Data nenurodyta';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Data nenurodyta';
+  return new Intl.DateTimeFormat('lt-LT', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
@@ -184,7 +195,9 @@ function toUserMessage(error) {
     'cannot demote parent with children': 'Negalima keisti tÄ—vinÄ—s gairÄ—s tipo, kol ji turi vaikiniÅ³ gairiÅ³.',
     'invalid line side': 'Netinkama linijos iÅ¡Ä—jimo pusÄ—.',
     'guidelineId required': 'Nenurodytas gairÄ—s ID.',
-    'guideline not found': 'GairÄ— nerasta.'
+    'guideline not found': 'GairÄ— nerasta.',
+    'commentId required': 'Nenurodytas komentaro ID.',
+    'comment not found': 'Komentaras nerastas.'
   };
   return map[raw] || raw || 'Nepavyko Ä¯vykdyti uÅ¾klausos.';
 }
@@ -457,9 +470,10 @@ function renderDashboard() {
         <strong>GairiÅ³ redagavimas</strong>
         <span class="tag">${state.guidelines.length}</span>
       </div>
-      <div class="card-list">
+      <div class="card-list admin-guideline-grid">
         ${state.guidelines.map((guideline) => {
           const relationType = guideline.relationType || 'orphan';
+          const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
           const parentOptions = state.guidelines
             .filter((candidate) => candidate.id !== guideline.id && candidate.relationType === 'parent')
             .map((candidate) => `<option value="${escapeHtml(candidate.id)}" ${candidate.id === guideline.parentGuidelineId ? 'selected' : ''}>${escapeHtml(candidate.title)}</option>`)
@@ -504,10 +518,46 @@ function renderDashboard() {
               <div class="header-stack">
                 <span class="tag">Balas: ${Number(guideline.totalScore || 0)}</span>
                 <span class="tag">Balsuotojai: ${Number(guideline.voterCount || 0)}</span>
-                <span class="tag">Komentarai: ${Number(guideline.commentCount || 0)}</span>
+                <span class="tag">Komentarai: ${comments.length}</span>
                 <span class="tag">RyÅ¡ys: ${escapeHtml(relationType)}</span>
               </div>
             </form>
+            <div class="admin-comment-box">
+              <div class="header-row">
+                <strong>Komentarai</strong>
+                <span class="tag">${comments.length}</span>
+              </div>
+              ${comments.length ? `
+                <ul class="mini-list admin-comment-list">
+                  ${comments.map((comment) => {
+                    const commentStatus = String(comment.status || 'visible').toLowerCase();
+                    const nextStatus = commentStatus === 'hidden' ? 'visible' : 'hidden';
+                    const toggleText = commentStatus === 'hidden' ? 'Rodyti' : 'Slëpti';
+                    return `
+                      <li class="admin-comment-item ${commentStatus === 'hidden' ? 'is-hidden' : ''}">
+                        <div class="admin-comment-body">${escapeHtml(comment.body || '')}</div>
+                        <div class="admin-comment-meta">
+                          ${escapeHtml(comment.authorName || 'Nežinomas autorius')}
+                          · ${escapeHtml(formatDateTime(comment.createdAt))}
+                          · <span class="tag">${escapeHtml(commentStatus)}</span>
+                        </div>
+                        <div class="admin-comment-actions">
+                          <button
+                            type="button"
+                            class="btn btn-ghost comment-status-btn"
+                            data-comment-id="${escapeHtml(comment.id)}"
+                            data-next-status="${escapeHtml(nextStatus)}"
+                            ${state.busy ? 'disabled' : ''}
+                          >
+                            ${toggleText}
+                          </button>
+                        </div>
+                      </li>
+                    `;
+                  }).join('')}
+                </ul>
+              ` : '<p class="prompt">Komentarø dar nëra.</p>'}
+            </div>
           </article>
         `;
         }).join('')}
@@ -685,6 +735,25 @@ function bindDashboardEvents() {
     });
   });
 
+  root.querySelectorAll('.comment-status-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const commentId = String(button.dataset.commentId || '').trim();
+      const nextStatus = String(button.dataset.nextStatus || '').trim().toLowerCase();
+      if (!commentId) return;
+      if (!['visible', 'hidden'].includes(nextStatus)) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/admin/comments/${encodeURIComponent(commentId)}/status`, {
+          method: 'PUT',
+          body: { status: nextStatus }
+        });
+        state.notice = nextStatus === 'hidden'
+          ? 'Komentaras paslëptas.'
+          : 'Komentaras vël rodomas.';
+        await bootstrap();
+      });
+    });
+  });
   root.querySelectorAll('.participant-password-form').forEach((form) => {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();

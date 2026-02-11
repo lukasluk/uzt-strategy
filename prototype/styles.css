@@ -351,6 +351,53 @@ textarea {
   gap: 16px;
   margin-top: 16px;
 }
+.admin-guideline-grid {
+  grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+  gap: 18px;
+}
+.admin-guideline-grid .card {
+  padding: 16px;
+}
+.admin-comment-box {
+  border-top: 1px solid #ead8c3;
+  padding-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+.admin-comment-list {
+  margin-top: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.admin-comment-item {
+  border: 1px solid #e9d8c4;
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: #fffdf8;
+}
+.admin-comment-item.is-hidden {
+  background: #f4f1eb;
+  border-color: #d9cec0;
+  opacity: 0.88;
+}
+.admin-comment-item .admin-comment-body {
+  font-size: 14px;
+  line-height: 1.42;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.admin-comment-item .admin-comment-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.admin-comment-actions {
+  margin-top: 7px;
+  display: flex;
+  justify-content: flex-end;
+}
 .guideline-groups {
   display: grid;
   gap: 18px;
@@ -950,8 +997,8 @@ textarea {
 }
 .institution-node strong {
   font-family: 'Fraunces', serif;
-  font-size: 44px;
-  line-height: 1.05;
+  font-size: clamp(30px, 2.6vw, 36px);
+  line-height: 1.08;
   letter-spacing: -0.015em;
 }
 @keyframes institutionPulse {
@@ -999,6 +1046,34 @@ textarea {
   font-size: 14px;
   line-height: 1.35;
   margin: 0;
+}
+.map-node-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.map-comment-btn {
+  border: 1px solid #dcc8b3;
+  background: #fff7ee;
+  color: #4f4337;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.map-comment-btn:hover {
+  border-color: #c2ab90;
+  background: #fff1e4;
+}
+.map-comment-icon {
+  font-size: 12px;
+  line-height: 1;
 }
 .guideline-node small {
   font-size: 11px;
@@ -1065,6 +1140,50 @@ textarea {
 .map-vote-empty {
   font-size: 11px;
   color: #76695b;
+}
+.map-comment-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 34;
+  display: grid;
+  place-items: center;
+}
+.map-comment-modal[hidden] {
+  display: none;
+}
+.map-comment-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(18, 15, 10, 0.46);
+}
+.map-comment-card {
+  position: relative;
+  z-index: 1;
+  width: min(680px, calc(100vw - 28px));
+  max-height: min(78vh, 760px);
+  overflow: hidden;
+  display: grid;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e4d2be;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 24px 48px rgba(28, 26, 22, 0.26);
+}
+.map-comment-card h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  line-height: 1.2;
+}
+.map-comment-description {
+  margin: 0;
+}
+.map-comment-card .mini-list {
+  margin-top: 0;
+  max-height: min(44vh, 400px);
+  overflow-y: auto;
+  padding-right: 6px;
 }
 .checkbox-row {
   font-size: 13px;

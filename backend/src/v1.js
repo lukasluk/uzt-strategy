@@ -128,6 +128,22 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     return res.rows[0] || null;
   }
 
+  async function loadCommentContext(commentId) {
+    const res = await query(
+      `select c.id as comment_id,
+              c.guideline_id,
+              c.status as comment_status,
+              g.cycle_id,
+              sc.institution_id
+       from strategy_comments c
+       join strategy_guidelines g on g.id = c.guideline_id
+       join strategy_cycles sc on sc.id = g.cycle_id
+       where c.id = $1`,
+      [commentId]
+    );
+    return res.rows[0] || null;
+  }
+
   function isCycleWritable(state) {
     return state === 'open' || state === 'review';
   }
@@ -201,6 +217,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
     const guidelinesByCycle = {};
     const voteByGuideline = {};
+    const commentsByGuideline = {};
     if (cycleIds.length) {
       const guidelinesRes = await query(
         `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, line_side, map_x, map_y, created_at
@@ -229,6 +246,32 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         };
       });
 
+      const commentsRes = await query(
+        `select c.id,
+                c.guideline_id,
+                c.body,
+                c.created_at,
+                u.display_name as author_display_name,
+                u.email as author_email
+         from strategy_comments c
+         join strategy_guidelines g on g.id = c.guideline_id
+         left join platform_users u on u.id = c.author_id
+         where g.cycle_id = any($1::uuid[])
+           and c.status = 'visible'
+         order by c.created_at asc`,
+        [cycleIds]
+      );
+      commentsRes.rows.forEach((row) => {
+        if (!commentsByGuideline[row.guideline_id]) commentsByGuideline[row.guideline_id] = [];
+        commentsByGuideline[row.guideline_id].push({
+          id: row.id,
+          body: row.body,
+          authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
+          authorEmail: row.author_email || null,
+          createdAt: row.created_at
+        });
+      });
+
       guidelinesRes.rows.forEach((row) => {
         if (!guidelinesByCycle[row.cycle_id]) guidelinesByCycle[row.cycle_id] = [];
         guidelinesByCycle[row.cycle_id].push({
@@ -243,6 +286,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
           mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
           totalScore: voteByGuideline[row.id]?.totalScore || 0,
           voterCount: voteByGuideline[row.id]?.voterCount || 0,
+          commentCount: (commentsByGuideline[row.id] || []).length,
+          comments: commentsByGuideline[row.id] || [],
           createdAt: row.created_at
         });
       });
@@ -1073,8 +1118,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const guidelinesRes = await query(
       `select g.id, g.title, g.description, g.status, g.relation_type, g.parent_guideline_id, g.line_side, g.created_at,
               coalesce(v.total_score, 0)::int as total_score,
-              coalesce(v.voter_count, 0)::int as voter_count,
-              coalesce(c.comment_count, 0)::int as comment_count
+              coalesce(v.voter_count, 0)::int as voter_count
        from strategy_guidelines g
        left join (
          select guideline_id,
@@ -1083,17 +1127,40 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
          from strategy_votes
          group by guideline_id
        ) v on v.guideline_id = g.id
-       left join (
-         select guideline_id,
-                count(*)::int as comment_count
-         from strategy_comments
-         where status = 'visible'
-         group by guideline_id
-       ) c on c.guideline_id = g.id
        where g.cycle_id = $1
        order by g.created_at asc`,
       [cycleId]
     );
+
+    const guidelineIds = guidelinesRes.rows.map((row) => row.id);
+    const commentsByGuideline = {};
+    if (guidelineIds.length) {
+      const commentsRes = await query(
+        `select c.id,
+                c.guideline_id,
+                c.body,
+                c.status,
+                c.created_at,
+                u.display_name as author_display_name,
+                u.email as author_email
+         from strategy_comments c
+         left join platform_users u on u.id = c.author_id
+         where c.guideline_id = any($1::uuid[])
+         order by c.created_at desc`,
+        [guidelineIds]
+      );
+      commentsRes.rows.forEach((row) => {
+        if (!commentsByGuideline[row.guideline_id]) commentsByGuideline[row.guideline_id] = [];
+        commentsByGuideline[row.guideline_id].push({
+          id: row.id,
+          body: row.body,
+          status: row.status || 'visible',
+          authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
+          authorEmail: row.author_email || null,
+          createdAt: row.created_at
+        });
+      });
+    }
 
     res.json({
       guidelines: guidelinesRes.rows.map((row) => ({
@@ -1107,9 +1174,38 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         createdAt: row.created_at,
         totalScore: row.total_score,
         voterCount: row.voter_count,
-        commentCount: row.comment_count
+        commentCount: (commentsByGuideline[row.id] || []).length,
+        comments: commentsByGuideline[row.id] || []
       }))
     });
+  });
+
+  app.put('/api/v1/admin/comments/:commentId/status', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const commentId = String(req.params.commentId || '').trim();
+    const status = String(req.body?.status || '').trim().toLowerCase();
+    if (!commentId) return res.status(400).json({ error: 'commentId required' });
+    if (!['visible', 'hidden'].includes(status)) return res.status(400).json({ error: 'invalid status' });
+
+    const context = await loadCommentContext(commentId);
+    if (!context) return res.status(404).json({ error: 'comment not found' });
+    if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+
+    await query(
+      `update strategy_comments
+       set status = $1
+       where id = $2`,
+      [status, commentId]
+    );
+
+    broadcast({
+      type: 'v1.comment.status.updated',
+      institutionId: req.auth.institutionId,
+      guidelineId: context.guideline_id,
+      commentId,
+      status
+    });
+    res.json({ ok: true, commentId, status });
   });
 
   app.put('/api/v1/admin/cycles/:cycleId/map-layout', requireAuth, async (req, res) => {

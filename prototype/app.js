@@ -1022,6 +1022,7 @@ function bindMapInteractions(viewport, world, { editable }) {
   viewport.addEventListener('pointerdown', (event) => {
     const target = event.target;
     if (event.button !== 0) return;
+    if (target instanceof HTMLElement && target.closest('button, a, input, textarea, select, [data-map-interactive="true"]')) return;
 
     if (editable && target instanceof HTMLElement) {
       const node = target.closest('.strategy-map-node');
@@ -1153,6 +1154,12 @@ function renderMapView() {
     const relationText = relationLabel(relation);
     const score = Number(node.guideline.totalScore || 0);
     const voters = Math.max(0, Number(node.guideline.voterCount || 0));
+    const mapCommentCount = Math.max(
+      0,
+      Array.isArray(node.guideline.comments)
+        ? node.guideline.comments.length
+        : Number(node.guideline.commentCount || 0)
+    );
     const scoreForSquares = Math.max(0, Math.round(score));
     const voteSquares = scoreForSquares
       ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
@@ -1170,7 +1177,20 @@ function renderMapView() {
                data-h="${node.h}"
                data-draggable="${editable ? 'true' : 'false'}"
                style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
-        <h4>${escapeHtml(node.guideline.title)}</h4>
+        <div class="map-node-head">
+          <h4>${escapeHtml(node.guideline.title)}</h4>
+          <button
+            type="button"
+            class="map-comment-btn"
+            data-map-comment-guideline-id="${escapeHtml(node.guideline.id)}"
+            data-map-interactive="true"
+            aria-label="Rodyti aprašymą ir komentarus"
+            title="Rodyti aprašymą ir komentarus"
+          >
+            <span class="map-comment-icon" aria-hidden="true">💬</span>
+            <span>${mapCommentCount}</span>
+          </button>
+        </div>
         <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
         <div class="map-vote-row">
           <span class="map-vote-chip" title="Bendras balas">
@@ -1205,15 +1225,68 @@ function renderMapView() {
         ${nodeMarkup}
       </div>
     </section>
+    <section id="mapCommentModal" class="map-comment-modal" hidden>
+      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uždaryti"></button>
+      <article class="map-comment-card" role="dialog" aria-modal="true" aria-labelledby="mapCommentTitle">
+        <div class="header-row">
+          <h3 id="mapCommentTitle">Gairė</h3>
+          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uždaryti</button>
+        </div>
+        <p id="mapCommentDescription" class="prompt map-comment-description"></p>
+        <strong>Komentarai</strong>
+        <ul id="mapCommentList" class="mini-list"></ul>
+      </article>
+    </section>
   `;
 
   const viewport = elements.stepView.querySelector('#strategyMapViewport');
   const world = elements.stepView.querySelector('#strategyMapWorld');
   const resetBtn = elements.stepView.querySelector('#mapResetBtn');
+  const commentModal = elements.stepView.querySelector('#mapCommentModal');
+  const commentTitle = elements.stepView.querySelector('#mapCommentTitle');
+  const commentDescription = elements.stepView.querySelector('#mapCommentDescription');
+  const commentList = elements.stepView.querySelector('#mapCommentList');
+  const guidelineById = new Map(
+    graph.nodes
+      .filter((node) => node.kind === 'guideline' && node.guideline?.id)
+      .map((node) => [String(node.guideline.id), node.guideline])
+  );
+
+  const closeMapCommentModal = () => {
+    if (!commentModal) return;
+    commentModal.hidden = true;
+  };
+
+  const openMapCommentModal = (guidelineId) => {
+    if (!commentModal || !commentTitle || !commentDescription || !commentList) return;
+    const guideline = guidelineById.get(String(guidelineId || ''));
+    if (!guideline) return;
+    const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
+    commentTitle.textContent = guideline.title || 'Gairė';
+    commentDescription.textContent = guideline.description || 'Aprašymas nepateiktas.';
+    commentList.innerHTML = comments.length
+      ? comments.map((comment) => renderCommentItem(comment)).join('')
+      : '<li class="comment-item comment-item-empty">Komentarų dar nėra.</li>';
+    commentModal.hidden = false;
+  };
+
+  if (commentModal) {
+    commentModal.querySelectorAll('[data-map-comment-close="1"]').forEach((button) => {
+      button.addEventListener('click', closeMapCommentModal);
+    });
+  }
+  elements.stepView.querySelectorAll('[data-map-comment-guideline-id]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openMapCommentModal(button.dataset.mapCommentGuidelineId);
+    });
+  });
+
   if (viewport && world) {
     syncMapNodeBounds(world);
     refreshMapEdges(world);
-    applyMapTransform(viewport, world);
+    fitMapToCurrentNodes(viewport, world);
     bindMapInteractions(viewport, world, { editable });
   }
   if (resetBtn && viewport && world) {
