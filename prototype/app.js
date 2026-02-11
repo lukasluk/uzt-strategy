@@ -368,6 +368,12 @@ function clamp(value, min, max) {
 
 const MAP_LINE_SIDES = new Set(['auto', 'left', 'right', 'top', 'bottom']);
 const MAP_VOTE_SQUARES_PER_ROW = 12;
+const MAP_COMMENT_ICON_SVG = `
+  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+    <path d="M5 6.5h14a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1H10l-4.5 3.2c-.7.5-1.5 0-1.5-.8V17H3a1 1 0 0 1-1-1V7.5a1 1 0 0 1 1-1h2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M8 10.2h8M8 13.2h5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  </svg>
+`;
 
 function normalizeLineSide(value) {
   const side = String(value || 'auto').trim().toLowerCase();
@@ -1458,8 +1464,9 @@ function renderMapView() {
               aria-label="Rodyti aprasyma ir komentarus"
               title="Rodyti aprasyma ir komentarus"
             >
-              <span class="map-comment-icon" aria-hidden="true">??</span>
-              <span>${mapCommentCount}</span>
+              <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
+              <span class="map-comment-label">Aprašymai ir komentarai</span>
+              <span class="map-comment-count">${mapCommentCount}</span>
             </button>
           </div>
           <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
@@ -1516,8 +1523,9 @@ function renderMapView() {
             aria-label="Rodyti aprasyma ir komentarus"
             title="Rodyti aprasyma ir komentarus"
           >
-            <span class="map-comment-icon" aria-hidden="true">??</span>
-            <span>${mapCommentCount}</span>
+            <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
+            <span class="map-comment-label">Aprašymai ir komentarai</span>
+            <span class="map-comment-count">${mapCommentCount}</span>
           </button>
         </div>
         <small>Iniciatyva · Susieta su gairių: ${linkedCount}</small>

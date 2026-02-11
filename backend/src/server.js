@@ -13,7 +13,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_CODE = process.env.ADMIN_CODE || 'change-me';
-const VOTE_BUDGET = Number(process.env.VOTE_BUDGET || 10);
+const VOTE_BUDGET = Math.max(20, Number(process.env.VOTE_BUDGET || 20));
 
 function uuid() {
   return crypto.randomUUID();

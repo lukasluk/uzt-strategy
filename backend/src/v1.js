@@ -70,7 +70,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   const SUPERADMIN_CODE = process.env.SUPERADMIN_CODE || 'change-me';
   const AUTH_SECRET = process.env.AUTH_SECRET || 'change-me-too';
   const META_ADMIN_PASSWORD = process.env.META_ADMIN_PASSWORD || 'Bedarbystės-ratas-sukasi';
-  const VOTE_BUDGET = Number(process.env.VOTE_BUDGET || 20);
+  const VOTE_BUDGET = Math.max(20, Number(process.env.VOTE_BUDGET || 20));
   const INVITE_TTL_HOURS = Number(process.env.INVITE_TTL_HOURS || 72);
   const AUTH_TTL_HOURS = Number(process.env.AUTH_TTL_HOURS || 12);
 
