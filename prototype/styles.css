@@ -1512,6 +1512,12 @@ textarea {
   filter: saturate(0.7);
   z-index: 2;
 }
+.strategy-map-viewport.map-layer-initiatives .institution-node {
+  opacity: 0.32;
+  pointer-events: none;
+  filter: saturate(0.72);
+  z-index: 2;
+}
 .strategy-map-viewport.map-layer-initiatives .initiative-lines,
 .strategy-map-viewport.map-layer-initiatives .initiative-node {
   opacity: 1;

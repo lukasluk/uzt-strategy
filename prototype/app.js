@@ -985,7 +985,7 @@ function fitMapToCurrentNodes(viewport, world) {
   const viewportH = Math.max(1, viewport.clientHeight);
   const scale = clamp(
     Math.min((viewportW - pad) / width, (viewportH - pad) / height),
-    0.45,
+    0.2,
     1.8
   );
 
@@ -1382,7 +1382,7 @@ function bindMapInteractions(viewport, world, { editable }) {
     event.preventDefault();
     const nextScale = clamp(
       state.mapTransform.scale + (event.deltaY < 0 ? 0.08 : -0.08),
-      0.45,
+      0.2,
       1.8
     );
     if (nextScale === state.mapTransform.scale) return;
