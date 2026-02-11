@@ -70,7 +70,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   const SUPERADMIN_CODE = process.env.SUPERADMIN_CODE || 'change-me';
   const AUTH_SECRET = process.env.AUTH_SECRET || 'change-me-too';
   const META_ADMIN_PASSWORD = process.env.META_ADMIN_PASSWORD || 'Bedarbystės-ratas-sukasi';
-  const VOTE_BUDGET = Number(process.env.VOTE_BUDGET || 10);
+  const VOTE_BUDGET = Number(process.env.VOTE_BUDGET || 20);
   const INVITE_TTL_HOURS = Number(process.env.INVITE_TTL_HOURS || 72);
   const AUTH_TTL_HOURS = Number(process.env.AUTH_TTL_HOURS || 12);
 
@@ -144,6 +144,39 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     return res.rows[0] || null;
   }
 
+  async function loadInitiativeContext(initiativeId) {
+    const res = await query(
+      `select i.id as initiative_id,
+              i.title,
+              i.description,
+              i.status as initiative_status,
+              c.id as cycle_id,
+              c.state as cycle_state,
+              c.institution_id
+       from strategy_initiatives i
+       join strategy_cycles c on c.id = i.cycle_id
+       where i.id = $1`,
+      [initiativeId]
+    );
+    return res.rows[0] || null;
+  }
+
+  async function loadInitiativeCommentContext(commentId) {
+    const res = await query(
+      `select c.id as comment_id,
+              c.initiative_id,
+              c.status as comment_status,
+              i.cycle_id,
+              sc.institution_id
+       from strategy_initiative_comments c
+       join strategy_initiatives i on i.id = c.initiative_id
+       join strategy_cycles sc on sc.id = i.cycle_id
+       where c.id = $1`,
+      [commentId]
+    );
+    return res.rows[0] || null;
+  }
+
   function isCycleWritable(state) {
     return state === 'open' || state === 'review';
   }
@@ -181,6 +214,31 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     return null;
   }
 
+  async function validateInitiativeGuidelineAssignments({ cycleId, guidelineIds }) {
+    const normalized = [...new Set(
+      (Array.isArray(guidelineIds) ? guidelineIds : [])
+        .map((id) => String(id || '').trim())
+        .filter(Boolean)
+    )];
+    if (normalized.length === 0) {
+      throw new Error('at least one guideline required');
+    }
+
+    const validRes = await query(
+      `select id
+       from strategy_guidelines
+       where cycle_id = $1
+         and id = any($2::uuid[])
+         and status in ('active', 'disabled', 'merged')`,
+      [cycleId, normalized]
+    );
+    const validIds = new Set(validRes.rows.map((row) => row.id));
+    if (validIds.size !== normalized.length) {
+      throw new Error('guideline not in cycle');
+    }
+    return normalized;
+  }
+
   app.get('/api/v1/health', (_req, res) => {
     res.json({ ok: true, version: 'v1' });
   });
@@ -216,8 +274,13 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const cycleIds = cyclesRes.rows.map((row) => row.id);
 
     const guidelinesByCycle = {};
+    const guidelineLookupByCycle = {};
     const voteByGuideline = {};
     const commentsByGuideline = {};
+    const initiativesByCycle = {};
+    const initiativeLinksByInitiative = {};
+    const voteByInitiative = {};
+    const commentsByInitiative = {};
     if (cycleIds.length) {
       const guidelinesRes = await query(
         `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, line_side, map_x, map_y, created_at
@@ -235,7 +298,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
          from strategy_guidelines g
          left join strategy_votes v on v.guideline_id = g.id
          where g.cycle_id = any($1::uuid[])
-           and g.status in ('active', 'disabled', 'merged')
+           and g.status in ('active', 'disabled', 'merged', 'hidden')
          group by g.id`,
         [cycleIds]
       );
@@ -272,9 +335,74 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         });
       });
 
+      const initiativesRes = await query(
+        `select id, cycle_id, title, description, status, line_side, map_x, map_y, created_at
+         from strategy_initiatives
+         where cycle_id = any($1::uuid[])
+           and status in ('active', 'disabled', 'merged', 'hidden')
+         order by created_at asc`,
+        [cycleIds]
+      );
+
+      const linksRes = await query(
+        `select ig.initiative_id, ig.guideline_id
+         from strategy_initiative_guidelines ig
+         join strategy_initiatives i on i.id = ig.initiative_id
+         where i.cycle_id = any($1::uuid[])`,
+        [cycleIds]
+      );
+      linksRes.rows.forEach((row) => {
+        if (!initiativeLinksByInitiative[row.initiative_id]) initiativeLinksByInitiative[row.initiative_id] = [];
+        initiativeLinksByInitiative[row.initiative_id].push(row.guideline_id);
+      });
+
+      const initiativeVotesRes = await query(
+        `select i.id as initiative_id,
+                coalesce(sum(v.score), 0)::int as total_score,
+                count(distinct v.voter_id)::int as voter_count
+         from strategy_initiatives i
+         left join strategy_initiative_votes v on v.initiative_id = i.id
+         where i.cycle_id = any($1::uuid[])
+           and i.status in ('active', 'disabled', 'merged', 'hidden')
+         group by i.id`,
+        [cycleIds]
+      );
+      initiativeVotesRes.rows.forEach((row) => {
+        voteByInitiative[row.initiative_id] = {
+          totalScore: Number(row.total_score || 0),
+          voterCount: Number(row.voter_count || 0)
+        };
+      });
+
+      const initiativeCommentsRes = await query(
+        `select c.id,
+                c.initiative_id,
+                c.body,
+                c.created_at,
+                u.display_name as author_display_name,
+                u.email as author_email
+         from strategy_initiative_comments c
+         join strategy_initiatives i on i.id = c.initiative_id
+         left join platform_users u on u.id = c.author_id
+         where i.cycle_id = any($1::uuid[])
+           and c.status = 'visible'
+         order by c.created_at asc`,
+        [cycleIds]
+      );
+      initiativeCommentsRes.rows.forEach((row) => {
+        if (!commentsByInitiative[row.initiative_id]) commentsByInitiative[row.initiative_id] = [];
+        commentsByInitiative[row.initiative_id].push({
+          id: row.id,
+          body: row.body,
+          authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
+          authorEmail: row.author_email || null,
+          createdAt: row.created_at
+        });
+      });
+
       guidelinesRes.rows.forEach((row) => {
         if (!guidelinesByCycle[row.cycle_id]) guidelinesByCycle[row.cycle_id] = [];
-        guidelinesByCycle[row.cycle_id].push({
+        const guidelineItem = {
           id: row.id,
           title: row.title,
           description: row.description,
@@ -288,6 +416,31 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
           voterCount: voteByGuideline[row.id]?.voterCount || 0,
           commentCount: (commentsByGuideline[row.id] || []).length,
           comments: commentsByGuideline[row.id] || [],
+          createdAt: row.created_at
+        };
+        guidelinesByCycle[row.cycle_id].push(guidelineItem);
+        if (!guidelineLookupByCycle[row.cycle_id]) guidelineLookupByCycle[row.cycle_id] = {};
+        guidelineLookupByCycle[row.cycle_id][row.id] = guidelineItem;
+      });
+
+      initiativesRes.rows.forEach((row) => {
+        if (!initiativesByCycle[row.cycle_id]) initiativesByCycle[row.cycle_id] = [];
+        const guidelineIds = (initiativeLinksByInitiative[row.id] || []).filter((guidelineId) =>
+          Boolean(guidelineLookupByCycle[row.cycle_id]?.[guidelineId])
+        );
+        initiativesByCycle[row.cycle_id].push({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          status: row.status,
+          lineSide: normalizeLineSide(row.line_side) || 'auto',
+          mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
+          mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
+          guidelineIds,
+          totalScore: voteByInitiative[row.id]?.totalScore || 0,
+          voterCount: voteByInitiative[row.id]?.voterCount || 0,
+          commentCount: (commentsByInitiative[row.id] || []).length,
+          comments: commentsByInitiative[row.id] || [],
           createdAt: row.created_at
         });
       });
@@ -313,7 +466,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
                 mapY: Number.isFinite(Number(cycle.map_y)) ? Number(cycle.map_y) : null
               }
             : null,
-          guidelines: cycle ? (guidelinesByCycle[cycle.id] || []) : []
+          guidelines: cycle ? (guidelinesByCycle[cycle.id] || []) : [],
+          initiatives: cycle ? (initiativesByCycle[cycle.id] || []) : []
         };
       })
     });
@@ -329,8 +483,23 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const stats = await query(
       `select
          (select count(*) from strategy_guidelines g where g.cycle_id = $1 and g.status in ('active', 'disabled')) as guidelines_count,
+         (select count(*) from strategy_initiatives i where i.cycle_id = $1 and i.status in ('active', 'disabled')) as initiatives_count,
          (select count(*) from strategy_comments c join strategy_guidelines g on g.id = c.guideline_id where g.cycle_id = $1 and c.status = 'visible') as comments_count,
-         (select count(distinct v.voter_id) from strategy_votes v join strategy_guidelines g on g.id = v.guideline_id where g.cycle_id = $1) as participant_count`,
+         (select count(*) from strategy_initiative_comments c join strategy_initiatives i on i.id = c.initiative_id where i.cycle_id = $1 and c.status = 'visible') as initiative_comments_count,
+         (
+           select count(distinct voter_id)
+           from (
+             select v.voter_id
+             from strategy_votes v
+             join strategy_guidelines g on g.id = v.guideline_id
+             where g.cycle_id = $1
+             union
+             select iv.voter_id
+             from strategy_initiative_votes iv
+             join strategy_initiatives i on i.id = iv.initiative_id
+             where i.cycle_id = $1
+           ) as voters
+         ) as participant_count`,
       [cycle.id]
     );
 
@@ -408,6 +577,99 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         totalScore: voteByGuideline[g.id]?.totalScore || 0,
         voterCount: voteByGuideline[g.id]?.voterCount || 0,
         comments: commentsByGuideline[g.id] || []
+      }))
+    });
+  });
+
+  app.get('/api/v1/public/institutions/:slug/cycles/current/initiatives', async (req, res) => {
+    const institution = await getInstitutionBySlug(query, req.params.slug);
+    if (!institution) return res.status(404).json({ error: 'institution not found' });
+
+    const cycle = await getCurrentCycle(query, institution.id);
+    if (!cycle) return res.status(404).json({ error: 'cycle not found' });
+
+    const initiativesRes = await query(
+      `select id, title, description, status, line_side, map_x, map_y, created_at
+       from strategy_initiatives
+       where cycle_id = $1 and status in ('active', 'disabled')
+       order by created_at asc`,
+      [cycle.id]
+    );
+
+    const linksRes = await query(
+      `select ig.initiative_id, ig.guideline_id, g.title as guideline_title
+       from strategy_initiative_guidelines ig
+       join strategy_guidelines g on g.id = ig.guideline_id
+       join strategy_initiatives i on i.id = ig.initiative_id
+       where i.cycle_id = $1
+       order by g.created_at asc`,
+      [cycle.id]
+    );
+
+    const votesRes = await query(
+      `select i.id as initiative_id,
+              coalesce(sum(v.score), 0)::int as total_score,
+              count(distinct v.voter_id)::int as voter_count
+       from strategy_initiatives i
+       left join strategy_initiative_votes v on v.initiative_id = i.id
+       where i.cycle_id = $1 and i.status in ('active', 'disabled')
+       group by i.id`,
+      [cycle.id]
+    );
+
+    const commentsRes = await query(
+      `select c.id, c.initiative_id, c.body, c.created_at,
+              u.display_name as author_display_name,
+              u.email as author_email
+       from strategy_initiative_comments c
+       join strategy_initiatives i on i.id = c.initiative_id
+       left join platform_users u on u.id = c.author_id
+       where i.cycle_id = $1 and c.status = 'visible'
+       order by c.created_at asc`,
+      [cycle.id]
+    );
+
+    const linksByInitiative = {};
+    linksRes.rows.forEach((row) => {
+      if (!linksByInitiative[row.initiative_id]) linksByInitiative[row.initiative_id] = [];
+      linksByInitiative[row.initiative_id].push({
+        guidelineId: row.guideline_id,
+        guidelineTitle: row.guideline_title
+      });
+    });
+
+    const voteByInitiative = Object.fromEntries(
+      votesRes.rows.map((row) => [row.initiative_id, { totalScore: row.total_score, voterCount: row.voter_count }])
+    );
+
+    const commentsByInitiative = commentsRes.rows.reduce((acc, row) => {
+      if (!acc[row.initiative_id]) acc[row.initiative_id] = [];
+      acc[row.initiative_id].push({
+        id: row.id,
+        body: row.body,
+        authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
+        authorEmail: row.author_email || null,
+        createdAt: row.created_at
+      });
+      return acc;
+    }, {});
+
+    res.json({
+      institution,
+      cycle,
+      initiatives: initiativesRes.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        lineSide: normalizeLineSide(row.line_side) || 'auto',
+        mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
+        mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
+        guidelineLinks: linksByInitiative[row.id] || [],
+        guidelineIds: (linksByInitiative[row.id] || []).map((item) => item.guidelineId),
+        totalScore: voteByInitiative[row.id]?.totalScore || 0,
+        voterCount: voteByInitiative[row.id]?.voterCount || 0,
+        comments: commentsByInitiative[row.id] || []
       }))
     });
   });
@@ -797,7 +1059,9 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
       rules: {
         voteBudget: VOTE_BUDGET,
         minPerGuideline: 0,
-        maxPerGuideline: 5
+        maxPerGuideline: 5,
+        minPerInitiative: 0,
+        maxPerInitiative: 5
       }
     });
   });
@@ -823,17 +1087,33 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
       [cycleId, req.auth.sub]
     );
 
+    const initiativeVotesRes = await query(
+      `select v.initiative_id, v.score
+       from strategy_initiative_votes v
+       join strategy_initiatives i on i.id = v.initiative_id
+       where i.cycle_id = $1 and v.voter_id = $2`,
+      [cycleId, req.auth.sub]
+    );
+
     const votes = votesRes.rows.map((row) => ({
       guidelineId: row.guideline_id,
       score: row.score
     }));
-    const totalUsed = votes.reduce((sum, row) => sum + row.score, 0);
+    const initiativeVotes = initiativeVotesRes.rows.map((row) => ({
+      initiativeId: row.initiative_id,
+      score: row.score
+    }));
+    const totalUsed =
+      votes.reduce((sum, row) => sum + row.score, 0) +
+      initiativeVotes.reduce((sum, row) => sum + row.score, 0);
 
     res.json({
       cycleId,
       budget: VOTE_BUDGET,
       totalUsed,
-      votes
+      votes,
+      guidelineVotes: votes,
+      initiativeVotes
     });
   });
 
@@ -887,6 +1167,49 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     res.status(201).json({ guidelineId });
   });
 
+  app.post('/api/v1/cycles/:cycleId/initiatives', requireAuth, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    const title = String(req.body?.title || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const lineSide = normalizeLineSide(req.body?.lineSide);
+    const guidelineIdsRaw = req.body?.guidelineIds;
+    if (!cycleId || !title) return res.status(400).json({ error: 'cycleId and title required' });
+    if (!lineSide) return res.status(400).json({ error: 'invalid line side' });
+
+    const cycleRes = await query(
+      'select id, institution_id, state from strategy_cycles where id = $1',
+      [cycleId]
+    );
+    const cycle = cycleRes.rows[0];
+    if (!cycle) return res.status(404).json({ error: 'cycle not found' });
+    if (cycle.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+    if (!isCycleWritable(cycle.state)) return res.status(409).json({ error: 'cycle not writable' });
+
+    let guidelineIds = [];
+    try {
+      guidelineIds = await validateInitiativeGuidelineAssignments({ cycleId, guidelineIds: guidelineIdsRaw });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid guideline assignment') });
+    }
+
+    const initiativeId = uuid();
+    await query(
+      `insert into strategy_initiatives (id, cycle_id, title, description, status, line_side, created_by)
+       values ($1, $2, $3, $4, 'active', $5, $6)`,
+      [initiativeId, cycleId, title, description || null, lineSide, req.auth.sub]
+    );
+    for (const guidelineId of guidelineIds) {
+      await query(
+        `insert into strategy_initiative_guidelines (id, initiative_id, guideline_id)
+         values ($1, $2, $3)`,
+        [uuid(), initiativeId, guidelineId]
+      );
+    }
+
+    broadcast({ type: 'v1.initiative.created', institutionId: req.auth.institutionId, cycleId, initiativeId });
+    res.status(201).json({ initiativeId });
+  });
+
   app.post('/api/v1/guidelines/:guidelineId/comments', requireAuth, async (req, res) => {
     const guidelineId = String(req.params.guidelineId || '').trim();
     const body = String(req.body?.body || '').trim();
@@ -909,6 +1232,28 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     res.status(201).json({ commentId });
   });
 
+  app.post('/api/v1/initiatives/:initiativeId/comments', requireAuth, async (req, res) => {
+    const initiativeId = String(req.params.initiativeId || '').trim();
+    const body = String(req.body?.body || '').trim();
+    if (!initiativeId || !body) return res.status(400).json({ error: 'initiativeId and body required' });
+
+    const context = await loadInitiativeContext(initiativeId);
+    if (!context) return res.status(404).json({ error: 'initiative not found' });
+    if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+    if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
+    if (context.initiative_status !== 'active') return res.status(409).json({ error: 'initiative voting disabled' });
+
+    const commentId = uuid();
+    await query(
+      `insert into strategy_initiative_comments (id, initiative_id, author_id, body, status)
+       values ($1, $2, $3, $4, 'visible')`,
+      [commentId, initiativeId, req.auth.sub, body]
+    );
+
+    broadcast({ type: 'v1.initiative.comment.created', institutionId: req.auth.institutionId, initiativeId, commentId });
+    res.status(201).json({ commentId });
+  });
+
   app.put('/api/v1/guidelines/:guidelineId/vote', requireAuth, async (req, res) => {
     const guidelineId = String(req.params.guidelineId || '').trim();
     const score = Number(req.body?.score);
@@ -920,6 +1265,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     if (!context) return res.status(404).json({ error: 'guideline not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
     if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
+    if (context.guideline_status !== 'active') return res.status(409).json({ error: 'guideline voting disabled' });
 
     const currentVote = await query(
       'select score from strategy_votes where guideline_id = $1 and voter_id = $2',
@@ -928,10 +1274,22 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     const currentScore = currentVote.rows[0]?.score || 0;
 
     const totalRes = await query(
-      `select coalesce(sum(v.score), 0)::int as total_used
-       from strategy_votes v
-       join strategy_guidelines g on g.id = v.guideline_id
-       where v.voter_id = $1 and g.cycle_id = $2`,
+      `select
+         (
+           coalesce((
+             select sum(v.score)::int
+             from strategy_votes v
+             join strategy_guidelines g on g.id = v.guideline_id
+             where v.voter_id = $1 and g.cycle_id = $2
+           ), 0)
+           +
+           coalesce((
+             select sum(v.score)::int
+             from strategy_initiative_votes v
+             join strategy_initiatives i on i.id = v.initiative_id
+             where v.voter_id = $1 and i.cycle_id = $2
+           ), 0)
+         )::int as total_used`,
       [req.auth.sub, context.cycle_id]
     );
     const totalUsed = totalRes.rows[0].total_used;
@@ -956,6 +1314,69 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     }
 
     broadcast({ type: 'v1.vote.updated', institutionId: req.auth.institutionId, guidelineId, score });
+    res.json({ ok: true, score, totalUsed: nextTotal, budget: VOTE_BUDGET });
+  });
+
+  app.put('/api/v1/initiatives/:initiativeId/vote', requireAuth, async (req, res) => {
+    const initiativeId = String(req.params.initiativeId || '').trim();
+    const score = Number(req.body?.score);
+    if (!initiativeId || !Number.isInteger(score) || score < 0 || score > 5) {
+      return res.status(400).json({ error: 'initiativeId and score(0..5) required' });
+    }
+
+    const context = await loadInitiativeContext(initiativeId);
+    if (!context) return res.status(404).json({ error: 'initiative not found' });
+    if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+    if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
+    if (context.initiative_status !== 'active') return res.status(409).json({ error: 'initiative voting disabled' });
+
+    const currentVote = await query(
+      'select score from strategy_initiative_votes where initiative_id = $1 and voter_id = $2',
+      [initiativeId, req.auth.sub]
+    );
+    const currentScore = currentVote.rows[0]?.score || 0;
+
+    const totalRes = await query(
+      `select
+         (
+           coalesce((
+             select sum(v.score)::int
+             from strategy_votes v
+             join strategy_guidelines g on g.id = v.guideline_id
+             where v.voter_id = $1 and g.cycle_id = $2
+           ), 0)
+           +
+           coalesce((
+             select sum(v.score)::int
+             from strategy_initiative_votes v
+             join strategy_initiatives i on i.id = v.initiative_id
+             where v.voter_id = $1 and i.cycle_id = $2
+           ), 0)
+         )::int as total_used`,
+      [req.auth.sub, context.cycle_id]
+    );
+    const totalUsed = totalRes.rows[0].total_used;
+    const nextTotal = totalUsed - currentScore + score;
+    if (nextTotal > VOTE_BUDGET) {
+      return res.status(400).json({ error: 'vote budget exceeded' });
+    }
+
+    if (currentVote.rowCount > 0) {
+      await query(
+        `update strategy_initiative_votes
+         set score = $1, updated_at = now()
+         where initiative_id = $2 and voter_id = $3`,
+        [score, initiativeId, req.auth.sub]
+      );
+    } else {
+      await query(
+        `insert into strategy_initiative_votes (id, initiative_id, voter_id, score)
+         values ($1, $2, $3, $4)`,
+        [uuid(), initiativeId, req.auth.sub, score]
+      );
+    }
+
+    broadcast({ type: 'v1.initiative.vote.updated', institutionId: req.auth.institutionId, initiativeId, score });
     res.json({ ok: true, score, totalUsed: nextTotal, budget: VOTE_BUDGET });
   });
 
@@ -1021,14 +1442,27 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
     const participants = await query(
       `select u.id, u.email, u.display_name,
-              coalesce(sum(case when g.id is not null then v.score else 0 end), 0)::int as total_score,
-              case when count(g.id) > 0 then true else false end as has_voted
+              coalesce(votes.total_score, 0)::int as total_score,
+              case when coalesce(votes.vote_count, 0) > 0 then true else false end as has_voted
        from institution_memberships m
        join platform_users u on u.id = m.user_id
-       left join strategy_votes v on v.voter_id = u.id
-       left join strategy_guidelines g on g.id = v.guideline_id and g.cycle_id = $1
+       left join (
+         select voter_id, sum(score)::int as total_score, count(*)::int as vote_count
+         from (
+           select v.voter_id, v.score
+           from strategy_votes v
+           join strategy_guidelines g on g.id = v.guideline_id
+           where g.cycle_id = $1
+           union all
+           select v.voter_id, v.score
+           from strategy_initiative_votes v
+           join strategy_initiatives i on i.id = v.initiative_id
+           where i.cycle_id = $1
+         ) as all_votes
+         group by voter_id
+       ) votes on votes.voter_id = u.id
        where m.institution_id = $2 and m.status = 'active'
-       group by u.id, u.email, u.display_name
+       group by u.id, u.email, u.display_name, votes.total_score, votes.vote_count
        order by u.display_name asc`,
       [cycleId, req.auth.institutionId]
     );
@@ -1180,6 +1614,118 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     });
   });
 
+  app.get('/api/v1/admin/cycles/:cycleId/initiatives', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+
+    const cycleRes = await query(
+      'select institution_id from strategy_cycles where id = $1',
+      [cycleId]
+    );
+    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
+    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
+      return res.status(403).json({ error: 'cross-institution forbidden' });
+    }
+
+    const guidelinesRes = await query(
+      `select id, title, status
+       from strategy_guidelines
+       where cycle_id = $1
+       order by created_at asc`,
+      [cycleId]
+    );
+
+    const initiativesRes = await query(
+      `select i.id, i.title, i.description, i.status, i.line_side, i.map_x, i.map_y, i.created_at,
+              coalesce(v.total_score, 0)::int as total_score,
+              coalesce(v.voter_count, 0)::int as voter_count
+       from strategy_initiatives i
+       left join (
+         select initiative_id,
+                coalesce(sum(score), 0)::int as total_score,
+                count(distinct voter_id)::int as voter_count
+         from strategy_initiative_votes
+         group by initiative_id
+       ) v on v.initiative_id = i.id
+       where i.cycle_id = $1
+       order by i.created_at asc`,
+      [cycleId]
+    );
+
+    const initiativeIds = initiativesRes.rows.map((row) => row.id);
+    const linksByInitiative = {};
+    const commentsByInitiative = {};
+
+    if (initiativeIds.length) {
+      const linksRes = await query(
+        `select ig.initiative_id, ig.guideline_id, g.title as guideline_title
+         from strategy_initiative_guidelines ig
+         join strategy_guidelines g on g.id = ig.guideline_id
+         where ig.initiative_id = any($1::uuid[])
+         order by g.created_at asc`,
+        [initiativeIds]
+      );
+      linksRes.rows.forEach((row) => {
+        if (!linksByInitiative[row.initiative_id]) linksByInitiative[row.initiative_id] = [];
+        linksByInitiative[row.initiative_id].push({
+          guidelineId: row.guideline_id,
+          guidelineTitle: row.guideline_title
+        });
+      });
+
+      const commentsRes = await query(
+        `select c.id,
+                c.initiative_id,
+                c.body,
+                c.status,
+                c.created_at,
+                u.display_name as author_display_name,
+                u.email as author_email
+         from strategy_initiative_comments c
+         left join platform_users u on u.id = c.author_id
+         where c.initiative_id = any($1::uuid[])
+         order by c.created_at desc`,
+        [initiativeIds]
+      );
+      commentsRes.rows.forEach((row) => {
+        if (!commentsByInitiative[row.initiative_id]) commentsByInitiative[row.initiative_id] = [];
+        commentsByInitiative[row.initiative_id].push({
+          id: row.id,
+          body: row.body,
+          status: row.status || 'visible',
+          authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
+          authorEmail: row.author_email || null,
+          createdAt: row.created_at
+        });
+      });
+    }
+
+    res.json({
+      guidelines: guidelinesRes.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        status: row.status
+      })),
+      initiatives: initiativesRes.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        lineSide: normalizeLineSide(row.line_side) || 'auto',
+        mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
+        mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
+        createdAt: row.created_at,
+        totalScore: row.total_score,
+        voterCount: row.voter_count,
+        guidelineLinks: linksByInitiative[row.id] || [],
+        guidelineIds: (linksByInitiative[row.id] || []).map((item) => item.guidelineId),
+        commentCount: (commentsByInitiative[row.id] || []).length,
+        comments: commentsByInitiative[row.id] || []
+      }))
+    });
+  });
+
   app.put('/api/v1/admin/comments/:commentId/status', requireAuth, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const commentId = String(req.params.commentId || '').trim();
@@ -1208,6 +1754,34 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     res.json({ ok: true, commentId, status });
   });
 
+  app.put('/api/v1/admin/initiative-comments/:commentId/status', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const commentId = String(req.params.commentId || '').trim();
+    const status = String(req.body?.status || '').trim().toLowerCase();
+    if (!commentId) return res.status(400).json({ error: 'commentId required' });
+    if (!['visible', 'hidden'].includes(status)) return res.status(400).json({ error: 'invalid status' });
+
+    const context = await loadInitiativeCommentContext(commentId);
+    if (!context) return res.status(404).json({ error: 'comment not found' });
+    if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+
+    await query(
+      `update strategy_initiative_comments
+       set status = $1
+       where id = $2`,
+      [status, commentId]
+    );
+
+    broadcast({
+      type: 'v1.initiative.comment.status.updated',
+      institutionId: req.auth.institutionId,
+      initiativeId: context.initiative_id,
+      commentId,
+      status
+    });
+    res.json({ ok: true, commentId, status });
+  });
+
   app.put('/api/v1/admin/cycles/:cycleId/map-layout', requireAuth, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const cycleId = String(req.params.cycleId || '').trim();
@@ -1230,6 +1804,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
     const institutionPosition = req.body?.institutionPosition || null;
     const rawGuidelinePositions = Array.isArray(req.body?.guidelinePositions) ? req.body.guidelinePositions : [];
+    const rawInitiativePositions = Array.isArray(req.body?.initiativePositions) ? req.body.initiativePositions : [];
     const guidelinePositions = rawGuidelinePositions
       .map((item) => ({
         guidelineId: String(item?.guidelineId || '').trim(),
@@ -1237,12 +1812,19 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
         y: parseCoord(item?.y)
       }))
       .filter((item) => item.guidelineId && item.x !== null && item.y !== null);
+    const initiativePositions = rawInitiativePositions
+      .map((item) => ({
+        initiativeId: String(item?.initiativeId || '').trim(),
+        x: parseCoord(item?.x),
+        y: parseCoord(item?.y)
+      }))
+      .filter((item) => item.initiativeId && item.x !== null && item.y !== null);
 
     const hasInstitutionPosition =
       institutionPosition &&
       parseCoord(institutionPosition.x) !== null &&
       parseCoord(institutionPosition.y) !== null;
-    if (!hasInstitutionPosition && guidelinePositions.length === 0) {
+    if (!hasInstitutionPosition && guidelinePositions.length === 0 && initiativePositions.length === 0) {
       return res.status(400).json({ error: 'layout payload required' });
     }
 
@@ -1277,11 +1859,34 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
       }
     }
 
+    if (initiativePositions.length > 0) {
+      const initiativeIds = [...new Set(initiativePositions.map((item) => item.initiativeId))];
+      const validRes = await query(
+        `select id
+         from strategy_initiatives
+         where cycle_id = $1 and id = any($2::uuid[])`,
+        [cycleId, initiativeIds]
+      );
+      const validIds = new Set(validRes.rows.map((row) => row.id));
+      const invalid = initiativeIds.find((id) => !validIds.has(id));
+      if (invalid) return res.status(400).json({ error: 'initiative not in cycle' });
+
+      for (const item of initiativePositions) {
+        await query(
+          `update strategy_initiatives
+           set map_x = $1, map_y = $2
+           where id = $3 and cycle_id = $4`,
+          [item.x, item.y, item.initiativeId, cycleId]
+        );
+      }
+    }
+
     broadcast({ type: 'v1.map.layout.updated', institutionId: req.auth.institutionId, cycleId });
     res.json({
       ok: true,
       updatedInstitution: Boolean(hasInstitutionPosition),
-      updatedGuidelines: guidelinePositions.length
+      updatedGuidelines: guidelinePositions.length,
+      updatedInitiatives: initiativePositions.length
     });
   });
 
@@ -1341,6 +1946,75 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
     broadcast({ type: 'v1.guideline.updated', institutionId: req.auth.institutionId, guidelineId });
     res.json({ ok: true });
+  });
+
+  app.put('/api/v1/admin/initiatives/:initiativeId', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const initiativeId = String(req.params.initiativeId || '').trim();
+    const title = String(req.body?.title || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const status = String(req.body?.status || 'active').trim();
+    const lineSide = normalizeLineSide(req.body?.lineSide);
+    const guidelineIdsRaw = req.body?.guidelineIds;
+    if (!initiativeId || !title) return res.status(400).json({ error: 'initiativeId and title required' });
+    if (!['active', 'disabled', 'merged', 'hidden'].includes(status)) return res.status(400).json({ error: 'invalid status' });
+    if (!lineSide) return res.status(400).json({ error: 'invalid line side' });
+
+    const context = await loadInitiativeContext(initiativeId);
+    if (!context) return res.status(404).json({ error: 'initiative not found' });
+    if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+
+    let guidelineIds = [];
+    try {
+      guidelineIds = await validateInitiativeGuidelineAssignments({
+        cycleId: context.cycle_id,
+        guidelineIds: guidelineIdsRaw
+      });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid guideline assignment') });
+    }
+
+    await query(
+      `update strategy_initiatives
+       set title = $1,
+           description = $2,
+           status = $3,
+           line_side = $4,
+           updated_at = now()
+       where id = $5`,
+      [title, description || null, status, lineSide, initiativeId]
+    );
+
+    await query('delete from strategy_initiative_guidelines where initiative_id = $1', [initiativeId]);
+    for (const guidelineId of guidelineIds) {
+      await query(
+        `insert into strategy_initiative_guidelines (id, initiative_id, guideline_id)
+         values ($1, $2, $3)`,
+        [uuid(), initiativeId, guidelineId]
+      );
+    }
+
+    broadcast({ type: 'v1.initiative.updated', institutionId: req.auth.institutionId, initiativeId });
+    res.json({ ok: true });
+  });
+
+  app.delete('/api/v1/admin/initiatives/:initiativeId', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const initiativeId = String(req.params.initiativeId || '').trim();
+    if (!initiativeId) return res.status(400).json({ error: 'initiativeId required' });
+
+    const context = await loadInitiativeContext(initiativeId);
+    if (!context) return res.status(404).json({ error: 'initiative not found' });
+    if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+
+    await query(
+      `delete from strategy_initiatives
+       where id = $1 and cycle_id = $2`,
+      [initiativeId, context.cycle_id]
+    );
+
+    broadcast({ type: 'v1.initiative.deleted', institutionId: req.auth.institutionId, initiativeId });
+    res.json({ ok: true, initiativeId });
   });
 
   app.delete('/api/v1/admin/guidelines/:guidelineId', requireAuth, async (req, res) => {

@@ -1,9 +1,15 @@
-const steps = [
+﻿const steps = [
   {
     id: 'guidelines',
     title: 'Gairės',
     hint: 'Aptarimas, balsavimas, komentarai',
     prompt: 'Kur link judėsime ir kokią naudą kursime?'
+  },
+  {
+    id: 'initiatives',
+    title: 'Iniciatyvos',
+    hint: 'Veiksmai, balsavimas, komentarai',
+    prompt: 'Kokias konkrečias iniciatyvas įgyvendinsime?'
   }
 ];
 
@@ -50,7 +56,7 @@ const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
 const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open', 'review']);
-const ALLOWED_VIEWS = new Set(['guidelines', 'admin', 'map', 'about']);
+const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'about']);
 const ADMIN_FRAME_HEIGHT_EVENT = 'uzt-admin-height';
 
 const elements = {
@@ -78,6 +84,7 @@ const state = {
   cycle: null,
   summary: null,
   guidelines: [],
+  initiatives: [],
   mapData: null,
   mapError: '',
   token: null,
@@ -86,6 +93,7 @@ const state = {
   accountContext: null,
   context: null,
   userVotes: {},
+  mapLayer: 'guidelines',
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapTransform: { x: 120, y: 80, scale: 1 }
 };
@@ -246,6 +254,7 @@ function clearSession() {
   state.accountContext = null;
   state.context = null;
   state.userVotes = {};
+  state.initiatives = [];
   localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
@@ -283,7 +292,7 @@ function cycleIsWritable() {
 }
 
 function voteBudget() {
-  return Number(state.context?.rules?.voteBudget || 10);
+  return Number(state.context?.rules?.voteBudget || 20);
 }
 
 function minPerGuideline() {
@@ -292,6 +301,14 @@ function minPerGuideline() {
 
 function maxPerGuideline() {
   return Number(state.context?.rules?.maxPerGuideline ?? 5);
+}
+
+function minPerInitiative() {
+  return Number(state.context?.rules?.minPerInitiative ?? 0);
+}
+
+function maxPerInitiative() {
+  return Number(state.context?.rules?.maxPerInitiative ?? 5);
 }
 
 function usedVotesTotal() {
@@ -323,6 +340,12 @@ function estimateGuidelineNodeHeight(totalScore) {
   const score = Math.max(0, Number(totalScore || 0));
   const voteRows = Math.max(1, Math.ceil(score / MAP_VOTE_SQUARES_PER_ROW));
   return 104 + voteRows * 14;
+}
+
+function estimateInitiativeNodeHeight(totalScore) {
+  const score = Math.max(0, Number(totalScore || 0));
+  const voteRows = Math.max(1, Math.ceil(score / MAP_VOTE_SQUARES_PER_ROW));
+  return 110 + voteRows * 14;
 }
 
 function resolveAutoSide(fromNode, toNode) {
@@ -380,6 +403,7 @@ function toUserMessage(error) {
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
     'cycle not writable': 'Ciklas nebeleidžia redaguoti (tik skaitymas).',
     'guideline voting disabled': 'Ši gairė išjungta: balsuoti negalima.',
+    'initiative voting disabled': 'Si iniciatyva isjungta: balsuoti negalima.',
     'vote budget exceeded': 'Viršytas balsų biudžetas.',
     forbidden: 'Veiksmas neleidžiamas.',
     'membership inactive': 'Narystė neaktyvi.',
@@ -389,8 +413,13 @@ function toUserMessage(error) {
     'invite revoked': 'Kvietimas atšauktas.',
     'invite already used': 'Kvietimas jau panaudotas.',
     'guidelineId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
+    'initiativeId and score(0..5) required': 'Balsas turi buti tarp 0 ir 5.',
+    'initiativeId and body required': 'Komentaras negali buti tuscias.',
     'layout payload required': 'Nepateikti žemėlapio išdėstymo duomenys.',
     'guideline not in cycle': 'Gairė nepriklauso šiam ciklui.',
+    'initiative not in cycle': 'Iniciatyva nepriklauso siam ciklui.',
+    'initiative not found': 'Iniciatyva nerasta.',
+    'at least one guideline required': 'Iniciatyva turi buti priskirta bent vienai gairei.',
     'name required': 'Nurodykite pavadinimą.',
     'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.'
   };
@@ -429,15 +458,17 @@ async function api(path, { method = 'GET', body = null, auth = true } = {}) {
 
 async function loadPublicData() {
   const base = `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current`;
-  const [summaryPayload, guidelinesPayload] = await Promise.all([
+  const [summaryPayload, guidelinesPayload, initiativesPayload] = await Promise.all([
     api(`${base}/summary`, { auth: false }),
-    api(`${base}/guidelines`, { auth: false })
+    api(`${base}/guidelines`, { auth: false }),
+    api(`${base}/initiatives`, { auth: false })
   ]);
 
-  state.institution = guidelinesPayload.institution || summaryPayload.institution || null;
-  state.cycle = guidelinesPayload.cycle || summaryPayload.cycle || null;
+  state.institution = initiativesPayload.institution || guidelinesPayload.institution || summaryPayload.institution || null;
+  state.cycle = initiativesPayload.cycle || guidelinesPayload.cycle || summaryPayload.cycle || null;
   state.summary = summaryPayload.summary || null;
   state.guidelines = Array.isArray(guidelinesPayload.guidelines) ? guidelinesPayload.guidelines : [];
+  state.initiatives = Array.isArray(initiativesPayload.initiatives) ? initiativesPayload.initiatives : [];
 }
 
 async function refreshGuidelines() {
@@ -448,6 +479,16 @@ async function refreshGuidelines() {
   state.institution = payload.institution || state.institution;
   state.cycle = payload.cycle || state.cycle;
   state.guidelines = Array.isArray(payload.guidelines) ? payload.guidelines : [];
+}
+
+async function refreshInitiatives() {
+  const payload = await api(
+    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/initiatives`,
+    { auth: false }
+  );
+  state.institution = payload.institution || state.institution;
+  state.cycle = payload.cycle || state.cycle;
+  state.initiatives = Array.isArray(payload.initiatives) ? payload.initiatives : [];
 }
 
 async function refreshSummary() {
@@ -482,8 +523,11 @@ async function loadMemberContext() {
     if (context.cycle?.id) {
       const votesPayload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycle.id)}/my-votes`);
       const nextVotes = {};
-      (votesPayload.votes || []).forEach((vote) => {
+      (votesPayload.guidelineVotes || votesPayload.votes || []).forEach((vote) => {
         nextVotes[vote.guidelineId] = Number(vote.score || 0);
+      });
+      (votesPayload.initiativeVotes || []).forEach((vote) => {
+        nextVotes[vote.initiativeId] = Number(vote.score || 0);
       });
       state.userVotes = nextVotes;
     } else {
@@ -516,6 +560,7 @@ async function bootstrap() {
       state.cycle = null;
       state.summary = null;
       state.guidelines = [];
+      state.initiatives = [];
       state.userVotes = {};
       return;
     }
@@ -663,6 +708,7 @@ function renderSteps() {
   const canOpenAdmin = canOpenAdminView();
   const items = [
     { id: 'guidelines', icon: '◍', title: 'Gairės', hint: 'Aptarimas, balsavimas, komentarai', locked: false },
+    { id: 'initiatives', icon: '✦', title: 'Iniciatyvos', hint: 'Veiksmai, balsai, komentarai', locked: false },
     { id: 'admin', icon: '⚙', title: 'Admin', hint: 'Kvietimai, ciklas, rezultatai', locked: !canOpenAdmin },
     { id: 'map', icon: '⌗', title: 'Strategijų žemėlapis', hint: 'Ryšiai ir gairių visuma', locked: false },
     { id: 'about', icon: 'ℹ', title: 'Apie mus', hint: 'Iniciatyvos aprašymas', locked: false }
@@ -809,10 +855,28 @@ function fitMapToCurrentNodes(viewport, world) {
 function layoutStrategyMap() {
   const institutions = Array.isArray(state.mapData?.institutions) ? state.mapData.institutions : [];
   const selectedSlug = normalizeSlug(state.institutionSlug);
-  if (!selectedSlug) return { nodes: [], edges: [], width: 1200, height: 820, institution: null };
+  if (!selectedSlug) {
+    return {
+      nodes: [],
+      guidelineEdges: [],
+      initiativeEdges: [],
+      width: 1200,
+      height: 820,
+      institution: null
+    };
+  }
 
   const institution = institutions.find((item) => normalizeSlug(item.slug) === selectedSlug);
-  if (!institution) return { nodes: [], edges: [], width: 1200, height: 820, institution: null };
+  if (!institution) {
+    return {
+      nodes: [],
+      guidelineEdges: [],
+      initiativeEdges: [],
+      width: 1200,
+      height: 820,
+      institution: null
+    };
+  }
 
   const toNumberOrNull = (value) => {
     const parsed = Number(value);
@@ -820,7 +884,8 @@ function layoutStrategyMap() {
   };
 
   const nodes = [];
-  const edges = [];
+  const guidelineEdges = [];
+  const initiativeEdges = [];
   const baseX = 140;
   const institutionNodeId = `inst-${institution.id}`;
   const institutionX = toNumberOrNull(institution.cycle?.mapX) ?? baseX;
@@ -838,68 +903,109 @@ function layoutStrategyMap() {
   });
 
   const guidelines = Array.isArray(institution.guidelines) ? institution.guidelines : [];
-  if (!guidelines.length) {
-    return { nodes, edges, width: 1600, height: 900, institution };
-  }
+  const initiatives = Array.isArray(institution.initiatives) ? institution.initiatives : [];
 
+  const guidelineNodeIdByEntity = {};
   const guidelineById = Object.fromEntries(guidelines.map((g) => [g.id, g]));
-  const childrenByParent = {};
-  guidelines.forEach((guideline) => {
-    const parentId = guideline.parentGuidelineId;
-    if (!parentId || !guidelineById[parentId]) return;
-    if (!childrenByParent[parentId]) childrenByParent[parentId] = [];
-    childrenByParent[parentId].push(guideline);
-  });
-
-  const roots = guidelines.filter((guideline) => {
-    const parentId = guideline.parentGuidelineId;
-    return guideline.relationType !== 'child' || !parentId || !guidelineById[parentId];
-  });
-
-  const visited = new Set();
-  let nextY = institutionY + 170;
-  const placeNodeTree = (guideline, depth, parentNodeId) => {
-    if (visited.has(guideline.id)) return;
-    visited.add(guideline.id);
-
-    const nodeId = `guide-${guideline.id}`;
-    const defaultX = institutionX + 46 + depth * 250;
-    const defaultY = nextY;
-    nextY += 100;
-
-    const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
-    const nodeY = toNumberOrNull(guideline.mapY) ?? defaultY;
-    nodes.push({
-      id: nodeId,
-      kind: 'guideline',
-      entityId: guideline.id,
-      cycleId: institution.cycle?.id || null,
-      x: nodeX,
-      y: nodeY,
-      w: 220,
-      h: estimateGuidelineNodeHeight(guideline.totalScore),
-      institution,
-      guideline
+  if (guidelines.length) {
+    const childrenByParent = {};
+    guidelines.forEach((guideline) => {
+      const parentId = guideline.parentGuidelineId;
+      if (!parentId || !guidelineById[parentId]) return;
+      if (!childrenByParent[parentId]) childrenByParent[parentId] = [];
+      childrenByParent[parentId].push(guideline);
     });
 
-    if (parentNodeId) {
-      edges.push({ from: parentNodeId, to: nodeId, type: 'child' });
-    } else {
-      edges.push({
-        from: institutionNodeId,
-        to: nodeId,
-        type: guideline.relationType === 'orphan' ? 'orphan' : 'root'
+    const roots = guidelines.filter((guideline) => {
+      const parentId = guideline.parentGuidelineId;
+      return guideline.relationType !== 'child' || !parentId || !guidelineById[parentId];
+    });
+
+    const visited = new Set();
+    let nextY = institutionY + 170;
+    const placeNodeTree = (guideline, depth, parentNodeId) => {
+      if (visited.has(guideline.id)) return;
+      visited.add(guideline.id);
+
+      const nodeId = `guide-${guideline.id}`;
+      const defaultX = institutionX + 46 + depth * 250;
+      const defaultY = nextY;
+      nextY += 100;
+
+      const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
+      const nodeY = toNumberOrNull(guideline.mapY) ?? defaultY;
+      const node = {
+        id: nodeId,
+        kind: 'guideline',
+        entityId: guideline.id,
+        cycleId: institution.cycle?.id || null,
+        x: nodeX,
+        y: nodeY,
+        w: 220,
+        h: estimateGuidelineNodeHeight(guideline.totalScore),
+        institution,
+        guideline
+      };
+      nodes.push(node);
+      guidelineNodeIdByEntity[guideline.id] = nodeId;
+
+      if (parentNodeId) {
+        guidelineEdges.push({ from: parentNodeId, to: nodeId, type: 'child', layer: 'guidelines' });
+      } else {
+        guidelineEdges.push({
+          from: institutionNodeId,
+          to: nodeId,
+          type: guideline.relationType === 'orphan' ? 'orphan' : 'root',
+          layer: 'guidelines'
+        });
+      }
+
+      const children = childrenByParent[guideline.id] || [];
+      children.forEach((child) => placeNodeTree(child, depth + 1, nodeId));
+    };
+
+    roots.forEach((root) => placeNodeTree(root, 0, null));
+    guidelines.forEach((guideline) => {
+      if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
+    });
+  }
+
+  if (initiatives.length) {
+    let floatingY = institutionY + 120;
+    initiatives.forEach((initiative, index) => {
+      const nodeId = `initiative-${initiative.id}`;
+      const defaultX = institutionX + 520 + (index % 4) * 260;
+      const defaultY = floatingY + Math.floor(index / 4) * 170;
+      const nodeX = toNumberOrNull(initiative.mapX) ?? defaultX;
+      const nodeY = toNumberOrNull(initiative.mapY) ?? defaultY;
+      const node = {
+        id: nodeId,
+        kind: 'initiative',
+        entityId: initiative.id,
+        cycleId: institution.cycle?.id || null,
+        x: nodeX,
+        y: nodeY,
+        w: 250,
+        h: estimateInitiativeNodeHeight(initiative.totalScore),
+        institution,
+        initiative
+      };
+      nodes.push(node);
+
+      const linkedGuidelineIds = Array.isArray(initiative.guidelineIds) ? initiative.guidelineIds : [];
+      linkedGuidelineIds.forEach((guidelineId) => {
+        const targetNodeId = guidelineNodeIdByEntity[guidelineId];
+        if (!targetNodeId) return;
+        initiativeEdges.push({
+          from: nodeId,
+          to: targetNodeId,
+          type: 'initiative-link',
+          layer: 'initiatives',
+          lineSide: normalizeLineSide(initiative.lineSide)
+        });
       });
-    }
-
-    const children = childrenByParent[guideline.id] || [];
-    children.forEach((child) => placeNodeTree(child, depth + 1, nodeId));
-  };
-
-  roots.forEach((root) => placeNodeTree(root, 0, null));
-  guidelines.forEach((guideline) => {
-    if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
-  });
+    });
+  }
 
   const minLeft = nodes.reduce((acc, node) => Math.min(acc, node.x), Infinity);
   const minTop = nodes.reduce((acc, node) => Math.min(acc, node.y), Infinity);
@@ -922,7 +1028,14 @@ function layoutStrategyMap() {
     : 920;
   const width = Math.max(1800, rawWidth);
   const height = Math.max(920, rawHeight);
-  return { nodes, edges, width, height, institution };
+  return {
+    nodes,
+    guidelineEdges,
+    initiativeEdges,
+    width,
+    height,
+    institution
+  };
 }
 
 function relationLabel(relationType) {
@@ -1005,6 +1118,23 @@ async function persistMapNodePosition(nodeElement) {
       method: 'PUT',
       body: {
         guidelinePositions: [{ guidelineId: entityId, x: Math.round(x), y: Math.round(y) }]
+      }
+    });
+    return;
+  }
+
+  if (kind === 'initiative' && entityId) {
+    const initiative = Array.isArray(institution.initiatives)
+      ? institution.initiatives.find((item) => item.id === entityId)
+      : null;
+    if (initiative) {
+      initiative.mapX = Math.round(x);
+      initiative.mapY = Math.round(y);
+    }
+    await api(`/api/v1/admin/cycles/${encodeURIComponent(cycleId)}/map-layout`, {
+      method: 'PUT',
+      body: {
+        initiativePositions: [{ initiativeId: entityId, x: Math.round(x), y: Math.round(y) }]
       }
     });
   }
@@ -1114,16 +1244,16 @@ function bindMapInteractions(viewport, world, { editable }) {
 
 function renderMapView() {
   if (state.loading && !state.mapData) {
-    elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategijų žemėlapis...</strong></div>';
+    elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategiju zemelapis...</strong></div>';
     return;
   }
 
   if (state.mapError) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Nepavyko įkelti strategijų žemėlapio</strong>
+        <strong>Nepavyko ikelti strategiju zemelapio</strong>
         <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapError)}</p>
-        <button id="retryMapLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar kartą</button>
+        <button id="retryMapLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar karta</button>
       </div>
     `;
     const retryBtn = elements.stepView.querySelector('#retryMapLoadBtn');
@@ -1134,8 +1264,8 @@ function renderMapView() {
   if (!Array.isArray(state.mapData?.institutions) || !state.mapData.institutions.length) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Strategijų žemėlapis dar tuščias</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Kai institucijos patvirtins ciklus (Final/Archived), jų gairės atsiras šiame žemėlapyje.</p>
+        <strong>Strategiju zemelapis dar tuscias</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Kai institucijos tures strategijas, jos atsiras siame zemelapyje.</p>
       </div>
     `;
     return;
@@ -1145,25 +1275,43 @@ function renderMapView() {
   if (!graph.institution) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Pasirinkite instituciją</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Žemėlapyje rodoma tik viršuje pasirinktos institucijos strategija.</p>
+        <strong>Pasirinkite institucija</strong>
+        <p class="prompt" style="margin: 8px 0 0;">Zemelapyje rodoma tik virsuje pasirinktos institucijos strategija.</p>
       </div>
     `;
     return;
   }
 
+  const hasInitiativeNodes = graph.nodes.some((node) => node.kind === 'initiative');
+  if (state.mapLayer !== 'guidelines' && state.mapLayer !== 'initiatives') {
+    state.mapLayer = 'guidelines';
+  }
+  if (state.mapLayer === 'initiatives' && !hasInitiativeNodes) {
+    state.mapLayer = 'guidelines';
+  }
+  const activeLayer = state.mapLayer;
+
   const editable = canEditMapLayout()
     && normalizeSlug(graph.institution.slug) === normalizeSlug(state.institutionSlug)
     && Boolean(graph.institution.cycle?.id);
   const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
-  const edgeMarkup = graph.edges.map((edge) => {
+  const guidelineEdgeMarkup = graph.guidelineEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
     if (!fromNode || !toNode) return '';
     const lineSide = fromNode.kind === 'guideline'
       ? normalizeLineSide(fromNode.guideline?.lineSide)
       : 'auto';
-    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
+    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)} edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
+  }).join('');
+  const initiativeEdgeMarkup = graph.initiativeEdges.map((edge) => {
+    const fromNode = nodeById[edge.from];
+    const toNode = nodeById[edge.to];
+    if (!fromNode || !toNode) return '';
+    const lineSide = fromNode.kind === 'initiative'
+      ? normalizeLineSide(fromNode.initiative?.lineSide)
+      : 'auto';
+    return `<path class="strategy-map-edge edge-initiative edge-initiative-layer" data-layer="initiatives" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
   }).join('');
 
   const nodeMarkup = graph.nodes.map((node) => {
@@ -1184,60 +1332,121 @@ function renderMapView() {
           <strong>${escapeHtml(node.institution.name)}</strong>
           <small class="institution-subtitle">Skaitmenizacijos strategija</small>
           <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
-          <small class="institution-cycle-label">Strategijos ciklo būsena</small>
+          <small class="institution-cycle-label">Strategijos ciklo busena</small>
         </article>
       `;
     }
 
-    const relation = String(node.guideline.relationType || 'orphan');
-    const relationText = relationLabel(relation);
-    const score = Number(node.guideline.totalScore || 0);
-    const voters = Math.max(0, Number(node.guideline.voterCount || 0));
+    if (node.kind === 'guideline') {
+      const relation = String(node.guideline.relationType || 'orphan');
+      const relationText = relationLabel(relation);
+      const score = Number(node.guideline.totalScore || 0);
+      const voters = Math.max(0, Number(node.guideline.voterCount || 0));
+      const mapCommentCount = Math.max(
+        0,
+        Array.isArray(node.guideline.comments)
+          ? node.guideline.comments.length
+          : Number(node.guideline.commentCount || 0)
+      );
+      const scoreForSquares = Math.max(0, Math.round(score));
+      const voteSquares = scoreForSquares
+        ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
+        : '<span class="map-vote-empty">Dar nebalsuota</span>';
+
+      return `
+        <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}"
+                 data-layer="guidelines"
+                 data-node-id="${escapeHtml(node.id)}"
+                 data-kind="guideline"
+                 data-entity-id="${escapeHtml(node.entityId)}"
+                 data-cycle-id="${escapeHtml(node.cycleId || '')}"
+                 data-x="${node.x}"
+                 data-y="${node.y}"
+                 data-w="${node.w}"
+                 data-h="${node.h}"
+                 data-draggable="${editable && activeLayer === 'guidelines' ? 'true' : 'false'}"
+                 style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
+          <div class="map-node-head">
+            <h4>${escapeHtml(node.guideline.title)}</h4>
+            <button
+              type="button"
+              class="map-comment-btn"
+              data-map-comment-kind="guideline"
+              data-map-comment-id="${escapeHtml(node.guideline.id)}"
+              data-map-interactive="true"
+              aria-label="Rodyti aprasyma ir komentarus"
+              title="Rodyti aprasyma ir komentarus"
+            >
+              <span class="map-comment-icon" aria-hidden="true">??</span>
+              <span>${mapCommentCount}</span>
+            </button>
+          </div>
+          <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
+          <div class="map-vote-row">
+            <span class="map-vote-chip" title="Bendras balas">
+              <span class="map-vote-icon" aria-hidden="true">?</span>
+              <strong>${score}</strong>
+            </span>
+            <span class="map-vote-chip" title="Balsuotojai">
+              <span class="map-vote-icon" aria-hidden="true">?</span>
+              <strong>${voters}</strong>
+            </span>
+          </div>
+          <div class="map-vote-squares">${voteSquares}</div>
+        </article>
+      `;
+    }
+
+    const score = Number(node.initiative.totalScore || 0);
+    const voters = Math.max(0, Number(node.initiative.voterCount || 0));
     const mapCommentCount = Math.max(
       0,
-      Array.isArray(node.guideline.comments)
-        ? node.guideline.comments.length
-        : Number(node.guideline.commentCount || 0)
+      Array.isArray(node.initiative.comments)
+        ? node.initiative.comments.length
+        : Number(node.initiative.commentCount || 0)
     );
+    const linkedCount = Array.isArray(node.initiative.guidelineIds) ? node.initiative.guidelineIds.length : 0;
     const scoreForSquares = Math.max(0, Math.round(score));
     const voteSquares = scoreForSquares
-      ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
+      ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square initiative-square" aria-hidden="true"></span>').join('')
       : '<span class="map-vote-empty">Dar nebalsuota</span>';
 
     return `
-      <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}"
+      <article class="strategy-map-node initiative-node status-${escapeHtml(String(node.initiative.status || 'active').toLowerCase())}"
+               data-layer="initiatives"
                data-node-id="${escapeHtml(node.id)}"
-               data-kind="guideline"
+               data-kind="initiative"
                data-entity-id="${escapeHtml(node.entityId)}"
                data-cycle-id="${escapeHtml(node.cycleId || '')}"
                data-x="${node.x}"
                data-y="${node.y}"
                data-w="${node.w}"
                data-h="${node.h}"
-               data-draggable="${editable ? 'true' : 'false'}"
+               data-draggable="${editable && activeLayer === 'initiatives' ? 'true' : 'false'}"
                style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
         <div class="map-node-head">
-          <h4>${escapeHtml(node.guideline.title)}</h4>
+          <h4>${escapeHtml(node.initiative.title)}</h4>
           <button
             type="button"
             class="map-comment-btn"
-            data-map-comment-guideline-id="${escapeHtml(node.guideline.id)}"
+            data-map-comment-kind="initiative"
+            data-map-comment-id="${escapeHtml(node.initiative.id)}"
             data-map-interactive="true"
-            aria-label="Rodyti aprašymą ir komentarus"
-            title="Rodyti aprašymą ir komentarus"
+            aria-label="Rodyti aprasyma ir komentarus"
+            title="Rodyti aprasyma ir komentarus"
           >
-            <span class="map-comment-icon" aria-hidden="true">💬</span>
+            <span class="map-comment-icon" aria-hidden="true">??</span>
             <span>${mapCommentCount}</span>
           </button>
         </div>
-        <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
+        <small>Iniciatyva · Susieta su gairių: ${linkedCount}</small>
         <div class="map-vote-row">
           <span class="map-vote-chip" title="Bendras balas">
-            <span class="map-vote-icon" aria-hidden="true">◉</span>
+            <span class="map-vote-icon" aria-hidden="true">?</span>
             <strong>${score}</strong>
           </span>
           <span class="map-vote-chip" title="Balsuotojai">
-            <span class="map-vote-icon" aria-hidden="true">◌</span>
+            <span class="map-vote-icon" aria-hidden="true">?</span>
             <strong>${voters}</strong>
           </span>
         </div>
@@ -1248,28 +1457,35 @@ function renderMapView() {
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>Strategijų žemėlapis</h2>
+      <h2>Strategiju zemelapis</h2>
       <div class="header-stack step-header-actions">
-        <button id="mapResetBtn" class="btn btn-ghost">Atstatyti vaizdą</button>
+        <div class="map-layer-toggle">
+          <button id="mapLayerGuidelinesBtn" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">Gairės</button>
+          <button id="mapLayerInitiativesBtn" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
+        </div>
+        <button id="mapResetBtn" class="btn btn-ghost">Atstatyti vaizda</button>
         <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
-        ${editable ? '<span class="tag tag-main">Admin: galite tempti korteles</span>' : ''}
+        ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvu' : 'gairiu'} korteles</span>` : ''}
       </div>
     </div>
-    <p class="prompt">Peržiūrėkite pasirinktos institucijos patvirtintą strategiją: tėvinės/vaikinės gairės ir jų ryšiai. Temkite foną pele ir artinkite pelės ratuku.</p>
-    <section id="strategyMapViewport" class="strategy-map-viewport">
+    <p class="prompt">Perziurekite pasirinktos institucijos strategijos sluoksnius. Iniciatyvu sluoksnyje gairiu korteles lieka matomos, bet uzrakintos.</p>
+    <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer}">
       <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
-        <svg class="strategy-map-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
-          ${edgeMarkup}
+        <svg class="strategy-map-lines guideline-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
+          ${guidelineEdgeMarkup}
+        </svg>
+        <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
+          ${initiativeEdgeMarkup}
         </svg>
         ${nodeMarkup}
       </div>
     </section>
     <section id="mapCommentModal" class="map-comment-modal" hidden>
-      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uždaryti"></button>
+      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uzdaryti"></button>
       <article class="map-comment-card" role="dialog" aria-modal="true" aria-labelledby="mapCommentTitle">
         <div class="header-row">
-          <h3 id="mapCommentTitle">Gairė</h3>
-          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uždaryti</button>
+          <h3 id="mapCommentTitle">Elementas</h3>
+          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uzdaryti</button>
         </div>
         <p id="mapCommentDescription" class="prompt map-comment-description"></p>
         <strong>Komentarai</strong>
@@ -1285,27 +1501,39 @@ function renderMapView() {
   const commentTitle = elements.stepView.querySelector('#mapCommentTitle');
   const commentDescription = elements.stepView.querySelector('#mapCommentDescription');
   const commentList = elements.stepView.querySelector('#mapCommentList');
-  const guidelineById = new Map(
-    graph.nodes
-      .filter((node) => node.kind === 'guideline' && node.guideline?.id)
-      .map((node) => [String(node.guideline.id), node.guideline])
-  );
+  const mapCommentItems = new Map();
+  graph.nodes.forEach((node) => {
+    if (node.kind === 'guideline' && node.guideline?.id) {
+      mapCommentItems.set(`guideline:${node.guideline.id}`, {
+        title: node.guideline.title || 'Gaire',
+        description: node.guideline.description || 'Aprasymas nepateiktas.',
+        comments: Array.isArray(node.guideline.comments) ? node.guideline.comments : []
+      });
+    }
+    if (node.kind === 'initiative' && node.initiative?.id) {
+      mapCommentItems.set(`initiative:${node.initiative.id}`, {
+        title: node.initiative.title || 'Iniciatyva',
+        description: node.initiative.description || 'Aprasymas nepateiktas.',
+        comments: Array.isArray(node.initiative.comments) ? node.initiative.comments : []
+      });
+    }
+  });
 
   const closeMapCommentModal = () => {
     if (!commentModal) return;
     commentModal.hidden = true;
   };
 
-  const openMapCommentModal = (guidelineId) => {
+  const openMapCommentModal = (kind, itemId) => {
     if (!commentModal || !commentTitle || !commentDescription || !commentList) return;
-    const guideline = guidelineById.get(String(guidelineId || ''));
-    if (!guideline) return;
-    const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
-    commentTitle.textContent = guideline.title || 'Gairė';
-    commentDescription.textContent = guideline.description || 'Aprašymas nepateiktas.';
+    const payload = mapCommentItems.get(`${String(kind || '').trim()}:${String(itemId || '').trim()}`);
+    if (!payload) return;
+    const comments = Array.isArray(payload.comments) ? payload.comments : [];
+    commentTitle.textContent = payload.title;
+    commentDescription.textContent = payload.description;
     commentList.innerHTML = comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : '<li class="comment-item comment-item-empty">Komentarų dar nėra.</li>';
+      : '<li class="comment-item comment-item-empty">Komentaru dar nera.</li>';
     commentModal.hidden = false;
   };
 
@@ -1314,13 +1542,30 @@ function renderMapView() {
       button.addEventListener('click', closeMapCommentModal);
     });
   }
-  elements.stepView.querySelectorAll('[data-map-comment-guideline-id]').forEach((button) => {
+  elements.stepView.querySelectorAll('[data-map-comment-id]').forEach((button) => {
     button.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      openMapCommentModal(button.dataset.mapCommentGuidelineId);
+      openMapCommentModal(button.dataset.mapCommentKind, button.dataset.mapCommentId);
     });
   });
+
+  const layerGuidelinesBtn = elements.stepView.querySelector('#mapLayerGuidelinesBtn');
+  const layerInitiativesBtn = elements.stepView.querySelector('#mapLayerInitiativesBtn');
+  if (layerGuidelinesBtn) {
+    layerGuidelinesBtn.addEventListener('click', () => {
+      if (state.mapLayer === 'guidelines') return;
+      state.mapLayer = 'guidelines';
+      renderStepView();
+    });
+  }
+  if (layerInitiativesBtn) {
+    layerInitiativesBtn.addEventListener('click', () => {
+      if (state.mapLayer === 'initiatives') return;
+      state.mapLayer = 'initiatives';
+      renderStepView();
+    });
+  }
 
   if (viewport && world) {
     syncMapNodeBounds(world);
@@ -1597,9 +1842,287 @@ function renderGuidelineCard(guideline, options) {
     </article>
   `;
 }
+
+function resolveInitiativeGuidelineNames(initiative) {
+  const links = Array.isArray(initiative.guidelineLinks) ? initiative.guidelineLinks : [];
+  if (links.length) {
+    return links.map((link) => String(link.guidelineTitle || '').trim()).filter(Boolean);
+  }
+  const idSet = new Set(Array.isArray(initiative.guidelineIds) ? initiative.guidelineIds : []);
+  if (!idSet.size) return [];
+  return state.guidelines
+    .filter((guideline) => idSet.has(guideline.id))
+    .map((guideline) => guideline.title)
+    .filter(Boolean);
+}
+
+function renderInitiativeCard(initiative, options) {
+  const userScore = Number(state.userVotes[initiative.id] || 0);
+  const comments = Array.isArray(initiative.comments) ? initiative.comments : [];
+  const safeComments = comments.length
+    ? comments.map((comment) => renderCommentItem(comment)).join('')
+    : '<li class="comment-item comment-item-empty">Dar nera komentaru.</li>';
+  const initiativeStatus = String(initiative.status || 'active').toLowerCase();
+  const votingDisabled = initiativeStatus === 'disabled';
+  const linkedNames = resolveInitiativeGuidelineNames(initiative);
+
+  const budget = voteBudget();
+  const usedWithoutCurrent = usedVotesTotal() - userScore;
+  const maxAllowed = clamp(
+    Math.min(maxPerInitiative(), budget - usedWithoutCurrent),
+    minPerInitiative(),
+    maxPerInitiative()
+  );
+  const canMinus = options.member && options.writable && !votingDisabled && !state.busy && userScore > minPerInitiative();
+  const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
+
+  return `
+    <article class="card ${votingDisabled ? 'guideline-disabled' : ''}">
+      <div class="card-top">
+        <div class="title-row">
+          <h4>${escapeHtml(initiative.title)}</h4>
+          <span class="tag">Iniciatyva</span>
+          ${votingDisabled ? '<span class="tag tag-disabled">Isjungta</span>' : ''}
+        </div>
+        <p>${escapeHtml(initiative.description || 'Be paaiskinimo')}</p>
+        <div class="header-stack">
+          ${(linkedNames.length
+            ? linkedNames.map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join('')
+            : '<span class="tag">Nepriskirta gairiu</span>')}
+        </div>
+      </div>
+      ${options.member ? `
+        <div class="vote-panel">
+          <div class="vote-panel-head">
+            <span class="vote-label">Tavo balas</span>
+            <span class="tag">Balsuotoju: ${Number(initiative.voterCount || 0)}</span>
+          </div>
+          <div class="vote-panel-body">
+            <div class="vote-controls">
+              <button class="vote-btn" data-action="initiative-vote-minus" data-id="${escapeHtml(initiative.id)}" aria-label="Atimti balsa" ${canMinus ? '' : 'disabled'}>−</button>
+              <span class="vote-score">${userScore}</span>
+              <button class="vote-btn" data-action="initiative-vote-plus" data-id="${escapeHtml(initiative.id)}" aria-label="Prideti balsa" ${canPlus ? '' : 'disabled'}>+</button>
+            </div>
+            <div class="vote-total">Bendras balas: <strong>${Number(initiative.totalScore || 0)}</strong></div>
+            ${votingDisabled ? '<div class="vote-total">Balsavimas isjungtas administratoriaus</div>' : ''}
+          </div>
+        </div>
+      ` : `
+        <div class="vote-panel">
+          <div class="vote-panel-head">
+            <span class="vote-label">Viesas rezimas</span>
+            <span class="tag">Balsuotoju: ${Number(initiative.voterCount || 0)}</span>
+          </div>
+          <div class="vote-panel-body">
+            <div class="vote-total"><strong>Bendras balas: ${Number(initiative.totalScore || 0)}</strong></div>
+            <div class="vote-total">Rodomi tik agreguoti duomenys</div>
+          </div>
+        </div>
+      `}
+      <div class="card-section">
+        <strong>Komentarai</strong>
+        <ul class="mini-list">${safeComments}</ul>
+        ${options.member && options.writable ? `
+          <form data-action="initiative-comment" data-id="${escapeHtml(initiative.id)}" class="inline-form">
+            <input type="text" name="comment" placeholder="Irasykite komentara" required ${state.busy ? 'disabled' : ''}/>
+            <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Prideti</button>
+          </form>
+        ` : '<p class="prompt" style="margin: 8px 0 0;">Viesai rodomi komentarai. Prisijunkite, jei norite komentuoti.</p>'}
+      </div>
+    </article>
+  `;
+}
+
+function renderInitiativesView() {
+  if (!state.institutionSlug) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Pasirinkite institucija</strong>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.loading) {
+    elements.stepView.innerHTML = '<div class="card"><strong>Kraunami duomenys...</strong></div>';
+    return;
+  }
+
+  if (state.error) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>Nepavyko ikelti duomenu</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar karta</button>
+      </div>
+    `;
+    const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
+    if (retryBtn) retryBtn.addEventListener('click', bootstrap);
+    return;
+  }
+
+  const member = isLoggedIn();
+  const authenticated = isAuthenticated();
+  const writable = member && cycleIsWritable();
+  const budget = voteBudget();
+  const used = member ? usedVotesTotal() : 0;
+  const remaining = Math.max(0, budget - used);
+  const initiatives = Array.isArray(state.initiatives) ? state.initiatives : [];
+  const eligibleGuidelines = state.guidelines.filter((guideline) => {
+    const status = String(guideline.status || 'active').toLowerCase();
+    return status === 'active' || status === 'disabled' || status === 'merged';
+  });
+
+  const stats = [
+    `Busena: ${String(state.cycle?.state || '-').toUpperCase()}`,
+    `Iniciatyvos: ${Number(state.summary?.initiatives_count || initiatives.length || 0)}`,
+    `Komentarai: ${Number(state.summary?.initiative_comments_count || 0)}`,
+    `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
+  ];
+
+  elements.stepView.innerHTML = `
+    <div class="step-header">
+      <h2>Iniciatyvos</h2>
+      <div class="header-stack step-header-actions">
+        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Eksportuoti santrauka</button>
+        <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
+        ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viesas rezimas</span>'}
+      </div>
+    </div>
+
+    <p class="prompt">${escapeHtml(steps[1].prompt)}</p>
+    ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
+
+    <div class="header-stack" style="margin-bottom: 14px;">
+      ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
+    </div>
+
+    <section id="initiativeSection" class="guideline-group">
+      ${initiatives.length
+        ? `<div class="card-list initiative-list">
+            ${initiatives.map((initiative) => renderInitiativeCard(initiative, { member, writable })).join('')}
+          </div>`
+        : `<div class="card guideline-empty">
+            <strong>Iniciatyvu dar nera</strong>
+            <p class="prompt" style="margin: 6px 0 0;">Sioje institucijoje kol kas nera sukurtu iniciatyvu.</p>
+          </div>`
+      }
+    </section>
+
+    ${member ? (writable ? `
+      <div class="card" style="margin-top: 16px;">
+        <div class="header-row">
+          <strong>Nauja iniciatyva</strong>
+          <span class="tag">Pasiulymas</span>
+        </div>
+        <p class="prompt" style="margin-bottom: 10px;">Iniciatyva turi buti priskirta bent vienai gairei.</p>
+        <form id="initiativeAddForm">
+          <div class="form-row">
+            <input type="text" name="title" placeholder="Iniciatyvos pavadinimas" required ${state.busy ? 'disabled' : ''}/>
+          </div>
+          <textarea name="desc" placeholder="Trumpas paaiskinimas" ${state.busy ? 'disabled' : ''}></textarea>
+          <label class="prompt" style="display:block;margin:10px 0 6px;">Priskirtos gaires</label>
+          <select name="guidelineIds" multiple size="${Math.min(Math.max(eligibleGuidelines.length, 4), 10)}" ${state.busy ? 'disabled' : ''}>
+            ${eligibleGuidelines.map((guideline) => `<option value="${escapeHtml(guideline.id)}">${escapeHtml(guideline.title)}</option>`).join('')}
+          </select>
+          <p class="prompt" style="margin: 8px 0 0;">Laikykite Ctrl (arba Cmd), jei norite pazymeti kelias gaires.</p>
+          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Prideti iniciatyva</button>
+        </form>
+      </div>
+    ` : `
+      <div class="card" style="margin-top: 16px;">
+        <strong>Ciklas uzrakintas redagavimui</strong>
+      </div>
+    `) : (authenticated ? `
+      <div class="card" style="margin-top: 16px;">
+        <strong>Prisijungta prie kitos institucijos</strong>
+      </div>
+    ` : `
+      <div class="card" style="margin-top: 16px;">
+        <strong>Prisijunkite, kad galetumete aktyviai dalyvauti</strong>
+        <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
+      </div>
+    `)}
+  `;
+
+  const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
+  const exportBtnInline = elements.stepView.querySelector('#exportBtnInline');
+  const initiativeForm = elements.stepView.querySelector('#initiativeAddForm');
+  const list = elements.stepView.querySelector('#initiativeSection');
+
+  if (openAuthFromStep) {
+    openAuthFromStep.addEventListener('click', () => showAuthModal('login'));
+  }
+  if (exportBtnInline) {
+    exportBtnInline.addEventListener('click', exportSummary);
+  }
+  if (initiativeForm) {
+    initiativeForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fd = new FormData(initiativeForm);
+      const title = String(fd.get('title') || '').trim();
+      const description = String(fd.get('desc') || '').trim();
+      const guidelineIds = Array.from(initiativeForm.querySelectorAll('select[name=\"guidelineIds\"] option:checked'))
+        .map((option) => option.value)
+        .filter(Boolean);
+      if (!title) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/initiatives`, {
+          method: 'POST',
+          body: { title, description, guidelineIds, lineSide: 'auto' }
+        });
+        await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap()]);
+      });
+    });
+  }
+  if (list) {
+    list.addEventListener('click', async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const action = target.dataset.action;
+      const initiativeId = target.dataset.id;
+      if (!action || !initiativeId) return;
+      if (action === 'initiative-vote-plus' || action === 'initiative-vote-minus') {
+        const delta = action === 'initiative-vote-plus' ? 1 : -1;
+        const origin = getElementCenter(target);
+        await runBusy(async () => {
+          const changed = await changeInitiativeVote(initiativeId, delta);
+          if (changed) triggerVoteBurstAt(origin, delta);
+        });
+      }
+    });
+
+    list.addEventListener('submit', async (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      if (form.dataset.action !== 'initiative-comment') return;
+      event.preventDefault();
+
+      const initiativeId = form.dataset.id;
+      const value = String(new FormData(form).get('comment') || '').trim();
+      if (!initiativeId || !value) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/initiatives/${encodeURIComponent(initiativeId)}/comments`, {
+          method: 'POST',
+          body: { body: value }
+        });
+        await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap()]);
+      });
+    });
+  }
+}
+
 function renderStepView() {
   if (state.activeView === 'about') {
     renderAboutView();
+    return;
+  }
+
+  if (state.activeView === 'initiatives') {
+    renderInitiativesView();
     return;
   }
 
@@ -1669,7 +2192,7 @@ function renderStepView() {
       </div>
     </div>
 
-    <p class="prompt">${escapeHtml(steps[0].prompt)}</p>
+    <p class="prompt">${escapeHtml((steps.find((item) => item.id === 'guidelines') || steps[0]).prompt)}</p>
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
 
     <div class="header-stack" style="margin-bottom: 14px;">
@@ -1800,7 +2323,7 @@ function bindStepEvents() {
           method: 'POST',
           body: { title, description }
         });
-        await Promise.all([refreshGuidelines(), refreshSummary()]);
+        await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap()]);
       });
     });
   }
@@ -1838,7 +2361,7 @@ function bindStepEvents() {
           method: 'POST',
           body: { body: value }
         });
-        await Promise.all([refreshGuidelines(), refreshSummary()]);
+        await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap()]);
       });
     });
   }
@@ -1863,7 +2386,30 @@ async function changeVote(guidelineId, delta) {
     body: { score: next }
   });
   state.userVotes[guidelineId] = Number(response.score || next);
-  await Promise.all([refreshGuidelines(), refreshSummary()]);
+  await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap()]);
+  return true;
+}
+
+async function changeInitiativeVote(initiativeId, delta) {
+  if (!isLoggedIn()) throw new Error('unauthorized');
+  if (!cycleIsWritable()) throw new Error('cycle not writable');
+
+  const current = Number(state.userVotes[initiativeId] || 0);
+  const usedWithoutCurrent = usedVotesTotal() - current;
+  const maxAllowed = clamp(
+    Math.min(maxPerInitiative(), voteBudget() - usedWithoutCurrent),
+    minPerInitiative(),
+    maxPerInitiative()
+  );
+  const next = clamp(current + delta, minPerInitiative(), maxAllowed);
+  if (next === current) return false;
+
+  const response = await api(`/api/v1/initiatives/${encodeURIComponent(initiativeId)}/vote`, {
+    method: 'PUT',
+    body: { score: next }
+  });
+  state.userVotes[initiativeId] = Number(response.score || next);
+  await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap()]);
   return true;
 }
 
@@ -1928,7 +2474,7 @@ function renderVoteFloating() {
     document.body.appendChild(floating);
   }
 
-  if (!isLoggedIn() || state.activeView !== 'guidelines') {
+  if (!isLoggedIn() || (state.activeView !== 'guidelines' && state.activeView !== 'initiatives')) {
     floating.hidden = true;
     return;
   }
@@ -1982,6 +2528,20 @@ function buildSummary() {
     lines.push(`  komentarų: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
   });
 
+  lines.push('');
+  lines.push('Iniciatyvos:');
+  if (!state.initiatives.length) {
+    lines.push('- Nera duomenu');
+  } else {
+    state.initiatives.forEach((initiative) => {
+      const linkedNames = resolveInitiativeGuidelineNames(initiative);
+      lines.push(`- ${initiative.title} (bendras balas: ${Number(initiative.totalScore || 0)})`);
+      lines.push(`  aprasymas: ${initiative.description || 'be paaiskinimo'}`);
+      lines.push(`  susietos gaires: ${linkedNames.length ? linkedNames.join(', ') : 'nera'}`);
+      lines.push(`  komentaru: ${Array.isArray(initiative.comments) ? initiative.comments.length : 0}`);
+    });
+  }
+
   return lines.join('\n');
 }
 
@@ -1996,7 +2556,8 @@ function downloadJson() {
     institution: state.institution,
     cycle: state.cycle,
     summary: state.summary,
-    guidelines: state.guidelines
+    guidelines: state.guidelines,
+    initiatives: state.initiatives
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');

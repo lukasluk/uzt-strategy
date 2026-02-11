@@ -84,6 +84,47 @@ create table if not exists strategy_votes (
   unique (guideline_id, voter_id)
 );
 
+create table if not exists strategy_initiatives (
+  id uuid primary key,
+  cycle_id uuid not null references strategy_cycles(id) on delete cascade,
+  title text not null,
+  description text,
+  status text not null default 'active' check (status in ('active', 'disabled', 'merged', 'hidden')),
+  line_side text not null default 'auto',
+  map_x integer,
+  map_y integer,
+  created_by uuid references platform_users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists strategy_initiative_guidelines (
+  id uuid primary key,
+  initiative_id uuid not null references strategy_initiatives(id) on delete cascade,
+  guideline_id uuid not null references strategy_guidelines(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (initiative_id, guideline_id)
+);
+
+create table if not exists strategy_initiative_comments (
+  id uuid primary key,
+  initiative_id uuid not null references strategy_initiatives(id) on delete cascade,
+  author_id uuid not null references platform_users(id) on delete cascade,
+  body text not null,
+  status text not null default 'visible' check (status in ('visible', 'hidden')),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists strategy_initiative_votes (
+  id uuid primary key,
+  initiative_id uuid not null references strategy_initiatives(id) on delete cascade,
+  voter_id uuid not null references platform_users(id) on delete cascade,
+  score integer not null check (score between 0 and 5),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (initiative_id, voter_id)
+);
+
 create table if not exists audit_events (
   id uuid primary key,
   institution_id uuid references institutions(id) on delete cascade,
@@ -104,6 +145,12 @@ create index if not exists idx_guidelines_cycle on strategy_guidelines(cycle_id)
 create index if not exists idx_comments_guideline on strategy_comments(guideline_id);
 create index if not exists idx_votes_guideline on strategy_votes(guideline_id);
 create index if not exists idx_votes_voter on strategy_votes(voter_id);
+create index if not exists idx_initiatives_cycle on strategy_initiatives(cycle_id);
+create index if not exists idx_initiative_guidelines_initiative on strategy_initiative_guidelines(initiative_id);
+create index if not exists idx_initiative_guidelines_guideline on strategy_initiative_guidelines(guideline_id);
+create index if not exists idx_initiative_comments_initiative on strategy_initiative_comments(initiative_id);
+create index if not exists idx_initiative_votes_initiative on strategy_initiative_votes(initiative_id);
+create index if not exists idx_initiative_votes_voter on strategy_initiative_votes(voter_id);
 
 alter table if exists strategy_guidelines
   add column if not exists relation_type text not null default 'orphan';
@@ -133,4 +180,20 @@ alter table if exists strategy_guidelines
 
 alter table if exists strategy_guidelines
   add constraint strategy_guidelines_status_check
+  check (status in ('active', 'disabled', 'merged', 'hidden'));
+
+alter table if exists strategy_initiatives
+  add column if not exists line_side text not null default 'auto';
+
+alter table if exists strategy_initiatives
+  add column if not exists map_x integer;
+
+alter table if exists strategy_initiatives
+  add column if not exists map_y integer;
+
+alter table if exists strategy_initiatives
+  drop constraint if exists strategy_initiatives_status_check;
+
+alter table if exists strategy_initiatives
+  add constraint strategy_initiatives_status_check
   check (status in ('active', 'disabled', 'merged', 'hidden'));
