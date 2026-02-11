@@ -1531,10 +1531,10 @@ textarea {
   cursor: move;
 }
 .strategy-map-viewport.map-layer-initiatives .initiative-lines {
-  z-index: 8;
+  z-index: 5;
 }
 .strategy-map-viewport.map-layer-initiatives .initiative-node {
-  z-index: 7;
+  z-index: 8;
   box-shadow: 0 14px 28px rgba(160, 104, 29, 0.26);
 }
 .strategy-map-viewport.map-layer-initiatives .strategy-map-edge.edge-initiative-layer {

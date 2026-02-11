@@ -1905,27 +1905,6 @@ function renderMapView() {
     });
   });
 
-  if (world) {
-    const initiativesLayer = state.mapLayer === 'initiatives';
-    world.querySelectorAll('.strategy-map-node[data-node-id]').forEach((node) => {
-      const kind = String(node.dataset.kind || '').toLowerCase();
-      if (kind === 'institution') {
-        node.style.pointerEvents = editable ? 'auto' : 'none';
-        node.style.cursor = editable ? 'move' : '';
-        return;
-      }
-      if (kind === 'guideline') {
-        node.style.pointerEvents = initiativesLayer ? 'none' : 'auto';
-        node.style.cursor = editable && !initiativesLayer ? 'move' : '';
-        return;
-      }
-      if (kind === 'initiative') {
-        node.style.pointerEvents = initiativesLayer ? 'auto' : 'none';
-        node.style.cursor = editable && initiativesLayer ? 'move' : '';
-      }
-    });
-  }
-
   if (viewport && world) {
     syncMapNodeBounds(world);
     refreshMapEdges(world);
