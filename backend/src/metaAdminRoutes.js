@@ -459,6 +459,117 @@ function registerMetaAdminRoutes({
     res.json({ ok: true, status });
   });
 
+  app.post('/api/v1/meta-admin/users/:userId/archive', requireMetaAdminSession, async (req, res) => {
+    const userId = String(req.params.userId || '').trim();
+    const action = String(req.body?.action || 'keep').trim();
+    if (!userId || !['keep', 'delete'].includes(action)) {
+      return res.status(400).json({ error: 'userId and valid archive action required' });
+    }
+
+    const userRes = await query(
+      'select id, email, display_name, status from platform_users where id = $1',
+      [userId]
+    );
+    if (!userRes.rowCount) return res.status(404).json({ error: 'user not found' });
+
+    const deleted = {
+      guidelines: 0,
+      initiatives: 0,
+      guidelineComments: 0,
+      initiativeComments: 0,
+      guidelineVotes: 0,
+      initiativeVotes: 0
+    };
+
+    if (action === 'delete') {
+      const guidelineCommentsRes = await query(
+        'delete from strategy_comments where author_id = $1',
+        [userId]
+      );
+      deleted.guidelineComments = Number(guidelineCommentsRes.rowCount || 0);
+
+      const initiativeCommentsRes = await query(
+        'delete from strategy_initiative_comments where author_id = $1',
+        [userId]
+      );
+      deleted.initiativeComments = Number(initiativeCommentsRes.rowCount || 0);
+
+      const guidelineVotesRes = await query(
+        'delete from strategy_votes where voter_id = $1',
+        [userId]
+      );
+      deleted.guidelineVotes = Number(guidelineVotesRes.rowCount || 0);
+
+      const initiativeVotesRes = await query(
+        'delete from strategy_initiative_votes where voter_id = $1',
+        [userId]
+      );
+      deleted.initiativeVotes = Number(initiativeVotesRes.rowCount || 0);
+
+      const initiativesRes = await query(
+        'delete from strategy_initiatives where created_by = $1',
+        [userId]
+      );
+      deleted.initiatives = Number(initiativesRes.rowCount || 0);
+
+      const guidelinesRes = await query(
+        'delete from strategy_guidelines where created_by = $1',
+        [userId]
+      );
+      deleted.guidelines = Number(guidelinesRes.rowCount || 0);
+
+      await query(
+        `update strategy_guidelines
+         set relation_type = 'orphan',
+             updated_at = now()
+         where relation_type = 'child'
+           and parent_guideline_id is null`
+      );
+    }
+
+    const membershipsRes = await query(
+      `update institution_memberships
+       set status = 'blocked'
+       where user_id = $1
+         and status <> 'blocked'`,
+      [userId]
+    );
+
+    await query(
+      `update platform_users
+       set status = 'archived'
+       where id = $1`,
+      [userId]
+    );
+
+    await logAuditEvent({
+      query,
+      uuid,
+      action: 'meta_admin.user.archived',
+      entityType: 'platform_user',
+      entityId: userId,
+      payload: metaAuditPayload(req, {
+        archiveAction: action,
+        membershipsBlocked: Number(membershipsRes.rowCount || 0),
+        deleted
+      })
+    });
+
+    res.json({
+      ok: true,
+      user: {
+        id: userRes.rows[0].id,
+        email: userRes.rows[0].email,
+        displayName: userRes.rows[0].display_name,
+        previousStatus: userRes.rows[0].status,
+        status: 'archived'
+      },
+      action,
+      membershipsBlocked: Number(membershipsRes.rowCount || 0),
+      deleted
+    });
+  });
+
   app.post('/api/v1/meta-admin/users/:userId/password-reset-link', requireMetaAdminSession, async (req, res) => {
     const userId = String(req.params.userId || '').trim();
     if (!userId) return res.status(400).json({ error: 'userId required' });

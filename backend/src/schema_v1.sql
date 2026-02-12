@@ -14,7 +14,7 @@ create table if not exists platform_users (
   display_name text not null,
   password_salt text not null,
   password_hash text not null,
-  status text not null default 'active' check (status in ('active', 'blocked')),
+  status text not null default 'active' check (status in ('active', 'blocked', 'archived')),
   created_at timestamptz not null default now()
 );
 
@@ -251,6 +251,13 @@ alter table if exists strategy_initiatives
 alter table if exists strategy_initiatives
   add constraint strategy_initiatives_status_check
   check (status in ('active', 'disabled', 'merged', 'hidden'));
+
+alter table if exists platform_users
+  drop constraint if exists platform_users_status_check;
+
+alter table if exists platform_users
+  add constraint platform_users_status_check
+  check (status in ('active', 'blocked', 'archived'));
 
 alter table if exists strategy_cycles
   drop constraint if exists strategy_cycles_state_check;

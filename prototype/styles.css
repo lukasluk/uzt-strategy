@@ -2917,6 +2917,15 @@ body.meta-admin-page .stage {
   margin-top: 2px;
 }
 
+.meta-user-actions-danger {
+  margin-top: 0;
+}
+
+.meta-user-actions-danger .btn-danger {
+  border-color: #a63b31;
+  background: linear-gradient(180deg, #d95b52 0%, #bf453c 100%);
+}
+
 .meta-reset-panel {
   border: 1px dashed #9dc0ea;
   border-radius: 12px;
@@ -3030,6 +3039,12 @@ body.meta-admin-page .tag-status-blocked {
   background: #fff0ef;
   border-color: #f0c2bf;
   color: #8f2d27;
+}
+
+body.meta-admin-page .tag-status-archived {
+  background: #f2f4f7;
+  border-color: #d2d8e2;
+  color: #5f6b7d;
 }
 
 body.meta-admin-page .tag-slug {

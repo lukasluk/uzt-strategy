@@ -52,6 +52,7 @@ function toUserMessage(error) {
     'invalid role': 'Netinkamas vaidmuo.',
     'userId required': 'Truksta vartotojo ID.',
     'userId and valid status required': 'Netinkami vartotojo statuso duomenys.',
+    'userId and valid archive action required': 'Netinkami vartotojo archyvavimo duomenys.',
     'membershipId and valid status required': 'Netinkami narystes statuso duomenys.',
     'guideIntroText or aboutText required': 'Pakeiskite bent viena teksta.',
     'content text too long': 'Tekstas per ilgas.',
@@ -229,6 +230,16 @@ function renderUsers(users) {
             Slaptazodzio keitimo nuoroda
           </button>
         </div>
+        ${user.status !== 'archived' ? `
+          <div class="inline-form meta-user-actions-danger">
+            <button class="btn btn-ghost" type="button" data-action="archive-user-keep" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
+              Archyvuoti (palikti turini)
+            </button>
+            <button class="btn btn-danger" type="button" data-action="archive-user-delete" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
+              Archyvuoti + istrinti turini
+            </button>
+          </div>
+        ` : ''}
         ${hasLatestReset ? `
           <div class="card-section meta-reset-panel">
             <strong>Vienkartine slaptazodzio keitimo nuoroda</strong>
@@ -647,6 +658,31 @@ function bindDashboardEvents() {
     }
   }
 
+  async function archiveUser(userId, action) {
+    const normalizedUserId = String(userId || '').trim();
+    const normalizedAction = String(action || '').trim();
+    if (!normalizedUserId || !['keep', 'delete'].includes(normalizedAction)) return;
+
+    const confirmMessage = normalizedAction === 'delete'
+      ? 'Ar tikrai norite archyvuoti vartotoja ir istrinti jo komentarus, gaires bei iniciatyvas?'
+      : 'Ar tikrai norite archyvuoti vartotoja paliekant jo turini?';
+    if (!window.confirm(confirmMessage)) return;
+
+    await runBusy(async () => {
+      const payload = await api(`/api/v1/meta-admin/users/${encodeURIComponent(normalizedUserId)}/archive`, {
+        method: 'POST',
+        body: { action: normalizedAction }
+      });
+      const deleted = payload?.deleted || {};
+      if (normalizedAction === 'delete') {
+        state.notice = `Vartotojas archyvuotas ir turinys istrintas (gaires: ${Number(deleted.guidelines || 0)}, iniciatyvos: ${Number(deleted.initiatives || 0)}, koment.: ${Number(deleted.guidelineComments || 0) + Number(deleted.initiativeComments || 0)}).`;
+      } else {
+        state.notice = 'Vartotojas archyvuotas. Turinys paliktas.';
+      }
+      await loadOverview();
+    });
+  }
+
   if (!root.dataset.resetDelegatedBound) {
     root.dataset.resetDelegatedBound = '1';
     root.addEventListener('click', async (event) => {
@@ -664,6 +700,20 @@ function bindDashboardEvents() {
         event.preventDefault();
         event.stopPropagation();
         await copyPasswordResetLink();
+        return;
+      }
+      const archiveKeepButton = target.closest('[data-action="archive-user-keep"]');
+      if (archiveKeepButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        await archiveUser(archiveKeepButton.dataset.userId, 'keep');
+        return;
+      }
+      const archiveDeleteButton = target.closest('[data-action="archive-user-delete"]');
+      if (archiveDeleteButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        await archiveUser(archiveDeleteButton.dataset.userId, 'delete');
       }
     });
   }
