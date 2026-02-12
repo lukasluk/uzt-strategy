@@ -1,5 +1,5 @@
 ﻿PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-12 23:44
+Generated: 2026-02-12 23:54
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
@@ -101,6 +101,8 @@ Current focus:
   - replaced guideline assignment UX from Ctrl/Cmd multiselect to checkbox lists in initiatives flow (member view and institution admin add/edit forms)
   - widened initiative "Trumpas paaiškinimas" input area to full form width
   - stretched "Gairių ir iniciatyvų susiejimas" panel to match full height of the "Nauja iniciatyva" block
+  - switched top-left DS tile to bright yellow styling
+  - updated favicon to matching yellow DS theme and bumped favicon cache version across all prototype HTML pages
 
 ==================================================
 5) BACKEND STATUS

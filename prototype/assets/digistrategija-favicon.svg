@@ -1,34 +1,30 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title">
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
   <title id="title">digistrategija.lt favicon</title>
+  <desc id="desc">DS monograma ant ryškaus geltono fono</desc>
   <defs>
-    <linearGradient id="segA" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#d9ecff"/>
-      <stop offset="0.45" stop-color="#7fb7e8"/>
-      <stop offset="1" stop-color="#2e6fae"/>
+    <linearGradient id="bgYellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff983"/>
+      <stop offset="0.52" stop-color="#ffe04a"/>
+      <stop offset="1" stop-color="#ffc920"/>
     </linearGradient>
-    <linearGradient id="segB" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#bfe0ff"/>
-      <stop offset="0.4" stop-color="#5fa2da"/>
-      <stop offset="1" stop-color="#244f95"/>
+    <linearGradient id="dsBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f67ff"/>
+      <stop offset="1" stop-color="#0f52e8"/>
     </linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
-      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#2a5a96" flood-opacity="0.28"/>
+    <linearGradient id="dsDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#000a2f"/>
+      <stop offset="1" stop-color="#001b64"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="150%" height="170%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#6f5310" flood-opacity="0.28"/>
     </filter>
   </defs>
 
-  <rect width="320" height="320" rx="72" fill="#f3f8ff"/>
-  <g transform="translate(18 24)" filter="url(#shadow)">
-    <path d="M18 26 C18 16 26 8 36 8 H82 C92 8 100 16 100 26 V66 C100 76 92 84 82 84 H36 C26 84 18 76 18 66 Z"
-      fill="url(#segB)" stroke="#e4f2ff" stroke-width="3"/>
-    <path d="M18 94 C18 84 26 76 36 76 H82 C92 76 100 84 100 94 V130 C100 141 92 148 82 148 H36 C26 148 18 141 18 130 Z"
-      fill="url(#segA)" stroke="#e4f2ff" stroke-width="3"/>
+  <rect width="320" height="320" rx="72" fill="url(#bgYellow)"/>
+  <rect x="2" y="2" width="316" height="316" rx="70" fill="none" stroke="#b4870f" stroke-opacity="0.42" stroke-width="3"/>
 
-    <path d="M112 8 H166 C196 8 220 32 220 62 C220 92 196 116 166 116 H112 C102 116 94 108 94 98 V26 C94 16 102 8 112 8 Z"
-      fill="url(#segA)" stroke="#eaf4ff" stroke-width="3"/>
-    <path d="M112 78 H166 C196 78 220 102 220 132 C220 162 196 186 166 186 H112 C102 186 94 178 94 168 V96 C94 86 102 78 112 78 Z"
-      fill="url(#segB)" stroke="#eaf4ff" stroke-width="3"/>
-
-    <rect x="86" y="66" width="20" height="44" rx="9" fill="url(#segA)" stroke="#eef6ff" stroke-width="2.5"/>
-    <circle cx="102" cy="88" r="30" fill="url(#segA)" stroke="#f5faff" stroke-width="3"/>
+  <g font-family="'Montserrat','Poppins','Segoe UI',Arial,sans-serif" font-weight="800" letter-spacing="-2" filter="url(#shadow)">
+    <text x="32" y="286" font-size="248" fill="url(#dsBlue)">D</text>
+    <text x="170" y="232" font-size="212" fill="url(#dsDark)">S</text>
   </g>
 </svg>
