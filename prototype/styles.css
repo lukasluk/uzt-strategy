@@ -2075,6 +2075,66 @@ body.embed-map-page .map-fullscreen-watermark img {
   border-radius: 14px;
   padding: 10px 12px;
 }
+.admin-participant-list {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+.admin-participant-item {
+  border: 1px solid var(--border-soft);
+  background: var(--surface-soft);
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+.admin-participant-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-participant-identity {
+  display: grid;
+  gap: 4px;
+}
+.admin-participant-identity strong {
+  font-size: 22px;
+  line-height: 1.15;
+}
+.admin-participant-stats {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.admin-participant-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.admin-participant-actions .btn {
+  margin: 0;
+}
+.admin-participant-reset-card {
+  border: 1px dashed var(--border-soft);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+.admin-participant-reset-link {
+  word-break: break-all;
+}
+.admin-participant-empty {
+  color: var(--muted);
+  border: 1px dashed var(--border-soft);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
 .login-overlay {
   position: fixed;
   inset: 0;
@@ -2809,6 +2869,21 @@ select:focus {
     flex-direction: column;
     align-items: flex-start;
   }
+  .admin-participant-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .admin-participant-stats {
+    justify-content: flex-start;
+  }
+  .admin-participant-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-participant-actions .btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 1280px) {
@@ -2965,22 +3040,32 @@ body.meta-admin-page .stage {
 }
 
 .meta-user-card {
-  gap: 10px;
+  gap: 12px;
 }
 
 .meta-user-email {
   margin-bottom: 0;
 }
 
-.meta-user-actions {
-  margin-top: 2px;
+.meta-user-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.meta-user-actions-danger {
-  margin-top: 0;
+.meta-user-actions-grid .btn {
+  width: 100%;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+  min-height: 42px;
 }
 
-.meta-user-actions-danger .btn-danger {
+.meta-user-actions-grid-danger {
+  margin-top: -2px;
+}
+
+.meta-user-actions-grid-danger .btn-danger {
   border-color: #a63b31;
   background: linear-gradient(180deg, #d95b52 0%, #bf453c 100%);
 }
@@ -3019,13 +3104,30 @@ body.meta-admin-page .stage {
 .meta-membership-item,
 .meta-admin-list-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  align-items: center;
+  grid-template-columns: 1fr;
+  align-items: stretch;
   gap: 8px;
   border: 1px solid #d4e3f7;
   border-radius: 12px;
   padding: 9px 10px;
   background: #fafdff;
+}
+
+.meta-membership-main strong {
+  display: block;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.meta-membership-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-membership-controls .btn {
+  margin-left: auto;
 }
 
 .meta-admin-list-item {
@@ -3125,6 +3227,15 @@ body.meta-admin-page .tag-slug {
   .meta-admin-list-item {
     grid-template-columns: 1fr;
     justify-items: start;
+  }
+
+  .meta-user-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-membership-controls .btn {
+    margin-left: 0;
+    width: 100%;
   }
 
   .meta-admin-hero-actions {

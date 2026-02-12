@@ -206,12 +206,16 @@ function renderUsers(users) {
     const hasLatestReset = state.lastPasswordReset && state.lastPasswordReset.userId === user.id;
     const membershipRows = (user.memberships || []).map((membership) => `
       <li class="meta-membership-item">
-        <strong>${escapeHtml(membership.institutionName)} (${escapeHtml(membership.institutionSlug)})</strong>
-        ${renderTag(membership.role, 'role')}
-        ${renderTag(membership.status, 'status')}
-        <button class="btn btn-ghost" data-action="toggle-membership-status" data-membership-id="${escapeHtml(membership.id)}" data-next-status="${membership.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
-          ${membership.status === 'active' ? 'Blokuoti naryste' : 'Aktyvuoti naryste'}
-        </button>
+        <div class="meta-membership-main">
+          <strong>${escapeHtml(membership.institutionName)} (${escapeHtml(membership.institutionSlug)})</strong>
+        </div>
+        <div class="meta-membership-controls">
+          ${renderTag(membership.role, 'role')}
+          ${renderTag(membership.status, 'status')}
+          <button class="btn btn-ghost" data-action="toggle-membership-status" data-membership-id="${escapeHtml(membership.id)}" data-next-status="${membership.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
+            ${membership.status === 'active' ? 'Blokuoti naryste' : 'Aktyvuoti naryste'}
+          </button>
+        </div>
       </li>
     `).join('');
 
@@ -222,7 +226,7 @@ function renderUsers(users) {
           ${renderTag(user.status, 'status')}
         </div>
         <p class="prompt meta-user-email">${escapeHtml(user.email)}</p>
-        <div class="inline-form meta-user-actions">
+        <div class="meta-user-actions-grid">
           <button class="btn btn-ghost" type="button" data-action="toggle-user-status" data-user-id="${escapeHtml(user.id)}" data-next-status="${user.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
             ${user.status === 'active' ? 'Blokuoti vartotoja' : 'Aktyvuoti vartotoja'}
           </button>
@@ -231,7 +235,7 @@ function renderUsers(users) {
           </button>
         </div>
         ${user.status !== 'archived' ? `
-          <div class="inline-form meta-user-actions-danger">
+          <div class="meta-user-actions-grid meta-user-actions-grid-danger">
             <button class="btn btn-ghost" type="button" data-action="archive-user-keep" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
               Archyvuoti (palikti turini)
             </button>
