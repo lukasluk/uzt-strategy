@@ -524,7 +524,7 @@ body.embedded-admin .stage {
   margin-bottom: 12px;
 }
 
-input[type='text'], textarea, select {
+input[type='text'], input[type='email'], input[type='password'], textarea, select {
   font-family: 'Space Grotesk', sans-serif;
   padding: 10px 12px;
   border-radius: 12px;
@@ -2088,11 +2088,12 @@ body.embed-map-page .map-fullscreen-watermark img {
   display: none;
 }
 .login-card {
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%);
+  border: 1px solid #c6d9f4;
   padding: 24px;
   border-radius: 20px;
-  box-shadow: var(--shadow);
-  width: min(420px, 90vw);
+  box-shadow: 0 22px 44px rgba(25, 62, 117, 0.2);
+  width: min(460px, 92vw);
   position: relative;
   z-index: 21;
   pointer-events: auto;
@@ -2101,6 +2102,60 @@ body.embed-map-page .map-fullscreen-watermark img {
   display: grid;
   gap: 12px;
   margin-top: 12px;
+}
+.login-form-auth {
+  gap: 9px;
+}
+.auth-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #304e75;
+  margin-top: 1px;
+}
+.auth-password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.auth-password-field input {
+  width: 100%;
+  padding-right: 86px;
+}
+.auth-password-toggle {
+  position: absolute;
+  right: 8px;
+  border: 1px solid #c7d9f4;
+  background: #ffffff;
+  color: #224872;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+.auth-password-toggle:hover {
+  border-color: #98bbe8;
+  background: #edf5ff;
+  transform: translateY(-1px);
+}
+.auth-password-toggle:focus-visible {
+  outline: 2px solid rgba(63, 143, 230, 0.35);
+  outline-offset: 1px;
+}
+.auth-separator {
+  border-top: 1px solid #d9e5f8;
+  margin: 14px 0 12px;
+}
+.auth-forgot-btn {
+  width: 100%;
+  justify-content: center;
+}
+.auth-hint {
+  margin-top: -2px;
+  margin-bottom: 4px;
+  color: #355b8b;
+  font-size: 13px;
 }
 .error {
   color: #b33a2b;
@@ -2344,6 +2399,8 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 
 input[type='text'],
+input[type='email'],
+input[type='password'],
 textarea,
 select {
   border-color: var(--border-soft);
@@ -2351,6 +2408,8 @@ select {
   color: var(--ink);
 }
 input[type='text']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
 textarea:focus,
 select:focus {
   outline: 2px solid rgba(63, 143, 230, 0.22);

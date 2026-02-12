@@ -2073,8 +2073,9 @@ function bindGlobal() {
   window.addEventListener('scroll', maybeAutoCollapseIntroOnFirstScroll, { passive: true });
 }
 
-function showAuthModal(initialMode) {
+function showAuthModal(initialMode = 'login') {
   if (!state.institutionSlug) return;
+  void initialMode;
 
   let overlay = document.getElementById('loginOverlay');
   if (overlay) overlay.remove();
@@ -2085,52 +2086,83 @@ function showAuthModal(initialMode) {
   overlay.innerHTML = `
     <div class="login-card">
       <div class="header-row" style="margin-bottom: 8px;">
-        <h2>${initialMode === 'invite' ? 'Kvietimo priėmimas' : 'Prisijungimas'}</h2>
+        <h2>Prisijungimas</h2>
         <button id="closeAuthModal" class="btn btn-ghost" type="button">Uždaryti</button>
       </div>
       <p class="prompt">Institucija: <strong>${escapeHtml(state.institutionSlug)}</strong></p>
       <div id="authError" class="error" style="display:none;"></div>
+      <p id="authHint" class="prompt auth-hint" style="display:none;"></p>
 
-      <form id="loginForm" class="login-form">
-        <input type="text" name="email" placeholder="El. paštas" required />
-        <input type="password" name="password" placeholder="Slaptažodis" required />
+      <form id="loginForm" class="login-form login-form-auth">
+        <label class="auth-label" for="authEmail">El. paštas</label>
+        <input id="authEmail" type="email" name="email" placeholder="El. paštas" autocomplete="email" required />
+        <label class="auth-label" for="authPassword">Slaptažodis</label>
+        <div class="auth-password-field">
+          <input id="authPassword" type="password" name="password" placeholder="Slaptažodis" autocomplete="current-password" required />
+          <button id="toggleAuthPassword" class="auth-password-toggle" type="button" aria-label="Rodyti slaptažodį">Rodyti</button>
+        </div>
         <button class="btn btn-primary" type="submit">Prisijungti</button>
       </form>
 
-      <hr style="border: none; border-top: 1px solid #eadbc7; margin: 14px 0;">
-
-      <form id="inviteForm" class="login-form">
-        <input type="text" name="token" placeholder="Kvietimo žetonas" required />
-        <input type="text" name="displayName" placeholder="Vardas ir pavardė" required />
-        <input type="password" name="password" placeholder="Sukurkite slaptažodį (min. 8)" required />
-        <button class="btn btn-ghost" type="submit">Priimti kvietimą</button>
-      </form>
+      <div class="auth-separator"></div>
+      <button id="forgotPasswordBtn" class="btn btn-ghost auth-forgot-btn" type="button">Pamiršau slaptažodį</button>
     </div>
   `;
   document.body.appendChild(overlay);
 
   const closeBtn = overlay.querySelector('#closeAuthModal');
   const authError = overlay.querySelector('#authError');
+  const authHint = overlay.querySelector('#authHint');
   const loginForm = overlay.querySelector('#loginForm');
-  const inviteForm = overlay.querySelector('#inviteForm');
+  const forgotPasswordBtn = overlay.querySelector('#forgotPasswordBtn');
+  const authPasswordInput = overlay.querySelector('#authPassword');
+  const toggleAuthPassword = overlay.querySelector('#toggleAuthPassword');
+  const authEmailInput = overlay.querySelector('#authEmail');
 
   function closeModal() {
     const current = document.getElementById('loginOverlay');
     if (current) current.remove();
   }
 
+  function clearMessages() {
+    authError.textContent = '';
+    authError.style.display = 'none';
+    authHint.textContent = '';
+    authHint.style.display = 'none';
+  }
+
   function showError(message) {
+    authHint.textContent = '';
+    authHint.style.display = 'none';
     authError.textContent = message;
     authError.style.display = 'block';
+  }
+
+  function showHint(message) {
+    authError.textContent = '';
+    authError.style.display = 'none';
+    authHint.textContent = message;
+    authHint.style.display = 'block';
   }
 
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) closeModal();
   });
+  toggleAuthPassword.addEventListener('click', () => {
+    const nextType = authPasswordInput.type === 'password' ? 'text' : 'password';
+    authPasswordInput.type = nextType;
+    toggleAuthPassword.textContent = nextType === 'password' ? 'Rodyti' : 'Slėpti';
+    toggleAuthPassword.setAttribute('aria-label', nextType === 'password' ? 'Rodyti slaptažodį' : 'Slėpti slaptažodį');
+  });
+  forgotPasswordBtn.addEventListener('click', () => {
+    showHint('Susisiekite su savo organizacijos administratoriumi dėl vienkartinės slaptažodžio keitimo nuorodos.');
+  });
+  authEmailInput?.focus();
 
   loginForm.addEventListener('submit', async (event) => {
     event.preventDefault();
+    clearMessages();
     const fd = new FormData(loginForm);
     const email = String(fd.get('email') || '').trim();
     const password = String(fd.get('password') || '');
@@ -2145,28 +2177,6 @@ function showAuthModal(initialMode) {
           password,
           institutionSlug: state.institutionSlug
         }
-      });
-      setSession(payload);
-      closeModal();
-      await bootstrap();
-    } catch (error) {
-      showError(toUserMessage(error));
-    }
-  });
-
-  inviteForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const fd = new FormData(inviteForm);
-    const token = String(fd.get('token') || '').trim();
-    const displayName = String(fd.get('displayName') || '').trim();
-    const password = String(fd.get('password') || '');
-    if (!token || !displayName || !password) return;
-
-    try {
-      const payload = await api('/api/v1/invites/accept', {
-        method: 'POST',
-        auth: false,
-        body: { token, displayName, password }
       });
       setSession(payload);
       closeModal();
