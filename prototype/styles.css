@@ -838,12 +838,23 @@ textarea {
   border: 1px solid #e6d8c6;
   border-radius: 14px;
   background: #fff;
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px 16px;
+  text-align: left;
+  flex-wrap: wrap;
+}
+
+.app-disclaimer-lang {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
 }
 
 .app-disclaimer p {
-  margin: 0 auto;
-  max-width: 980px;
+  margin: 0;
+  max-width: none;
+  flex: 1 1 440px;
   font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
@@ -2609,6 +2620,11 @@ select:focus {
   }
   .vote-floating-inner {
     width: min(190px, calc(100vw - 20px));
+  }
+
+  .app-disclaimer {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
