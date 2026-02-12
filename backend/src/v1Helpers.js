@@ -2,11 +2,13 @@ const { parseBearer, readAuthToken } = require('./security');
 const { createInstitutionCycleService } = require('./services/institutionCycleService');
 const { createContextLookupService } = require('./services/contextLookupService');
 const { createVoteService } = require('./services/voteService');
+const { createContentMutationService } = require('./services/contentMutationService');
 
 function createV1Helpers({ query, authSecret }) {
   const institutionCycleService = createInstitutionCycleService({ query });
   const contextLookupService = createContextLookupService({ query });
   const voteService = createVoteService({ query });
+  const contentMutationService = createContentMutationService({ query });
 
   function requireAuth(req, res, next) {
     const token = parseBearer(req);
@@ -35,7 +37,11 @@ function createV1Helpers({ query, authSecret }) {
     getCurrentInitiativeVote: voteService.getCurrentInitiativeVote,
     calculateUserCycleVoteTotal: voteService.calculateUserCycleVoteTotal,
     upsertGuidelineVote: voteService.upsertGuidelineVote,
-    upsertInitiativeVote: voteService.upsertInitiativeVote
+    upsertInitiativeVote: voteService.upsertInitiativeVote,
+    createGuideline: contentMutationService.createGuideline,
+    createInitiativeWithGuidelines: contentMutationService.createInitiativeWithGuidelines,
+    createGuidelineComment: contentMutationService.createGuidelineComment,
+    createInitiativeComment: contentMutationService.createInitiativeComment
   };
 }
 

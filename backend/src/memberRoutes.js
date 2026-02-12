@@ -1,6 +1,5 @@
 function registerMemberRoutes({
   app,
-  query,
   broadcast,
   uuid,
   requireAuth,
@@ -16,7 +15,11 @@ function registerMemberRoutes({
   getCurrentInitiativeVote,
   calculateUserCycleVoteTotal,
   upsertGuidelineVote,
-  upsertInitiativeVote
+  upsertInitiativeVote,
+  createGuideline,
+  createInitiativeWithGuidelines,
+  createGuidelineComment,
+  createInitiativeComment
 }) {
   app.get('/api/v1/cycles/:cycleId/my-votes', requireAuth, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
@@ -49,12 +52,13 @@ function registerMemberRoutes({
     const { cycle } = cycleAccess;
     if (!isCycleWritable(cycle.state)) return res.status(409).json({ error: 'cycle not writable' });
 
-    const guidelineId = uuid();
-    await query(
-      `insert into strategy_guidelines (id, cycle_id, title, description, status, created_by)
-       values ($1, $2, $3, $4, 'active', $5)`,
-      [guidelineId, cycleId, title, description || null, req.auth.sub]
-    );
+    const guidelineId = await createGuideline({
+      cycleId,
+      title,
+      description,
+      createdBy: req.auth.sub,
+      uuid
+    });
 
     broadcast({ type: 'v1.guideline.created', institutionId: req.auth.institutionId, cycleId, guidelineId });
     res.status(201).json({ guidelineId });
@@ -82,19 +86,15 @@ function registerMemberRoutes({
       return res.status(400).json({ error: String(error?.message || 'invalid guideline assignment') });
     }
 
-    const initiativeId = uuid();
-    await query(
-      `insert into strategy_initiatives (id, cycle_id, title, description, status, line_side, created_by)
-       values ($1, $2, $3, $4, 'active', $5, $6)`,
-      [initiativeId, cycleId, title, description || null, lineSide, req.auth.sub]
-    );
-    for (const guidelineId of guidelineIds) {
-      await query(
-        `insert into strategy_initiative_guidelines (id, initiative_id, guideline_id)
-         values ($1, $2, $3)`,
-        [uuid(), initiativeId, guidelineId]
-      );
-    }
+    const initiativeId = await createInitiativeWithGuidelines({
+      cycleId,
+      title,
+      description,
+      lineSide,
+      guidelineIds,
+      createdBy: req.auth.sub,
+      uuid
+    });
 
     broadcast({ type: 'v1.initiative.created', institutionId: req.auth.institutionId, cycleId, initiativeId });
     res.status(201).json({ initiativeId });
@@ -112,12 +112,12 @@ function registerMemberRoutes({
     if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
     if (context.guideline_status !== 'active') return res.status(409).json({ error: 'guideline voting disabled' });
 
-    const commentId = uuid();
-    await query(
-      `insert into strategy_comments (id, guideline_id, author_id, body, status)
-       values ($1, $2, $3, $4, 'visible')`,
-      [commentId, guidelineId, req.auth.sub, body]
-    );
+    const commentId = await createGuidelineComment({
+      guidelineId,
+      authorId: req.auth.sub,
+      body,
+      uuid
+    });
 
     broadcast({ type: 'v1.comment.created', institutionId: req.auth.institutionId, guidelineId, commentId });
     res.status(201).json({ commentId });
@@ -135,12 +135,12 @@ function registerMemberRoutes({
     if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
     if (context.initiative_status !== 'active') return res.status(409).json({ error: 'initiative voting disabled' });
 
-    const commentId = uuid();
-    await query(
-      `insert into strategy_initiative_comments (id, initiative_id, author_id, body, status)
-       values ($1, $2, $3, $4, 'visible')`,
-      [commentId, initiativeId, req.auth.sub, body]
-    );
+    const commentId = await createInitiativeComment({
+      initiativeId,
+      authorId: req.auth.sub,
+      body,
+      uuid
+    });
 
     broadcast({ type: 'v1.initiative.comment.created', institutionId: req.auth.institutionId, initiativeId, commentId });
     res.status(201).json({ commentId });

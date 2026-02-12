@@ -54,7 +54,11 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     getCurrentInitiativeVote,
     calculateUserCycleVoteTotal,
     upsertGuidelineVote,
-    upsertInitiativeVote
+    upsertInitiativeVote,
+    createGuideline,
+    createInitiativeWithGuidelines,
+    createGuidelineComment,
+    createInitiativeComment
   } = createV1Helpers({ query, authSecret: AUTH_SECRET });
 
   registerMetaAdminRoutes({
@@ -90,7 +94,6 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
   registerMemberRoutes({
     app,
-    query,
     broadcast,
     uuid,
     requireAuth,
@@ -106,7 +109,11 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     getCurrentInitiativeVote,
     calculateUserCycleVoteTotal,
     upsertGuidelineVote,
-    upsertInitiativeVote
+    upsertInitiativeVote,
+    createGuideline,
+    createInitiativeWithGuidelines,
+    createGuidelineComment,
+    createInitiativeComment
   });
 
   registerAdminRoutes({
