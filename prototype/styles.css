@@ -434,9 +434,9 @@ body.embed-map-page .stage {
 
 .embed-map-branding-note {
   position: absolute;
-  left: 50%;
-  bottom: 12px;
-  transform: translateX(-50%);
+  left: 14px;
+  bottom: 14px;
+  transform: none;
   margin: 0;
   z-index: 18;
   padding: 4px 10px;
@@ -445,7 +445,7 @@ body.embed-map-page .stage {
   box-shadow: 0 6px 14px rgba(18, 49, 88, 0.12);
   backdrop-filter: blur(2px);
   max-width: calc(100% - 28px);
-  text-align: center;
+  text-align: left;
   font-size: 12px;
   line-height: 1.2;
 }
@@ -1380,11 +1380,12 @@ body.embed-map-page .map-view-shell {
   position: relative;
 }
 body.embed-map-page .strategy-map-viewport {
-  border: 0;
-  border-radius: 0;
+  border: 1px solid rgba(43, 111, 190, 0.22);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 body.embed-map-page .map-overlay-toolbar {
-  display: none;
+  display: flex;
 }
 .map-overlay-toolbar {
   position: absolute;
@@ -1432,8 +1433,8 @@ body.embed-map-page .map-overlay-toolbar {
 }
 body.embed-map-page .map-fullscreen-watermark,
 body.embed-map-page .map-fullscreen-watermark.embed-visible {
-  left: 14px;
-  right: auto;
+  right: 14px;
+  left: auto;
   bottom: 14px;
   opacity: 0.14;
   transform: translateY(0);

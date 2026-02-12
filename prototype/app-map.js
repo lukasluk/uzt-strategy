@@ -759,9 +759,7 @@ function renderMapView() {
       </div>
       <p class="prompt">Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.</p>
     `;
-  const mapToolbar = state.embedMapMode
-    ? ''
-    : `
+  const mapToolbar = `
       <div class="map-overlay-toolbar">
         <div class="map-layer-toggle map-overlay-layer-toggle">
           <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">Gairės</button>
