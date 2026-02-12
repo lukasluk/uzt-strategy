@@ -52,6 +52,14 @@ read_env_var() {
   printf '%s' "$value"
 }
 
+extract_db_name_from_url() {
+  local url="$1"
+  local tail="${url##*/}"
+  tail="${tail%%\?*}"
+  tail="${tail%%#*}"
+  printf '%s' "$tail"
+}
+
 run_healthcheck() {
   local attempts="${1:-20}"
   local sleep_seconds="${2:-2}"
@@ -183,6 +191,14 @@ if [ -f /etc/systemd/system/uzt-strategy-api.service ]; then
 fi
 
 trap 'on_error $LINENO' ERR
+
+DB_NAME_FROM_URL="$(extract_db_name_from_url "$DATABASE_URL")"
+if [ -z "$DB_NAME_FROM_URL" ]; then
+  echo "ERROR: could not parse DB name from DATABASE_URL"
+  exit 1
+fi
+echo "Applying database schema migration for DB: $DB_NAME_FROM_URL"
+SKIP_DB_BACKUP=1 SRC_DIR="$SRC_DIR" BACKUP_ROOT="$BACKUP_ROOT" DB_NAME="$DB_NAME_FROM_URL" bash "$SRC_DIR/deploy/migrate_schema_v1.sh"
 
 echo "Deploying frontend..."
 rsync -az --delete "$SRC_DIR/prototype/" "$FRONT_DIR/"

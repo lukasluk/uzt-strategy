@@ -1,6 +1,12 @@
 const GUIDE_INTRO_KEY = 'guide_intro_text';
 const ABOUT_TEXT_KEY = 'about_text';
 const MAX_CONTENT_TEXT_LENGTH = 40000;
+let contentSettingsSchemaReady = false;
+
+async function tableExists(query, qualifiedTableName) {
+  const result = await query('select to_regclass($1) as table_name', [qualifiedTableName]);
+  return Boolean(result.rows?.[0]?.table_name);
+}
 
 const DEFAULT_GUIDE_INTRO_TEXT = [
   'digistrategija.lt sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.',
@@ -33,13 +39,26 @@ function createBadRequestError(message) {
 }
 
 async function ensureContentSettingsTable(query) {
-  await query(
-    `create table if not exists platform_settings (
-      key text primary key,
-      value text not null,
-      updated_at timestamptz not null default now()
-    )`
-  );
+  if (contentSettingsSchemaReady) return;
+  try {
+    await query(
+      `create table if not exists platform_settings (
+        key text primary key,
+        value text not null,
+        updated_at timestamptz not null default now()
+      )`
+    );
+    contentSettingsSchemaReady = true;
+  } catch (error) {
+    if (String(error?.code || '') === '42501') {
+      const exists = await tableExists(query, 'public.platform_settings');
+      if (exists) {
+        contentSettingsSchemaReady = true;
+        return;
+      }
+    }
+    throw error;
+  }
 }
 
 async function loadContentSettings(query) {

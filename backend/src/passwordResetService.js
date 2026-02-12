@@ -4,23 +4,42 @@ const { sha256 } = require('./security');
 const RESET_TOKEN_BYTES = 32;
 const MIN_RESET_TTL_MINUTES = 5;
 const MAX_RESET_TTL_MINUTES = 24 * 60;
+let passwordResetSchemaReady = false;
+
+async function tableExists(query, qualifiedTableName) {
+  const result = await query('select to_regclass($1) as table_name', [qualifiedTableName]);
+  return Boolean(result.rows?.[0]?.table_name);
+}
 
 async function ensurePasswordResetTable(query) {
-  await query(
-    `create table if not exists password_reset_tokens (
-      id uuid primary key,
-      user_id uuid not null references platform_users(id) on delete cascade,
-      token_hash text not null unique,
-      expires_at timestamptz not null,
-      used_at timestamptz,
-      revoked_at timestamptz,
-      created_by_scope text not null default 'meta_admin',
-      created_by_id text,
-      created_at timestamptz not null default now()
-    )`
-  );
-  await query('create index if not exists idx_password_reset_user on password_reset_tokens(user_id)');
-  await query('create index if not exists idx_password_reset_expires on password_reset_tokens(expires_at)');
+  if (passwordResetSchemaReady) return;
+  try {
+    await query(
+      `create table if not exists password_reset_tokens (
+        id uuid primary key,
+        user_id uuid not null references platform_users(id) on delete cascade,
+        token_hash text not null unique,
+        expires_at timestamptz not null,
+        used_at timestamptz,
+        revoked_at timestamptz,
+        created_by_scope text not null default 'meta_admin',
+        created_by_id text,
+        created_at timestamptz not null default now()
+      )`
+    );
+    await query('create index if not exists idx_password_reset_user on password_reset_tokens(user_id)');
+    await query('create index if not exists idx_password_reset_expires on password_reset_tokens(expires_at)');
+    passwordResetSchemaReady = true;
+  } catch (error) {
+    if (String(error?.code || '') === '42501') {
+      const exists = await tableExists(query, 'public.password_reset_tokens');
+      if (exists) {
+        passwordResetSchemaReady = true;
+        return;
+      }
+    }
+    throw error;
+  }
 }
 
 function normalizeTtlMinutes(value) {
