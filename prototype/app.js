@@ -62,6 +62,10 @@ const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open']);
 const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'guide', 'about']);
 const ADMIN_CACHE_BUST_PARAM = 't';
+const EMBED_QUERY_KEY = 'embed';
+const EMBED_MAP_VALUE = 'map';
+const EMBED_MAP_PATH_PREFIX = '/embed/strategy-map';
+const EMBED_BRAND_LINK = 'https://www.digistrategija.lt';
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -74,7 +78,10 @@ const elements = {
   summaryText: document.getElementById('summaryText')
 };
 
+const EMBED_MAP_MODE = resolveEmbedMapMode();
+
 const state = {
+  embedMapMode: EMBED_MAP_MODE,
   institutionSlug: resolveInstitutionSlug(),
   activeView: resolveInitialView(),
   introFirstVisit: hydrateIntroFirstVisit(),
@@ -169,6 +176,7 @@ function resolveInstitutionSlug() {
   const params = new URLSearchParams(window.location.search);
   const querySlug = normalizeSlug(params.get('institution'));
   if (querySlug) return querySlug;
+  if (EMBED_MAP_MODE) return DEFAULT_INSTITUTION_SLUG || null;
 
   const parts = window.location.pathname.split('/').filter(Boolean);
   if (!parts.length) return DEFAULT_INSTITUTION_SLUG || null;
@@ -183,7 +191,17 @@ function resolveInstitutionSlug() {
   return normalizeSlug(last) || DEFAULT_INSTITUTION_SLUG || null;
 }
 
+function resolveEmbedMapMode() {
+  const params = new URLSearchParams(window.location.search);
+  const embed = String(params.get(EMBED_QUERY_KEY) || '').trim().toLowerCase();
+  if (embed === EMBED_MAP_VALUE) return true;
+
+  const path = String(window.location.pathname || '').trim().toLowerCase();
+  return path === EMBED_MAP_PATH_PREFIX || path.startsWith(`${EMBED_MAP_PATH_PREFIX}/`);
+}
+
 function resolveInitialView() {
+  if (EMBED_MAP_MODE) return 'map';
   const params = new URLSearchParams(window.location.search);
   const view = String(params.get('view') || '').trim().toLowerCase();
   return ALLOWED_VIEWS.has(view) ? view : 'guidelines';
@@ -192,10 +210,13 @@ function resolveInitialView() {
 function buildCurrentPageHref({ slug = state.institutionSlug, view = state.activeView } = {}) {
   const params = new URLSearchParams(window.location.search);
   const nextSlug = normalizeSlug(slug);
-  const nextView = ALLOWED_VIEWS.has(view) ? view : 'guidelines';
+  const nextView = state.embedMapMode ? 'map' : (ALLOWED_VIEWS.has(view) ? view : 'guidelines');
 
   if (nextSlug) params.set('institution', nextSlug);
   else params.delete('institution');
+
+  if (state.embedMapMode) params.set(EMBED_QUERY_KEY, EMBED_MAP_VALUE);
+  else params.delete(EMBED_QUERY_KEY);
 
   if (nextView !== 'guidelines') params.set('view', nextView);
   else params.delete('view');
@@ -337,6 +358,7 @@ function isEmbeddedContext() {
 }
 
 function canEditMapLayout() {
+  if (state.embedMapMode) return false;
   if (!isAuthenticated()) return false;
   if (state.role !== 'institution_admin') return false;
   const homeSlug = normalizeSlug(state.accountContext?.institution?.slug);
@@ -593,7 +615,7 @@ async function bootstrap() {
     }
 
     await loadPublicData();
-    if (state.token) {
+    if (state.token && !state.embedMapMode) {
       try {
         await loadMemberContext();
       } catch (error) {
@@ -605,6 +627,9 @@ async function bootstrap() {
         state.context = null;
         state.userVotes = {};
       }
+    } else if (state.embedMapMode) {
+      state.context = null;
+      state.userVotes = {};
     }
   } catch (error) {
     state.error = toUserMessage(error);
@@ -733,6 +758,7 @@ function setActiveView(nextView) {
 }
 
 function renderSteps() {
+  if (!elements.steps) return;
   elements.steps.innerHTML = '';
 
   const canOpenAdmin = canOpenAdminView();
@@ -745,9 +771,11 @@ function renderSteps() {
     { id: 'about', icon: 'ℹ', title: 'Apie', locked: false }
   ];
 
-  const visibleItems = isEmbeddedContext()
-    ? items.filter((item) => item.id !== 'admin')
-    : items;
+  const visibleItems = state.embedMapMode
+    ? items.filter((item) => item.id === 'map')
+    : (isEmbeddedContext()
+      ? items.filter((item) => item.id !== 'admin')
+      : items);
 
   if (state.activeView === 'admin' && !visibleItems.some((item) => item.id === 'admin')) {
     state.activeView = 'guidelines';
@@ -825,6 +853,11 @@ function refreshIntroNarrativeTexts() {
 
 function renderIntroDeck() {
   if (!elements.introDeck) return;
+  if (state.embedMapMode) {
+    elements.introDeck.hidden = true;
+    elements.introDeck.innerHTML = '';
+    return;
+  }
 
   const existingGuide = elements.introDeck.querySelector('.intro-guide');
   if (!existingGuide) {
@@ -1009,12 +1042,53 @@ function renderAboutView() {
   `;
 }
 
+function buildInstitutionEmbedSourceUrl() {
+  const slug = normalizeSlug(state.institutionSlug);
+  if (!slug) return '';
+  const lang = String(window.DigiI18n?.getLanguage?.() || 'lt').trim().toLowerCase() || 'lt';
+  const base = `${window.location.origin}${EMBED_MAP_PATH_PREFIX}/`;
+  return `${base}?institution=${encodeURIComponent(slug)}&${EMBED_QUERY_KEY}=${EMBED_MAP_VALUE}&view=map&lang=${encodeURIComponent(lang)}`;
+}
+
+function buildInstitutionEmbedIframeCode() {
+  const src = buildInstitutionEmbedSourceUrl();
+  if (!src) return '';
+  return [
+    '<iframe',
+    `  src="${src}"`,
+    '  width="100%"',
+    '  height="720"',
+    '  loading="lazy"',
+    '  style="border:0;overflow:hidden;"',
+    '  referrerpolicy="strict-origin-when-cross-origin"',
+    '  allowfullscreen',
+    '></iframe>'
+  ].join('\n');
+}
+
 function renderAdminView() {
+  const showEmbedHelper = canOpenAdminView();
+  const embedCode = showEmbedHelper ? buildInstitutionEmbedIframeCode() : '';
   elements.stepView.innerHTML = `
     <section class="admin-inline-shell">
       <div class="step-header">
         <h2>Admin</h2>
       </div>
+      ${showEmbedHelper ? `
+        <section class="card admin-embed-card">
+          <div class="header-row">
+            <strong>Embed: Strategijų žemėlapis (view-only)</strong>
+            <span class="tag">Institucija: ${escapeHtml(state.institutionSlug)}</span>
+          </div>
+          <p class="prompt admin-embed-help">
+            Įdėkite kodą į savo svetainę. Įterptas blokas rodo tik viešus pasirinktos institucijos žemėlapio duomenis.
+          </p>
+          <textarea id="adminEmbedCode" class="admin-embed-code" readonly>${escapeHtml(embedCode)}</textarea>
+          <div class="inline-form" style="margin-top:10px;">
+            <button id="copyEmbedCodeBtn" class="btn btn-primary" type="button">Kopijuoti embed kodą</button>
+          </div>
+        </section>
+      ` : ''}
       <div id="adminRoot" class="admin-inline-host">
         <section class="card">
           <strong>Kraunamas administravimo langas...</strong>
@@ -1025,6 +1099,25 @@ function renderAdminView() {
 
   const adminRoot = document.getElementById('adminRoot');
   if (!adminRoot) return;
+
+  const copyEmbedCodeBtn = document.getElementById('copyEmbedCodeBtn');
+  const adminEmbedCode = document.getElementById('adminEmbedCode');
+  if (copyEmbedCodeBtn && adminEmbedCode) {
+    copyEmbedCodeBtn.addEventListener('click', async () => {
+      const value = adminEmbedCode.value || '';
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        state.notice = 'Embed kodas nukopijuotas.';
+      } catch {
+        adminEmbedCode.focus();
+        adminEmbedCode.select();
+        document.execCommand('copy');
+        state.notice = 'Embed kodas nukopijuotas.';
+      }
+      render();
+    });
+  }
 
   ensureAdminAppLoaded()
     .then((adminApp) => {
@@ -1474,6 +1567,9 @@ function renderInitiativesView() {
 }
 
 function renderStepView() {
+  if (state.embedMapMode && state.activeView !== 'map') {
+    state.activeView = 'map';
+  }
   if (state.activeView !== 'map' && document.fullscreenElement === elements.stepView) {
     document.exitFullscreen().catch(() => {});
   }
@@ -1783,6 +1879,12 @@ async function changeInitiativeVote(initiativeId, delta) {
 function renderUserBar() {
   const container = document.getElementById('userBar');
   if (!container) return;
+  if (state.embedMapMode) {
+    container.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+  container.hidden = false;
   const switcher = institutionSelectMarkup();
 
   if (!state.institutionSlug) {
@@ -1833,6 +1935,11 @@ function renderUserBar() {
 }
 
 function renderVoteFloating() {
+  if (state.embedMapMode) {
+    const existing = document.getElementById('voteFloating');
+    if (existing) existing.remove();
+    return;
+  }
   let floating = document.getElementById('voteFloating');
   if (!floating) {
     floating = document.createElement('div');

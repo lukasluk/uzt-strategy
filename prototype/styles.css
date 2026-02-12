@@ -40,8 +40,16 @@ body {
   overflow-x: hidden;
 }
 
+body.embed-map-page {
+  background: #ffffff;
+}
+
 .app {
   padding: var(--page-gutter) var(--page-gutter) 52px;
+}
+
+body.embed-map-page .app {
+  padding: 10px;
 }
 .site-header {
   margin-bottom: 18px;
@@ -225,6 +233,26 @@ body {
   align-items: start;
 }
 
+body.embed-map-page .layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+body.embed-map-page .steps,
+body.embed-map-page #institutionPicker,
+body.embed-map-page #introDeck,
+body.embed-map-page #userBar,
+body.embed-map-page #exportPanel,
+body.embed-map-page .vote-floating,
+body.embed-map-page .app-disclaimer {
+  display: none !important;
+}
+
+body.embed-map-page .stage {
+  min-height: 0;
+  border-radius: 12px;
+}
+
 .steps {
   display: flex;
   flex-direction: column;
@@ -381,6 +409,37 @@ body {
 
 .admin-inline-host {
   min-height: 320px;
+}
+
+.admin-embed-card {
+  margin-bottom: 14px;
+}
+
+.admin-embed-help {
+  margin-bottom: 10px;
+}
+
+.admin-embed-code {
+  width: 100%;
+  min-height: 170px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.embed-map-branding-note {
+  margin-bottom: 10px;
+}
+
+.embed-map-branding-note a {
+  color: #245eaa;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.embed-map-branding-note a:hover {
+  text-decoration: underline;
 }
 
 body.embedded-admin {

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategijų žemėlapis embed - digistrategija.lt</title>
+  <base href="/" />
+  <link rel="icon" type="image/svg+xml" href="assets/digistrategija-favicon.svg?v=20260212c" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="embed-map-page">
+  <div class="app">
+    <div data-language-switch style="display:none"></div>
+    <section id="introDeck" hidden></section>
+    <section id="institutionPicker" hidden></section>
+    <div class="layout" id="mainLayout">
+      <aside class="steps" id="steps"></aside>
+      <main class="stage">
+        <section class="step-view" id="stepView"></section>
+      </main>
+    </div>
+    <div id="userBar" hidden></div>
+    <section class="export" id="exportPanel" hidden>
+      <div class="export-card">
+        <div class="export-header">
+          <h2>Santrauka</h2>
+          <div class="export-actions">
+            <button id="copySummary" class="btn btn-ghost">Kopijuoti tekstą</button>
+            <button id="downloadJson" class="btn btn-primary">Atsisiųsti JSON</button>
+            <button id="closeExport" class="btn btn-ghost">Uždaryti</button>
+          </div>
+        </div>
+        <textarea id="summaryText" class="summary"></textarea>
+      </div>
+    </section>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="app-map.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

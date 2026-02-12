@@ -738,6 +738,15 @@ function renderMapView() {
   const editable = canEditMapLayout()
     && normalizeSlug(graph.institution.slug) === normalizeSlug(state.institutionSlug)
     && Boolean(graph.institution.cycle?.id);
+  const embedBranding = state.embedMapMode
+    ? `
+      <p class="prompt embed-map-branding-note">
+        <a href="${escapeHtml(EMBED_BRAND_LINK)}" target="_blank" rel="noopener noreferrer">
+          Strategijų žemėlapis by digistrategija.lt
+        </a>
+      </p>
+    `
+    : '';
   const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
   const guidelineEdgeMarkup = graph.guidelineEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
@@ -896,6 +905,7 @@ function renderMapView() {
           ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvų' : 'gairių'} korteles</span>` : ''}
         </div>
       </div>
+      ${embedBranding}
       <p class="prompt">Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.</p>
       <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer} ${editable ? 'map-editable' : ''}">
         <div class="map-overlay-toolbar">
