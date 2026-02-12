@@ -1014,8 +1014,16 @@ function renderGuideView() {
         <h2>Naudojimosi gidas</h2>
       </div>
       <p class="prompt">
-        digistrategija.lt sistema skirta patogiam institucijos strategijos rengimo procesui:
-        nuo gairių ir iniciatyvų valdymo iki galutinio strategijų žemėlapio publikavimo su embed funkcija.
+        digistrategija.lt sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai
+        susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.<br />
+        Sistema susideda iš 2 pagrindinių dalių:<br />
+        1. Kortelių valdymo modulio (Gairės ir Iniciatyvos) - čia jūsų kolegos gali komentuoti,
+        siūlyti įvairias strategijos kryptis, balsuoti už vieni kitų teiktus pasiūlymus.<br />
+        2. Strategijų žemėlapis - patogus vizualinis įrankis peržiūrėti strategijos struktūrą ir
+        ryšius tarp skirtingų jų elementų.<br />
+        Galutinį savo interaktyvų strategijos žemėlapį įkelkite į intranetą ar vidinį puslapį su
+        embeding funkcionalumu. Sistema skirta valstybinėms institucijoms kurios nori savo strategijos
+        kūrimo procesą vykdyti efektyviai.
       </p>
       <div class="guide-grid guide-grid-page">
         ${cards}
