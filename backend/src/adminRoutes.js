@@ -10,14 +10,35 @@ function registerAdminRoutes({
   inviteTtlHours,
   requireAuth,
   verifyCycleAccess,
-  isCycleWritable,
   normalizeLineSide,
   loadGuidelineContext,
   loadCommentContext,
   loadInitiativeContext,
   loadInitiativeCommentContext,
   validateGuidelineRelationship,
-  validateInitiativeGuidelineAssignments
+  validateInitiativeGuidelineAssignments,
+  createInstitutionInvite,
+  setCycleState,
+  setCycleSettings,
+  setCycleResultsPublished,
+  updatePlatformUserPassword,
+  deleteInstitutionMembership,
+  countUserMemberships,
+  deletePlatformUser,
+  setGuidelineCommentStatus,
+  setInitiativeCommentStatus,
+  setCycleMapPosition,
+  listExistingGuidelineIds,
+  setGuidelineMapPosition,
+  listExistingInitiativeIds,
+  setInitiativeMapPosition,
+  hasGuidelineChildren,
+  updateGuidelineRecord,
+  updateInitiativeRecord,
+  replaceInitiativeGuidelineLinks,
+  deleteInitiativeByCycle,
+  resetChildrenToOrphan,
+  deleteGuidelineByCycle
 }) {
   app.post('/api/v1/admin/invites', requireAuth, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
@@ -27,19 +48,15 @@ function registerAdminRoutes({
     if (role !== 'member') return res.status(400).json({ error: 'institution admin can invite only members in v1' });
 
     const inviteToken = crypto.randomBytes(32).toString('hex');
-    await query(
-      `insert into institution_invites (id, institution_id, email, role, token_hash, expires_at, created_by)
-       values ($1, $2, $3, $4, $5, now() + ($6 || ' hours')::interval, $7)`,
-      [
-        uuid(),
-        req.auth.institutionId,
-        email,
-        role,
-        sha256(inviteToken),
-        String(inviteTtlHours),
-        req.auth.sub
-      ]
-    );
+    await createInstitutionInvite({
+      institutionId: req.auth.institutionId,
+      email,
+      role,
+      tokenHash: sha256(inviteToken),
+      inviteTtlHours,
+      createdBy: req.auth.sub,
+      uuid
+    });
     res.status(201).json({ inviteToken, email, role });
   });
 
@@ -56,13 +73,7 @@ function registerAdminRoutes({
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
     const { cycle } = cycleAccess;
 
-    await query(
-      `update strategy_cycles
-       set state = $1,
-           finalized_at = case when $1 = 'closed' then now() else null end
-       where id = $2`,
-      [state, cycleId]
-    );
+    await setCycleState({ cycleId, state });
 
     broadcast({ type: 'v1.cycle.state', institutionId: req.auth.institutionId, cycleId, state });
     res.json({ ok: true, state });
@@ -87,14 +98,13 @@ function registerAdminRoutes({
     const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
-    const updated = await query(
-      `update strategy_cycles
-       set mission_text = case when $1::boolean then $2 else mission_text end,
-           vision_text = case when $3::boolean then $4 else vision_text end
-       where id = $5
-       returning mission_text, vision_text`,
-      [missionProvided, missionText, visionProvided, visionText, cycleId]
-    );
+    const updated = await setCycleSettings({
+      cycleId,
+      missionProvided,
+      missionText,
+      visionProvided,
+      visionText
+    });
 
     broadcast({
       type: 'v1.cycle.settings',
@@ -104,8 +114,8 @@ function registerAdminRoutes({
 
     res.json({
       ok: true,
-      missionText: updated.rows[0]?.mission_text || null,
-      visionText: updated.rows[0]?.vision_text || null
+      missionText: updated?.mission_text || null,
+      visionText: updated?.vision_text || null
     });
   });
 
@@ -118,10 +128,7 @@ function registerAdminRoutes({
     const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
-    await query(
-      'update strategy_cycles set results_published = $1 where id = $2',
-      [published, cycleId]
-    );
+    await setCycleResultsPublished({ cycleId, published });
     broadcast({ type: 'v1.cycle.results', institutionId: req.auth.institutionId, cycleId, published });
     res.json({ ok: true, published });
   });
@@ -183,13 +190,7 @@ function registerAdminRoutes({
 
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = hashPassword(password, salt);
-    await query(
-      `update platform_users
-       set password_salt = $1,
-           password_hash = $2
-       where id = $3`,
-      [salt, hash, userId]
-    );
+    await updatePlatformUserPassword({ userId, salt, hash });
 
     res.json({ ok: true });
   });
@@ -209,22 +210,12 @@ function registerAdminRoutes({
     );
     if (membershipRes.rowCount === 0) return res.status(404).json({ error: 'membership not found' });
 
-    await query(
-      `delete from institution_memberships
-       where institution_id = $1 and user_id = $2`,
-      [req.auth.institutionId, userId]
-    );
+    await deleteInstitutionMembership({ institutionId: req.auth.institutionId, userId });
 
-    const leftRes = await query(
-      `select count(*)::int as membership_count
-       from institution_memberships
-       where user_id = $1`,
-      [userId]
-    );
-    const membershipsLeft = Number(leftRes.rows[0]?.membership_count || 0);
+    const membershipsLeft = await countUserMemberships(userId);
     let userDeleted = false;
     if (membershipsLeft === 0) {
-      await query('delete from platform_users where id = $1', [userId]);
+      await deletePlatformUser(userId);
       userDeleted = true;
     }
 
@@ -424,12 +415,7 @@ function registerAdminRoutes({
     if (!context) return res.status(404).json({ error: 'comment not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
 
-    await query(
-      `update strategy_comments
-       set status = $1
-       where id = $2`,
-      [status, commentId]
-    );
+    await setGuidelineCommentStatus({ commentId, status });
 
     broadcast({
       type: 'v1.comment.status.updated',
@@ -453,12 +439,7 @@ function registerAdminRoutes({
     if (!context) return res.status(404).json({ error: 'comment not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
 
-    await query(
-      `update strategy_initiative_comments
-       set status = $1
-       where id = $2`,
-      [status, commentId]
-    );
+    await setInitiativeCommentStatus({ commentId, status });
 
     broadcast({
       type: 'v1.initiative.comment.status.updated',
@@ -512,55 +493,42 @@ function registerAdminRoutes({
     }
 
     if (hasInstitutionPosition) {
-      await query(
-        `update strategy_cycles
-         set map_x = $1, map_y = $2
-         where id = $3`,
-        [parseCoord(institutionPosition.x), parseCoord(institutionPosition.y), cycleId]
-      );
+      await setCycleMapPosition({
+        cycleId,
+        x: parseCoord(institutionPosition.x),
+        y: parseCoord(institutionPosition.y)
+      });
     }
 
     if (guidelinePositions.length > 0) {
       const guidelineIds = [...new Set(guidelinePositions.map((item) => item.guidelineId))];
-      const validRes = await query(
-        `select id
-         from strategy_guidelines
-         where cycle_id = $1 and id = any($2::uuid[])`,
-        [cycleId, guidelineIds]
-      );
-      const validIds = new Set(validRes.rows.map((row) => row.id));
+      const validIds = await listExistingGuidelineIds({ cycleId, guidelineIds });
       const invalid = guidelineIds.find((id) => !validIds.has(id));
       if (invalid) return res.status(400).json({ error: 'guideline not in cycle' });
 
       for (const item of guidelinePositions) {
-        await query(
-          `update strategy_guidelines
-           set map_x = $1, map_y = $2
-           where id = $3 and cycle_id = $4`,
-          [item.x, item.y, item.guidelineId, cycleId]
-        );
+        await setGuidelineMapPosition({
+          cycleId,
+          guidelineId: item.guidelineId,
+          x: item.x,
+          y: item.y
+        });
       }
     }
 
     if (initiativePositions.length > 0) {
       const initiativeIds = [...new Set(initiativePositions.map((item) => item.initiativeId))];
-      const validRes = await query(
-        `select id
-         from strategy_initiatives
-         where cycle_id = $1 and id = any($2::uuid[])`,
-        [cycleId, initiativeIds]
-      );
-      const validIds = new Set(validRes.rows.map((row) => row.id));
+      const validIds = await listExistingInitiativeIds({ cycleId, initiativeIds });
       const invalid = initiativeIds.find((id) => !validIds.has(id));
       if (invalid) return res.status(400).json({ error: 'initiative not in cycle' });
 
       for (const item of initiativePositions) {
-        await query(
-          `update strategy_initiatives
-           set map_x = $1, map_y = $2
-           where id = $3 and cycle_id = $4`,
-          [item.x, item.y, item.initiativeId, cycleId]
-        );
+        await setInitiativeMapPosition({
+          cycleId,
+          initiativeId: item.initiativeId,
+          x: item.x,
+          y: item.y
+        });
       }
     }
 
@@ -604,29 +572,21 @@ function registerAdminRoutes({
     }
 
     if (relationType !== 'parent') {
-      const childrenRes = await query(
-        `select id from strategy_guidelines
-         where parent_guideline_id = $1 and id <> $1
-         limit 1`,
-        [guidelineId]
-      );
-      if (childrenRes.rowCount > 0) {
+      const hasChildren = await hasGuidelineChildren(guidelineId);
+      if (hasChildren) {
         return res.status(400).json({ error: 'cannot demote parent with children' });
       }
     }
 
-    await query(
-      `update strategy_guidelines
-       set title = $1,
-           description = $2,
-           status = $3,
-           relation_type = $4,
-           parent_guideline_id = $5,
-           line_side = $6,
-           updated_at = now()
-       where id = $7`,
-      [title, description || null, status, relationType, parentGuidelineId, lineSide, guidelineId]
-    );
+    await updateGuidelineRecord({
+      guidelineId,
+      title,
+      description,
+      status,
+      relationType,
+      parentGuidelineId,
+      lineSide
+    });
 
     broadcast({ type: 'v1.guideline.updated', institutionId: req.auth.institutionId, guidelineId });
     res.json({ ok: true });
@@ -659,25 +619,19 @@ function registerAdminRoutes({
       return res.status(400).json({ error: String(error?.message || 'invalid guideline assignment') });
     }
 
-    await query(
-      `update strategy_initiatives
-       set title = $1,
-           description = $2,
-           status = $3,
-           line_side = $4,
-           updated_at = now()
-       where id = $5`,
-      [title, description || null, status, lineSide, initiativeId]
-    );
+    await updateInitiativeRecord({
+      initiativeId,
+      title,
+      description,
+      status,
+      lineSide
+    });
 
-    await query('delete from strategy_initiative_guidelines where initiative_id = $1', [initiativeId]);
-    for (const guidelineId of guidelineIds) {
-      await query(
-        `insert into strategy_initiative_guidelines (id, initiative_id, guideline_id)
-         values ($1, $2, $3)`,
-        [uuid(), initiativeId, guidelineId]
-      );
-    }
+    await replaceInitiativeGuidelineLinks({
+      initiativeId,
+      guidelineIds,
+      uuid
+    });
 
     broadcast({ type: 'v1.initiative.updated', institutionId: req.auth.institutionId, initiativeId });
     res.json({ ok: true });
@@ -693,11 +647,7 @@ function registerAdminRoutes({
     if (!context) return res.status(404).json({ error: 'initiative not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
 
-    await query(
-      `delete from strategy_initiatives
-       where id = $1 and cycle_id = $2`,
-      [initiativeId, context.cycle_id]
-    );
+    await deleteInitiativeByCycle({ initiativeId, cycleId: context.cycle_id });
 
     broadcast({ type: 'v1.initiative.deleted', institutionId: req.auth.institutionId, initiativeId });
     res.json({ ok: true, initiativeId });
@@ -713,20 +663,8 @@ function registerAdminRoutes({
     if (!context) return res.status(404).json({ error: 'guideline not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
 
-    await query(
-      `update strategy_guidelines
-       set relation_type = 'orphan',
-           parent_guideline_id = null,
-           updated_at = now()
-       where parent_guideline_id = $1`,
-      [guidelineId]
-    );
-
-    await query(
-      `delete from strategy_guidelines
-       where id = $1 and cycle_id = $2`,
-      [guidelineId, context.cycle_id]
-    );
+    await resetChildrenToOrphan(guidelineId);
+    await deleteGuidelineByCycle({ guidelineId, cycleId: context.cycle_id });
 
     broadcast({ type: 'v1.guideline.deleted', institutionId: req.auth.institutionId, guidelineId });
     res.json({ ok: true, guidelineId });

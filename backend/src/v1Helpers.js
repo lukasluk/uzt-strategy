@@ -3,12 +3,14 @@ const { createInstitutionCycleService } = require('./services/institutionCycleSe
 const { createContextLookupService } = require('./services/contextLookupService');
 const { createVoteService } = require('./services/voteService');
 const { createContentMutationService } = require('./services/contentMutationService');
+const { createAdminMutationService } = require('./services/adminMutationService');
 
 function createV1Helpers({ query, authSecret }) {
   const institutionCycleService = createInstitutionCycleService({ query });
   const contextLookupService = createContextLookupService({ query });
   const voteService = createVoteService({ query });
   const contentMutationService = createContentMutationService({ query });
+  const adminMutationService = createAdminMutationService({ query });
 
   function requireAuth(req, res, next) {
     const token = parseBearer(req);
@@ -41,7 +43,29 @@ function createV1Helpers({ query, authSecret }) {
     createGuideline: contentMutationService.createGuideline,
     createInitiativeWithGuidelines: contentMutationService.createInitiativeWithGuidelines,
     createGuidelineComment: contentMutationService.createGuidelineComment,
-    createInitiativeComment: contentMutationService.createInitiativeComment
+    createInitiativeComment: contentMutationService.createInitiativeComment,
+    createInstitutionInvite: adminMutationService.createInstitutionInvite,
+    setCycleState: adminMutationService.setCycleState,
+    setCycleSettings: adminMutationService.setCycleSettings,
+    setCycleResultsPublished: adminMutationService.setCycleResultsPublished,
+    updatePlatformUserPassword: adminMutationService.updatePlatformUserPassword,
+    deleteInstitutionMembership: adminMutationService.deleteInstitutionMembership,
+    countUserMemberships: adminMutationService.countUserMemberships,
+    deletePlatformUser: adminMutationService.deletePlatformUser,
+    setGuidelineCommentStatus: adminMutationService.setGuidelineCommentStatus,
+    setInitiativeCommentStatus: adminMutationService.setInitiativeCommentStatus,
+    setCycleMapPosition: adminMutationService.setCycleMapPosition,
+    listExistingGuidelineIds: adminMutationService.listExistingGuidelineIds,
+    setGuidelineMapPosition: adminMutationService.setGuidelineMapPosition,
+    listExistingInitiativeIds: adminMutationService.listExistingInitiativeIds,
+    setInitiativeMapPosition: adminMutationService.setInitiativeMapPosition,
+    hasGuidelineChildren: adminMutationService.hasGuidelineChildren,
+    updateGuidelineRecord: adminMutationService.updateGuidelineRecord,
+    updateInitiativeRecord: adminMutationService.updateInitiativeRecord,
+    replaceInitiativeGuidelineLinks: adminMutationService.replaceInitiativeGuidelineLinks,
+    deleteInitiativeByCycle: adminMutationService.deleteInitiativeByCycle,
+    resetChildrenToOrphan: adminMutationService.resetChildrenToOrphan,
+    deleteGuidelineByCycle: adminMutationService.deleteGuidelineByCycle
   };
 }
 
