@@ -1,10 +1,12 @@
 const { parseBearer, readAuthToken } = require('./security');
 const { createInstitutionCycleService } = require('./services/institutionCycleService');
 const { createContextLookupService } = require('./services/contextLookupService');
+const { createVoteService } = require('./services/voteService');
 
 function createV1Helpers({ query, authSecret }) {
   const institutionCycleService = createInstitutionCycleService({ query });
   const contextLookupService = createContextLookupService({ query });
+  const voteService = createVoteService({ query });
 
   function requireAuth(req, res, next) {
     const token = parseBearer(req);
@@ -27,7 +29,13 @@ function createV1Helpers({ query, authSecret }) {
     isCycleWritable: contextLookupService.isCycleWritable,
     validateGuidelineRelationship: contextLookupService.validateGuidelineRelationship,
     normalizeLineSide: contextLookupService.normalizeLineSide,
-    validateInitiativeGuidelineAssignments: contextLookupService.validateInitiativeGuidelineAssignments
+    validateInitiativeGuidelineAssignments: contextLookupService.validateInitiativeGuidelineAssignments,
+    getUserCycleVotes: voteService.getUserCycleVotes,
+    getCurrentGuidelineVote: voteService.getCurrentGuidelineVote,
+    getCurrentInitiativeVote: voteService.getCurrentInitiativeVote,
+    calculateUserCycleVoteTotal: voteService.calculateUserCycleVoteTotal,
+    upsertGuidelineVote: voteService.upsertGuidelineVote,
+    upsertInitiativeVote: voteService.upsertInitiativeVote
   };
 }
 

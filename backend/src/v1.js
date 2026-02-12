@@ -48,7 +48,13 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     isCycleWritable,
     validateGuidelineRelationship,
     normalizeLineSide,
-    validateInitiativeGuidelineAssignments
+    validateInitiativeGuidelineAssignments,
+    getUserCycleVotes,
+    getCurrentGuidelineVote,
+    getCurrentInitiativeVote,
+    calculateUserCycleVoteTotal,
+    upsertGuidelineVote,
+    upsertInitiativeVote
   } = createV1Helpers({ query, authSecret: AUTH_SECRET });
 
   registerMetaAdminRoutes({
@@ -94,7 +100,13 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     normalizeLineSide,
     loadGuidelineContext,
     loadInitiativeContext,
-    validateInitiativeGuidelineAssignments
+    validateInitiativeGuidelineAssignments,
+    getUserCycleVotes,
+    getCurrentGuidelineVote,
+    getCurrentInitiativeVote,
+    calculateUserCycleVoteTotal,
+    upsertGuidelineVote,
+    upsertInitiativeVote
   });
 
   registerAdminRoutes({

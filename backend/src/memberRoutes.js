@@ -10,7 +10,13 @@ function registerMemberRoutes({
   normalizeLineSide,
   loadGuidelineContext,
   loadInitiativeContext,
-  validateInitiativeGuidelineAssignments
+  validateInitiativeGuidelineAssignments,
+  getUserCycleVotes,
+  getCurrentGuidelineVote,
+  getCurrentInitiativeVote,
+  calculateUserCycleVoteTotal,
+  upsertGuidelineVote,
+  upsertInitiativeVote
 }) {
   app.get('/api/v1/cycles/:cycleId/my-votes', requireAuth, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
@@ -19,33 +25,7 @@ function registerMemberRoutes({
     const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
-    const votesRes = await query(
-      `select v.guideline_id, v.score
-       from strategy_votes v
-       join strategy_guidelines g on g.id = v.guideline_id
-       where g.cycle_id = $1 and v.voter_id = $2`,
-      [cycleId, req.auth.sub]
-    );
-
-    const initiativeVotesRes = await query(
-      `select v.initiative_id, v.score
-       from strategy_initiative_votes v
-       join strategy_initiatives i on i.id = v.initiative_id
-       where i.cycle_id = $1 and v.voter_id = $2`,
-      [cycleId, req.auth.sub]
-    );
-
-    const votes = votesRes.rows.map((row) => ({
-      guidelineId: row.guideline_id,
-      score: row.score
-    }));
-    const initiativeVotes = initiativeVotesRes.rows.map((row) => ({
-      initiativeId: row.initiative_id,
-      score: row.score
-    }));
-    const totalUsed =
-      votes.reduce((sum, row) => sum + row.score, 0) +
-      initiativeVotes.reduce((sum, row) => sum + row.score, 0);
+    const { votes, initiativeVotes, totalUsed } = await getUserCycleVotes(cycleId, req.auth.sub);
 
     res.json({
       cycleId,
@@ -180,51 +160,20 @@ function registerMemberRoutes({
     if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
     if (context.guideline_status !== 'active') return res.status(409).json({ error: 'guideline voting disabled' });
 
-    const currentVote = await query(
-      'select score from strategy_votes where guideline_id = $1 and voter_id = $2',
-      [guidelineId, req.auth.sub]
-    );
-    const currentScore = currentVote.rows[0]?.score || 0;
-
-    const totalRes = await query(
-      `select
-         (
-           coalesce((
-             select sum(v.score)::int
-             from strategy_votes v
-             join strategy_guidelines g on g.id = v.guideline_id
-             where v.voter_id = $1 and g.cycle_id = $2
-           ), 0)
-           +
-           coalesce((
-             select sum(v.score)::int
-             from strategy_initiative_votes v
-             join strategy_initiatives i on i.id = v.initiative_id
-             where v.voter_id = $1 and i.cycle_id = $2
-           ), 0)
-         )::int as total_used`,
-      [req.auth.sub, context.cycle_id]
-    );
-    const totalUsed = totalRes.rows[0].total_used;
+    const currentVote = await getCurrentGuidelineVote(guidelineId, req.auth.sub);
+    const currentScore = currentVote?.score || 0;
+    const totalUsed = await calculateUserCycleVoteTotal(req.auth.sub, context.cycle_id);
     const nextTotal = totalUsed - currentScore + score;
     if (nextTotal > voteBudget) {
       return res.status(400).json({ error: 'vote budget exceeded' });
     }
 
-    if (currentVote.rowCount > 0) {
-      await query(
-        `update strategy_votes
-         set score = $1, updated_at = now()
-         where guideline_id = $2 and voter_id = $3`,
-        [score, guidelineId, req.auth.sub]
-      );
-    } else {
-      await query(
-        `insert into strategy_votes (id, guideline_id, voter_id, score)
-         values ($1, $2, $3, $4)`,
-        [uuid(), guidelineId, req.auth.sub, score]
-      );
-    }
+    await upsertGuidelineVote({
+      guidelineId,
+      voterId: req.auth.sub,
+      score,
+      uuid
+    });
 
     broadcast({ type: 'v1.vote.updated', institutionId: req.auth.institutionId, guidelineId, score });
     res.json({ ok: true, score, totalUsed: nextTotal, budget: voteBudget });
@@ -244,51 +193,20 @@ function registerMemberRoutes({
     if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
     if (context.initiative_status !== 'active') return res.status(409).json({ error: 'initiative voting disabled' });
 
-    const currentVote = await query(
-      'select score from strategy_initiative_votes where initiative_id = $1 and voter_id = $2',
-      [initiativeId, req.auth.sub]
-    );
-    const currentScore = currentVote.rows[0]?.score || 0;
-
-    const totalRes = await query(
-      `select
-         (
-           coalesce((
-             select sum(v.score)::int
-             from strategy_votes v
-             join strategy_guidelines g on g.id = v.guideline_id
-             where v.voter_id = $1 and g.cycle_id = $2
-           ), 0)
-           +
-           coalesce((
-             select sum(v.score)::int
-             from strategy_initiative_votes v
-             join strategy_initiatives i on i.id = v.initiative_id
-             where v.voter_id = $1 and i.cycle_id = $2
-           ), 0)
-         )::int as total_used`,
-      [req.auth.sub, context.cycle_id]
-    );
-    const totalUsed = totalRes.rows[0].total_used;
+    const currentVote = await getCurrentInitiativeVote(initiativeId, req.auth.sub);
+    const currentScore = currentVote?.score || 0;
+    const totalUsed = await calculateUserCycleVoteTotal(req.auth.sub, context.cycle_id);
     const nextTotal = totalUsed - currentScore + score;
     if (nextTotal > voteBudget) {
       return res.status(400).json({ error: 'vote budget exceeded' });
     }
 
-    if (currentVote.rowCount > 0) {
-      await query(
-        `update strategy_initiative_votes
-         set score = $1, updated_at = now()
-         where initiative_id = $2 and voter_id = $3`,
-        [score, initiativeId, req.auth.sub]
-      );
-    } else {
-      await query(
-        `insert into strategy_initiative_votes (id, initiative_id, voter_id, score)
-         values ($1, $2, $3, $4)`,
-        [uuid(), initiativeId, req.auth.sub, score]
-      );
-    }
+    await upsertInitiativeVote({
+      initiativeId,
+      voterId: req.auth.sub,
+      score,
+      uuid
+    });
 
     broadcast({ type: 'v1.initiative.vote.updated', institutionId: req.auth.institutionId, initiativeId, score });
     res.json({ ok: true, score, totalUsed: nextTotal, budget: voteBudget });
