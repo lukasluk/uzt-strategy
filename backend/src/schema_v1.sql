@@ -144,6 +144,18 @@ create table if not exists platform_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists password_reset_tokens (
+  id uuid primary key,
+  user_id uuid not null references platform_users(id) on delete cascade,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  revoked_at timestamptz,
+  created_by_scope text not null default 'meta_admin',
+  created_by_id text,
+  created_at timestamptz not null default now()
+);
+
 insert into platform_settings (key, value)
 values
   ('guide_intro_text', $$digistrategija.lt sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.
@@ -185,6 +197,8 @@ create index if not exists idx_initiative_guidelines_guideline on strategy_initi
 create index if not exists idx_initiative_comments_initiative on strategy_initiative_comments(initiative_id);
 create index if not exists idx_initiative_votes_initiative on strategy_initiative_votes(initiative_id);
 create index if not exists idx_initiative_votes_voter on strategy_initiative_votes(voter_id);
+create index if not exists idx_password_reset_user on password_reset_tokens(user_id);
+create index if not exists idx_password_reset_expires on password_reset_tokens(expires_at);
 
 alter table if exists strategy_guidelines
   add column if not exists relation_type text not null default 'orphan';

@@ -18,6 +18,10 @@ const {
   normalizeContentSettingsPatch,
   updateContentSettings
 } = require('./contentSettings');
+const {
+  createPasswordResetToken,
+  ensurePasswordResetTable
+} = require('./passwordResetService');
 
 function registerMetaAdminRoutes({
   app,
@@ -41,6 +45,8 @@ function registerMetaAdminRoutes({
   const META_ADMIN_AUTH_MAX_ATTEMPTS = Number(process.env.META_ADMIN_AUTH_RATE_LIMIT_MAX || 8);
 
   const ENABLE_LEGACY_SUPERADMIN = String(process.env.ENABLE_LEGACY_SUPERADMIN || '0') === '1';
+  const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 60);
+  const PASSWORD_RESET_BASE_URL = String(process.env.PASSWORD_RESET_BASE_URL || '').trim();
 
   const metaAdminAuthConfigured = Boolean(META_ADMIN_PASSWORD_HASH)
     || (ALLOW_LEGACY_META_ADMIN_PASSWORD && Boolean(META_ADMIN_PASSWORD));
@@ -123,6 +129,14 @@ function registerMetaAdminRoutes({
       userAgent: String(req.headers['user-agent'] || ''),
       ...extra
     };
+  }
+
+  function buildPasswordResetUrl(req, token) {
+    const safeToken = encodeURIComponent(String(token || '').trim());
+    const base = PASSWORD_RESET_BASE_URL
+      ? PASSWORD_RESET_BASE_URL.replace(/\/+$/, '')
+      : `${String(req.protocol || 'https')}://${String(req.get('host') || '').trim()}`;
+    return `${base}/reset-password.html?token=${safeToken}`;
   }
 
   async function createInstitutionWithDefaultCycle(name, slug) {
@@ -443,6 +457,52 @@ function registerMetaAdminRoutes({
     });
 
     res.json({ ok: true, status });
+  });
+
+  app.post('/api/v1/meta-admin/users/:userId/password-reset-link', requireMetaAdminSession, async (req, res) => {
+    const userId = String(req.params.userId || '').trim();
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    const userRes = await query(
+      'select id, email, display_name, status from platform_users where id = $1',
+      [userId]
+    );
+    if (!userRes.rowCount) return res.status(404).json({ error: 'user not found' });
+
+    await ensurePasswordResetTable(query);
+    const reset = await createPasswordResetToken({
+      query,
+      uuid,
+      userId,
+      ttlMinutes: PASSWORD_RESET_TTL_MINUTES,
+      createdByScope: 'meta_admin',
+      createdById: req.metaAdmin?.scope || 'meta_admin'
+    });
+    const resetUrl = buildPasswordResetUrl(req, reset.token);
+
+    await logAuditEvent({
+      query,
+      uuid,
+      action: 'meta_admin.user.password_reset_link_created',
+      entityType: 'platform_user',
+      entityId: userId,
+      payload: metaAuditPayload(req, {
+        resetTokenId: reset.tokenId,
+        expiresAt: reset.expiresAt
+      })
+    });
+
+    res.status(201).json({
+      ok: true,
+      user: {
+        id: userRes.rows[0].id,
+        email: userRes.rows[0].email,
+        displayName: userRes.rows[0].display_name,
+        status: userRes.rows[0].status
+      },
+      resetUrl,
+      expiresAt: reset.expiresAt
+    });
   });
 
   app.put('/api/v1/meta-admin/memberships/:membershipId/status', requireMetaAdminSession, async (req, res) => {

@@ -5,6 +5,10 @@ const {
   normalizeEmail,
   sha256
 } = require('./security');
+const {
+  getActivePasswordResetTokenInfo,
+  consumePasswordResetTokenAndSetPassword
+} = require('./passwordResetService');
 
 function registerAuthRoutes({
   app,
@@ -134,6 +138,49 @@ function registerAuthRoutes({
         name: institution.name
       },
       role: membership.role
+    });
+  });
+
+  app.get('/api/v1/auth/password-reset/token-info', inviteAcceptRateLimit, async (req, res) => {
+    const token = String(req.query?.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'reset token required' });
+
+    const tokenInfo = await getActivePasswordResetTokenInfo(query, token);
+    if (!tokenInfo) return res.status(404).json({ error: 'reset token invalid' });
+
+    res.json({
+      ok: true,
+      email: tokenInfo.email,
+      displayName: tokenInfo.display_name,
+      expiresAt: tokenInfo.expires_at
+    });
+  });
+
+  app.post('/api/v1/auth/password-reset/complete', inviteAcceptRateLimit, async (req, res) => {
+    const token = String(req.body?.token || '').trim();
+    const password = String(req.body?.password || '');
+
+    if (!token) return res.status(400).json({ error: 'reset token required' });
+    if (password.length < 8) return res.status(400).json({ error: 'password must be at least 8 chars' });
+
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = hashPassword(password, salt);
+    const result = await consumePasswordResetTokenAndSetPassword({
+      query,
+      rawToken: token,
+      passwordSalt: salt,
+      passwordHash: hash
+    });
+
+    if (!result) return res.status(404).json({ error: 'reset token invalid' });
+
+    res.json({
+      ok: true,
+      user: {
+        id: result.user_id,
+        email: result.email,
+        displayName: result.display_name
+      }
     });
   });
 

@@ -7,7 +7,8 @@ const state = {
   error: '',
   notice: '',
   overview: null,
-  lastInviteToken: ''
+  lastInviteToken: '',
+  lastPasswordReset: null
 };
 
 bootstrap();
@@ -24,22 +25,25 @@ function escapeHtml(value) {
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
-    unauthorized: 'Sesija negalioja. Prisijunkite iš naujo.',
-    'invalid token': 'Sesija negalioja. Prisijunkite iš naujo.',
-    'too many requests': 'Per daug bandymų. Pabandykite po kelių minučių.',
-    forbidden: 'Neteisingas slaptažodis arba neleidžiama operacija.',
-    'name required': 'Įveskite institucijos pavadinimą.',
-    'institutionId and name required': 'Pasirinkite instituciją ir įveskite naują pavadinimą.',
+    unauthorized: 'Sesija negalioja. Prisijunkite is naujo.',
+    'invalid token': 'Sesija negalioja. Prisijunkite is naujo.',
+    'too many requests': 'Per daug bandymu. Pabandykite po keliu minuciu.',
+    forbidden: 'Neteisingas slaptazodis arba neleidziama operacija.',
+    'name required': 'Iveskite institucijos pavadinima.',
+    'institutionId and name required': 'Pasirinkite institucija ir iveskite nauja pavadinima.',
     'invalid slug': 'Netinkamas slug.',
     'slug already exists': 'Toks institucijos slug jau egzistuoja.',
-    'institutionId and email required': 'Pasirinkite instituciją ir įveskite el. paštą.',
+    'institutionId and email required': 'Pasirinkite institucija ir iveskite el. pasta.',
     'invalid role': 'Netinkamas vaidmuo.',
+    'userId required': 'Truksta vartotojo ID.',
     'userId and valid status required': 'Netinkami vartotojo statuso duomenys.',
-    'membershipId and valid status required': 'Netinkami narystės statuso duomenys.',
-    'guideIntroText or aboutText required': 'Pakeiskite bent vieną tekstą.',
-    'content text too long': 'Tekstas per ilgas.'
+    'membershipId and valid status required': 'Netinkami narystes statuso duomenys.',
+    'guideIntroText or aboutText required': 'Pakeiskite bent viena teksta.',
+    'content text too long': 'Tekstas per ilgas.',
+    'reset token required': 'Truksta slaptazodzio keitimo nuorodos.',
+    'reset token invalid': 'Nuoroda nebegalioja arba jau panaudota.'
   };
-  return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
+  return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
 }
 
 async function api(path, { method = 'GET', body = null } = {}) {
@@ -161,17 +165,18 @@ function renderLogin() {
 
 function renderUsers(users) {
   if (!users.length) {
-    return '<div class="card"><p class="prompt">Dar nėra vartotojų.</p></div>';
+    return '<div class="card"><p class="prompt">Dar nera vartotoju.</p></div>';
   }
 
   return users.map((user) => {
+    const hasLatestReset = state.lastPasswordReset && state.lastPasswordReset.userId === user.id;
     const membershipRows = (user.memberships || []).map((membership) => `
       <li>
         <strong>${escapeHtml(membership.institutionName)} (${escapeHtml(membership.institutionSlug)})</strong>
         <span class="tag">${escapeHtml(membership.role)}</span>
         <span class="tag">${escapeHtml(membership.status)}</span>
         <button class="btn btn-ghost" data-action="toggle-membership-status" data-membership-id="${escapeHtml(membership.id)}" data-next-status="${membership.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
-          ${membership.status === 'active' ? 'Blokuoti narystę' : 'Aktyvuoti narystę'}
+          ${membership.status === 'active' ? 'Blokuoti naryste' : 'Aktyvuoti naryste'}
         </button>
       </li>
     `).join('');
@@ -185,12 +190,26 @@ function renderUsers(users) {
         <p class="prompt">${escapeHtml(user.email)}</p>
         <div class="inline-form">
           <button class="btn btn-ghost" data-action="toggle-user-status" data-user-id="${escapeHtml(user.id)}" data-next-status="${user.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
-            ${user.status === 'active' ? 'Blokuoti vartotoją' : 'Aktyvuoti vartotoją'}
+            ${user.status === 'active' ? 'Blokuoti vartotoja' : 'Aktyvuoti vartotoja'}
+          </button>
+          <button class="btn btn-ghost" data-action="create-password-reset-link" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
+            Slaptazodzio keitimo nuoroda
           </button>
         </div>
+        ${hasLatestReset ? `
+          <div class="card-section">
+            <strong>Vienkartine slaptazodzio keitimo nuoroda</strong>
+            <p class="prompt" style="word-break: break-all; margin-top: 6px;">${escapeHtml(state.lastPasswordReset.url || '')}</p>
+            <p class="prompt" style="margin-top: 4px;">Galioja iki: ${escapeHtml(formatDateTime(state.lastPasswordReset.expiresAt))}</p>
+            <div class="inline-form">
+              <button class="btn btn-ghost" data-action="copy-password-reset-link" type="button">Kopijuoti nuoroda</button>
+              <a class="btn btn-ghost" href="${escapeHtml(state.lastPasswordReset.url || '#')}" target="_blank" rel="noopener noreferrer">Atidaryti</a>
+            </div>
+          </div>
+        ` : ''}
         <div class="card-section">
-          <strong>Narystės</strong>
-          <ul class="mini-list">${membershipRows || '<li>Nėra narysčių.</li>'}</ul>
+          <strong>Narystes</strong>
+          <ul class="mini-list">${membershipRows || '<li>Nera narystciu.</li>'}</ul>
         </div>
       </article>
     `;
@@ -551,6 +570,37 @@ function bindDashboardEvents() {
     });
   }
 
+
+  root.querySelectorAll('[data-action="create-password-reset-link"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const userId = String(button.dataset.userId || '').trim();
+      if (!userId) return;
+
+      await runBusy(async () => {
+        const payload = await api(`/api/v1/meta-admin/users/${encodeURIComponent(userId)}/password-reset-link`, {
+          method: 'POST'
+        });
+        state.lastPasswordReset = {
+          userId,
+          url: String(payload?.resetUrl || ''),
+          expiresAt: payload?.expiresAt || null
+        };
+        state.notice = 'Sugeneruota vienkartine slaptazodzio keitimo nuoroda.';
+        render();
+      });
+    });
+  });
+
+  root.querySelectorAll('[data-action="copy-password-reset-link"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const link = String(state.lastPasswordReset?.url || '').trim();
+      if (!link) return;
+      await navigator.clipboard.writeText(link);
+      state.notice = 'Slaptazodzio keitimo nuoroda nukopijuota.';
+      render();
+    });
+  });
+
   root.querySelectorAll('[data-action="toggle-user-status"]').forEach((button) => {
     button.addEventListener('click', async () => {
       const userId = button.dataset.userId;
@@ -617,3 +667,6 @@ function render() {
 
   renderDashboard();
 }
+
+
+
