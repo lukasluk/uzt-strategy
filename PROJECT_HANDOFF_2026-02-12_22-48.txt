@@ -1,5 +1,5 @@
 ﻿PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-12 22:38
+Generated: 2026-02-12 22:48
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
@@ -93,6 +93,7 @@ Current focus:
   - show latest generated URL + copy button in admin UI
   - regrouped institution-admin participants UI so each user and related actions are in a clear card block
   - regrouped meta-admin user actions/memberships to prevent button overlap and improve readability
+  - adjusted top-left DS logo: reduced size by ~30% and added subtle glass/emboss styling
 
 ==================================================
 5) BACKEND STATUS
