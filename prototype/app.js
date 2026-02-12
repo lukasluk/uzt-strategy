@@ -1332,6 +1332,31 @@ function resolveInitiativeGuidelineIds(initiative) {
   return Array.from(new Set(ids.map((id) => String(id || '').trim()).filter(Boolean)));
 }
 
+function renderGuidelineCheckboxList(guidelines, { selectedIds = [], name = 'guidelineIds', disabled = false } = {}) {
+  const guidelineList = Array.isArray(guidelines) ? guidelines : [];
+  const selectedSet = new Set((Array.isArray(selectedIds) ? selectedIds : []).map((id) => String(id || '').trim()));
+  if (!guidelineList.length) {
+    return '<p class="prompt guideline-checkbox-empty">Nėra aktyvių gairių pasirinkimui.</p>';
+  }
+  return `
+    <div class="guideline-checkbox-list">
+      ${guidelineList.map((guideline) => `
+        <label class="guideline-checkbox-item">
+          <input
+            class="guideline-checkbox-input"
+            type="checkbox"
+            name="${escapeHtml(name)}"
+            value="${escapeHtml(guideline.id)}"
+            ${selectedSet.has(String(guideline.id || '').trim()) ? 'checked' : ''}
+            ${disabled ? 'disabled' : ''}
+          />
+          <span class="guideline-checkbox-label">${escapeHtml(guideline.title || guideline.id)}</span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+}
+
 function buildGuidelineInitiativeMatrixRows(guidelines, initiatives) {
   const guidelineList = Array.isArray(guidelines) ? guidelines : [];
   const initiativeList = Array.isArray(initiatives) ? initiatives : [];
@@ -1570,10 +1595,10 @@ function renderInitiativesView() {
               </div>
               <textarea name="desc" placeholder="Trumpas paaiškinimas" ${state.busy ? 'disabled' : ''}></textarea>
               <label class="prompt" style="display:block;margin:10px 0 6px;">Priskirtos gairės</label>
-              <select name="guidelineIds" multiple size="${Math.min(Math.max(eligibleGuidelines.length, 4), 10)}" ${state.busy ? 'disabled' : ''}>
-                ${eligibleGuidelines.map((guideline) => `<option value="${escapeHtml(guideline.id)}">${escapeHtml(guideline.title)}</option>`).join('')}
-              </select>
-              <p class="prompt" style="margin: 8px 0 0;">Laikykite Ctrl (arba Cmd), jei norite pažymėti kelias gaires.</p>
+              <div class="guideline-checkbox-panel">
+                ${renderGuidelineCheckboxList(eligibleGuidelines, { name: 'guidelineIds', disabled: state.busy })}
+              </div>
+              <p class="prompt guideline-checkbox-hint" style="margin: 8px 0 0;">Pažymėkite vieną ar kelias gaires.</p>
               <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Pridėti iniciatyvą</button>
             </form>
           </div>
@@ -1615,8 +1640,8 @@ function renderInitiativesView() {
       const fd = new FormData(initiativeForm);
       const title = String(fd.get('title') || '').trim();
       const description = String(fd.get('desc') || '').trim();
-      const guidelineIds = Array.from(initiativeForm.querySelectorAll('select[name=\"guidelineIds\"] option:checked'))
-        .map((option) => option.value)
+      const guidelineIds = Array.from(initiativeForm.querySelectorAll('input[name="guidelineIds"]:checked'))
+        .map((input) => String(input.value || '').trim())
         .filter(Boolean);
       if (!title) return;
 
@@ -1828,12 +1853,12 @@ function renderStepView() {
           <span class="tag">Siūlymas</span>
         </div>
         <p class="prompt" style="margin-bottom: 10px;">Siūlykite papildomas gaires, kurios turėtų būti įtrauktos.</p>
-        <form id="guidelineAddForm">
+        <form id="guidelineAddForm" class="guideline-add-form">
           <div class="form-row">
             <input type="text" name="title" placeholder="Gairės pavadinimas" required ${state.busy ? 'disabled' : ''}/>
           </div>
           <textarea name="desc" placeholder="Trumpas paaiškinimas" ${state.busy ? 'disabled' : ''}></textarea>
-          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Pridėti gairę</button>
+          <button class="btn btn-primary guideline-add-submit-btn" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Pridėti gairę</button>
         </form>
       </div>
     ` : `

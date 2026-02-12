@@ -577,6 +577,60 @@ textarea {
   min-height: 80px;
   resize: vertical;
 }
+.guideline-checkbox-panel {
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+}
+.guideline-checkbox-list {
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.guideline-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid #deebff;
+  background: #f7fbff;
+  cursor: pointer;
+}
+.guideline-checkbox-item:hover {
+  background: #eef6ff;
+  border-color: #c8dcf8;
+}
+.guideline-checkbox-input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.guideline-checkbox-label {
+  color: #254a76;
+  font-size: 14px;
+  line-height: 1.25;
+}
+.guideline-checkbox-empty {
+  margin: 0;
+  color: var(--muted);
+}
+.guideline-checkbox-hint {
+  margin-bottom: 0;
+}
+.guideline-add-form textarea[name='desc'] {
+  width: min(760px, 100%);
+  min-height: 110px;
+  display: block;
+}
+.guideline-add-submit-btn {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
 
 .card-list {
   display: grid;

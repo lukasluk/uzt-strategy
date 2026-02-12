@@ -1,5 +1,5 @@
 ﻿PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-12 23:17
+Generated: 2026-02-12 23:35
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
@@ -98,6 +98,7 @@ Current focus:
   - removed redundant "Iniciatyva" tag from initiative cards in the Initiatives view
   - reduced top-left DS icon tile by ~40% for a more compact header footprint
   - added initiative page matrix panel (Guideline -> Initiatives) with scrollable table, alternating row colors, and explicit highlight for unassigned guidelines
+  - replaced guideline assignment UX from Ctrl/Cmd multiselect to checkbox lists in initiatives flow (member view and institution admin add/edit forms)
 
 ==================================================
 5) BACKEND STATUS
