@@ -1,4 +1,17 @@
 function createContextLookupService({ query }) {
+  async function verifyCycleAccess(cycleId, institutionId) {
+    const cycleRes = await query(
+      'select id, institution_id, state from strategy_cycles where id = $1',
+      [cycleId]
+    );
+    const cycle = cycleRes.rows[0];
+    if (!cycle) return { ok: false, status: 404, error: 'cycle not found' };
+    if (cycle.institution_id !== institutionId) {
+      return { ok: false, status: 403, error: 'cross-institution forbidden' };
+    }
+    return { ok: true, cycle };
+  }
+
   async function loadGuidelineContext(guidelineId) {
     const res = await query(
       `select g.id as guideline_id,
@@ -128,6 +141,7 @@ function createContextLookupService({ query }) {
   }
 
   return {
+    verifyCycleAccess,
     loadGuidelineContext,
     loadCommentContext,
     loadInitiativeContext,

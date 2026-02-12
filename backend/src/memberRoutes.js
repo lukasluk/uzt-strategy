@@ -4,6 +4,7 @@ function registerMemberRoutes({
   broadcast,
   uuid,
   requireAuth,
+  verifyCycleAccess,
   voteBudget,
   isCycleWritable,
   normalizeLineSide,
@@ -15,14 +16,8 @@ function registerMemberRoutes({
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
 
-    const cycleRes = await query(
-      'select id, institution_id from strategy_cycles where id = $1',
-      [cycleId]
-    );
-    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
-    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
-      return res.status(403).json({ error: 'cross-institution forbidden' });
-    }
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     const votesRes = await query(
       `select v.guideline_id, v.score
@@ -69,13 +64,9 @@ function registerMemberRoutes({
     const description = String(req.body?.description || '').trim();
     if (!cycleId || !title) return res.status(400).json({ error: 'cycleId and title required' });
 
-    const cycleRes = await query(
-      'select id, institution_id, state from strategy_cycles where id = $1',
-      [cycleId]
-    );
-    const cycle = cycleRes.rows[0];
-    if (!cycle) return res.status(404).json({ error: 'cycle not found' });
-    if (cycle.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
     if (!isCycleWritable(cycle.state)) return res.status(409).json({ error: 'cycle not writable' });
 
     const guidelineId = uuid();
@@ -99,13 +90,9 @@ function registerMemberRoutes({
     if (!cycleId || !title) return res.status(400).json({ error: 'cycleId and title required' });
     if (!lineSide) return res.status(400).json({ error: 'invalid line side' });
 
-    const cycleRes = await query(
-      'select id, institution_id, state from strategy_cycles where id = $1',
-      [cycleId]
-    );
-    const cycle = cycleRes.rows[0];
-    if (!cycle) return res.status(404).json({ error: 'cycle not found' });
-    if (cycle.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
     if (!isCycleWritable(cycle.state)) return res.status(409).json({ error: 'cycle not writable' });
 
     let guidelineIds = [];

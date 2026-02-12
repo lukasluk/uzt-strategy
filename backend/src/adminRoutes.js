@@ -9,6 +9,7 @@ function registerAdminRoutes({
   sha256,
   inviteTtlHours,
   requireAuth,
+  verifyCycleAccess,
   isCycleWritable,
   normalizeLineSide,
   loadGuidelineContext,
@@ -51,13 +52,9 @@ function registerAdminRoutes({
       return res.status(400).json({ error: 'invalid state' });
     }
 
-    const cycleRes = await query(
-      'select id, institution_id from strategy_cycles where id = $1',
-      [cycleId]
-    );
-    const cycle = cycleRes.rows[0];
-    if (!cycle) return res.status(404).json({ error: 'cycle not found' });
-    if (cycle.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
 
     await query(
       `update strategy_cycles
@@ -87,11 +84,8 @@ function registerAdminRoutes({
     const missionText = missionProvided ? (String(body.missionText || '').trim() || null) : null;
     const visionText = visionProvided ? (String(body.visionText || '').trim() || null) : null;
 
-    const cycleRes = await query('select institution_id from strategy_cycles where id = $1', [cycleId]);
-    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
-    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
-      return res.status(403).json({ error: 'cross-institution forbidden' });
-    }
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     const updated = await query(
       `update strategy_cycles
@@ -121,11 +115,8 @@ function registerAdminRoutes({
     const cycleId = String(req.params.cycleId || '').trim();
     const published = Boolean(req.body?.published);
 
-    const cycleRes = await query('select institution_id from strategy_cycles where id = $1', [cycleId]);
-    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
-    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
-      return res.status(403).json({ error: 'cross-institution forbidden' });
-    }
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     await query(
       'update strategy_cycles set results_published = $1 where id = $2',
@@ -140,14 +131,8 @@ function registerAdminRoutes({
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const cycleId = String(req.params.cycleId || '').trim();
 
-    const cycleRes = await query(
-      'select institution_id from strategy_cycles where id = $1',
-      [cycleId]
-    );
-    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
-    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
-      return res.status(403).json({ error: 'cross-institution forbidden' });
-    }
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     const participants = await query(
       `select u.id, u.email, u.display_name,
@@ -252,14 +237,8 @@ function registerAdminRoutes({
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
 
-    const cycleRes = await query(
-      'select institution_id from strategy_cycles where id = $1',
-      [cycleId]
-    );
-    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
-    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
-      return res.status(403).json({ error: 'cross-institution forbidden' });
-    }
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     const guidelinesRes = await query(
       `select g.id, g.title, g.description, g.status, g.relation_type, g.parent_guideline_id, g.line_side, g.created_at,
@@ -332,14 +311,8 @@ function registerAdminRoutes({
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
 
-    const cycleRes = await query(
-      'select institution_id from strategy_cycles where id = $1',
-      [cycleId]
-    );
-    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
-    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
-      return res.status(403).json({ error: 'cross-institution forbidden' });
-    }
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     const guidelinesRes = await query(
       `select id, title, status
@@ -503,14 +476,8 @@ function registerAdminRoutes({
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
 
-    const cycleRes = await query(
-      'select id, institution_id from strategy_cycles where id = $1',
-      [cycleId]
-    );
-    if (cycleRes.rowCount === 0) return res.status(404).json({ error: 'cycle not found' });
-    if (cycleRes.rows[0].institution_id !== req.auth.institutionId) {
-      return res.status(403).json({ error: 'cross-institution forbidden' });
-    }
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     const parseCoord = (value) => {
       const parsed = Number(value);

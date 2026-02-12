@@ -19,6 +19,7 @@ function createV1Helpers({ query, authSecret }) {
     getInstitutionBySlug: institutionCycleService.getInstitutionBySlug,
     getCurrentCycle: institutionCycleService.getCurrentCycle,
     requireAuth,
+    verifyCycleAccess: contextLookupService.verifyCycleAccess,
     loadGuidelineContext: contextLookupService.loadGuidelineContext,
     loadCommentContext: contextLookupService.loadCommentContext,
     loadInitiativeContext: contextLookupService.loadInitiativeContext,
