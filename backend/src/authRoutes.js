@@ -23,11 +23,43 @@ function registerAuthRoutes({
   authSecret,
   authTtlHours
 }) {
+  app.get('/api/v1/invites/token-info', inviteAcceptRateLimit, async (req, res) => {
+    const token = String(req.query?.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'token required' });
+
+    const invite = await query(
+      `select inv.id, inv.institution_id, inv.email, inv.role, inv.expires_at, inv.used_at, inv.revoked_at,
+              i.slug as institution_slug, i.name as institution_name
+       from institution_invites inv
+       join institutions i on i.id = inv.institution_id
+       where inv.token_hash = $1`,
+      [sha256(token)]
+    );
+    const row = invite.rows[0];
+    if (!row) return res.status(404).json({ error: 'invite not found' });
+    if (row.revoked_at) return res.status(403).json({ error: 'invite revoked' });
+    if (row.used_at) return res.status(403).json({ error: 'invite already used' });
+    if (new Date(row.expires_at).getTime() < Date.now()) return res.status(403).json({ error: 'invite expired' });
+
+    res.json({
+      ok: true,
+      email: normalizeEmail(row.email),
+      role: row.role,
+      expiresAt: row.expires_at,
+      institution: {
+        id: row.institution_id,
+        slug: row.institution_slug,
+        name: row.institution_name
+      }
+    });
+  });
+
   app.post('/api/v1/invites/accept', inviteAcceptRateLimit, async (req, res) => {
     const token = String(req.body?.token || '').trim();
+    const emailInput = normalizeEmail(req.body?.email);
     const displayName = String(req.body?.displayName || '').trim();
     const password = String(req.body?.password || '');
-    if (!token || !displayName) return res.status(400).json({ error: 'token and displayName required' });
+    if (!token || !emailInput || !displayName) return res.status(400).json({ error: 'token, email and displayName required' });
 
     const invite = await query(
       `select id, institution_id, email, role, expires_at, used_at, revoked_at
@@ -42,6 +74,15 @@ function registerAuthRoutes({
     if (new Date(row.expires_at).getTime() < Date.now()) return res.status(403).json({ error: 'invite expired' });
 
     const email = normalizeEmail(row.email);
+    if (emailInput !== email) return res.status(400).json({ error: 'invite email mismatch' });
+
+    const institutionRes = await query(
+      'select id, slug, name from institutions where id = $1',
+      [row.institution_id]
+    );
+    if (institutionRes.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
+    const institution = institutionRes.rows[0];
+
     let user = await query('select id, email, display_name, password_salt, password_hash, status from platform_users where email = $1', [email]);
     let userRow = user.rows[0];
 
@@ -82,6 +123,11 @@ function registerAuthRoutes({
         id: userRow.id,
         email: userRow.email,
         displayName: userRow.display_name
+      },
+      institution: {
+        id: institution.id,
+        slug: institution.slug,
+        name: institution.name
       },
       institutionId: row.institution_id,
       role: row.role

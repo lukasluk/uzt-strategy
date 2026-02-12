@@ -1,3 +1,8 @@
+const {
+  createPasswordResetToken,
+  ensurePasswordResetTable
+} = require('./passwordResetService');
+
 function registerAdminRoutes({
   app,
   query,
@@ -45,6 +50,24 @@ function registerAdminRoutes({
   const adminWriteGuard = typeof adminWriteRateLimit === 'function'
     ? adminWriteRateLimit
     : (_req, _res, next) => next();
+  const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 24 * 60);
+  const PASSWORD_RESET_BASE_URL = String(process.env.PASSWORD_RESET_BASE_URL || '').trim();
+  const INVITE_BASE_URL = String(process.env.INVITE_BASE_URL || PASSWORD_RESET_BASE_URL || '').trim();
+
+  function resolveAbsoluteBase(req, configuredBase) {
+    if (configuredBase) return configuredBase.replace(/\/+$/, '');
+    return `${String(req.protocol || 'https')}://${String(req.get('host') || '').trim()}`;
+  }
+
+  function buildPasswordResetUrl(req, token) {
+    const base = resolveAbsoluteBase(req, PASSWORD_RESET_BASE_URL);
+    return `${base}/reset-password.html?token=${encodeURIComponent(String(token || '').trim())}`;
+  }
+
+  function buildInviteAcceptUrl(req, token) {
+    const base = resolveAbsoluteBase(req, INVITE_BASE_URL);
+    return `${base}/accept-invite.html?token=${encodeURIComponent(String(token || '').trim())}`;
+  }
 
   app.get('/api/v1/admin/embed-views', requireAuth, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
@@ -89,7 +112,9 @@ function registerAdminRoutes({
       createdBy: req.auth.sub,
       uuid
     });
-    res.status(201).json({ inviteToken, email, role });
+    const inviteUrl = buildInviteAcceptUrl(req, inviteToken);
+    const expiresAt = new Date(Date.now() + inviteTtlHours * 60 * 60 * 1000).toISOString();
+    res.status(201).json({ inviteToken, inviteUrl, expiresAt, email, role });
   });
 
 
@@ -201,6 +226,49 @@ function registerAdminRoutes({
     );
 
     res.json({ participants: participants.rows });
+  });
+
+  app.post('/api/v1/admin/users/:userId/password-reset-link', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const userId = String(req.params.userId || '').trim();
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    const membershipRes = await query(
+      `select u.id, u.email, u.display_name, u.status
+       from institution_memberships m
+       join platform_users u on u.id = m.user_id
+       where m.institution_id = $1 and m.user_id = $2`,
+      [req.auth.institutionId, userId]
+    );
+    if (!membershipRes.rowCount) return res.status(404).json({ error: 'membership not found' });
+
+    const user = membershipRes.rows[0];
+    if (String(user.status || '').trim() !== 'active') {
+      return res.status(409).json({ error: 'user inactive' });
+    }
+
+    await ensurePasswordResetTable(query);
+    const reset = await createPasswordResetToken({
+      query,
+      uuid,
+      userId,
+      ttlMinutes: PASSWORD_RESET_TTL_MINUTES,
+      createdByScope: 'institution_admin',
+      createdById: req.auth.sub
+    });
+    const resetUrl = buildPasswordResetUrl(req, reset.token);
+
+    res.status(201).json({
+      ok: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.display_name,
+        status: user.status
+      },
+      resetUrl,
+      expiresAt: reset.expiresAt
+    });
   });
 
 
