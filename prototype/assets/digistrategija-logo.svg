@@ -1,53 +1,24 @@
 ﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 360" role="img" aria-labelledby="title desc">
   <title id="title">digistrategija.lt logotipas</title>
-  <desc id="desc">Melynas segmentuotas simbolis ir uzrasas digistrategija.lt</desc>
+  <desc id="desc">DS simbolis ir uzrasas digi STRATEGIJA.LT</desc>
   <defs>
-    <linearGradient id="segA" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#d9ecff"/>
-      <stop offset="0.45" stop-color="#7fb7e8"/>
-      <stop offset="1" stop-color="#2e6fae"/>
+    <linearGradient id="dsBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f67ff"/>
+      <stop offset="1" stop-color="#0f52e8"/>
     </linearGradient>
-    <linearGradient id="segB" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#bfe0ff"/>
-      <stop offset="0.4" stop-color="#5fa2da"/>
-      <stop offset="1" stop-color="#244f95"/>
+    <linearGradient id="dsDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#000a2f"/>
+      <stop offset="1" stop-color="#001b64"/>
     </linearGradient>
-    <linearGradient id="wordA" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#2f93e1"/>
-      <stop offset="1" stop-color="#244f95"/>
-    </linearGradient>
-    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="200%">
-      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#285d9b" flood-opacity="0.22"/>
-    </filter>
-    <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="2.6" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="arithmetic" k2="1" k3="-0.3"/>
-    </filter>
   </defs>
 
-  <g transform="translate(36 24)" filter="url(#softShadow)">
-    <path d="M26 36 C26 22 36 12 50 12 H108 C121 12 132 22 132 36 V92 C132 105 121 116 108 116 H50 C36 116 26 106 26 92 Z"
-      fill="url(#segB)" stroke="#dceeff" stroke-opacity="0.9" stroke-width="4"/>
-
-    <path d="M26 136 C26 122 36 112 50 112 H108 C121 112 132 122 132 136 V186 C132 201 121 212 108 212 H50 C36 212 26 201 26 186 Z"
-      fill="url(#segA)" stroke="#e5f3ff" stroke-opacity="0.9" stroke-width="4"/>
-
-    <path d="M148 14 H214 C253 14 286 47 286 86 C286 125 253 158 214 158 H148 C134 158 124 148 124 134 V38 C124 24 134 14 148 14 Z"
-      fill="url(#segA)" stroke="#e8f4ff" stroke-width="4"/>
-
-    <path d="M148 110 H214 C253 110 286 143 286 182 C286 221 253 254 214 254 H148 C134 254 124 244 124 230 V134 C124 120 134 110 148 110 Z"
-      fill="url(#segB)" stroke="#e8f4ff" stroke-width="4"/>
-
-    <rect x="112" y="98" width="28" height="58" rx="12" fill="url(#segA)" stroke="#eaf5ff" stroke-width="3"/>
-    <circle cx="134" cy="126" r="42" fill="url(#segA)" stroke="#f3f9ff" stroke-width="5" filter="url(#innerGlow)"/>
-
-    <path d="M236 18 L248 6" stroke="#ffffff" stroke-opacity="0.9" stroke-width="5" stroke-linecap="round"/>
-    <path d="M244 20 L260 4" stroke="#ffffff" stroke-opacity="0.8" stroke-width="3" stroke-linecap="round"/>
+  <g font-family="'Montserrat','Poppins','Segoe UI',Arial,sans-serif" font-weight="800" letter-spacing="-2">
+    <text x="34" y="312" font-size="292" fill="url(#dsBlue)">D</text>
+    <text x="222" y="244" font-size="252" fill="url(#dsDark)">S</text>
   </g>
 
-  <g transform="translate(360 106)">
-    <text x="0" y="122" font-family="'Montserrat','Poppins','Segoe UI',Arial,sans-serif" font-size="118" font-weight="700" letter-spacing="-1.5">
-      <tspan fill="url(#wordA)">digi</tspan><tspan fill="#264c8f">strategija.lt</tspan>
-    </text>
+  <g font-family="'Montserrat','Poppins','Segoe UI',Arial,sans-serif">
+    <text x="558" y="174" font-size="128" font-weight="700" fill="#1a5dff">digi</text>
+    <text x="558" y="286" font-size="100" font-weight="800" fill="#232a68" letter-spacing="1.5">STRATEGIJA.LT</text>
   </g>
 </svg>

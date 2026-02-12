@@ -924,7 +924,7 @@ function renderMapView() {
           ${nodeMarkup}
         </div>
         <div class="map-fullscreen-watermark" aria-hidden="true">
-          <img src="assets/digistrategija-logo.svg?v=20260212a" alt="" />
+          <img src="assets/digistrategija-logo.svg?v=20260212c" alt="" />
         </div>
       </section>
     </section>
