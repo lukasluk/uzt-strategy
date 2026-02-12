@@ -16,38 +16,67 @@ const steps = [
 const introSlides = [
   {
     title: '1. Pasirinkite instituciją',
-    body: 'Viršuje dešinėje pasirinkite instituciją, kurios strategiją norite peržiūrėti ar administruoti.',
-    points: ['Instituciją galima keisti bet kada.', 'Pakeitus instituciją duomenys persikrauna automatiškai.']
+    body: 'digistrategija.lt sistema skirta patogiam jūsų institucijos strategijos rengimo procesui.',
+    points: [
+      'Viršuje dešinėje pasirinkite instituciją, kurios strategiją norite peržiūrėti ar administruoti.',
+      'Instituciją galima keisti bet kada, duomenys persikrauna automatiškai.'
+    ]
   },
   {
-    title: '2. Peržiūrėkite gaires',
-    body: 'Skiltyje „Gairės“ rasite kryptis ir tikslus, jų aprašymus, balsus bei diskusijas.',
-    points: ['Gairės grupuojamos pagal ryšius: tėvinės, vaikinės ir našlaitinės.', 'Neprisijungęs lankytojas mato tik viešą informaciją.']
+    title: '2. Sukurkite gairių struktūrą',
+    body: 'Patogiai susikurkite gairių struktūrą ir aiškiai apibrėžkite strategijos kryptis.',
+    points: [
+      'Gairės grupuojamos pagal ryšius: tėvinės, vaikinės ir našlaitinės.',
+      'Tai pagrindinis kortelių valdymo modulio etapas.'
+    ]
   },
   {
-    title: '3. Peržiūrėkite iniciatyvas',
-    body: 'Skiltyje „Iniciatyvos“ matysite konkrečius uždavinius, kurie įgyvendina gaires.',
-    points: ['Kiekviena iniciatyva priskiriama bent vienai gairei.', 'Bendras balsų biudžetas dalijamas tarp gairių ir iniciatyvų.']
+    title: '3. Priskirkite iniciatyvas',
+    body: 'Skiltyje „Iniciatyvos“ priskirkite konkrečias iniciatyvas gairių įgyvendinimui.',
+    points: [
+      'Kiekviena iniciatyva turi būti susieta bent su viena gaire.',
+      'Taip kuriamas aiškus ryšys tarp krypties ir veiksmų.'
+    ]
   },
   {
-    title: '4. Prisijunkite aktyviam dalyvavimui',
-    body: 'Prisijungę dalyviai gali balsuoti, komentuoti ir kurti naujas iniciatyvas.',
-    points: ['Institucijos administratorius gauna papildomas valdymo teises.', 'Kitų institucijų strategijose veikia tik peržiūros režimas.']
+    title: '4. Komentuokite ir siūlykite kryptis',
+    body: 'Kortelių valdymo modulyje jūsų kolegos gali komentuoti ir siūlyti įvairias strategijos kryptis.',
+    points: [
+      'Diskusijos vyksta prie konkrečių gairių ir iniciatyvų.',
+      'Neprisijungęs lankytojas mato tik viešą informaciją.'
+    ]
   },
   {
-    title: '5. Naudokite balsų biudžetą',
-    body: 'Kiekvienas narys turi bendrą 20 balsų biudžetą gairėms ir iniciatyvoms.',
-    points: ['Balsai skiriami „+“ ir „−“ mygtukais.', 'Kol ciklas atviras, balsus galima koreguoti.']
+    title: '5. Balsuokite už pasiūlymus',
+    body: 'Nariai gali balsuoti už vieni kitų teiktus pasiūlymus gairėse ir iniciatyvose.',
+    points: [
+      'Balsai skiriami „+“ ir „−“ mygtukais.',
+      'Kol ciklas atviras, balsus galima koreguoti.'
+    ]
   },
   {
-    title: '6. Analizuokite strategijų žemėlapį',
-    body: 'Žemėlapyje galite matyti sluoksnius „Gairės“ ir „Iniciatyvos“ bei jų tarpusavio ryšius.',
-    points: ['Galima centruoti vaizdą, priartinti ir naudoti pilno ekrano režimą.', 'Administratorius gali keisti kortelių pozicijas.']
+    title: '6. Naudokite strategijų žemėlapį',
+    body: 'Strategijų žemėlapis yra patogus vizualinis įrankis peržiūrėti strategijos struktūrą ir elementų ryšius.',
+    points: [
+      'Galite perjungti sluoksnius „Gairės“ ir „Iniciatyvos“.',
+      'Galima centruoti vaizdą, priartinti ir naudoti pilno ekrano režimą.'
+    ]
   },
   {
-    title: '7. Užbaikite ciklą ir eksportuokite rezultatą',
-    body: 'Kai diskusijos baigtos, administratorius uždaro ciklą ir strategija tampa tik peržiūros režime.',
-    points: ['Uždarytame cikle balsavimas ir komentavimas išjungiami.', 'Santrauką galima eksportuoti į tekstą arba JSON.']
+    title: '7. Užbaikite strategijos ciklą',
+    body: 'Kai diskusijos baigtos, administratorius uždaro ciklą ir strategija lieka peržiūros režime.',
+    points: [
+      'Uždarytame cikle balsavimas ir komentavimas išjungiami.',
+      'Santrauką galima eksportuoti į tekstą arba JSON.'
+    ]
+  },
+  {
+    title: '8. Įkelkite žemėlapį su embed funkcija',
+    body: 'Galutinį interaktyvų strategijos žemėlapį įkelkite į intranetą ar vidinį puslapį naudodami embedding funkcionalumą.',
+    points: [
+      'Admin skiltyje „Embed: Strategijų žemėlapis“ nukopijuokite paruoštą iframe kodą.',
+      'Sistema skirta valstybinėms institucijoms, siekiančioms strategijos kūrimo procesą vykdyti efektyviai.'
+    ]
   }
 ];
 
@@ -985,8 +1014,8 @@ function renderGuideView() {
         <h2>Naudojimosi gidas</h2>
       </div>
       <p class="prompt">
-        Ši sistema skirta skaidriai kurti institucijos skaitmenizacijos strategiją: aptarti gaires,
-        formuoti iniciatyvas, balsuoti ir stebėti rezultatų žemėlapį.
+        digistrategija.lt sistema skirta patogiam institucijos strategijos rengimo procesui:
+        nuo gairių ir iniciatyvų valdymo iki galutinio strategijų žemėlapio publikavimo su embed funkcija.
       </p>
       <div class="guide-grid guide-grid-page">
         ${cards}
