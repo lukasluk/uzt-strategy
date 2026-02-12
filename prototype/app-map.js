@@ -740,13 +740,40 @@ function renderMapView() {
     && Boolean(graph.institution.cycle?.id);
   const embedBranding = state.embedMapMode
     ? `
-      <p class="prompt embed-map-branding-note">
+      <p class="embed-map-branding-note">
         <a href="${escapeHtml(EMBED_BRAND_LINK)}" target="_blank" rel="noopener noreferrer">
           Strategijų žemėlapis by digistrategija.lt
         </a>
       </p>
     `
     : '';
+  const mapHeader = state.embedMapMode
+    ? ''
+    : `
+      <div class="step-header">
+        <h2>Strategijų žemėlapis</h2>
+        <div class="header-stack step-header-actions">
+          <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
+          ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvų' : 'gairių'} korteles</span>` : ''}
+        </div>
+      </div>
+      <p class="prompt">Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.</p>
+    `;
+  const mapToolbar = state.embedMapMode
+    ? ''
+    : `
+      <div class="map-overlay-toolbar">
+        <div class="map-layer-toggle map-overlay-layer-toggle">
+          <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">Gairės</button>
+          <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
+        </div>
+        <div class="map-overlay-actions">
+          <button type="button" data-map-reset-btn class="btn btn-ghost">Centruoti vaizdą</button>
+          <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="Įjungti pilno ekrano režimą" title="Įjungti pilno ekrano režimą"></button>
+        </div>
+      </div>
+    `;
+  const mapWatermarkClass = state.embedMapMode ? 'map-fullscreen-watermark embed-visible' : 'map-fullscreen-watermark';
   const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
   const guidelineEdgeMarkup = graph.guidelineEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
@@ -898,26 +925,9 @@ function renderMapView() {
 
   elements.stepView.innerHTML = `
     <section class="map-view-shell">
-      <div class="step-header">
-        <h2>Strategijų žemėlapis</h2>
-        <div class="header-stack step-header-actions">
-          <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
-          ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvų' : 'gairių'} korteles</span>` : ''}
-        </div>
-      </div>
-      ${embedBranding}
-      <p class="prompt">Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.</p>
+      ${mapHeader}
       <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer} ${editable ? 'map-editable' : ''}">
-        <div class="map-overlay-toolbar">
-          <div class="map-layer-toggle map-overlay-layer-toggle">
-            <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">Gairės</button>
-            <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
-          </div>
-          <div class="map-overlay-actions">
-            <button type="button" data-map-reset-btn class="btn btn-ghost">Centruoti vaizdą</button>
-            <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="Įjungti pilno ekrano režimą" title="Įjungti pilno ekrano režimą"></button>
-          </div>
-        </div>
+        ${mapToolbar}
         <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
           <svg class="strategy-map-lines guideline-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
             ${guidelineEdgeMarkup}
@@ -933,9 +943,10 @@ function renderMapView() {
           </svg>
           ${nodeMarkup}
         </div>
-        <div class="map-fullscreen-watermark" aria-hidden="true">
+        <div class="${mapWatermarkClass}" aria-hidden="true">
           <img src="assets/digistrategija-logo.svg?v=20260212c" alt="" />
         </div>
+        ${embedBranding}
       </section>
     </section>
     <section id="mapCommentModal" class="map-comment-modal" hidden>

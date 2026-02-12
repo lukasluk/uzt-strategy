@@ -41,7 +41,7 @@ body {
 }
 
 body.embed-map-page {
-  background: #ffffff;
+  background: transparent;
 }
 
 .app {
@@ -49,7 +49,7 @@ body.embed-map-page {
 }
 
 body.embed-map-page .app {
-  padding: 10px;
+  padding: 0;
 }
 .site-header {
   margin-bottom: 18px;
@@ -250,7 +250,11 @@ body.embed-map-page .app-disclaimer {
 
 body.embed-map-page .stage {
   min-height: 0;
-  border-radius: 12px;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .steps {
@@ -429,7 +433,21 @@ body.embed-map-page .stage {
 }
 
 .embed-map-branding-note {
-  margin-bottom: 10px;
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: 18;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 6px 14px rgba(18, 49, 88, 0.12);
+  backdrop-filter: blur(2px);
+  max-width: calc(100% - 28px);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .embed-map-branding-note a {
@@ -1358,6 +1376,16 @@ textarea {
   display: grid;
   gap: 0;
 }
+body.embed-map-page .map-view-shell {
+  position: relative;
+}
+body.embed-map-page .strategy-map-viewport {
+  border: 0;
+  border-radius: 0;
+}
+body.embed-map-page .map-overlay-toolbar {
+  display: none;
+}
 .map-overlay-toolbar {
   position: absolute;
   top: 12px;
@@ -1402,11 +1430,22 @@ textarea {
   transform: translateY(6px);
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
+body.embed-map-page .map-fullscreen-watermark,
+body.embed-map-page .map-fullscreen-watermark.embed-visible {
+  left: 14px;
+  right: auto;
+  bottom: 14px;
+  opacity: 0.14;
+  transform: translateY(0);
+}
 .map-fullscreen-watermark img {
   width: clamp(150px, 16vw, 260px);
   height: auto;
   display: block;
   filter: grayscale(0.05);
+}
+body.embed-map-page .map-fullscreen-watermark img {
+  width: clamp(130px, 14vw, 220px);
 }
 .step-view:fullscreen .map-fullscreen-watermark,
 .step-view:-webkit-full-screen .map-fullscreen-watermark {

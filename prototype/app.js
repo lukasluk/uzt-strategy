@@ -1042,53 +1042,12 @@ function renderAboutView() {
   `;
 }
 
-function buildInstitutionEmbedSourceUrl() {
-  const slug = normalizeSlug(state.institutionSlug);
-  if (!slug) return '';
-  const lang = String(window.DigiI18n?.getLanguage?.() || 'lt').trim().toLowerCase() || 'lt';
-  const base = `${window.location.origin}${EMBED_MAP_PATH_PREFIX}/`;
-  return `${base}?institution=${encodeURIComponent(slug)}&${EMBED_QUERY_KEY}=${EMBED_MAP_VALUE}&view=map&lang=${encodeURIComponent(lang)}`;
-}
-
-function buildInstitutionEmbedIframeCode() {
-  const src = buildInstitutionEmbedSourceUrl();
-  if (!src) return '';
-  return [
-    '<iframe',
-    `  src="${src}"`,
-    '  width="100%"',
-    '  height="720"',
-    '  loading="lazy"',
-    '  style="border:0;overflow:hidden;"',
-    '  referrerpolicy="strict-origin-when-cross-origin"',
-    '  allowfullscreen',
-    '></iframe>'
-  ].join('\n');
-}
-
 function renderAdminView() {
-  const showEmbedHelper = canOpenAdminView();
-  const embedCode = showEmbedHelper ? buildInstitutionEmbedIframeCode() : '';
   elements.stepView.innerHTML = `
     <section class="admin-inline-shell">
       <div class="step-header">
         <h2>Admin</h2>
       </div>
-      ${showEmbedHelper ? `
-        <section class="card admin-embed-card">
-          <div class="header-row">
-            <strong>Embed: Strategijų žemėlapis (view-only)</strong>
-            <span class="tag">Institucija: ${escapeHtml(state.institutionSlug)}</span>
-          </div>
-          <p class="prompt admin-embed-help">
-            Įdėkite kodą į savo svetainę. Įterptas blokas rodo tik viešus pasirinktos institucijos žemėlapio duomenis.
-          </p>
-          <textarea id="adminEmbedCode" class="admin-embed-code" readonly>${escapeHtml(embedCode)}</textarea>
-          <div class="inline-form" style="margin-top:10px;">
-            <button id="copyEmbedCodeBtn" class="btn btn-primary" type="button">Kopijuoti embed kodą</button>
-          </div>
-        </section>
-      ` : ''}
       <div id="adminRoot" class="admin-inline-host">
         <section class="card">
           <strong>Kraunamas administravimo langas...</strong>
@@ -1099,25 +1058,6 @@ function renderAdminView() {
 
   const adminRoot = document.getElementById('adminRoot');
   if (!adminRoot) return;
-
-  const copyEmbedCodeBtn = document.getElementById('copyEmbedCodeBtn');
-  const adminEmbedCode = document.getElementById('adminEmbedCode');
-  if (copyEmbedCodeBtn && adminEmbedCode) {
-    copyEmbedCodeBtn.addEventListener('click', async () => {
-      const value = adminEmbedCode.value || '';
-      if (!value) return;
-      try {
-        await navigator.clipboard.writeText(value);
-        state.notice = 'Embed kodas nukopijuotas.';
-      } catch {
-        adminEmbedCode.focus();
-        adminEmbedCode.select();
-        document.execCommand('copy');
-        state.notice = 'Embed kodas nukopijuotas.';
-      }
-      render();
-    });
-  }
 
   ensureAdminAppLoaded()
     .then((adminApp) => {
