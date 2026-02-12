@@ -1346,7 +1346,6 @@ function renderInitiativeCard(initiative, options) {
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(initiative.title)}</h4>
-          <span class="tag">Iniciatyva</span>
           ${votingDisabled ? '<span class="tag tag-disabled">Išjungta</span>' : ''}
         </div>
         <p>${escapeHtml(initiative.description || 'Be paaiškinimo')}</p>
