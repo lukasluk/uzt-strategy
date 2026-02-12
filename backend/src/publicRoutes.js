@@ -1,9 +1,21 @@
-function registerPublicRoutes({ app, query, getInstitutionBySlug, getCurrentCycle, normalizeLineSide }) {
+function registerPublicRoutes({
+  app,
+  query,
+  publicReadRateLimit,
+  trafficMonitor,
+  getInstitutionBySlug,
+  getCurrentCycle,
+  normalizeLineSide
+}) {
+  const publicReadGuard = typeof publicReadRateLimit === 'function'
+    ? publicReadRateLimit
+    : (_req, _res, next) => next();
+
   app.get('/api/v1/health', (_req, res) => {
     res.json({ ok: true, version: 'v1' });
   });
 
-  app.get('/api/v1/public/institutions', async (_req, res) => {
+  app.get('/api/v1/public/institutions', publicReadGuard, async (_req, res) => {
     const institutions = await query(
       'select id, name, slug, status, created_at from institutions where status = $1 order by name asc',
       ['active']
@@ -11,13 +23,29 @@ function registerPublicRoutes({ app, query, getInstitutionBySlug, getCurrentCycl
     res.json({ institutions: institutions.rows });
   });
 
-  app.get('/api/v1/public/strategy-map', async (_req, res) => {
-    const institutionsRes = await query(
-      `select id, name, slug, status, created_at
-       from institutions
-       where status = 'active'
-       order by name asc`
-    );
+  app.get('/api/v1/public/strategy-map', publicReadGuard, async (req, res) => {
+    const requestedInstitutionSlug = String(req.query?.institution || '').trim().toLowerCase();
+    const source = String(req.query?.source || '').trim().toLowerCase();
+    const hasRequestedInstitutionSlug = Boolean(requestedInstitutionSlug && /^[a-z0-9-]+$/.test(requestedInstitutionSlug));
+
+    if (source === 'embed' && hasRequestedInstitutionSlug && trafficMonitor) {
+      trafficMonitor.trackEmbedView({ institutionSlug: requestedInstitutionSlug });
+    }
+
+    const institutionsRes = hasRequestedInstitutionSlug
+      ? await query(
+        `select id, name, slug, status, created_at
+         from institutions
+         where status = 'active' and slug = $1
+         order by name asc`,
+        [requestedInstitutionSlug]
+      )
+      : await query(
+        `select id, name, slug, status, created_at
+         from institutions
+         where status = 'active'
+         order by name asc`
+      );
     const institutions = institutionsRes.rows;
     if (!institutions.length) return res.json({ institutions: [] });
 
@@ -225,7 +253,7 @@ function registerPublicRoutes({ app, query, getInstitutionBySlug, getCurrentCycl
     });
   });
 
-  app.get('/api/v1/public/institutions/:slug/cycles/current/summary', async (req, res) => {
+  app.get('/api/v1/public/institutions/:slug/cycles/current/summary', publicReadGuard, async (req, res) => {
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
 
@@ -262,7 +290,7 @@ function registerPublicRoutes({ app, query, getInstitutionBySlug, getCurrentCycl
     });
   });
 
-  app.get('/api/v1/public/institutions/:slug/cycles/current/guidelines', async (req, res) => {
+  app.get('/api/v1/public/institutions/:slug/cycles/current/guidelines', publicReadGuard, async (req, res) => {
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
 
@@ -328,7 +356,7 @@ function registerPublicRoutes({ app, query, getInstitutionBySlug, getCurrentCycl
     });
   });
 
-  app.get('/api/v1/public/institutions/:slug/cycles/current/initiatives', async (req, res) => {
+  app.get('/api/v1/public/institutions/:slug/cycles/current/initiatives', publicReadGuard, async (req, res) => {
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
 

@@ -14,7 +14,16 @@ const {
 } = require('./security');
 const { logAuditEvent } = require('./audit');
 
-function registerMetaAdminRoutes({ app, query, uuid, authSecret, inviteTtlHours, authWindowMs }) {
+function registerMetaAdminRoutes({
+  app,
+  query,
+  uuid,
+  authSecret,
+  inviteTtlHours,
+  authWindowMs,
+  trafficMonitor,
+  rateLimitConfig
+}) {
   const SUPERADMIN_CODE = process.env.SUPERADMIN_CODE || 'change-me';
 
   const META_ADMIN_PASSWORD_HASH = String(process.env.META_ADMIN_PASSWORD_HASH || '').trim();
@@ -42,7 +51,16 @@ function registerMetaAdminRoutes({ app, query, uuid, authSecret, inviteTtlHours,
     windowMs: authWindowMs,
     max: META_ADMIN_AUTH_MAX_ATTEMPTS,
     keyPrefix: 'meta-admin-auth',
-    keyFn: (req) => resolveClientIp(req)
+    keyFn: (req) => resolveClientIp(req),
+    onBlocked: ({ req, retryAfter }) => {
+      if (!trafficMonitor) return;
+      trafficMonitor.trackRateLimitBlocked({
+        limiter: 'meta-admin-auth',
+        ip: resolveClientIp(req),
+        path: req.path || req.originalUrl || '',
+        retryAfterSeconds: retryAfter
+      });
+    }
   });
 
   function decodePasswordCandidate(value) {
@@ -245,6 +263,33 @@ function registerMetaAdminRoutes({ app, query, uuid, authSecret, inviteTtlHours,
         createdAt: row.created_at
       }));
 
+    const monitoringSnapshot = trafficMonitor
+      ? trafficMonitor.getSnapshot()
+      : {
+          startedAt: null,
+          requestTotal: 0,
+          requestsByCategory: [],
+          requestsByStatusBucket: [],
+          topPaths: [],
+          rateLimit: { blockedTotal: 0, byLimiter: [], recent: [] },
+          embedViews: { totalViews: 0, institutions: [] }
+        };
+    const embedViewBySlug = new Map(
+      (monitoringSnapshot.embedViews?.institutions || []).map((item) => [item.institutionSlug, item])
+    );
+    const embedViewsByInstitution = institutionsRes.rows
+      .map((institution) => {
+        const stats = embedViewBySlug.get(institution.slug);
+        return {
+          institutionId: institution.id,
+          institutionName: institution.name,
+          institutionSlug: institution.slug,
+          views: Number(stats?.views || 0),
+          lastViewedAt: stats?.lastViewedAt || null
+        };
+      })
+      .sort((left, right) => right.views - left.views);
+
     res.json({
       institutions: institutionsRes.rows.map((row) => ({
         id: row.id,
@@ -261,7 +306,12 @@ function registerMetaAdminRoutes({ app, query, uuid, authSecret, inviteTtlHours,
         createdAt: row.created_at,
         memberships: membershipsByUser[row.id] || []
       })),
-      pendingInvites
+      pendingInvites,
+      monitoring: {
+        ...monitoringSnapshot,
+        rateLimitConfig: rateLimitConfig || null,
+        embedViewsByInstitution
+      }
     });
   });
 

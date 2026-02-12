@@ -3,6 +3,8 @@ function registerAdminRoutes({
   query,
   broadcast,
   uuid,
+  adminWriteRateLimit,
+  trafficMonitor,
   crypto,
   hashPassword,
   normalizeEmail,
@@ -40,7 +42,37 @@ function registerAdminRoutes({
   resetChildrenToOrphan,
   deleteGuidelineByCycle
 }) {
-  app.post('/api/v1/admin/invites', requireAuth, async (req, res) => {
+  const adminWriteGuard = typeof adminWriteRateLimit === 'function'
+    ? adminWriteRateLimit
+    : (_req, _res, next) => next();
+
+  app.get('/api/v1/admin/embed-views', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+
+    const institutionRes = await query(
+      'select id, name, slug from institutions where id = $1',
+      [req.auth.institutionId]
+    );
+    if (institutionRes.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
+    const institution = institutionRes.rows[0];
+    const institutionEmbedStats = trafficMonitor
+      ? trafficMonitor.getEmbedViewsForInstitution(institution.slug)
+      : { views: 0, lastViewedAt: null };
+    const embedSummary = trafficMonitor
+      ? trafficMonitor.getEmbedViewsSummary()
+      : { totalViews: 0 };
+
+    res.json({
+      institutionId: institution.id,
+      institutionName: institution.name,
+      institutionSlug: institution.slug,
+      viewCount: Number(institutionEmbedStats.views || 0),
+      lastViewedAt: institutionEmbedStats.lastViewedAt || null,
+      totalEmbedViews: Number(embedSummary.totalViews || 0)
+    });
+  });
+
+  app.post('/api/v1/admin/invites', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const email = normalizeEmail(req.body?.email);
     const role = String(req.body?.role || 'member').trim();
@@ -61,7 +93,7 @@ function registerAdminRoutes({
   });
 
 
-  app.put('/api/v1/admin/cycles/:cycleId/state', requireAuth, async (req, res) => {
+  app.put('/api/v1/admin/cycles/:cycleId/state', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const cycleId = String(req.params.cycleId || '').trim();
     const state = String(req.body?.state || '').trim();
@@ -80,7 +112,7 @@ function registerAdminRoutes({
   });
 
 
-  app.put('/api/v1/admin/cycles/:cycleId/settings', requireAuth, async (req, res) => {
+  app.put('/api/v1/admin/cycles/:cycleId/settings', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
@@ -120,7 +152,7 @@ function registerAdminRoutes({
   });
 
 
-  app.post('/api/v1/admin/cycles/:cycleId/results', requireAuth, async (req, res) => {
+  app.post('/api/v1/admin/cycles/:cycleId/results', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const cycleId = String(req.params.cycleId || '').trim();
     const published = Boolean(req.body?.published);
@@ -172,7 +204,7 @@ function registerAdminRoutes({
   });
 
 
-  app.put('/api/v1/admin/users/:userId/password', requireAuth, async (req, res) => {
+  app.put('/api/v1/admin/users/:userId/password', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const userId = String(req.params.userId || '').trim();
     const password = String(req.body?.password || '');
@@ -196,7 +228,7 @@ function registerAdminRoutes({
   });
 
 
-  app.delete('/api/v1/admin/users/:userId', requireAuth, async (req, res) => {
+  app.delete('/api/v1/admin/users/:userId', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const userId = String(req.params.userId || '').trim();
     if (!userId) return res.status(400).json({ error: 'userId required' });
@@ -404,7 +436,7 @@ function registerAdminRoutes({
   });
 
 
-  app.put('/api/v1/admin/comments/:commentId/status', requireAuth, async (req, res) => {
+  app.put('/api/v1/admin/comments/:commentId/status', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const commentId = String(req.params.commentId || '').trim();
     const status = String(req.body?.status || '').trim().toLowerCase();
@@ -428,7 +460,7 @@ function registerAdminRoutes({
   });
 
 
-  app.put('/api/v1/admin/initiative-comments/:commentId/status', requireAuth, async (req, res) => {
+  app.put('/api/v1/admin/initiative-comments/:commentId/status', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const commentId = String(req.params.commentId || '').trim();
     const status = String(req.body?.status || '').trim().toLowerCase();
@@ -452,7 +484,7 @@ function registerAdminRoutes({
   });
 
 
-  app.put('/api/v1/admin/cycles/:cycleId/map-layout', requireAuth, async (req, res) => {
+  app.put('/api/v1/admin/cycles/:cycleId/map-layout', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
@@ -542,7 +574,7 @@ function registerAdminRoutes({
   });
 
 
-  app.put('/api/v1/admin/guidelines/:guidelineId', requireAuth, async (req, res) => {
+  app.put('/api/v1/admin/guidelines/:guidelineId', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const guidelineId = String(req.params.guidelineId || '').trim();
     const title = String(req.body?.title || '').trim();
@@ -593,7 +625,7 @@ function registerAdminRoutes({
   });
 
 
-  app.put('/api/v1/admin/initiatives/:initiativeId', requireAuth, async (req, res) => {
+  app.put('/api/v1/admin/initiatives/:initiativeId', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const initiativeId = String(req.params.initiativeId || '').trim();
     const title = String(req.body?.title || '').trim();
@@ -638,7 +670,7 @@ function registerAdminRoutes({
   });
 
 
-  app.delete('/api/v1/admin/initiatives/:initiativeId', requireAuth, async (req, res) => {
+  app.delete('/api/v1/admin/initiatives/:initiativeId', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const initiativeId = String(req.params.initiativeId || '').trim();
     if (!initiativeId) return res.status(400).json({ error: 'initiativeId required' });
@@ -654,7 +686,7 @@ function registerAdminRoutes({
   });
 
 
-  app.delete('/api/v1/admin/guidelines/:guidelineId', requireAuth, async (req, res) => {
+  app.delete('/api/v1/admin/guidelines/:guidelineId', requireAuth, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
     const guidelineId = String(req.params.guidelineId || '').trim();
     if (!guidelineId) return res.status(400).json({ error: 'guidelineId required' });

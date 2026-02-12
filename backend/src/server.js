@@ -6,6 +6,7 @@ const cors = require('cors');
 const { WebSocketServer } = require('ws');
 const { query } = require('./db');
 const { registerV1Routes } = require('./v1');
+const { trafficMonitor } = require('./trafficMonitor');
 require('dotenv').config();
 
 const app = express();
@@ -36,6 +37,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Superadmin-Code']
 }));
 app.use(express.json({ limit: '256kb' }));
+app.use('/api/v1', trafficMonitor.createApiRequestMiddleware());
 
 function uuid() {
   return crypto.randomUUID();

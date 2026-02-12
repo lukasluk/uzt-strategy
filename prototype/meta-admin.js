@@ -195,10 +195,115 @@ function renderUsers(users) {
   }).join('');
 }
 
+function formatDateTime(value) {
+  if (!value) return 'N/A';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return new Intl.DateTimeFormat('lt-LT', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(parsed);
+}
+
+function renderMonitoringCards(monitoring) {
+  if (!monitoring) return '';
+  const requestsByCategory = Array.isArray(monitoring.requestsByCategory) ? monitoring.requestsByCategory : [];
+  const requestsByStatusBucket = Array.isArray(monitoring.requestsByStatusBucket) ? monitoring.requestsByStatusBucket : [];
+  const topPaths = Array.isArray(monitoring.topPaths) ? monitoring.topPaths : [];
+  const limiterHits = Array.isArray(monitoring?.rateLimit?.byLimiter) ? monitoring.rateLimit.byLimiter : [];
+  const recentRateLimitEvents = Array.isArray(monitoring?.rateLimit?.recent) ? monitoring.rateLimit.recent : [];
+  const embedViewsByInstitution = Array.isArray(monitoring.embedViewsByInstitution) ? monitoring.embedViewsByInstitution : [];
+  const rateConfig = monitoring.rateLimitConfig || null;
+
+  const configBadges = rateConfig
+    ? `
+      <div class="header-stack" style="margin-top:8px;">
+        <span class="tag">public: ${Number(rateConfig.publicRead?.max || 0)}/${Math.round(Number(rateConfig.publicRead?.windowMs || 0) / 1000)}s</span>
+        <span class="tag">member-write: ${Number(rateConfig.memberWrite?.max || 0)}/${Math.round(Number(rateConfig.memberWrite?.windowMs || 0) / 1000)}s</span>
+        <span class="tag">admin-write: ${Number(rateConfig.adminWrite?.max || 0)}/${Math.round(Number(rateConfig.adminWrite?.windowMs || 0) / 1000)}s</span>
+      </div>
+    `
+    : '';
+
+  return `
+    <section class="card" style="margin-bottom: 16px;">
+      <div class="header-row">
+        <strong>API apkrovos monitoringas</strong>
+        <span class="tag">Nuo ${escapeHtml(formatDateTime(monitoring.startedAt))}</span>
+      </div>
+      <div class="header-stack">
+        <span class="tag">Užklausų iš viso: ${Number(monitoring.requestTotal || 0)}</span>
+        <span class="tag">Rate limit blokavimų: ${Number(monitoring?.rateLimit?.blockedTotal || 0)}</span>
+      </div>
+      ${configBadges}
+      <div class="card-list" style="margin-top: 12px;">
+        <article class="card">
+          <strong>Užklausos pagal sritį</strong>
+          <ul class="mini-list">
+            ${requestsByCategory.length
+              ? requestsByCategory.map((item) => `<li><span>${escapeHtml(item.category)}</span> <span class="tag">${Number(item.count || 0)}</span></li>`).join('')
+              : '<li>Nėra duomenų.</li>'}
+          </ul>
+        </article>
+        <article class="card">
+          <strong>HTTP status grupės</strong>
+          <ul class="mini-list">
+            ${requestsByStatusBucket.length
+              ? requestsByStatusBucket.map((item) => `<li><span>${escapeHtml(item.status)}</span> <span class="tag">${Number(item.count || 0)}</span></li>`).join('')
+              : '<li>Nėra duomenų.</li>'}
+          </ul>
+        </article>
+        <article class="card">
+          <strong>Rate limiteriai</strong>
+          <ul class="mini-list">
+            ${limiterHits.length
+              ? limiterHits.map((item) => `<li><span>${escapeHtml(item.limiter)}</span> <span class="tag">${Number(item.count || 0)}</span></li>`).join('')
+              : '<li>Blokavimų kol kas nėra.</li>'}
+          </ul>
+        </article>
+      </div>
+      <div class="card-list" style="margin-top: 12px;">
+        <article class="card">
+          <strong>Top endpointai</strong>
+          <ul class="mini-list">
+            ${topPaths.length
+              ? topPaths.slice(0, 10).map((item) => `<li><span>${escapeHtml(item.path)}</span> <span class="tag">${Number(item.count || 0)}</span></li>`).join('')
+              : '<li>Nėra duomenų.</li>'}
+          </ul>
+        </article>
+        <article class="card">
+          <strong>Naujausi 429 įvykiai</strong>
+          <ul class="mini-list">
+            ${recentRateLimitEvents.length
+              ? recentRateLimitEvents.slice(0, 10).map((event) => `<li><span>${escapeHtml(event.limiter)} · ${escapeHtml(event.path)}</span> <span class="tag">${escapeHtml(formatDateTime(event.at))}</span></li>`).join('')
+              : '<li>Nėra 429 įvykių.</li>'}
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="card" style="margin-bottom: 16px;">
+      <div class="header-row">
+        <strong>Embed žemėlapių peržiūros</strong>
+        <span class="tag">Viso: ${Number(monitoring?.embedViews?.totalViews || 0)}</span>
+      </div>
+      <ul class="mini-list">
+        ${embedViewsByInstitution.length
+          ? embedViewsByInstitution.map((item) => `<li><strong>${escapeHtml(item.institutionName)} (${escapeHtml(item.institutionSlug)})</strong> <span class="tag">${Number(item.views || 0)}</span> <span class="muted">${escapeHtml(formatDateTime(item.lastViewedAt))}</span></li>`).join('')
+          : '<li>Peržiūrų dar nėra.</li>'}
+      </ul>
+    </section>
+  `;
+}
+
 function renderDashboard() {
   const institutions = state.overview?.institutions || [];
   const users = state.overview?.users || [];
   const pendingInvites = state.overview?.pendingInvites || [];
+  const monitoring = state.overview?.monitoring || null;
 
   root.innerHTML = `
     <section class="card" style="margin-bottom: 16px;">
@@ -213,6 +318,8 @@ function renderDashboard() {
       </div>
       ${state.notice ? `<p class="prompt" style="color:#1c1a16;">${escapeHtml(state.notice)}</p>` : ''}
     </section>
+
+    ${renderMonitoringCards(monitoring)}
 
     <section class="card" style="margin-bottom: 16px;">
       <div class="header-row">

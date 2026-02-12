@@ -2,6 +2,7 @@ function registerMemberRoutes({
   app,
   broadcast,
   uuid,
+  memberWriteRateLimit,
   requireAuth,
   verifyCycleAccess,
   voteBudget,
@@ -21,6 +22,10 @@ function registerMemberRoutes({
   createGuidelineComment,
   createInitiativeComment
 }) {
+  const memberWriteGuard = typeof memberWriteRateLimit === 'function'
+    ? memberWriteRateLimit
+    : (_req, _res, next) => next();
+
   app.get('/api/v1/cycles/:cycleId/my-votes', requireAuth, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
@@ -41,7 +46,7 @@ function registerMemberRoutes({
   });
 
 
-  app.post('/api/v1/cycles/:cycleId/guidelines', requireAuth, async (req, res) => {
+  app.post('/api/v1/cycles/:cycleId/guidelines', requireAuth, memberWriteGuard, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
     const title = String(req.body?.title || '').trim();
     const description = String(req.body?.description || '').trim();
@@ -65,7 +70,7 @@ function registerMemberRoutes({
   });
 
 
-  app.post('/api/v1/cycles/:cycleId/initiatives', requireAuth, async (req, res) => {
+  app.post('/api/v1/cycles/:cycleId/initiatives', requireAuth, memberWriteGuard, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
     const title = String(req.body?.title || '').trim();
     const description = String(req.body?.description || '').trim();
@@ -101,7 +106,7 @@ function registerMemberRoutes({
   });
 
 
-  app.post('/api/v1/guidelines/:guidelineId/comments', requireAuth, async (req, res) => {
+  app.post('/api/v1/guidelines/:guidelineId/comments', requireAuth, memberWriteGuard, async (req, res) => {
     const guidelineId = String(req.params.guidelineId || '').trim();
     const body = String(req.body?.body || '').trim();
     if (!guidelineId || !body) return res.status(400).json({ error: 'guidelineId and body required' });
@@ -124,7 +129,7 @@ function registerMemberRoutes({
   });
 
 
-  app.post('/api/v1/initiatives/:initiativeId/comments', requireAuth, async (req, res) => {
+  app.post('/api/v1/initiatives/:initiativeId/comments', requireAuth, memberWriteGuard, async (req, res) => {
     const initiativeId = String(req.params.initiativeId || '').trim();
     const body = String(req.body?.body || '').trim();
     if (!initiativeId || !body) return res.status(400).json({ error: 'initiativeId and body required' });
@@ -147,7 +152,7 @@ function registerMemberRoutes({
   });
 
 
-  app.put('/api/v1/guidelines/:guidelineId/vote', requireAuth, async (req, res) => {
+  app.put('/api/v1/guidelines/:guidelineId/vote', requireAuth, memberWriteGuard, async (req, res) => {
     const guidelineId = String(req.params.guidelineId || '').trim();
     const score = Number(req.body?.score);
     if (!guidelineId || !Number.isInteger(score) || score < 0 || score > 5) {
@@ -180,7 +185,7 @@ function registerMemberRoutes({
   });
 
 
-  app.put('/api/v1/initiatives/:initiativeId/vote', requireAuth, async (req, res) => {
+  app.put('/api/v1/initiatives/:initiativeId/vote', requireAuth, memberWriteGuard, async (req, res) => {
     const initiativeId = String(req.params.initiativeId || '').trim();
     const score = Number(req.body?.score);
     if (!initiativeId || !Number.isInteger(score) || score < 0 || score > 5) {

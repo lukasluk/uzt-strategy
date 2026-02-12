@@ -83,7 +83,13 @@ function shouldUseSecureCookie(req) {
   return Boolean(req.secure || forwardedProto === 'https');
 }
 
-function createRateLimiter({ windowMs, max, keyPrefix = 'rl', keyFn = null }) {
+function createRateLimiter({
+  windowMs,
+  max,
+  keyPrefix = 'rl',
+  keyFn = null,
+  onBlocked = null
+}) {
   const hits = new Map();
 
   return function rateLimit(req, res, next) {
@@ -96,6 +102,20 @@ function createRateLimiter({ windowMs, max, keyPrefix = 'rl', keyFn = null }) {
       hits.set(key, { count: 1, resetAt: now + windowMs });
     } else if (current.count >= max) {
       const retryAfter = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+      if (typeof onBlocked === 'function') {
+        try {
+          onBlocked({
+            req,
+            key,
+            keyPrefix,
+            retryAfter,
+            max,
+            windowMs
+          });
+        } catch {
+          // Swallow monitoring callback errors to keep rate limiter safe.
+        }
+      }
       res.set('Retry-After', String(retryAfter));
       return res.status(429).json({ error: 'too many requests' });
     } else {

@@ -461,6 +461,7 @@ function toUserMessage(error) {
     'invite expired': 'Kvietimas nebegalioja.',
     'invite revoked': 'Kvietimas atšauktas.',
     'invite already used': 'Kvietimas jau panaudotas.',
+    'too many requests': 'Per daug užklausų. Pabandykite po kelių sekundžių.',
     'guidelineId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
     'initiativeId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
     'initiativeId and body required': 'Komentaras negali būti tuščias.',
@@ -555,7 +556,10 @@ async function loadInstitutions() {
 }
 
 async function loadStrategyMap() {
-  const payload = await api('/api/v1/public/strategy-map', { auth: false });
+  const params = new URLSearchParams();
+  if (state.institutionSlug) params.set('institution', state.institutionSlug);
+  params.set('source', state.embedMapMode ? 'embed' : 'app');
+  const payload = await api(`/api/v1/public/strategy-map?${params.toString()}`, { auth: false });
   state.mapData = payload || { institutions: [] };
 }
 
