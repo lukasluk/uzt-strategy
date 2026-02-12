@@ -44,36 +44,22 @@ body {
   padding: var(--page-gutter) var(--page-gutter) 52px;
 }
 .site-header {
-  position: relative;
   margin-bottom: 18px;
-  padding: 14px 12px 12px;
-  border: 1px solid var(--border-soft);
-  border-radius: 22px;
-  background:
-    linear-gradient(140deg, rgba(255, 255, 255, 0.95) 0%, rgba(242, 248, 255, 0.95) 58%, rgba(228, 238, 252, 0.92) 100%);
-  box-shadow: 0 10px 24px rgba(17, 47, 92, 0.08);
-  overflow: hidden;
-  isolation: isolate;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  isolation: auto;
 }
 
 .site-header::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 84% 22%, rgba(43, 111, 190, 0.2), transparent 56%),
-    radial-gradient(circle at 12% 15%, rgba(63, 143, 230, 0.1), transparent 48%);
-  pointer-events: none;
-  z-index: 0;
+  content: none;
 }
 
 .site-header::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.24) 47%, transparent 73%);
-  pointer-events: none;
-  z-index: 0;
+  content: none;
 }
 
 .topbar {
@@ -2654,10 +2640,6 @@ select:focus {
 
   .user-bar {
     justify-content: flex-start;
-  }
-
-  .site-header {
-    padding: 12px 10px 10px;
   }
 
   .top-actions {
