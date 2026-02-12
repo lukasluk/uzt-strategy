@@ -1,0 +1,159 @@
+﻿PROJECT HANDOFF - UZT / digistrategija.lt
+Generated: 2026-02-12 11:48
+Repo: https://github.com/lukasluk/uzt-strategy
+Branch: master
+
+==================================================
+1) CURRENT SNAPSHOT (2026-02-12)
+==================================================
+Production domain:
+- https://www.digistrategija.lt
+- https://digistrategija.lt
+
+Current deployed commit in production:
+- 9b12556  Move language switch to footer left area
+
+Previous commit deployed right before it:
+- 9ff3f90  Refactor frontend map view into dedicated module
+
+Latest verified deployment run:
+- Date: 2026-02-12
+- Result: Deployment completed safely
+- DB backup created:
+  /srv/uzt-backups/database/uzt_strategy_20260212T094412Z.dump
+- Release snapshot created:
+  /srv/uzt-backups/releases/20260212T094412Z
+- Service health:
+  /api/v1/health => {"ok":true,"version":"v1"}
+
+==================================================
+2) DEPLOYMENT STATUS - STABILIZED
+==================================================
+Deployment process is now stable and repeatable.
+
+In place:
+- GitHub Actions deployment workflow:
+  .github/workflows/deploy.yml
+- Safe server deploy script with:
+  - lock file protection (prevents concurrent deploys)
+  - required env validation
+  - DB backup before deploy
+  - code/config snapshot backup for rollback
+  - automatic health check after restart
+- Script path:
+  deploy/deploy.sh
+
+Validated in practice:
+- Repeated manual production deploys completed successfully.
+- nginx config tests pass during deploy.
+- API service restarts cleanly and health check passes.
+
+==================================================
+3) SUDO CONFIGURATION STATUS
+==================================================
+Operational reality on server:
+- Deployment operations were executed from a sudo-capable shell (root@srv1345585).
+- deploy/deploy.sh itself uses sudo internally for:
+  - systemd service updates/restarts
+  - nginx config install/reload
+
+Meaning:
+- sudo is configured and working for deployment flow.
+- No interactive blocker was observed in latest deploy runs.
+
+If using non-root deploy user in future:
+- Ensure that user has sudo rights for commands used by deploy.sh
+  (systemctl, nginx, cp/ln/rm under /etc paths), ideally non-interactive.
+
+==================================================
+4) FRONTEND STATUS
+==================================================
+Current frontend stack remains static + vanilla JS:
+- prototype/index.html
+- prototype/app.js
+- prototype/app-map.js (new map module)
+- prototype/styles.css
+- prototype/i18n.js
+- prototype/admin.html + admin.js
+- prototype/meta-admin.html + meta-admin.js
+
+Recent frontend changes live in production:
+1. Map logic split out of app.js into:
+   - prototype/app-map.js
+2. Language switch moved:
+   - from top header
+   - to footer left area (app-disclaimer-lang)
+
+==================================================
+5) BACKEND STATUS
+==================================================
+Backend remains modularized v1 API with separated route/service layers.
+
+Key modules:
+- backend/src/server.js
+- backend/src/v1.js
+- backend/src/publicRoutes.js
+- backend/src/authRoutes.js
+- backend/src/memberRoutes.js
+- backend/src/adminRoutes.js
+- backend/src/metaAdminRoutes.js
+- backend/src/v1Helpers.js
+- backend/src/services/*
+
+Health endpoint currently used by deploy:
+- /api/v1/health
+
+==================================================
+6) KNOWN SECURITY NOTE (ACTIVE WARNING)
+==================================================
+Still active warning in logs:
+- META_ADMIN_PASSWORD_HASH is not set; legacy plaintext meta-admin password flow is in use.
+
+Recommended next hardening step:
+- Set META_ADMIN_PASSWORD_HASH
+- Disable legacy mode when ready:
+  ALLOW_LEGACY_META_ADMIN_PASSWORD=0
+
+Helper script:
+- node backend/scripts/generate-meta-admin-hash.js "<strong-password>"
+
+==================================================
+7) MANDATORY HANDOFF UPDATE RULE
+==================================================
+THIS FILE IS A LIVING OPERATIONAL LOG.
+
+It MUST be updated after EVERY:
+1) commit that changes behavior/architecture/deploy flow
+2) production deployment
+
+Minimum mandatory updates each time:
+- exact commit hash and message
+- deployment date/time
+- health-check results
+- backup/snapshot paths created by deploy
+- any warnings/errors observed
+- current next-step recommendation
+
+If this file is not updated, it is considered stale and untrusted.
+
+==================================================
+8) STANDARD DEPLOY RUNBOOK (MANUAL)
+==================================================
+cd /srv/uzt-strategy-src
+sudo git fetch origin
+sudo git reset --hard origin/master
+git log --oneline -n 3
+sudo bash /srv/uzt-strategy-src/deploy/deploy.sh
+sudo systemctl status uzt-strategy-api --no-pager
+curl -fsS http://127.0.0.1:3000/api/v1/health
+curl -fsS https://www.digistrategija.lt/index.html | head -n 120
+
+==================================================
+9) NEXT RECOMMENDED STEP
+==================================================
+Continue frontend modularization in small safe steps:
+- split prototype/app.js by view domains (guidelines, initiatives, auth/userbar)
+- keep behavior identical per step
+- deploy and verify after each small refactor
+
+END OF HANDOFF
