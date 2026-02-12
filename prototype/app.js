@@ -911,25 +911,32 @@ function renderIntroDeck() {
                 <p data-guide-vision>${escapeHtml(cycleVisionText())}</p>
               </article>
               <span class="structure-arrow" aria-hidden="true">→</span>
-              <article class="structure-step structure-step-layer" role="listitem">
-                <span class="structure-label">Gairės</span>
-                <p>Kryptys arba tikslai, atvaizduojami dviem kortelių lygiais.</p>
-                <div class="structure-mini-cards" aria-hidden="true">
-                  <span>Tėvinės</span>
-                  <span>Vaikinės</span>
+              <section class="structure-layer-group" role="group" aria-label="Platformos dalis">
+                <div class="structure-layer-group-head">
+                  <span class="structure-group-badge">Platformos apimtis: www.digistrategija.lt</span>
                 </div>
-                <span class="structure-badge">www.digistrategija.lt</span>
-              </article>
-              <span class="structure-arrow" aria-hidden="true">→</span>
-              <article class="structure-step structure-step-layer" role="listitem">
-                <span class="structure-label">Iniciatyvos</span>
-                <p>Uždaviniai, kurie išpildo gaires ir kuria apčiuopiamą rezultatą.</p>
-                <div class="structure-mini-cards" aria-hidden="true">
-                  <span>Veiksmų idėjos</span>
-                  <span>Prioritetai</span>
+                <div class="structure-layer-grid">
+                  <article class="structure-step structure-step-layer" role="listitem">
+                    <span class="structure-label">Gairės</span>
+                    <p>Kryptys arba tikslai, atvaizduojami dviem kortelių lygiais.</p>
+                    <div class="structure-mini-cards" aria-hidden="true">
+                      <span>Tėvinės</span>
+                      <span>Vaikinės</span>
+                    </div>
+                    <span class="structure-badge">Etapas 1</span>
+                  </article>
+                  <span class="structure-arrow structure-arrow-inner" aria-hidden="true">→</span>
+                  <article class="structure-step structure-step-layer" role="listitem">
+                    <span class="structure-label">Iniciatyvos</span>
+                    <p>Uždaviniai, kurie išpildo gaires ir kuria apčiuopiamą rezultatą.</p>
+                    <div class="structure-mini-cards" aria-hidden="true">
+                      <span>Veiksmų idėjos</span>
+                      <span>Prioritetai</span>
+                    </div>
+                    <span class="structure-badge">Etapas 2</span>
+                  </article>
                 </div>
-                <span class="structure-badge">www.digistrategija.lt</span>
-              </article>
+              </section>
               <span class="structure-arrow" aria-hidden="true">→</span>
               <article class="structure-step" role="listitem">
                 <span class="structure-label">Įgyvendinimo planas</span>
