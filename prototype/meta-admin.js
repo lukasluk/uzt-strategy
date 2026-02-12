@@ -126,6 +126,24 @@ async function runBusy(task) {
   }
 }
 
+async function runBusyWithOutcome(task) {
+  if (state.busy) return { ok: false, skipped: true, error: '' };
+  state.busy = true;
+  state.notice = '';
+  render();
+  try {
+    await task();
+    return { ok: true, skipped: false, error: '' };
+  } catch (error) {
+    const message = toUserMessage(error);
+    state.notice = message;
+    return { ok: false, skipped: false, error: message };
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
+
 function renderLogin() {
   root.innerHTML = `
     <section class="card" style="max-width: 620px; margin: 30px auto;">
@@ -189,10 +207,10 @@ function renderUsers(users) {
         </div>
         <p class="prompt">${escapeHtml(user.email)}</p>
         <div class="inline-form">
-          <button class="btn btn-ghost" data-action="toggle-user-status" data-user-id="${escapeHtml(user.id)}" data-next-status="${user.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
+          <button class="btn btn-ghost" type="button" data-action="toggle-user-status" data-user-id="${escapeHtml(user.id)}" data-next-status="${user.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
             ${user.status === 'active' ? 'Blokuoti vartotoja' : 'Aktyvuoti vartotoja'}
           </button>
-          <button class="btn btn-ghost" data-action="create-password-reset-link" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
+          <button class="btn btn-ghost" type="button" data-action="create-password-reset-link" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
             Slaptazodzio keitimo nuoroda
           </button>
         </div>
@@ -571,35 +589,62 @@ function bindDashboardEvents() {
   }
 
 
-  root.querySelectorAll('[data-action="create-password-reset-link"]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const userId = String(button.dataset.userId || '').trim();
-      if (!userId) return;
-
-      await runBusy(async () => {
-        const payload = await api(`/api/v1/meta-admin/users/${encodeURIComponent(userId)}/password-reset-link`, {
-          method: 'POST'
-        });
-        state.lastPasswordReset = {
-          userId,
-          url: String(payload?.resetUrl || ''),
-          expiresAt: payload?.expiresAt || null
-        };
-        state.notice = 'Sugeneruota vienkartine slaptazodzio keitimo nuoroda.';
-        render();
+  async function createPasswordResetLinkForUser(userId) {
+    const normalizedUserId = String(userId || '').trim();
+    if (!normalizedUserId) return;
+    const outcome = await runBusyWithOutcome(async () => {
+      const payload = await api(`/api/v1/meta-admin/users/${encodeURIComponent(normalizedUserId)}/password-reset-link`, {
+        method: 'POST'
       });
+      const url = String(payload?.resetUrl || '');
+      state.lastPasswordReset = {
+        userId: normalizedUserId,
+        url,
+        expiresAt: payload?.expiresAt || null
+      };
+      state.notice = 'Sugeneruota vienkartine slaptazodzio keitimo nuoroda.';
+      render();
+      if (url) {
+        window.prompt('Vienkartine nuoroda (kopijavimui):', url);
+      }
     });
-  });
+    if (!outcome.ok && !outcome.skipped && outcome.error) {
+      window.alert(`Nepavyko sukurti slaptazodzio keitimo nuorodos: ${outcome.error}`);
+    }
+  }
 
-  root.querySelectorAll('[data-action="copy-password-reset-link"]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const link = String(state.lastPasswordReset?.url || '').trim();
-      if (!link) return;
+  async function copyPasswordResetLink() {
+    const link = String(state.lastPasswordReset?.url || '').trim();
+    if (!link) return;
+    const outcome = await runBusyWithOutcome(async () => {
       await navigator.clipboard.writeText(link);
       state.notice = 'Slaptazodzio keitimo nuoroda nukopijuota.';
-      render();
     });
-  });
+    if (!outcome.ok && !outcome.skipped && outcome.error) {
+      window.alert(`Nepavyko nukopijuoti nuorodos: ${outcome.error}`);
+    }
+  }
+
+  if (!root.dataset.resetDelegatedBound) {
+    root.dataset.resetDelegatedBound = '1';
+    root.addEventListener('click', async (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      const createButton = target.closest('[data-action="create-password-reset-link"]');
+      if (createButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        await createPasswordResetLinkForUser(createButton.dataset.userId);
+        return;
+      }
+      const copyButton = target.closest('[data-action="copy-password-reset-link"]');
+      if (copyButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        await copyPasswordResetLink();
+      }
+    });
+  }
 
   root.querySelectorAll('[data-action="toggle-user-status"]').forEach((button) => {
     button.addEventListener('click', async () => {
