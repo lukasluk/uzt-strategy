@@ -957,13 +957,14 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.92fr);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 .initiative-add-form-pane {
   min-width: 0;
 }
 .initiative-add-matrix-pane {
   min-width: 0;
+  display: flex;
 }
 .initiative-matrix-card {
   border: 1px solid var(--border-soft);
@@ -971,7 +972,9 @@ textarea {
   background: linear-gradient(180deg, #f9fcff 0%, #eff6ff 100%);
   padding: 12px;
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 10px;
+  height: 100%;
 }
 .initiative-matrix-header {
   display: flex;
@@ -980,11 +983,20 @@ textarea {
   gap: 8px;
 }
 .initiative-matrix-scroll {
-  max-height: 320px;
+  max-height: none;
+  min-height: 0;
   overflow: auto;
   border: 1px solid #cfddf2;
   border-radius: 12px;
   background: #fff;
+}
+#initiativeAddForm .form-row {
+  grid-template-columns: 1fr;
+}
+#initiativeAddForm textarea[name='desc'] {
+  width: 100%;
+  min-height: 110px;
+  display: block;
 }
 .initiative-matrix-table {
   width: 100%;
