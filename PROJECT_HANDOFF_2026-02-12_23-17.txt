@@ -1,5 +1,5 @@
 ﻿PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-12 22:59
+Generated: 2026-02-12 23:17
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
@@ -96,6 +96,8 @@ Current focus:
   - adjusted top-left DS logo: reduced size by ~30% and added subtle glass/emboss styling
   - centered DS mark inside fixed logo square, darkened square background, and increased emboss depth
   - removed redundant "Iniciatyva" tag from initiative cards in the Initiatives view
+  - reduced top-left DS icon tile by ~40% for a more compact header footprint
+  - added initiative page matrix panel (Guideline -> Initiatives) with scrollable table, alternating row colors, and explicit highlight for unassigned guidelines
 
 ==================================================
 5) BACKEND STATUS

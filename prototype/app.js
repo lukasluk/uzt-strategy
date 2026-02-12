@@ -1321,6 +1321,88 @@ function resolveInitiativeGuidelineNames(initiative) {
     .filter(Boolean);
 }
 
+function resolveInitiativeGuidelineIds(initiative) {
+  const links = Array.isArray(initiative?.guidelineLinks) ? initiative.guidelineLinks : [];
+  const idsFromLinks = links
+    .map((link) => String(link?.guidelineId || '').trim())
+    .filter(Boolean);
+  if (idsFromLinks.length) return Array.from(new Set(idsFromLinks));
+
+  const ids = Array.isArray(initiative?.guidelineIds) ? initiative.guidelineIds : [];
+  return Array.from(new Set(ids.map((id) => String(id || '').trim()).filter(Boolean)));
+}
+
+function buildGuidelineInitiativeMatrixRows(guidelines, initiatives) {
+  const guidelineList = Array.isArray(guidelines) ? guidelines : [];
+  const initiativeList = Array.isArray(initiatives) ? initiatives : [];
+
+  const rows = guidelineList.map((guideline) => ({
+    guidelineId: guideline.id,
+    guidelineTitle: String(guideline.title || '').trim() || 'Be pavadinimo',
+    initiativeTitles: []
+  }));
+  const rowByGuidelineId = new Map(rows.map((row) => [row.guidelineId, row]));
+
+  initiativeList.forEach((initiative) => {
+    const initiativeTitle = String(initiative?.title || '').trim() || 'Be pavadinimo';
+    const guidelineIds = resolveInitiativeGuidelineIds(initiative);
+    guidelineIds.forEach((guidelineId) => {
+      const row = rowByGuidelineId.get(guidelineId);
+      if (!row) return;
+      row.initiativeTitles.push(initiativeTitle);
+    });
+  });
+
+  return rows
+    .map((row) => {
+      const uniqueTitles = Array.from(new Set(row.initiativeTitles)).sort((a, b) => a.localeCompare(b, 'lt'));
+      return {
+        guidelineId: row.guidelineId,
+        guidelineTitle: row.guidelineTitle,
+        initiativeTitles: uniqueTitles,
+        unassigned: uniqueTitles.length === 0
+      };
+    })
+    .sort((a, b) => a.guidelineTitle.localeCompare(b.guidelineTitle, 'lt'));
+}
+
+function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
+  const rows = buildGuidelineInitiativeMatrixRows(guidelines, initiatives);
+  return `
+    <div class="initiative-matrix-card">
+      <div class="initiative-matrix-header">
+        <strong>Gairių ir iniciatyvų susiejimas</strong>
+        <span class="tag">Lentelė</span>
+      </div>
+      <p class="prompt">Gairės, kurios neturi nei vienos iniciatyvos, pažymėtos atskirai.</p>
+      <div class="initiative-matrix-scroll">
+        <table class="initiative-matrix-table">
+          <thead>
+            <tr>
+              <th>Gairė</th>
+              <th>Priskirtos iniciatyvos</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.length
+              ? rows.map((row) => `
+                <tr class="${row.unassigned ? 'is-unassigned' : ''}">
+                  <td class="initiative-matrix-guideline">${escapeHtml(row.guidelineTitle)}</td>
+                  <td>
+                    ${row.unassigned
+                      ? '<span class="initiative-matrix-empty">Nepriskirta nė viena iniciatyva</span>'
+                      : `<div class="initiative-matrix-initiative-list">${row.initiativeTitles.map((title) => `<span class="initiative-matrix-chip">${escapeHtml(title)}</span>`).join('')}</div>`}
+                  </td>
+                </tr>
+              `).join('')
+              : '<tr><td colspan="2" class="initiative-matrix-empty-row">Gairių dar nėra.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
 function renderInitiativeCard(initiative, options) {
   const userScore = Number(state.userVotes[initiative.id] || 0);
   const comments = Array.isArray(initiative.comments) ? initiative.comments : [];
@@ -1434,6 +1516,7 @@ function renderInitiativesView() {
     const status = String(guideline.status || 'active').toLowerCase();
     return status === 'active' || status === 'disabled' || status === 'merged';
   });
+  const guidelineInitiativeMatrix = renderGuidelineInitiativeMatrix(eligibleGuidelines, initiatives);
 
   const stats = [
     `Būsena: ${String(state.cycle?.state || '-').toUpperCase()}`,
@@ -1473,24 +1556,31 @@ function renderInitiativesView() {
     </section>
 
     ${member ? (writable ? `
-      <div class="card" style="margin-top: 16px;">
+      <div class="card initiative-add-card" style="margin-top: 16px;">
         <div class="header-row">
           <strong>Nauja iniciatyva</strong>
           <span class="tag">Pasiūlymas</span>
         </div>
-        <p class="prompt" style="margin-bottom: 10px;">Iniciatyva turi būti priskirta bent vienai gairei.</p>
-        <form id="initiativeAddForm">
-          <div class="form-row">
-            <input type="text" name="title" placeholder="Iniciatyvos pavadinimas" required ${state.busy ? 'disabled' : ''}/>
+        <div class="initiative-add-layout">
+          <div class="initiative-add-form-pane">
+            <p class="prompt" style="margin-bottom: 10px;">Iniciatyva turi būti priskirta bent vienai gairei.</p>
+            <form id="initiativeAddForm">
+              <div class="form-row">
+                <input type="text" name="title" placeholder="Iniciatyvos pavadinimas" required ${state.busy ? 'disabled' : ''}/>
+              </div>
+              <textarea name="desc" placeholder="Trumpas paaiškinimas" ${state.busy ? 'disabled' : ''}></textarea>
+              <label class="prompt" style="display:block;margin:10px 0 6px;">Priskirtos gairės</label>
+              <select name="guidelineIds" multiple size="${Math.min(Math.max(eligibleGuidelines.length, 4), 10)}" ${state.busy ? 'disabled' : ''}>
+                ${eligibleGuidelines.map((guideline) => `<option value="${escapeHtml(guideline.id)}">${escapeHtml(guideline.title)}</option>`).join('')}
+              </select>
+              <p class="prompt" style="margin: 8px 0 0;">Laikykite Ctrl (arba Cmd), jei norite pažymėti kelias gaires.</p>
+              <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Pridėti iniciatyvą</button>
+            </form>
           </div>
-          <textarea name="desc" placeholder="Trumpas paaiškinimas" ${state.busy ? 'disabled' : ''}></textarea>
-          <label class="prompt" style="display:block;margin:10px 0 6px;">Priskirtos gairės</label>
-          <select name="guidelineIds" multiple size="${Math.min(Math.max(eligibleGuidelines.length, 4), 10)}" ${state.busy ? 'disabled' : ''}>
-            ${eligibleGuidelines.map((guideline) => `<option value="${escapeHtml(guideline.id)}">${escapeHtml(guideline.title)}</option>`).join('')}
-          </select>
-          <p class="prompt" style="margin: 8px 0 0;">Laikykite Ctrl (arba Cmd), jei norite pažymėti kelias gaires.</p>
-          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>Pridėti iniciatyvą</button>
-        </form>
+          <aside class="initiative-add-matrix-pane">
+            ${guidelineInitiativeMatrix}
+          </aside>
+        </div>
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">

@@ -93,8 +93,8 @@ body.embed-map-page .app {
 .brand-map-link {
   display: inline-grid;
   place-items: center;
-  width: clamp(72px, 6vw, 92px);
-  height: clamp(72px, 6vw, 92px);
+  width: clamp(44px, 3.6vw, 55px);
+  height: clamp(44px, 3.6vw, 55px);
   text-decoration: none;
   position: relative;
   border-radius: 16px;
@@ -895,6 +895,106 @@ textarea {
   gap: 10px;
   font-size: 12px;
   color: var(--muted);
+}
+.initiative-add-card {
+  gap: 14px;
+}
+.initiative-add-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.92fr);
+  gap: 14px;
+  align-items: start;
+}
+.initiative-add-form-pane {
+  min-width: 0;
+}
+.initiative-add-matrix-pane {
+  min-width: 0;
+}
+.initiative-matrix-card {
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f9fcff 0%, #eff6ff 100%);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+.initiative-matrix-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.initiative-matrix-scroll {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid #cfddf2;
+  border-radius: 12px;
+  background: #fff;
+}
+.initiative-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 460px;
+}
+.initiative-matrix-table th,
+.initiative-matrix-table td {
+  padding: 9px 10px;
+  vertical-align: top;
+  text-align: left;
+  border-bottom: 1px solid #e0ebfb;
+}
+.initiative-matrix-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #dceaff;
+  color: #1f4674;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.initiative-matrix-table tbody tr:nth-child(odd) td {
+  background: #f8fbff;
+}
+.initiative-matrix-table tbody tr:nth-child(even) td {
+  background: #f2f7ff;
+}
+.initiative-matrix-table tbody tr.is-unassigned td {
+  background: #fff1ef;
+}
+.initiative-matrix-guideline {
+  font-weight: 700;
+  color: #1f4c80;
+}
+.initiative-matrix-initiative-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.initiative-matrix-chip {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #e3efff;
+  border: 1px solid #c7d9f2;
+  color: #245180;
+  font-size: 12px;
+  line-height: 1.2;
+}
+.initiative-matrix-empty {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #ffe1dd;
+  border: 1px solid #f4b4ad;
+  color: #8f2d27;
+  font-size: 12px;
+  font-weight: 700;
+}
+.initiative-matrix-empty-row {
+  text-align: center;
+  color: var(--muted);
+  background: #f8fbff;
 }
 
 .export {
@@ -2933,6 +3033,14 @@ select:focus {
 
   .vote-panel {
     width: 100%;
+  }
+
+  .initiative-add-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .initiative-matrix-table {
+    min-width: 0;
   }
 }
 
