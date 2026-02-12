@@ -22,6 +22,21 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+function normalizeTagToken(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || 'unknown';
+}
+
+function renderTag(value, type = 'default') {
+  const token = normalizeTagToken(value);
+  const typeToken = normalizeTagToken(type);
+  return `<span class="tag tag-${typeToken} tag-${typeToken}-${token}">${escapeHtml(value)}</span>`;
+}
+
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
@@ -146,8 +161,8 @@ async function runBusyWithOutcome(task) {
 
 function renderLogin() {
   root.innerHTML = `
-    <section class="card" style="max-width: 620px; margin: 30px auto;">
-      <h2 style="font-family: 'Fraunces', serif;">Meta Admin prisijungimas</h2>
+    <section class="card meta-admin-card meta-login-shell" style="max-width: 620px; margin: 30px auto;">
+      <h2 class="meta-login-title" style="font-family: 'Fraunces', serif;">Meta Admin prisijungimas</h2>
       <p class="prompt">Įveskite vienkartinį slaptažodį, kad gautumėte globalią prieigą.</p>
       ${state.error ? `<p class="error">${escapeHtml(state.error)}</p>` : ''}
       <form id="metaAdminLoginForm" class="login-form">
@@ -183,16 +198,16 @@ function renderLogin() {
 
 function renderUsers(users) {
   if (!users.length) {
-    return '<div class="card"><p class="prompt">Dar nera vartotoju.</p></div>';
+    return '<div class="card meta-admin-subcard"><p class="prompt">Dar nera vartotoju.</p></div>';
   }
 
   return users.map((user) => {
     const hasLatestReset = state.lastPasswordReset && state.lastPasswordReset.userId === user.id;
     const membershipRows = (user.memberships || []).map((membership) => `
-      <li>
+      <li class="meta-membership-item">
         <strong>${escapeHtml(membership.institutionName)} (${escapeHtml(membership.institutionSlug)})</strong>
-        <span class="tag">${escapeHtml(membership.role)}</span>
-        <span class="tag">${escapeHtml(membership.status)}</span>
+        ${renderTag(membership.role, 'role')}
+        ${renderTag(membership.status, 'status')}
         <button class="btn btn-ghost" data-action="toggle-membership-status" data-membership-id="${escapeHtml(membership.id)}" data-next-status="${membership.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
           ${membership.status === 'active' ? 'Blokuoti naryste' : 'Aktyvuoti naryste'}
         </button>
@@ -200,13 +215,13 @@ function renderUsers(users) {
     `).join('');
 
     return `
-      <article class="card">
-        <div class="header-row">
+      <article class="card meta-admin-subcard meta-user-card">
+        <div class="header-row meta-user-head">
           <strong>${escapeHtml(user.displayName || user.email)}</strong>
-          <span class="tag">${escapeHtml(user.status)}</span>
+          ${renderTag(user.status, 'status')}
         </div>
-        <p class="prompt">${escapeHtml(user.email)}</p>
-        <div class="inline-form">
+        <p class="prompt meta-user-email">${escapeHtml(user.email)}</p>
+        <div class="inline-form meta-user-actions">
           <button class="btn btn-ghost" type="button" data-action="toggle-user-status" data-user-id="${escapeHtml(user.id)}" data-next-status="${user.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
             ${user.status === 'active' ? 'Blokuoti vartotoja' : 'Aktyvuoti vartotoja'}
           </button>
@@ -215,19 +230,19 @@ function renderUsers(users) {
           </button>
         </div>
         ${hasLatestReset ? `
-          <div class="card-section">
+          <div class="card-section meta-reset-panel">
             <strong>Vienkartine slaptazodzio keitimo nuoroda</strong>
-            <p class="prompt" style="word-break: break-all; margin-top: 6px;">${escapeHtml(state.lastPasswordReset.url || '')}</p>
-            <p class="prompt" style="margin-top: 4px;">Galioja iki: ${escapeHtml(formatDateTime(state.lastPasswordReset.expiresAt))}</p>
+            <p class="prompt meta-reset-link">${escapeHtml(state.lastPasswordReset.url || '')}</p>
+            <p class="prompt meta-reset-expiry">Galioja iki: ${escapeHtml(formatDateTime(state.lastPasswordReset.expiresAt))}</p>
             <div class="inline-form">
               <button class="btn btn-ghost" data-action="copy-password-reset-link" type="button">Kopijuoti nuoroda</button>
               <a class="btn btn-ghost" href="${escapeHtml(state.lastPasswordReset.url || '#')}" target="_blank" rel="noopener noreferrer">Atidaryti</a>
             </div>
           </div>
         ` : ''}
-        <div class="card-section">
+        <div class="card-section meta-memberships-panel">
           <strong>Narystes</strong>
-          <ul class="mini-list">${membershipRows || '<li>Nera narystciu.</li>'}</ul>
+          <ul class="mini-list meta-membership-list">${membershipRows || '<li>Nera narystciu.</li>'}</ul>
         </div>
       </article>
     `;
@@ -268,7 +283,7 @@ function renderMonitoringCards(monitoring) {
     : '';
 
   return `
-    <section class="card" style="margin-bottom: 16px;">
+    <section class="card meta-admin-card meta-monitoring-card">
       <div class="header-row">
         <strong>API apkrovos monitoringas</strong>
         <span class="tag">Nuo ${escapeHtml(formatDateTime(monitoring.startedAt))}</span>
@@ -278,8 +293,8 @@ function renderMonitoringCards(monitoring) {
         <span class="tag">Rate limit blokavimų: ${Number(monitoring?.rateLimit?.blockedTotal || 0)}</span>
       </div>
       ${configBadges}
-      <div class="card-list" style="margin-top: 12px;">
-        <article class="card">
+      <div class="card-list meta-admin-subgrid" style="margin-top: 12px;">
+        <article class="card meta-admin-subcard">
           <strong>Užklausos pagal sritį</strong>
           <ul class="mini-list">
             ${requestsByCategory.length
@@ -287,7 +302,7 @@ function renderMonitoringCards(monitoring) {
               : '<li>Nėra duomenų.</li>'}
           </ul>
         </article>
-        <article class="card">
+        <article class="card meta-admin-subcard">
           <strong>HTTP status grupės</strong>
           <ul class="mini-list">
             ${requestsByStatusBucket.length
@@ -295,7 +310,7 @@ function renderMonitoringCards(monitoring) {
               : '<li>Nėra duomenų.</li>'}
           </ul>
         </article>
-        <article class="card">
+        <article class="card meta-admin-subcard">
           <strong>Rate limiteriai</strong>
           <ul class="mini-list">
             ${limiterHits.length
@@ -304,8 +319,8 @@ function renderMonitoringCards(monitoring) {
           </ul>
         </article>
       </div>
-      <div class="card-list" style="margin-top: 12px;">
-        <article class="card">
+      <div class="card-list meta-admin-subgrid" style="margin-top: 12px;">
+        <article class="card meta-admin-subcard">
           <strong>Top endpointai</strong>
           <ul class="mini-list">
             ${topPaths.length
@@ -313,7 +328,7 @@ function renderMonitoringCards(monitoring) {
               : '<li>Nėra duomenų.</li>'}
           </ul>
         </article>
-        <article class="card">
+        <article class="card meta-admin-subcard">
           <strong>Naujausi 429 įvykiai</strong>
           <ul class="mini-list">
             ${recentRateLimitEvents.length
@@ -324,7 +339,7 @@ function renderMonitoringCards(monitoring) {
       </div>
     </section>
 
-    <section class="card" style="margin-bottom: 16px;">
+    <section class="card meta-admin-card meta-embed-monitoring-card">
       <div class="header-row">
         <strong>Embed žemėlapių peržiūros</strong>
         <span class="tag">Viso: ${Number(monitoring?.embedViews?.totalViews || 0)}</span>
@@ -342,13 +357,13 @@ function renderContentSettingsCard(contentSettings) {
   const guideIntroText = String(contentSettings?.guideIntroText || '');
   const aboutText = String(contentSettings?.aboutText || '');
   return `
-    <section class="card" style="margin-bottom: 16px;">
+    <section class="card meta-admin-card meta-content-settings-card">
       <div class="header-row">
         <strong>Viešo turinio tekstai</strong>
         <span class="tag">Naudojimosi gidas ir Apie</span>
       </div>
       <p class="prompt">Šie tekstai rodomi viešame puslapyje skiltyse „Naudojimosi gidas“ ir „Apie“.</p>
-      <form id="contentSettingsForm">
+      <form id="contentSettingsForm" class="meta-content-settings-form">
         <label class="prompt" for="guideIntroTextField">Naudojimosi gidas (teksto blokas)</label>
         <textarea id="guideIntroTextField" name="guideIntroText" rows="8" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideIntroText)}</textarea>
         <label class="prompt" for="aboutTextField" style="margin-top:10px;">Apie (teksto blokas)</label>
@@ -367,123 +382,130 @@ function renderDashboard() {
   const contentSettings = state.overview?.contentSettings || {};
 
   root.innerHTML = `
-    <section class="card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>Meta Admin skydas</strong>
-        <span class="tag">Globalus valdymas</span>
-      </div>
-      <p class="prompt">Prieiga saugoma meta admin slaptažodžiu.</p>
-      <div class="inline-form">
-        <button id="refreshOverviewBtn" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Atnaujinti duomenis</button>
-        <button id="logoutMetaBtn" class="btn btn-ghost">Atsijungti</button>
-      </div>
-      ${state.notice ? `<p class="prompt" style="color:#1c1a16;">${escapeHtml(state.notice)}</p>` : ''}
-    </section>
-
-    ${renderMonitoringCards(monitoring)}
-    ${renderContentSettingsCard(contentSettings)}
-
-    <section class="card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>Nauja institucija</strong>
-        <span class="tag">${institutions.length} institucijos</span>
-      </div>
-      <form id="createInstitutionForm">
-        <div class="form-row">
-          <input type="text" name="name" placeholder="Institucijos pavadinimas" required ${state.busy ? 'disabled' : ''}/>
-          <input type="text" name="slug" placeholder="slug (pasirinktinai)" ${state.busy ? 'disabled' : ''}/>
+    <div class="meta-admin-dashboard">
+      <section class="card meta-admin-card meta-admin-hero">
+        <div class="header-row">
+          <strong>Meta Admin skydas</strong>
+          ${renderTag('Globalus valdymas', 'scope')}
         </div>
-        <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti instituciją</button>
-      </form>
-    </section>
-
-    <section class="card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>Esamos institucijos</strong>
-        <span class="tag">${institutions.length}</span>
-      </div>
-      <div class="card-list">
-        ${institutions.length
-          ? institutions.map((institution) => `
-              <article class="card">
-                <div class="header-row">
-                  <strong>${escapeHtml(institution.name)}</strong>
-                  <span class="tag">${escapeHtml(institution.slug)}</span>
-                </div>
-                <form class="institution-rename-form inline-form" data-institution-id="${escapeHtml(institution.id)}">
-                  <input
-                    type="text"
-                    name="name"
-                    value="${escapeHtml(institution.name)}"
-                    placeholder="Naujas institucijos pavadinimas"
-                    required
-                    ${state.busy ? 'disabled' : ''}
-                  />
-                  <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Išsaugoti</button>
-                </form>
-              </article>
-            `).join('')
-          : '<article class="card"><p class="prompt">Institucijų dar nėra.</p></article>'}
-      </div>
-    </section>
-
-    <section class="card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>Nauji žmonės (invite)</strong>
-        <span class="tag">Invite-only</span>
-      </div>
-      <form id="createInviteForm">
-        <div class="form-row">
-          <select name="institutionId" required ${state.busy ? 'disabled' : ''}>
-            <option value="">Pasirinkite instituciją</option>
-            ${institutions.map((institution) => `<option value="${escapeHtml(institution.id)}">${escapeHtml(institution.name)} (${escapeHtml(institution.slug)})</option>`).join('')}
-          </select>
-          <select name="role" required ${state.busy ? 'disabled' : ''}>
-            <option value="member">member</option>
-            <option value="institution_admin">institution_admin</option>
-          </select>
+        <p class="prompt">Prieiga saugoma meta admin slaptazodziu.</p>
+        <div class="header-stack meta-admin-kpis">
+          ${renderTag(`${institutions.length} institucijos`, 'count')}
+          ${renderTag(`${users.length} vartotojai`, 'count')}
+          ${renderTag(`${pendingInvites.length} laukia kvietimo`, 'count')}
         </div>
-        <div class="form-row">
-          <input type="text" name="email" placeholder="El. paštas" required ${state.busy ? 'disabled' : ''}/>
+        <div class="inline-form meta-admin-hero-actions">
+          <button id="refreshOverviewBtn" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Atnaujinti duomenis</button>
+          <button id="logoutMetaBtn" class="btn btn-ghost">Atsijungti</button>
         </div>
-        <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti kvietimą</button>
-      </form>
-      ${state.lastInviteToken ? `
-        <div class="card" style="margin-top: 12px;">
-          <strong>Naujausias kvietimo žetonas</strong>
-          <p class="prompt" style="word-break: break-all;">${escapeHtml(state.lastInviteToken)}</p>
-          <button id="copyInviteTokenBtn" class="btn btn-ghost">Kopijuoti žetoną</button>
+        ${state.notice ? `<p class="prompt meta-admin-notice">${escapeHtml(state.notice)}</p>` : ''}
+      </section>
+
+      ${renderMonitoringCards(monitoring)}
+      ${renderContentSettingsCard(contentSettings)}
+
+      <section class="card meta-admin-card">
+        <div class="header-row">
+          <strong>Nauja institucija</strong>
+          ${renderTag(`${institutions.length} institucijos`, 'count')}
         </div>
-      ` : ''}
-    </section>
+        <form id="createInstitutionForm" class="meta-admin-form">
+          <div class="form-row">
+            <input type="text" name="name" placeholder="Institucijos pavadinimas" required ${state.busy ? 'disabled' : ''}/>
+            <input type="text" name="slug" placeholder="slug (pasirinktinai)" ${state.busy ? 'disabled' : ''}/>
+          </div>
+          <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti institucija</button>
+        </form>
+      </section>
 
-    <section class="card" style="margin-bottom: 16px;">
-      <div class="header-row">
-        <strong>Laukiantys kvietimai</strong>
-        <span class="tag">${pendingInvites.length}</span>
-      </div>
-      <ul class="mini-list">
-        ${pendingInvites.length
-          ? pendingInvites.map((invite) => `
-              <li>
-                <strong>${escapeHtml(invite.email)}</strong>
-                <span class="tag">${escapeHtml(invite.role)}</span>
-                <span class="muted">${escapeHtml(invite.institutionName)} (${escapeHtml(invite.institutionSlug)})</span>
-              </li>
-            `).join('')
-          : '<li>Nėra laukiančių kvietimų.</li>'}
-      </ul>
-    </section>
+      <section class="card meta-admin-card">
+        <div class="header-row">
+          <strong>Esamos institucijos</strong>
+          ${renderTag(String(institutions.length), 'count')}
+        </div>
+        <div class="card-list meta-admin-subgrid">
+          ${institutions.length
+            ? institutions.map((institution) => `
+                <article class="card meta-admin-subcard">
+                  <div class="header-row">
+                    <strong>${escapeHtml(institution.name)}</strong>
+                    ${renderTag(institution.slug, 'slug')}
+                  </div>
+                  <form class="institution-rename-form inline-form" data-institution-id="${escapeHtml(institution.id)}">
+                    <input
+                      type="text"
+                      name="name"
+                      value="${escapeHtml(institution.name)}"
+                      placeholder="Naujas institucijos pavadinimas"
+                      required
+                      ${state.busy ? 'disabled' : ''}
+                    />
+                    <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+                  </form>
+                </article>
+              `).join('')
+            : '<article class="card meta-admin-subcard"><p class="prompt">Instituciju dar nera.</p></article>'}
+        </div>
+      </section>
 
-    <section class="card">
-      <div class="header-row">
-        <strong>Visi vartotojai</strong>
-        <span class="tag">${users.length}</span>
-      </div>
-      <div class="card-list">
-        ${renderUsers(users)}
-      </div>
-    </section>
+      <section class="card meta-admin-card">
+        <div class="header-row">
+          <strong>Nauji zmones (invite)</strong>
+          ${renderTag('Invite-only', 'scope')}
+        </div>
+        <form id="createInviteForm" class="meta-admin-form">
+          <div class="form-row">
+            <select name="institutionId" required ${state.busy ? 'disabled' : ''}>
+              <option value="">Pasirinkite institucija</option>
+              ${institutions.map((institution) => `<option value="${escapeHtml(institution.id)}">${escapeHtml(institution.name)} (${escapeHtml(institution.slug)})</option>`).join('')}
+            </select>
+            <select name="role" required ${state.busy ? 'disabled' : ''}>
+              <option value="member">member</option>
+              <option value="institution_admin">institution_admin</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <input type="text" name="email" placeholder="El. pastas" required ${state.busy ? 'disabled' : ''}/>
+          </div>
+          <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti kvietima</button>
+        </form>
+        ${state.lastInviteToken ? `
+          <div class="card meta-admin-subcard meta-invite-token-card" style="margin-top: 12px;">
+            <strong>Naujausias kvietimo zetonas</strong>
+            <p class="prompt meta-reset-link">${escapeHtml(state.lastInviteToken)}</p>
+            <button id="copyInviteTokenBtn" class="btn btn-ghost">Kopijuoti zetona</button>
+          </div>
+        ` : ''}
+      </section>
+
+      <section class="card meta-admin-card">
+        <div class="header-row">
+          <strong>Laukiantys kvietimai</strong>
+          ${renderTag(String(pendingInvites.length), 'count')}
+        </div>
+        <ul class="mini-list meta-admin-list">
+          ${pendingInvites.length
+            ? pendingInvites.map((invite) => `
+                <li class="meta-admin-list-item">
+                  <strong>${escapeHtml(invite.email)}</strong>
+                  ${renderTag(invite.role, 'role')}
+                  <span class="muted">${escapeHtml(invite.institutionName)} (${escapeHtml(invite.institutionSlug)})</span>
+                </li>
+              `).join('')
+            : '<li>Nera laukianciu kvietimu.</li>'}
+        </ul>
+      </section>
+
+      <section class="card meta-admin-card meta-users-shell">
+        <div class="header-row">
+          <strong>Visi vartotojai</strong>
+          ${renderTag(String(users.length), 'count')}
+        </div>
+        <div class="card-list meta-users-grid">
+          ${renderUsers(users)}
+        </div>
+      </section>
+    </div>
   `;
 
   bindDashboardEvents();
@@ -712,6 +734,7 @@ function render() {
 
   renderDashboard();
 }
+
 
 
 

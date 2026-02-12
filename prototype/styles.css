@@ -2815,3 +2815,245 @@ select:focus {
     grid-template-columns: repeat(auto-fit, minmax(760px, 1fr));
   }
 }
+
+/* Meta Admin UI refinement */
+body.meta-admin-page {
+  background:
+    radial-gradient(1200px 520px at 6% -8%, rgba(63, 143, 230, 0.2), rgba(63, 143, 230, 0)),
+    radial-gradient(900px 400px at 96% -16%, rgba(43, 111, 190, 0.18), rgba(43, 111, 190, 0)),
+    linear-gradient(180deg, #eef5ff 0%, #e8f1ff 52%, #edf4ff 100%);
+}
+
+body.meta-admin-page .app {
+  max-width: 1520px;
+  margin: 0 auto;
+  padding-bottom: 30px;
+}
+
+body.meta-admin-page .topbar {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(251, 253, 255, 0.96) 0%, rgba(240, 247, 255, 0.96) 100%);
+  box-shadow: 0 10px 22px rgba(27, 74, 136, 0.08);
+}
+
+body.meta-admin-page .topbar h1 {
+  font-size: clamp(30px, 2.1vw, 38px);
+  line-height: 1.1;
+}
+
+body.meta-admin-page .stage {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  min-height: 0;
+}
+
+.meta-admin-dashboard {
+  display: grid;
+  gap: 14px;
+}
+
+.meta-admin-card {
+  border-color: #bed4f1;
+  background: linear-gradient(180deg, #fcfeff 0%, #f4f9ff 100%);
+  box-shadow: 0 8px 20px rgba(35, 82, 147, 0.08);
+  padding: 16px 18px;
+  gap: 12px;
+}
+
+.meta-admin-subcard {
+  border-color: #cadef6;
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(35, 82, 147, 0.06);
+}
+
+.meta-admin-hero {
+  border-color: #97bceb;
+  background: linear-gradient(160deg, #f7fbff 0%, #e7f1ff 100%);
+  box-shadow: 0 12px 24px rgba(36, 81, 145, 0.12);
+}
+
+.meta-admin-kpis {
+  margin-top: 2px;
+}
+
+.meta-admin-kpis .tag {
+  font-weight: 700;
+}
+
+.meta-admin-hero-actions {
+  margin-top: 2px;
+}
+
+.meta-admin-notice {
+  margin-bottom: 0;
+  color: #1f4f84;
+  font-weight: 600;
+}
+
+.meta-admin-subgrid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.meta-users-grid {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 12px;
+}
+
+.meta-user-card {
+  gap: 10px;
+}
+
+.meta-user-email {
+  margin-bottom: 0;
+}
+
+.meta-user-actions {
+  margin-top: 2px;
+}
+
+.meta-reset-panel {
+  border: 1px dashed #9dc0ea;
+  border-radius: 12px;
+  padding: 10px;
+  background: #f5faff;
+}
+
+.meta-reset-link {
+  margin-top: 6px;
+  margin-bottom: 0;
+  word-break: break-all;
+  color: #244e80;
+}
+
+.meta-reset-expiry {
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.meta-memberships-panel {
+  border-top: 1px solid #d9e7fa;
+  padding-top: 8px;
+}
+
+.meta-membership-list,
+.meta-admin-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.meta-membership-item,
+.meta-admin-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d4e3f7;
+  border-radius: 12px;
+  padding: 9px 10px;
+  background: #fafdff;
+}
+
+.meta-admin-list-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.meta-invite-token-card {
+  border-style: dashed;
+}
+
+.meta-content-settings-form {
+  display: grid;
+  gap: 8px;
+}
+
+body.meta-admin-page .btn {
+  border-radius: 12px;
+  padding: 9px 14px;
+}
+
+body.meta-admin-page .btn-primary {
+  background: linear-gradient(180deg, #2d76c9 0%, #235fa8 100%);
+  border-color: #1f4f84;
+}
+
+body.meta-admin-page .btn-ghost {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: #c0d4f1;
+}
+
+body.meta-admin-page .tag {
+  background: #eaf3ff;
+  color: #224a79;
+  border: 1px solid #c3d8f3;
+  margin-right: 0;
+}
+
+body.meta-admin-page .tag-scope {
+  background: #dcecff;
+  border-color: #afccf2;
+  color: #1f4674;
+}
+
+body.meta-admin-page .tag-count {
+  background: #edf5ff;
+  border-color: #c3d9f5;
+  color: #2a578b;
+}
+
+body.meta-admin-page .tag-role {
+  background: #eef8ff;
+  border-color: #c5ddf7;
+  color: #245688;
+}
+
+body.meta-admin-page .tag-role-institution-admin {
+  background: #ddeeff;
+  border-color: #a9c9ef;
+  color: #173f6c;
+  font-weight: 700;
+}
+
+body.meta-admin-page .tag-status-active {
+  background: #e9f8ef;
+  border-color: #b7e3c6;
+  color: #1f6a3b;
+}
+
+body.meta-admin-page .tag-status-blocked {
+  background: #fff0ef;
+  border-color: #f0c2bf;
+  color: #8f2d27;
+}
+
+body.meta-admin-page .tag-slug {
+  background: #f1f7ff;
+  border-color: #ccddf5;
+  color: #345f8f;
+}
+
+@media (max-width: 900px) {
+  body.meta-admin-page .topbar {
+    padding: 12px;
+  }
+
+  .meta-users-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-membership-item,
+  .meta-admin-list-item {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .meta-admin-hero-actions {
+    grid-template-columns: 1fr;
+  }
+}
