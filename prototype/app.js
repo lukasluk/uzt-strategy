@@ -16,38 +16,38 @@
 const introSlides = [
   {
     title: '1. Pasirinkite instituciją',
-    body: 'Viršuje dešinėje pasirinkite instituciją. Matysite tik tos institucijos viešas gaires ir strategijos eigą.',
-    points: ['Instituciją galima keisti bet kada.', 'Perjungus instituciją duomenys atsinaujina automatiškai.']
+    body: 'Viršuje dešinėje pasirinkite instituciją, kurios strategiją norite peržiūrėti ar administruoti.',
+    points: ['Instituciją galima keisti bet kada.', 'Pakeitus instituciją duomenys persikrauna automatiškai.']
   },
   {
     title: '2. Peržiūrėkite gaires',
-    body: 'Skiltyje „Gairės“ matysite pasiūlymus, komentarus ir bendrus balsų rezultatus. Neprisijungę vartotojai mato tik viešą informaciją.',
-    points: ['Kiekviena gairė turi atskirą diskusijos bloką.', 'Matomi bendri balsai ir balsuotojų skaičius.']
+    body: 'Skiltyje „Gairės“ rasite kryptis ir tikslus, jų aprašymus, balsus bei diskusijas.',
+    points: ['Gairės grupuojamos pagal ryšius: tėvinės, vaikinės ir našlaitinės.', 'Neprisijungęs lankytojas mato tik viešą informaciją.']
   },
   {
-    title: '3. Prisijungimas ir teisės',
-    body: 'Prisijungę dalyviai gali komentuoti, balsuoti ir siūlyti naujas gaires. Administratoriaus teisės suteikia papildomą valdymą.',
-    points: ['Administratoriai gali valdyti ciklą ir narius.', 'Ne savo institucijos strategijose veikia tik peržiūros režimas.']
+    title: '3. Peržiūrėkite iniciatyvas',
+    body: 'Skiltyje „Iniciatyvos“ matysite konkrečius uždavinius, kurie įgyvendina gaires.',
+    points: ['Kiekviena iniciatyva priskiriama bent vienai gairei.', 'Bendras balsų biudžetas dalijamas tarp gairių ir iniciatyvų.']
   },
   {
-    title: '4. Balsavimo logika',
-    body: 'Kiekvienas narys turi ribotą balsų biudžetą. Balsai skiriami su „+“ ir „-“ mygtukais, o panelėje matomas likutis.',
-    points: ['Vienai gairei taikomos minimalios ir maksimalios ribos.', 'Balsus galima koreguoti, kol ciklas leidžia redagavimą.']
+    title: '4. Prisijunkite aktyviam dalyvavimui',
+    body: 'Prisijungę dalyviai gali balsuoti, komentuoti ir kurti naujas iniciatyvas.',
+    points: ['Institucijos administratorius gauna papildomas valdymo teises.', 'Kitų institucijų strategijose veikia tik peržiūros režimas.']
   },
   {
-    title: '5. Ciklo būsenos',
-    body: 'Strategija turi dvi būsenas: Open ir Closed. Nuo būsenos priklauso, ar galima aktyviai dalyvauti.',
-    points: ['Open: galima balsuoti ir komentuoti.', 'Closed: balsavimas ir komentavimas uždaromi.']
+    title: '5. Naudokite balsų biudžetą',
+    body: 'Kiekvienas narys turi bendrą 20 balsų biudžetą gairėms ir iniciatyvoms.',
+    points: ['Balsai skiriami „+“ ir „−“ mygtukais.', 'Kol ciklas atviras, balsus galima koreguoti.']
   },
   {
-    title: '6. Strategijų žemėlapis',
-    body: 'Žemėlapyje matysite institucijos gaires ir jų ryšius: tėvinė, vaikinė arba našlaitė.',
-    points: ['Administratoriai gali tempti korteles ir išsaugoti išdėstymą.', 'Kortelėse rodoma balsų dinamika vizualiais indikatoriais.']
+    title: '6. Analizuokite strategijų žemėlapį',
+    body: 'Žemėlapyje galite matyti sluoksnius „Gairės“ ir „Iniciatyvos“ bei jų tarpusavio ryšius.',
+    points: ['Galima centruoti vaizdą, priartinti ir naudoti pilno ekrano režimą.', 'Administratorius gali keisti kortelių pozicijas.']
   },
   {
-    title: '7. Kaip užbaigti etapą',
-    body: 'Etapo pabaigoje administratorius pakeičia ciklo būseną į Closed, kai diskusijos ir balsavimas jau užbaigti.',
-    points: ['Prieš uždarymą verta peržiūrėti komentarus ir balsus.', 'Santrauką galima eksportuoti į tekstą ir JSON.']
+    title: '7. Užbaikite ciklą ir eksportuokite rezultatą',
+    body: 'Kai diskusijos baigtos, administratorius uždaro ciklą ir strategija tampa tik peržiūros režime.',
+    points: ['Uždarytame cikle balsavimas ir komentavimas išjungiami.', 'Santrauką galima eksportuoti į tekstą arba JSON.']
   }
 ];
 
@@ -60,7 +60,7 @@ const INTRO_VISITED_KEY = 'uzt-strategy-v1-intro-visited';
 const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open']);
-const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'about']);
+const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'guide', 'about']);
 const ADMIN_CACHE_BUST_PARAM = 't';
 
 const elements = {
@@ -799,7 +799,8 @@ function renderSteps() {
     { id: 'initiatives', icon: '✦', title: 'Iniciatyvos', locked: false },
     { id: 'admin', icon: '⚙', title: 'Admin', locked: !canOpenAdmin },
     { id: 'map', icon: '⌗', title: 'Strategijų žemėlapis', locked: false },
-    { id: 'about', icon: 'ℹ', title: 'Apie mus', locked: false }
+    { id: 'guide', icon: '☰', title: 'Naudojimosi gidas', locked: false },
+    { id: 'about', icon: 'ℹ', title: 'Apie', locked: false }
   ];
 
   const visibleItems = isEmbeddedContext()
@@ -885,32 +886,15 @@ function renderIntroDeck() {
 
   const existingGuide = elements.introDeck.querySelector('.intro-guide');
   if (!existingGuide) {
-    const helpCards = introSlides.map((slide, idx) => `
-      <article class="guide-card" style="--card-index:${idx};">
-        <div class="guide-head">
-          <span class="guide-index">${idx + 1}</span>
-          <h4>${escapeHtml(String(slide.title || '').replace(/^\d+\.\s*/, ''))}</h4>
-        </div>
-        <p>${escapeHtml(slide.body || '')}</p>
-        ${Array.isArray(slide.points) && slide.points.length
-          ? `<ul class="guide-points">${slide.points.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
-          : ''}
-      </article>
-    `).join('');
-
     elements.introDeck.innerHTML = `
       <div class="intro-guide" role="button" tabindex="0" aria-expanded="true">
         <div class="intro-guide-header">
           <div>
-            <p class="kicker">Kaip naudotis</p>
-            <h3>Naudojimosi gidas</h3>
+            <h3>Skaitmenizacijos strategijos dirbtuvės</h3>
           </div>
           <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button" aria-expanded="true"></button>
         </div>
         <div class="intro-guide-body">
-          <div class="guide-grid">
-            ${helpCards}
-          </div>
           <section class="guide-structure" aria-label="Strategijos struktūra">
             <div class="guide-structure-head">
               <h4>Strategijos struktūra</h4>
@@ -1858,7 +1842,7 @@ function renderMapView() {
           ${nodeMarkup}
         </div>
         <div class="map-fullscreen-watermark" aria-hidden="true">
-          <img src="assets/digistrategija-logo.svg" alt="" />
+          <img src="assets/digistrategija-logo.svg?v=20260212a" alt="" />
         </div>
       </section>
     </section>
@@ -1989,11 +1973,41 @@ function renderMapView() {
   }
 }
 
+function renderGuideView() {
+  const cards = introSlides.map((slide, idx) => `
+    <article class="guide-card" style="--card-index:${idx};">
+      <div class="guide-head">
+        <span class="guide-index">${idx + 1}</span>
+        <h4>${escapeHtml(String(slide.title || '').replace(/^\d+\.\s*/, ''))}</h4>
+      </div>
+      <p>${escapeHtml(slide.body || '')}</p>
+      ${Array.isArray(slide.points) && slide.points.length
+        ? `<ul class="guide-points">${slide.points.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+        : ''}
+    </article>
+  `).join('');
+
+  elements.stepView.innerHTML = `
+    <section class="guide-window">
+      <div class="step-header">
+        <h2>Naudojimosi gidas</h2>
+      </div>
+      <p class="prompt">
+        Ši sistema skirta skaidriai kurti institucijos skaitmenizacijos strategiją: aptarti gaires,
+        formuoti iniciatyvas, balsuoti ir stebėti rezultatų žemėlapį.
+      </p>
+      <div class="guide-grid guide-grid-page">
+        ${cards}
+      </div>
+    </section>
+  `;
+}
+
 function renderAboutView() {
   elements.stepView.innerHTML = `
     <section class="about-window">
       <div class="step-header">
-        <h2>Apie mus</h2>
+        <h2>Apie</h2>
       </div>
       <div class="card">
         <p>
@@ -2509,6 +2523,11 @@ function renderStepView() {
 
   if (state.activeView === 'about') {
     renderAboutView();
+    return;
+  }
+
+  if (state.activeView === 'guide') {
+    renderGuideView();
     return;
   }
 
