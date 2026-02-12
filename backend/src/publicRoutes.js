@@ -1,3 +1,5 @@
+const { loadContentSettings } = require('./contentSettings');
+
 function registerPublicRoutes({
   app,
   query,
@@ -21,6 +23,11 @@ function registerPublicRoutes({
       ['active']
     );
     res.json({ institutions: institutions.rows });
+  });
+
+  app.get('/api/v1/public/content-settings', publicReadGuard, async (_req, res) => {
+    const contentSettings = await loadContentSettings(query);
+    res.json({ contentSettings });
   });
 
   app.get('/api/v1/public/strategy-map', publicReadGuard, async (req, res) => {

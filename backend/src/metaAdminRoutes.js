@@ -13,6 +13,11 @@ const {
   verifyMetaAdminPassword
 } = require('./security');
 const { logAuditEvent } = require('./audit');
+const {
+  loadContentSettings,
+  normalizeContentSettingsPatch,
+  updateContentSettings
+} = require('./contentSettings');
 
 function registerMetaAdminRoutes({
   app,
@@ -289,6 +294,7 @@ function registerMetaAdminRoutes({
         };
       })
       .sort((left, right) => right.views - left.views);
+    const contentSettings = await loadContentSettings(query);
 
     res.json({
       institutions: institutionsRes.rows.map((row) => ({
@@ -307,12 +313,32 @@ function registerMetaAdminRoutes({
         memberships: membershipsByUser[row.id] || []
       })),
       pendingInvites,
+      contentSettings,
       monitoring: {
         ...monitoringSnapshot,
         rateLimitConfig: rateLimitConfig || null,
         embedViewsByInstitution
       }
     });
+  });
+
+  app.put('/api/v1/meta-admin/content-settings', requireMetaAdminSession, async (req, res) => {
+    const patch = normalizeContentSettingsPatch(req.body || {});
+    if (!Object.keys(patch).length) {
+      return res.status(400).json({ error: 'guideIntroText or aboutText required' });
+    }
+
+    const contentSettings = await updateContentSettings(query, patch);
+
+    await logAuditEvent({
+      query,
+      uuid,
+      action: 'meta_admin.content_settings.updated',
+      entityType: 'platform_settings',
+      payload: metaAuditPayload(req, { fields: Object.keys(patch) })
+    });
+
+    res.json({ ok: true, contentSettings });
   });
 
   app.post('/api/v1/meta-admin/institutions', requireMetaAdminSession, async (req, res) => {

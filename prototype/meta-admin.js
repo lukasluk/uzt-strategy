@@ -35,7 +35,9 @@ function toUserMessage(error) {
     'institutionId and email required': 'Pasirinkite instituciją ir įveskite el. paštą.',
     'invalid role': 'Netinkamas vaidmuo.',
     'userId and valid status required': 'Netinkami vartotojo statuso duomenys.',
-    'membershipId and valid status required': 'Netinkami narystės statuso duomenys.'
+    'membershipId and valid status required': 'Netinkami narystės statuso duomenys.',
+    'guideIntroText or aboutText required': 'Pakeiskite bent vieną tekstą.',
+    'content text too long': 'Tekstas per ilgas.'
   };
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
@@ -299,11 +301,33 @@ function renderMonitoringCards(monitoring) {
   `;
 }
 
+function renderContentSettingsCard(contentSettings) {
+  const guideIntroText = String(contentSettings?.guideIntroText || '');
+  const aboutText = String(contentSettings?.aboutText || '');
+  return `
+    <section class="card" style="margin-bottom: 16px;">
+      <div class="header-row">
+        <strong>Viešo turinio tekstai</strong>
+        <span class="tag">Naudojimosi gidas ir Apie</span>
+      </div>
+      <p class="prompt">Šie tekstai rodomi viešame puslapyje skiltyse „Naudojimosi gidas“ ir „Apie“.</p>
+      <form id="contentSettingsForm">
+        <label class="prompt" for="guideIntroTextField">Naudojimosi gidas (teksto blokas)</label>
+        <textarea id="guideIntroTextField" name="guideIntroText" rows="8" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideIntroText)}</textarea>
+        <label class="prompt" for="aboutTextField" style="margin-top:10px;">Apie (teksto blokas)</label>
+        <textarea id="aboutTextField" name="aboutText" rows="14" ${state.busy ? 'disabled' : ''}>${escapeHtml(aboutText)}</textarea>
+        <button class="btn btn-primary" type="submit" style="margin-top:10px;" ${state.busy ? 'disabled' : ''}>Išsaugoti tekstus</button>
+      </form>
+    </section>
+  `;
+}
+
 function renderDashboard() {
   const institutions = state.overview?.institutions || [];
   const users = state.overview?.users || [];
   const pendingInvites = state.overview?.pendingInvites || [];
   const monitoring = state.overview?.monitoring || null;
+  const contentSettings = state.overview?.contentSettings || {};
 
   root.innerHTML = `
     <section class="card" style="margin-bottom: 16px;">
@@ -320,6 +344,7 @@ function renderDashboard() {
     </section>
 
     ${renderMonitoringCards(monitoring)}
+    ${renderContentSettingsCard(contentSettings)}
 
     <section class="card" style="margin-bottom: 16px;">
       <div class="header-row">
@@ -433,6 +458,7 @@ function bindDashboardEvents() {
   const createInstitutionForm = document.getElementById('createInstitutionForm');
   const createInviteForm = document.getElementById('createInviteForm');
   const copyInviteTokenBtn = document.getElementById('copyInviteTokenBtn');
+  const contentSettingsForm = document.getElementById('contentSettingsForm');
 
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
@@ -473,6 +499,23 @@ function bindDashboardEvents() {
         state.notice = 'Institucija sukurta.';
         await loadOverview();
         createInstitutionForm.reset();
+      });
+    });
+  }
+
+  if (contentSettingsForm) {
+    contentSettingsForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fd = new FormData(contentSettingsForm);
+      const guideIntroText = String(fd.get('guideIntroText') || '').trim();
+      const aboutText = String(fd.get('aboutText') || '').trim();
+      await runBusy(async () => {
+        await api('/api/v1/meta-admin/content-settings', {
+          method: 'PUT',
+          body: { guideIntroText, aboutText }
+        });
+        state.notice = 'Tekstai atnaujinti.';
+        await loadOverview();
       });
     });
   }

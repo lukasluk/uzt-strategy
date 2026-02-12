@@ -82,6 +82,23 @@ const introSlides = [
 
 const DEFAULT_MISSION_TEXT = 'Organizacijos paskirtis ir vertės kūrimo logika.';
 const DEFAULT_VISION_TEXT = 'Ilgalaikė kryptis ir siekiama pokyčio būsena.';
+const DEFAULT_GUIDE_INTRO_TEXT = [
+  'digistrategija.lt sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.',
+  'Sistema susideda iš 2 pagrindinių dalių:',
+  '1. Kortelių valdymo modulio (Gairės ir Iniciatyvos) - čia jūsų kolegos gali komentuoti, siūlyti įvairias strategijos kryptis, balsuoti už vieni kitų teiktus pasiūlymus.',
+  '2. Strategijų žemėlapis - patogus vizualinis įrankis peržiūrėti strategijos struktūrą ir ryšius tarp skirtingų jų elementų.',
+  'Galutinį savo interaktyvų strategijos žemėlapį įkelkite į intranetą ar vidinį puslapį su embeding funkcionalumu. Sistema skirta valstybinėms institucijoms kurios nori savo strategijos kūrimo procesą vykdyti efektyviai.'
+].join('\n');
+const DEFAULT_ABOUT_TEXT = [
+  'Lietuvos viešajame sektoriuje skaitmenizacija vis dažniau suvokiama ne kaip pavienių IT projektų rinkinys, o kaip sisteminis pokytis, apimantis paslaugų kokybę, duomenų valdymą ir naujų technologijų taikymą. Todėl vis didesnę reikšmę įgyja ne tik technologiniai sprendimai, bet ir aiškios, įgyvendinamos skaitmenizacijos strategijos (arba IT plėtros planai).',
+  'Praktika rodo, kad tradiciniai, didelės apimties strateginiai dokumentai dažnai tampa sunkiai pritaikomi greitai besikeičiančioje aplinkoje. Dėl to vis daugiau dėmesio skiriama lanksčioms, įtraukioms ir duomenimis grįstoms strategijų formavimo praktikoms, kurios leidžia greičiau susitarti dėl prioritetų ir krypties.',
+  'Vienas iš būdų tai pasiekti - aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:',
+  '- Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).\n- Duomenų kokybė ir duomenų valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
+  'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi būti suprantamas, įtraukiantis ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.',
+  'Šiame kontekste atsirado www.digistrategija.lt - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
+  'Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti veikiančius, naudotojams suprantamus įrankius.',
+  'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos, kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.'
+].join('\n\n');
 
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
@@ -136,6 +153,10 @@ const state = {
   accountContext: null,
   context: null,
   userVotes: {},
+  contentSettings: {
+    guideIntroText: DEFAULT_GUIDE_INTRO_TEXT,
+    aboutText: DEFAULT_ABOUT_TEXT
+  },
   mapLayer: 'guidelines',
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapInitiativeFocusId: '',
@@ -260,6 +281,25 @@ function syncRouteState() {
   if (nextHref !== currentHref) {
     window.history.replaceState(null, '', nextHref);
   }
+}
+
+function refreshBrandMapLink() {
+  const link = document.getElementById('brandMapLink');
+  if (!(link instanceof HTMLAnchorElement)) return;
+
+  link.href = buildCurrentPageHref({ view: 'map' });
+  if (link.dataset.bound === '1') return;
+  link.dataset.bound = '1';
+
+  link.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (state.activeView !== 'map') {
+      state.activeView = 'map';
+      render();
+      return;
+    }
+    syncRouteState();
+  });
 }
 
 function normalizeSlug(value) {
@@ -435,6 +475,40 @@ function cycleVisionText() {
   return text || DEFAULT_VISION_TEXT;
 }
 
+function normalizeGuideAboutContent(payload) {
+  const source = payload?.contentSettings || payload || {};
+  const guideIntroText = String(source.guideIntroText || '').trim() || DEFAULT_GUIDE_INTRO_TEXT;
+  const aboutText = String(source.aboutText || '').trim() || DEFAULT_ABOUT_TEXT;
+  return { guideIntroText, aboutText };
+}
+
+function guideIntroText() {
+  return String(state.contentSettings?.guideIntroText || '').trim() || DEFAULT_GUIDE_INTRO_TEXT;
+}
+
+function aboutText() {
+  return String(state.contentSettings?.aboutText || '').trim() || DEFAULT_ABOUT_TEXT;
+}
+
+function renderMultilineText(text) {
+  return escapeHtml(String(text || '')).replace(/\r\n/g, '\n').replace(/\n/g, '<br />');
+}
+
+function renderAboutBlocks(text) {
+  const normalized = String(text || '').replace(/\r\n/g, '\n').trim();
+  if (!normalized) return '<p>Tekstas nepateiktas.</p>';
+  const blocks = normalized.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+  return blocks.map((block) => {
+    const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (!lines.length) return '';
+    const bulletLines = lines.filter((line) => /^[-*]\s+/.test(line));
+    if (bulletLines.length === lines.length) {
+      return `<ul class="about-list">${bulletLines.map((line) => `<li>${escapeHtml(line.replace(/^[-*]\s+/, ''))}</li>`).join('')}</ul>`;
+    }
+    return `<p>${lines.map((line) => escapeHtml(line)).join('<br />')}</p>`;
+  }).join('');
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replaceAll('&', '&amp;')
@@ -584,6 +658,11 @@ async function loadInstitutions() {
   state.institutionsLoaded = true;
 }
 
+async function loadContentSettings() {
+  const payload = await api('/api/v1/public/content-settings', { auth: false });
+  state.contentSettings = normalizeGuideAboutContent(payload);
+}
+
 async function loadStrategyMap() {
   const params = new URLSearchParams();
   if (state.institutionSlug) params.set('institution', state.institutionSlug);
@@ -629,6 +708,11 @@ async function bootstrap() {
 
   try {
     await loadInstitutions();
+    try {
+      await loadContentSettings();
+    } catch {
+      state.contentSettings = normalizeGuideAboutContent(null);
+    }
     try {
       await loadStrategyMap();
       state.mapError = '';
@@ -1013,18 +1097,7 @@ function renderGuideView() {
       <div class="step-header">
         <h2>Naudojimosi gidas</h2>
       </div>
-      <p class="prompt">
-        digistrategija.lt sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai
-        susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.<br />
-        Sistema susideda iš 2 pagrindinių dalių:<br />
-        1. Kortelių valdymo modulio (Gairės ir Iniciatyvos) - čia jūsų kolegos gali komentuoti,
-        siūlyti įvairias strategijos kryptis, balsuoti už vieni kitų teiktus pasiūlymus.<br />
-        2. Strategijų žemėlapis - patogus vizualinis įrankis peržiūrėti strategijos struktūrą ir
-        ryšius tarp skirtingų jų elementų.<br />
-        Galutinį savo interaktyvų strategijos žemėlapį įkelkite į intranetą ar vidinį puslapį su
-        embeding funkcionalumu. Sistema skirta valstybinėms institucijoms kurios nori savo strategijos
-        kūrimo procesą vykdyti efektyviai.
-      </p>
+      <p class="prompt">${renderMultilineText(guideIntroText())}</p>
       <div class="guide-grid guide-grid-page">
         ${cards}
       </div>
@@ -1039,45 +1112,7 @@ function renderAboutView() {
         <h2>Apie</h2>
       </div>
       <div class="card">
-        <p>
-          Lietuvos viešajame sektoriuje skaitmenizacija vis dažniau suvokiama ne kaip pavienių IT projektų rinkinys,
-          o kaip sisteminis pokytis, apimantis paslaugų kokybę, duomenų valdymą ir naujų technologijų taikymą.
-          Todėl vis didesnę reikšmę įgyja ne tik technologiniai sprendimai, bet ir aiškios, įgyvendinamos
-          skaitmenizacijos strategijos (arba IT plėtros planai).
-        </p>
-        <p>
-          Praktika rodo, kad tradiciniai, didelės apimties strateginiai dokumentai dažnai tampa sunkiai pritaikomi
-          greitai besikeičiančioje aplinkoje. Dėl to vis daugiau dėmesio skiriama lanksčioms, įtraukioms ir
-          duomenimis grįstoms strategijų formavimo praktikoms, kurios leidžia greičiau susitarti dėl prioritetų ir krypties.
-        </p>
-        <p>Vienas iš būdų tai pasiekti – aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:</p>
-        <ul class="about-list">
-          <li>Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).</li>
-          <li>Duomenų kokybė ir duomenų valdymas (data governance).</li>
-          <li>Tikslingas dirbtinio intelekto taikymas (AI with purpose).</li>
-        </ul>
-        <p>
-          Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas – jis turi būti suprantamas, įtraukiantis
-          ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys
-          dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina
-          skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.
-        </p>
-        <p>
-          Šiame kontekste atsirado <strong>www.digistrategija.lt</strong> – eksperimentinis, atviras įrankis,
-          skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti.
-          Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo
-          abstrakčių idėjų prie aiškių sprendimų krypčių.
-        </p>
-        <p>
-          Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas – veikiau praktinis eksperimentas,
-          skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti
-          veikiančius, naudotojams suprantamus įrankius.
-        </p>
-        <p>
-          Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos,
-          kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę
-          judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.
-        </p>
+        ${renderAboutBlocks(aboutText())}
       </div>
     </section>
   `;
@@ -1237,7 +1272,6 @@ function renderGuidelineCard(guideline, options) {
         <div class="vote-panel">
           <div class="vote-panel-head">
             <span class="vote-label">Tavo balas</span>
-            <span class="tag">Balsuotojų: ${Number(guideline.voterCount || 0)}</span>
           </div>
           <div class="vote-panel-body">
             <div class="vote-controls">
@@ -1253,7 +1287,6 @@ function renderGuidelineCard(guideline, options) {
         <div class="vote-panel">
           <div class="vote-panel-head">
             <span class="vote-label">Viešas režimas</span>
-            <span class="tag">Balsuotojų: ${Number(guideline.voterCount || 0)}</span>
           </div>
           <div class="vote-panel-body">
             <div class="vote-total"><strong>Bendras balas: ${Number(guideline.totalScore || 0)}</strong></div>
@@ -1327,7 +1360,6 @@ function renderInitiativeCard(initiative, options) {
         <div class="vote-panel">
           <div class="vote-panel-head">
             <span class="vote-label">Tavo balas</span>
-            <span class="tag">Balsuotojų: ${Number(initiative.voterCount || 0)}</span>
           </div>
           <div class="vote-panel-body">
             <div class="vote-controls">
@@ -1343,7 +1375,6 @@ function renderInitiativeCard(initiative, options) {
         <div class="vote-panel">
           <div class="vote-panel-head">
             <span class="vote-label">Viešas režimas</span>
-            <span class="tag">Balsuotojų: ${Number(initiative.voterCount || 0)}</span>
           </div>
           <div class="vote-panel-body">
             <div class="vote-total"><strong>Bendras balas: ${Number(initiative.totalScore || 0)}</strong></div>
@@ -2147,6 +2178,7 @@ function showAuthModal(initialMode) {
 }
 
 function render() {
+  refreshBrandMapLink();
   renderSteps();
   syncRouteState();
   renderIntroDeck();

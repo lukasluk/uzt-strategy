@@ -282,6 +282,7 @@ function registerAdminRoutes({
 
     const guidelineIds = guidelinesRes.rows.map((row) => row.id);
     const commentsByGuideline = {};
+    const votesByGuideline = {};
     if (guidelineIds.length) {
       const commentsRes = await query(
         `select c.id,
@@ -308,6 +309,30 @@ function registerAdminRoutes({
           createdAt: row.created_at
         });
       });
+
+      const votesRes = await query(
+        `select v.guideline_id,
+                v.voter_id,
+                v.score,
+                v.updated_at,
+                u.display_name as voter_display_name,
+                u.email as voter_email
+         from strategy_votes v
+         left join platform_users u on u.id = v.voter_id
+         where v.guideline_id = any($1::uuid[])
+         order by v.guideline_id asc, v.score desc, v.updated_at desc`,
+        [guidelineIds]
+      );
+      votesRes.rows.forEach((row) => {
+        if (!votesByGuideline[row.guideline_id]) votesByGuideline[row.guideline_id] = [];
+        votesByGuideline[row.guideline_id].push({
+          voterId: row.voter_id,
+          voterName: row.voter_display_name || row.voter_email || 'Nežinomas vartotojas',
+          voterEmail: row.voter_email || null,
+          score: Number(row.score || 0),
+          updatedAt: row.updated_at
+        });
+      });
     }
 
     res.json({
@@ -322,6 +347,7 @@ function registerAdminRoutes({
         createdAt: row.created_at,
         totalScore: row.total_score,
         voterCount: row.voter_count,
+        votes: votesByGuideline[row.id] || [],
         commentCount: (commentsByGuideline[row.id] || []).length,
         comments: commentsByGuideline[row.id] || []
       }))
@@ -365,6 +391,7 @@ function registerAdminRoutes({
     const initiativeIds = initiativesRes.rows.map((row) => row.id);
     const linksByInitiative = {};
     const commentsByInitiative = {};
+    const votesByInitiative = {};
 
     if (initiativeIds.length) {
       const linksRes = await query(
@@ -408,6 +435,30 @@ function registerAdminRoutes({
           createdAt: row.created_at
         });
       });
+
+      const votesRes = await query(
+        `select v.initiative_id,
+                v.voter_id,
+                v.score,
+                v.updated_at,
+                u.display_name as voter_display_name,
+                u.email as voter_email
+         from strategy_initiative_votes v
+         left join platform_users u on u.id = v.voter_id
+         where v.initiative_id = any($1::uuid[])
+         order by v.initiative_id asc, v.score desc, v.updated_at desc`,
+        [initiativeIds]
+      );
+      votesRes.rows.forEach((row) => {
+        if (!votesByInitiative[row.initiative_id]) votesByInitiative[row.initiative_id] = [];
+        votesByInitiative[row.initiative_id].push({
+          voterId: row.voter_id,
+          voterName: row.voter_display_name || row.voter_email || 'Nežinomas vartotojas',
+          voterEmail: row.voter_email || null,
+          score: Number(row.score || 0),
+          updatedAt: row.updated_at
+        });
+      });
     }
 
     res.json({
@@ -427,6 +478,7 @@ function registerAdminRoutes({
         createdAt: row.created_at,
         totalScore: row.total_score,
         voterCount: row.voter_count,
+        votes: votesByInitiative[row.id] || [],
         guidelineLinks: linksByInitiative[row.id] || [],
         guidelineIds: (linksByInitiative[row.id] || []).map((item) => item.guidelineId),
         commentCount: (commentsByInitiative[row.id] || []).length,

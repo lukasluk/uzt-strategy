@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 340" role="img" aria-labelledby="title desc">
+  <title id="title">DS ikona</title>
+  <desc id="desc">Digistrategija DS simbolis</desc>
+  <defs>
+    <linearGradient id="dsBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f67ff"/>
+      <stop offset="1" stop-color="#0f52e8"/>
+    </linearGradient>
+    <linearGradient id="dsDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#000a2f"/>
+      <stop offset="1" stop-color="#001b64"/>
+    </linearGradient>
+  </defs>
+  <g font-family="'Montserrat','Poppins','Segoe UI',Arial,sans-serif" font-weight="800" letter-spacing="-2">
+    <text x="6" y="312" font-size="292" fill="url(#dsBlue)">D</text>
+    <text x="170" y="244" font-size="252" fill="url(#dsDark)">S</text>
+  </g>
+</svg>
