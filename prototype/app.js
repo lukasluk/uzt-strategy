@@ -2123,7 +2123,9 @@ function formatCommentDateTime(value) {
   if (!value) return 'Data nenurodyta';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Data nenurodyta';
-  return new Intl.DateTimeFormat('lt-LT', {
+  const lang = window.DigiI18n?.getLanguage?.() || 'lt';
+  const locale = lang === 'en' ? 'en-US' : 'lt-LT';
+  return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -3116,4 +3118,5 @@ function render() {
   renderStepView();
   renderUserBar();
   renderVoteFloating();
+  window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }

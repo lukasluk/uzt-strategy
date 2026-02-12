@@ -16,10 +16,12 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="admin-lang-shell" data-language-switch></div>
   <div class="app">
     <main class="stage" id="adminRoot"></main>
   </div>
 
+  <script src="i18n.js"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const cacheBust = params.get('t') || Date.now().toString();
