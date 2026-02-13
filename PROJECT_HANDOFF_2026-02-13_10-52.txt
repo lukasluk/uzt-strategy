@@ -1,5 +1,5 @@
 ﻿PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-13 07:47
+Generated: 2026-02-13 10:52
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
@@ -39,6 +39,13 @@ Latest applied source update in this handoff cycle (to be deployed if not yet):
   - active "Gairės" menu item can expand and show "Pridėti naują gairę"
   - active "Iniciatyvos" menu item can expand and show "Pridėti naują iniciatyvą"
   - quick-add action smooth-scrolls to the matching add section and focuses first input
+- Meta-admin invite flow now emphasizes one-time invite URL:
+  - meta-admin invite API returns inviteUrl + expiresAt
+  - meta-admin UI shows latest one-time invite URL block with copy/open actions
+  - token fallback remains only for compatibility if inviteUrl is missing
+- Strategy map parent guideline cards were further emphasized:
+  - stronger parent card border/accent/shadow
+  - added clear "Tėvinė" badge in map nodes for parent guidelines
 
 ==================================================
 2) DEPLOYMENT STATUS - STABLE

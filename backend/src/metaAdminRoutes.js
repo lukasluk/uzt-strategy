@@ -47,6 +47,7 @@ function registerMetaAdminRoutes({
   const ENABLE_LEGACY_SUPERADMIN = String(process.env.ENABLE_LEGACY_SUPERADMIN || '0') === '1';
   const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 60);
   const PASSWORD_RESET_BASE_URL = String(process.env.PASSWORD_RESET_BASE_URL || '').trim();
+  const INVITE_BASE_URL = String(process.env.INVITE_BASE_URL || PASSWORD_RESET_BASE_URL || '').trim();
 
   const metaAdminAuthConfigured = Boolean(META_ADMIN_PASSWORD_HASH)
     || (ALLOW_LEGACY_META_ADMIN_PASSWORD && Boolean(META_ADMIN_PASSWORD));
@@ -133,10 +134,19 @@ function registerMetaAdminRoutes({
 
   function buildPasswordResetUrl(req, token) {
     const safeToken = encodeURIComponent(String(token || '').trim());
-    const base = PASSWORD_RESET_BASE_URL
-      ? PASSWORD_RESET_BASE_URL.replace(/\/+$/, '')
-      : `${String(req.protocol || 'https')}://${String(req.get('host') || '').trim()}`;
+    const base = resolveAbsoluteBase(req, PASSWORD_RESET_BASE_URL);
     return `${base}/reset-password.html?token=${safeToken}`;
+  }
+
+  function resolveAbsoluteBase(req, configuredBase) {
+    if (configuredBase) return configuredBase.replace(/\/+$/, '');
+    return `${String(req.protocol || 'https')}://${String(req.get('host') || '').trim()}`;
+  }
+
+  function buildInviteAcceptUrl(req, token) {
+    const safeToken = encodeURIComponent(String(token || '').trim());
+    const base = resolveAbsoluteBase(req, INVITE_BASE_URL);
+    return `${base}/accept-invite.html?token=${safeToken}`;
   }
 
   async function createInstitutionWithDefaultCycle(name, slug) {
@@ -158,7 +168,7 @@ function registerMetaAdminRoutes({
     return { institutionId, cycleId, slug };
   }
 
-  async function createInviteForInstitution(institutionId, email, role) {
+  async function createInviteForInstitution(req, institutionId, email, role) {
     const inviteToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = sha256(inviteToken);
     const inviteId = uuid();
@@ -169,7 +179,9 @@ function registerMetaAdminRoutes({
       [inviteId, institutionId, email, role, tokenHash, String(inviteTtlHours)]
     );
 
-    return { inviteId, inviteToken, email, role };
+    const inviteUrl = buildInviteAcceptUrl(req, inviteToken);
+    const expiresAt = new Date(Date.now() + inviteTtlHours * 60 * 60 * 1000).toISOString();
+    return { inviteId, inviteToken, inviteUrl, expiresAt, email, role };
   }
 
   app.post('/api/v1/meta-admin/auth', metaAdminAuthRateLimit, async (req, res) => {
@@ -391,7 +403,7 @@ function registerMetaAdminRoutes({
     const exists = await query('select id from institutions where id = $1', [institutionId]);
     if (exists.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
 
-    const invite = await createInviteForInstitution(institutionId, email, role);
+    const invite = await createInviteForInstitution(req, institutionId, email, role);
 
     await logAuditEvent({
       query,
@@ -684,7 +696,7 @@ function registerMetaAdminRoutes({
       const exists = await query('select id from institutions where id = $1', [institutionId]);
       if (exists.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
 
-      const invite = await createInviteForInstitution(institutionId, email, role);
+      const invite = await createInviteForInstitution(req, institutionId, email, role);
 
       await logAuditEvent({
         query,

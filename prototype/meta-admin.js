@@ -7,7 +7,7 @@ const state = {
   error: '',
   notice: '',
   overview: null,
-  lastInviteToken: '',
+  lastInvite: null,
   lastPasswordReset: null
 };
 
@@ -484,11 +484,15 @@ function renderDashboard() {
           </div>
           <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Sukurti kvietima</button>
         </form>
-        ${state.lastInviteToken ? `
+        ${state.lastInvite?.url ? `
           <div class="card meta-admin-subcard meta-invite-token-card" style="margin-top: 12px;">
-            <strong>Naujausias kvietimo zetonas</strong>
-            <p class="prompt meta-reset-link">${escapeHtml(state.lastInviteToken)}</p>
-            <button id="copyInviteTokenBtn" class="btn btn-ghost">Kopijuoti zetona</button>
+            <strong>Naujausia vienkartine pakvietimo nuoroda</strong>
+            <p class="prompt meta-reset-link">${escapeHtml(state.lastInvite.url)}</p>
+            <p class="prompt meta-reset-expiry">Galioja iki: ${escapeHtml(formatDateTime(state.lastInvite.expiresAt))}</p>
+            <div class="inline-form">
+              <button id="copyInviteUrlBtn" class="btn btn-ghost" type="button">Kopijuoti nuoroda</button>
+              <a class="btn btn-ghost" href="${escapeHtml(state.lastInvite.url)}" target="_blank" rel="noopener noreferrer">Atidaryti</a>
+            </div>
           </div>
         ` : ''}
       </section>
@@ -531,7 +535,7 @@ function bindDashboardEvents() {
   const logoutBtn = document.getElementById('logoutMetaBtn');
   const createInstitutionForm = document.getElementById('createInstitutionForm');
   const createInviteForm = document.getElementById('createInviteForm');
-  const copyInviteTokenBtn = document.getElementById('copyInviteTokenBtn');
+  const copyInviteUrlBtn = document.getElementById('copyInviteUrlBtn');
   const contentSettingsForm = document.getElementById('contentSettingsForm');
 
   if (refreshBtn) {
@@ -608,7 +612,15 @@ function bindDashboardEvents() {
           method: 'POST',
           body: { email, role }
         });
-        state.lastInviteToken = String(payload.inviteToken || '');
+        const inviteUrl = String(payload.inviteUrl || '').trim()
+          || `${window.location.origin}/accept-invite.html?token=${encodeURIComponent(String(payload.inviteToken || '').trim())}`;
+        state.lastInvite = {
+          inviteId: String(payload.inviteId || '').trim(),
+          url: inviteUrl,
+          expiresAt: payload?.expiresAt || null,
+          email: String(payload.email || email),
+          role: String(payload.role || role)
+        };
         state.notice = 'Kvietimas sukurtas.';
         await loadOverview();
         createInviteForm.reset();
@@ -616,11 +628,12 @@ function bindDashboardEvents() {
     });
   }
 
-  if (copyInviteTokenBtn) {
-    copyInviteTokenBtn.addEventListener('click', async () => {
-      if (!state.lastInviteToken) return;
-      await navigator.clipboard.writeText(state.lastInviteToken);
-      state.notice = 'Kvietimo žetonas nukopijuotas.';
+  if (copyInviteUrlBtn) {
+    copyInviteUrlBtn.addEventListener('click', async () => {
+      const inviteUrl = String(state.lastInvite?.url || '').trim();
+      if (!inviteUrl) return;
+      await navigator.clipboard.writeText(inviteUrl);
+      state.notice = 'Pakvietimo nuoroda nukopijuota.';
       render();
     });
   }
@@ -788,7 +801,4 @@ function render() {
 
   renderDashboard();
 }
-
-
-
 

@@ -3055,9 +3055,30 @@ select:focus {
 }
 
 .guideline-node.relation-parent {
-  background: linear-gradient(180deg, #ffffff 0%, #f4faff 100%);
-  border-color: #bcd9f2;
-  border-left-color: #2b6fbe;
+  background: linear-gradient(180deg, #ffffff 0%, #eaf5ff 100%);
+  border-color: #92bbe8;
+  border-left: 7px solid #1f5fa8;
+  padding-top: 20px;
+  box-shadow:
+    0 0 0 2px rgba(56, 129, 211, 0.22),
+    0 12px 24px rgba(22, 69, 126, 0.18);
+}
+.guideline-node.relation-parent::before {
+  content: 'Tėvinė';
+  position: absolute;
+  top: 7px;
+  right: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1d4f8b;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #8ab6e8;
+  border-radius: 999px;
+  padding: 2px 7px;
+  line-height: 1.1;
+  pointer-events: none;
 }
 .guideline-node.relation-child {
   background: linear-gradient(180deg, #ffffff 0%, var(--pastel-soft) 100%);
