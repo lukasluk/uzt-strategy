@@ -1,6 +1,5 @@
 (function () {
   const activeStrategyLinks = Array.from(document.querySelectorAll('[data-active-strategy-link]'));
-  const workspaceLinks = Array.from(document.querySelectorAll('[data-workspace-link]'));
   const metricInstitutions = document.getElementById('metricInstitutions');
   const navLinks = Array.from(document.querySelectorAll('[data-scroll-link]'));
   const languageSelect = document.getElementById('landingLangSelect');
@@ -31,7 +30,6 @@
       heroTitle: 'Nuo ideju iki audituojamo igyvendinimo modernioms viesosioms institucijoms.',
       heroCopy: 'Kurkite gairiu strukturas, susiekite iniciatyvas, itraukite komandas i skaidru balsavima ir publikuokite strategiju zemelapius, kuriuos supranta visa bendruomene.',
       heroPrimaryCta: 'Perziureti aktyvias strategijas',
-      heroSecondaryCta: 'Atidaryti darbo aplinka',
       metricInstitutionsLabel: 'Aktyvios institucijos',
       metricInviteLabel: 'Saugaus kvietimo galiojimas',
       metricMapLabel: 'Map-first vizualus planavimas',
@@ -115,8 +113,7 @@
       finalTitle: 'Atverkite aktyvu strategijos zemelapi dabar.',
       finalCopy: 'Aplankykite viesa strategijos erdve ir pamatykite, kaip susijungia gaires bei iniciatyvos.',
       finalCta: 'Perziureti aktyvias strategijas',
-      footerCopy: 'digistrategija.lt - strateginio bendradarbiavimo platforma viesosioms institucijoms.',
-      footerLink: 'Atidaryti platformos darbo aplinka'
+      footerCopy: 'digistrategija.lt - strateginio bendradarbiavimo platforma viesosioms institucijoms.'
     },
     en: {
       metaTitle: 'digistrategija.lt | Public Strategy OS',
@@ -131,7 +128,6 @@
       heroTitle: 'From ideas to auditable execution for modern public institutions.',
       heroCopy: 'Build guideline structures, connect initiatives, involve teams in transparent voting, and publish strategy maps your community can actually understand.',
       heroPrimaryCta: 'View Active Strategies',
-      heroSecondaryCta: 'Open Workspace',
       metricInstitutionsLabel: 'Active Institutions',
       metricInviteLabel: 'Secure Invite Validity',
       metricMapLabel: 'Map-First Visual Planning',
@@ -215,8 +211,7 @@
       finalTitle: 'Explore an active strategy map now.',
       finalCopy: 'Open current public strategy workspace and review how guidelines and initiatives connect.',
       finalCta: 'View Active Strategies',
-      footerCopy: 'digistrategija.lt - Strategy collaboration platform for public institutions.',
-      footerLink: 'Open platform workspace'
+      footerCopy: 'digistrategija.lt - Strategy collaboration platform for public institutions.'
     }
   };
 
@@ -284,16 +279,8 @@
     });
   }
 
-  function setWorkspaceHref() {
-    const href = `index.html?lang=${encodeURIComponent(currentLang)}`;
-    workspaceLinks.forEach((link) => {
-      link.setAttribute('href', href);
-    });
-  }
-
   function updateNavigationLinks() {
     setActiveStrategyHref(preferredStrategySlug);
-    setWorkspaceHref();
   }
 
   async function loadPublicInstitutions() {
