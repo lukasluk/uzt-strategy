@@ -114,6 +114,45 @@
     updateActiveByScroll();
   }
 
+  function initHeaderMotion() {
+    const header = document.querySelector('.landing-header');
+    if (!(header instanceof HTMLElement)) return;
+
+    let lastY = window.scrollY || window.pageYOffset || 0;
+    let ticking = false;
+    const threshold = 180;
+
+    const update = () => {
+      const y = window.scrollY || window.pageYOffset || 0;
+      const delta = y - lastY;
+      const goingUp = delta < -2;
+      const goingDown = delta > 2;
+      const pastThreshold = y > threshold;
+
+      header.classList.toggle('is-floating', pastThreshold);
+
+      if (!pastThreshold || goingUp) {
+        header.classList.add('is-visible');
+      } else if (goingDown) {
+        header.classList.remove('is-visible');
+      }
+
+      lastY = y;
+      ticking = false;
+    };
+
+    const requestUpdate = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(update);
+    };
+
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
+    update();
+  }
+
+  initHeaderMotion();
   loadPublicInstitutions();
   initReveal();
   initNavScroll();

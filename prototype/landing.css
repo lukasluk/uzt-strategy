@@ -27,7 +27,7 @@ body {
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 110px;
+  scroll-padding-top: 132px;
 }
 
 body.landing-page {
@@ -39,6 +39,7 @@ body.landing-page {
   color: var(--landing-ink);
   min-height: 100vh;
   overflow-x: hidden;
+  padding-top: 132px;
 }
 
 .landing-bg {
@@ -91,7 +92,7 @@ main,
 
 .landing-header {
   width: min(1240px, calc(100% - 34px));
-  margin: 30px auto 0;
+  margin: 0 auto;
   padding: 16px 28px;
   border: 1px solid rgba(133, 169, 219, 0.5);
   border-radius: 999px;
@@ -104,6 +105,29 @@ main,
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translate(-50%, -138%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 110;
+  transition: transform 0.28s ease, opacity 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.landing-header.is-visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.landing-header.is-floating {
+  background: rgba(247, 252, 255, 0.76);
+  border-color: rgba(146, 178, 223, 0.58);
+  box-shadow:
+    0 16px 34px rgba(35, 84, 150, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(18px) saturate(1.1);
 }
 
 .landing-brand {
@@ -256,7 +280,7 @@ main,
 
 main {
   width: min(1240px, calc(100% - 34px));
-  margin: 40px auto 58px;
+  margin: 24px auto 58px;
   display: grid;
   gap: 28px;
 }
@@ -783,11 +807,16 @@ h2 {
 }
 
 @media (max-width: 1080px) {
+  body.landing-page {
+    padding-top: 124px;
+  }
+
   .landing-header {
     border-radius: 24px;
     flex-wrap: wrap;
     justify-content: center;
     padding: 14px;
+    top: 14px;
   }
 
   .landing-header-actions {
@@ -840,6 +869,10 @@ h2 {
 }
 
 @media (max-width: 760px) {
+  body.landing-page {
+    padding-top: 110px;
+  }
+
   .landing-header,
   main,
   .landing-footer {
@@ -847,7 +880,7 @@ h2 {
   }
 
   .landing-header {
-    margin-top: 12px;
+    top: 10px;
     padding: 12px;
     gap: 10px;
     border-radius: 20px;
