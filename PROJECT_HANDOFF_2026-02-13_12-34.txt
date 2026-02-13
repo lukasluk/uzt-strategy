@@ -1,5 +1,5 @@
 ﻿PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-13 11:14
+Generated: 2026-02-13 12:34
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
@@ -54,6 +54,9 @@ Latest applied source update in this handoff cycle (to be deployed if not yet):
   - parent guideline card border thickness now matches institution -> parent line thickness
   - parent guideline cards increased by ~20% (node size)
   - parent card internal text and key UI labels scaled up for readability
+- Strategy map institution emphasis alignment:
+  - institution card border thickness aligned to parent-card/root-link accent thickness
+  - institution active pulse ring size increased for stronger map focus signal
 
 ==================================================
 2) DEPLOYMENT STATUS - STABLE
