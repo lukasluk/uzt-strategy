@@ -1,6 +1,7 @@
 (function () {
   const activeStrategyLinks = Array.from(document.querySelectorAll('[data-active-strategy-link]'));
   const metricInstitutions = document.getElementById('metricInstitutions');
+  const navLinks = Array.from(document.querySelectorAll('[data-scroll-link]'));
 
   function setActiveStrategyHref(slug) {
     if (!slug) return;
@@ -52,6 +53,54 @@
     items.forEach((item) => observer.observe(item));
   }
 
+  function initNavScroll() {
+    if (!navLinks.length) return;
+
+    navLinks.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const href = String(link.getAttribute('href') || '').trim();
+        if (!href.startsWith('#')) return;
+        const target = document.querySelector(href);
+        if (!(target instanceof HTMLElement)) return;
+        event.preventDefault();
+        navLinks.forEach((item) => item.classList.remove('active'));
+        link.classList.add('active');
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    if (!('IntersectionObserver' in window)) return;
+
+    const sections = navLinks
+      .map((link) => {
+        const href = String(link.getAttribute('href') || '').trim();
+        if (!href.startsWith('#')) return null;
+        const element = document.querySelector(href);
+        if (!(element instanceof HTMLElement)) return null;
+        return { link, element };
+      })
+      .filter(Boolean);
+
+    if (!sections.length) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+
+      navLinks.forEach((link) => link.classList.remove('active'));
+      const match = sections.find((item) => item.element === visible.target);
+      if (match) match.link.classList.add('active');
+    }, {
+      rootMargin: '-28% 0px -56% 0px',
+      threshold: [0.2, 0.45, 0.7]
+    });
+
+    sections.forEach((item) => observer.observe(item.element));
+  }
+
   loadPublicInstitutions();
   initReveal();
+  initNavScroll();
 })();

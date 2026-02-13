@@ -25,6 +25,11 @@ body {
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 110px;
+}
+
 body.landing-page {
   font-family: 'Space Grotesk', sans-serif;
   background:
@@ -85,18 +90,20 @@ main,
 }
 
 .landing-header {
-  width: min(1220px, calc(100% - 32px));
-  margin: 14px auto 0;
-  padding: 10px 14px;
-  border: 1px solid var(--landing-border);
+  width: min(1240px, calc(100% - 34px));
+  margin: 24px auto 0;
+  padding: 14px 22px;
+  border: 1px solid rgba(133, 169, 219, 0.5);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 10px 26px rgba(35, 84, 150, 0.1);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  box-shadow:
+    0 14px 32px rgba(35, 84, 150, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.58);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 20px;
 }
 
 .landing-brand {
@@ -137,19 +144,45 @@ main,
 .landing-nav {
   display: inline-flex;
   align-items: center;
-  gap: 18px;
+  justify-content: center;
+  gap: 8px;
   flex-wrap: wrap;
+  padding: 4px;
+  border: 1px solid rgba(152, 183, 225, 0.52);
+  border-radius: 999px;
+  background: rgba(240, 248, 255, 0.72);
 }
 
-.landing-nav a {
+.landing-nav-link {
   text-decoration: none;
   color: #2f4f7d;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
 }
 
-.landing-nav a:hover {
-  color: var(--landing-accent-dark);
+.landing-nav-link:hover {
+  color: #1e4471;
+  border-color: rgba(131, 168, 217, 0.64);
+  background: rgba(255, 255, 255, 0.92);
+  transform: translateY(-1px);
+}
+
+.landing-nav-link.active {
+  color: #123761;
+  border-color: rgba(95, 141, 202, 0.78);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(231, 243, 255, 0.96) 100%);
+  box-shadow: 0 6px 12px rgba(41, 93, 161, 0.14);
+}
+
+.landing-nav-link:focus-visible {
+  outline: 2px solid rgba(53, 116, 193, 0.56);
+  outline-offset: 2px;
 }
 
 .btn {
@@ -185,10 +218,10 @@ main,
 }
 
 main {
-  width: min(1220px, calc(100% - 32px));
-  margin: 22px auto 36px;
+  width: min(1240px, calc(100% - 34px));
+  margin: 30px auto 42px;
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 
 .hero {
@@ -272,7 +305,100 @@ h2 {
 
 .hero-visual {
   position: relative;
-  min-height: clamp(280px, 38vw, 440px);
+  min-height: clamp(310px, 38vw, 460px);
+}
+
+.hero-art-core {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-art-aura {
+  position: absolute;
+  width: min(76%, 340px);
+  aspect-ratio: 1;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 42% 30%, rgba(95, 166, 255, 0.58), rgba(95, 166, 255, 0) 64%),
+    radial-gradient(circle at 62% 66%, rgba(255, 210, 70, 0.4), rgba(255, 210, 70, 0) 68%),
+    linear-gradient(140deg, rgba(57, 126, 216, 0.26), rgba(255, 255, 255, 0.08));
+  filter: blur(2px);
+  animation: auraPulse 6.8s ease-in-out infinite;
+}
+
+.hero-art-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(102, 149, 210, 0.5);
+}
+
+.hero-art-ring-a {
+  width: min(82%, 380px);
+  aspect-ratio: 1;
+  top: 9%;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: orbitSlow 11s linear infinite;
+}
+
+.hero-art-ring-b {
+  width: min(58%, 260px);
+  aspect-ratio: 1;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-color: rgba(255, 206, 64, 0.55);
+  animation: orbitSlowReverse 9s linear infinite;
+}
+
+.hero-art-node {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffffff 0%, #d5ebff 100%);
+  border: 1px solid rgba(103, 150, 209, 0.72);
+  box-shadow: 0 0 0 4px rgba(124, 170, 224, 0.2), 0 4px 10px rgba(34, 79, 142, 0.2);
+}
+
+.hero-art-node-a {
+  top: 18%;
+  left: 20%;
+}
+
+.hero-art-node-b {
+  top: 62%;
+  right: 18%;
+}
+
+.hero-art-node-c {
+  bottom: 20%;
+  left: 38%;
+}
+
+.hero-art-beam {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(66, 130, 208, 0), rgba(66, 130, 208, 0.66), rgba(66, 130, 208, 0));
+  transform-origin: left center;
+}
+
+.hero-art-beam-a {
+  width: 44%;
+  top: 37%;
+  left: 24%;
+  transform: rotate(22deg);
+}
+
+.hero-art-beam-b {
+  width: 30%;
+  top: 54%;
+  left: 36%;
+  transform: rotate(-30deg);
 }
 
 .glass-card {
@@ -288,6 +414,7 @@ h2 {
   position: absolute;
   inset: 12% 6% auto 6%;
   min-height: 210px;
+  z-index: 2;
   animation: floatMain 8s ease-in-out infinite;
 }
 
@@ -308,6 +435,7 @@ h2 {
 .glass-side {
   position: absolute;
   width: min(70%, 280px);
+  z-index: 2;
   animation: floatSide 9s ease-in-out infinite;
 }
 
@@ -441,7 +569,7 @@ h2 {
 }
 
 .landing-footer {
-  width: min(1220px, calc(100% - 32px));
+  width: min(1240px, calc(100% - 34px));
   margin: 0 auto 30px;
   padding: 16px 20px;
   border: 1px solid rgba(142, 177, 222, 0.55);
@@ -491,11 +619,27 @@ h2 {
   50% { transform: translateY(-7px); }
 }
 
+@keyframes auraPulse {
+  0%, 100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.04); }
+}
+
+@keyframes orbitSlow {
+  from { transform: translateX(-50%) rotate(0deg); }
+  to { transform: translateX(-50%) rotate(360deg); }
+}
+
+@keyframes orbitSlowReverse {
+  from { transform: translateX(-50%) rotate(360deg); }
+  to { transform: translateX(-50%) rotate(0deg); }
+}
+
 @media (max-width: 1080px) {
   .landing-header {
-    border-radius: 20px;
+    border-radius: 24px;
     flex-wrap: wrap;
     justify-content: center;
+    padding: 14px;
   }
 
   .hero {
@@ -503,7 +647,7 @@ h2 {
   }
 
   .hero-visual {
-    min-height: 290px;
+    min-height: 320px;
   }
 
   .feature-grid {
@@ -532,19 +676,21 @@ h2 {
   }
 
   .landing-header {
-    margin-top: 9px;
-    padding: 10px;
+    margin-top: 12px;
+    padding: 12px;
     gap: 10px;
+    border-radius: 20px;
   }
 
   .landing-nav {
     width: 100%;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
   }
 
-  .landing-nav a {
-    font-size: 13px;
+  .landing-nav-link {
+    font-size: 12px;
+    padding: 9px 11px;
   }
 
   .hero,
@@ -576,7 +722,7 @@ h2 {
   }
 
   .glass-main {
-    inset: 10% 2% auto 2%;
+    inset: 12% 2% auto 2%;
     min-height: 180px;
   }
 
@@ -600,3 +746,5 @@ h2 {
     padding: 14px;
   }
 }
+
+
