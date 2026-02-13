@@ -1,10 +1,10 @@
-ÔªøPROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-12 23:54
+PROJECT HANDOFF - UZT / digistrategija.lt
+Generated: 2026-02-13 07:36
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
 ==================================================
-1) CURRENT SNAPSHOT (2026-02-12)
+1) CURRENT SNAPSHOT (2026-02-13)
 ==================================================
 Production domain:
 - https://www.digistrategija.lt
@@ -30,6 +30,11 @@ Latest applied source update in this handoff cycle (to be deployed if not yet):
   - POST /api/v1/admin/users/:userId/password-reset-link
 - Added backend endpoint to validate invite token before acceptance:
   - GET /api/v1/invites/token-info
+- Mobile UI refinements for phone screens:
+  - tuned proportions at <=640px and <=480px breakpoints
+  - compacted header, toolbar, cards, buttons, and form fields
+  - improved mobile map controls and overlay layout
+  - improved login modal sizing and spacing on small screens
 
 ==================================================
 2) DEPLOYMENT STATUS - STABLE
@@ -99,8 +104,8 @@ Current focus:
   - reduced top-left DS icon tile by ~40% for a more compact header footprint
   - added initiative page matrix panel (Guideline -> Initiatives) with scrollable table, alternating row colors, and explicit highlight for unassigned guidelines
   - replaced guideline assignment UX from Ctrl/Cmd multiselect to checkbox lists in initiatives flow (member view and institution admin add/edit forms)
-  - widened initiative "Trumpas paai≈°kinimas" input area to full form width
-  - stretched "Gairi≈≥ ir iniciatyv≈≥ susiejimas" panel to match full height of the "Nauja iniciatyva" block
+  - widened initiative "Trumpas paaiökinimas" input area to full form width
+  - stretched "Gairiu ir iniciatyvu susiejimas" panel to match full height of the "Nauja iniciatyva" block
   - switched top-left DS tile to bright yellow styling
   - updated favicon to matching yellow DS theme and bumped favicon cache version across all prototype HTML pages
 
@@ -174,13 +179,16 @@ curl -fsS https://www.digistrategija.lt/index.html | head -n 120
 ==================================================
 After deploying this update:
 - Verify institution admin UI no longer shows:
-  - "Naujas slapta≈æodis (min. 8)" inline field
+  - "Naujas slaptaûodis (min. 8)" inline field
   - direct password update button
 - Verify participant card shows:
-  - "Slapta≈æod≈æio keitimo nuoroda" action
+  - "Slaptaûodûio keitimo nuoroda" action
 - Verify invite flow:
   - generated invite URL opens accept-invite page
   - accept page creates password + display name + email validation
 
 END OF HANDOFF
+
+
+
 

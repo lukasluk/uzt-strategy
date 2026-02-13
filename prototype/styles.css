@@ -3111,21 +3111,138 @@ select:focus {
 }
 
 @media (max-width: 640px) {
+  .app {
+    padding: 10px 10px 18px;
+  }
+
+  .site-header {
+    margin-bottom: 10px;
+  }
+
+  .topbar {
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: stretch;
+  }
+
+  .topbar > div:first-child {
+    flex: 1 1 auto;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .brand-map-link {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .brand-map-link::before {
+    inset: 4px;
+    border-radius: 10px;
+  }
+
+  .brand-map-link::after {
+    border-radius: 14px;
+  }
+
   .layout {
-    grid-template-columns: 108px minmax(0, 1fr);
+    grid-template-columns: 1fr;
     gap: 10px;
   }
 
+  .steps {
+    position: static;
+    top: auto;
+    align-self: stretch;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-height: none;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 14px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+
   .step-pill {
-    padding: 10px 7px;
+    width: auto;
+    min-width: 120px;
+    padding: 9px 9px;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .step-pill-head {
+    gap: 7px;
+  }
+
+  .step-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    border-radius: 7px;
+  }
+
+  .step-pill h4 {
+    font-size: 13px;
+  }
+
+  .session-name {
+    font-size: clamp(18px, 5.6vw, 22px);
+    line-height: 1.18;
   }
 
   .stage {
-    padding: 14px;
+    padding: 12px;
+    border-radius: 14px;
+    min-height: 0;
+  }
+
+  .step-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .step-header h2 {
+    font-size: 24px;
+  }
+
+  .step-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .prompt {
+    margin-bottom: 12px;
+  }
+
+  .btn {
+    padding: 9px 14px;
+    font-size: 14px;
+  }
+
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  textarea,
+  select {
+    font-size: 14px;
+    padding: 9px 11px;
+  }
+
+  textarea {
+    min-height: 94px;
   }
 
   .user-bar {
     justify-content: flex-start;
+    width: 100%;
+    margin: 4px 0 10px;
   }
 
   .top-actions {
@@ -3136,14 +3253,142 @@ select:focus {
   .user-toolbar {
     width: 100%;
     justify-content: flex-start;
+    align-items: stretch;
+    min-height: 0;
+    border-radius: 16px;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .institution-switcher {
+    width: 100%;
+    min-height: 0;
+    padding: 7px 10px;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .institution-switcher > span {
+    font-size: 10px;
+    letter-spacing: 0.03em;
   }
 
   .institution-switcher select {
-    width: clamp(120px, 40vw, 210px);
+    width: 100%;
+    font-size: 14px;
+  }
+
+  .user-chip {
+    width: 100%;
+    min-height: 36px;
+    justify-content: space-between;
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+
+  .user-toolbar .btn {
+    width: 100%;
+    min-height: 36px;
+    font-size: 13px;
+    justify-content: center;
+  }
+
+  .card {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .card h4 {
+    font-size: 19px;
+    line-height: 1.28;
+  }
+
+  .card p {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .inline-form {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .inline-form input[type='text'] {
+    padding: 10px 12px;
+  }
+
+  .inline-form .btn {
+    width: 100%;
+  }
+
+  .header-stack {
+    gap: 6px;
+  }
+
+  .header-row {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .tag {
+    font-size: 11px;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+  }
+
+  .guideline-checkbox-panel {
+    padding: 6px;
+  }
+
+  .guideline-checkbox-list {
+    max-height: 160px;
+    gap: 5px;
+  }
+
+  .guideline-checkbox-item {
+    padding: 6px 7px;
+  }
+
+  .guideline-checkbox-label {
+    font-size: 13px;
+  }
+
+  .initiative-add-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  #initiativeAddForm textarea[name='desc'],
+  .guideline-add-form textarea[name='desc'] {
+    width: 100%;
+    min-height: 102px;
+  }
+
+  .initiative-matrix-card {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .initiative-matrix-scroll {
+    max-height: 260px;
+  }
+
+  .initiative-matrix-table th,
+  .initiative-matrix-table td {
+    padding: 7px 8px;
+  }
+
+  .initiative-matrix-chip {
+    font-size: 11px;
+    padding: 3px 8px;
   }
 
   .card-list {
     grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 12px;
   }
 
   .institution-grid {
@@ -3151,7 +3396,261 @@ select:focus {
   }
 
   .strategy-map-viewport {
-    min-height: 520px;
+    min-height: 380px;
+    border-radius: 14px;
+  }
+
+  .map-overlay-toolbar {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .map-overlay-layer-toggle,
+  .map-overlay-actions {
+    width: 100%;
+  }
+
+  .map-overlay-actions {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .map-layer-toggle {
+    width: 100%;
+    gap: 4px;
+    padding: 3px;
+  }
+
+  .map-layer-toggle .btn {
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+
+  .map-overlay-actions .btn,
+  .map-overlay-actions .btn-icon {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .map-overlay-actions .btn-icon {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+  }
+
+  .map-fullscreen-watermark {
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .map-fullscreen-watermark img {
+    width: clamp(94px, 28vw, 150px);
+  }
+
+  .vote-panel {
+    padding: 9px 10px;
+  }
+
+  .vote-controls {
+    gap: 8px;
+  }
+
+  .vote-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .vote-score {
+    font-size: 17px;
+  }
+
+  .vote-floating {
+    left: 8px;
+    bottom: 8px;
+  }
+
+  .vote-floating-inner {
+    width: min(170px, calc(100vw - 16px));
+  }
+
+  .vote-floating-count {
+    font-size: 22px;
+  }
+
+  .login-overlay {
+    padding: 12px;
+  }
+
+  .login-card {
+    width: min(100%, 430px);
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .login-form {
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .auth-password-field input {
+    padding-right: 78px;
+  }
+
+  .auth-password-toggle {
+    right: 6px;
+    padding: 4px 9px;
+    font-size: 11px;
+  }
+
+  .auth-separator {
+    margin: 10px 0;
+  }
+
+  .export-card {
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .app-disclaimer {
+    padding: 12px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    padding: 8px 8px 14px;
+  }
+
+  .topbar {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .step-pill {
+    min-width: 108px;
+    padding: 8px 7px;
+  }
+
+  .step-pill h4 {
+    font-size: 12px;
+  }
+
+  .step-icon {
+    width: 17px;
+    height: 17px;
+    font-size: 11px;
+    border-radius: 6px;
+  }
+
+  .stage {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .step-header h2 {
+    font-size: 22px;
+  }
+
+  .brand-map-link {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .brand-map-link::before {
+    inset: 3px;
+    border-radius: 8px;
+  }
+
+  .brand-map-link::after {
+    border-radius: 12px;
+  }
+
+  .institution-switcher {
+    padding: 6px 8px;
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .institution-switcher > span {
+    display: none;
+  }
+
+  .user-toolbar {
+    padding: 7px;
+    border-radius: 14px;
+  }
+
+  .user-chip {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .card {
+    padding: 10px;
+  }
+
+  .card h4 {
+    font-size: 18px;
+  }
+
+  .strategy-map-viewport {
+    min-height: 340px;
+  }
+
+  .map-overlay-toolbar {
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    gap: 8px;
+  }
+
+  .map-overlay-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .map-layer-toggle .btn,
+  .map-overlay-actions .btn {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
+  .map-overlay-actions .btn-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .vote-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+  }
+
+  .vote-score {
+    font-size: 16px;
+  }
+
+  .app-disclaimer {
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+
+  body.meta-admin-page .topbar h1 {
+    font-size: 26px;
+  }
+
+  .meta-admin-card {
+    padding: 12px;
   }
 }
 
