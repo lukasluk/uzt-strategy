@@ -13,6 +13,8 @@ function estimateInitiativeNodeHeight(totalScore) {
   return 110 + voteRows * 14;
 }
 
+const PARENT_GUIDELINE_SCALE = 1.2;
+
 function resolveAutoSide(fromNode, toNode) {
   const fromCenterX = fromNode.x + fromNode.w / 2;
   const fromCenterY = fromNode.y + fromNode.h / 2;
@@ -200,6 +202,8 @@ function layoutStrategyMap() {
 
       const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
       const nodeY = toNumberOrNull(guideline.mapY) ?? defaultY;
+      const isParentGuideline = String(guideline.relationType || '').toLowerCase() === 'parent';
+      const sizeScale = isParentGuideline ? PARENT_GUIDELINE_SCALE : 1;
       const node = {
         id: nodeId,
         kind: 'guideline',
@@ -207,8 +211,8 @@ function layoutStrategyMap() {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: 220,
-        h: estimateGuidelineNodeHeight(guideline.totalScore),
+        w: Math.round(220 * sizeScale),
+        h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
         guideline
       };

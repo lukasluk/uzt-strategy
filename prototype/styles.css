@@ -3004,6 +3004,7 @@ select:focus {
   border-color: #1f4f84;
 }
 .strategy-map-viewport {
+  --map-parent-accent-thickness: 6px;
   border-color: #c5d8f2;
   background-color: #fbfdff;
   background-image:
@@ -3015,7 +3016,7 @@ select:focus {
 }
 .strategy-map-edge.edge-root-parent {
   stroke: #0e86ff;
-  stroke-width: 6.4;
+  stroke-width: var(--map-parent-accent-thickness);
   opacity: 0.98;
   filter: drop-shadow(0 0 2px rgba(14, 134, 255, 0.35));
 }
@@ -3062,12 +3063,40 @@ select:focus {
 
 .guideline-node.relation-parent {
   background: linear-gradient(180deg, #ffffff 0%, #e7f2ff 100%);
-  border: 3px solid #2d86e6;
-  border-left: 9px solid #0f6fd8;
+  border: var(--map-parent-accent-thickness) solid #0e86ff;
   padding: 10px 12px;
   box-shadow:
     0 0 0 3px rgba(45, 134, 230, 0.22),
     0 16px 28px rgba(18, 72, 138, 0.22);
+}
+.guideline-node.relation-parent h4 {
+  font-size: 17px;
+}
+.guideline-node.relation-parent small {
+  font-size: 13px;
+}
+.guideline-node.relation-parent .map-comment-btn {
+  font-size: 13px;
+  padding: 5px 10px 5px 6px;
+}
+.guideline-node.relation-parent .map-comment-icon {
+  width: 24px;
+  height: 24px;
+}
+.guideline-node.relation-parent .map-comment-count {
+  min-width: 21px;
+  height: 21px;
+  font-size: 13px;
+}
+.guideline-node.relation-parent .map-vote-chip {
+  font-size: 13px;
+  padding: 3px 10px;
+}
+.guideline-node.relation-parent .map-vote-chip strong {
+  font-size: 16px;
+}
+.guideline-node.relation-parent .map-vote-empty {
+  font-size: 13px;
 }
 .guideline-node.relation-child {
   background: linear-gradient(180deg, #ffffff 0%, var(--pastel-soft) 100%);
