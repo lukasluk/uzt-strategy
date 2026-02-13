@@ -25,7 +25,6 @@
 
     <nav class="landing-nav" aria-label="Primary">
       <a class="landing-nav-link" data-scroll-link data-i18n="navHow" href="#how">Kaip tai veikia</a>
-      <a class="landing-nav-link" data-scroll-link data-i18n="navDemo" href="#demoMap">Demo zemelapis</a>
       <a class="landing-nav-link" data-scroll-link data-i18n="navWhy" href="#usp">Kuo issiskiria</a>
       <a class="landing-nav-link" data-scroll-link data-i18n="navTrust" href="#trust">Pasitikejimas</a>
       <a class="landing-nav-link" data-scroll-link data-i18n="navLaunch" href="#finalCta">Pradeti</a>
@@ -41,28 +40,6 @@
           </select>
         </label>
       </div>
-      <span class="eu-badge">
-        <span class="eu-flag" aria-hidden="true">
-          <svg viewBox="0 0 60 40" role="img" aria-label="EU flag">
-            <rect width="60" height="40" rx="4" fill="#1f4f9f"></rect>
-            <g fill="#ffcc33">
-              <circle cx="30" cy="8" r="1.5"></circle>
-              <circle cx="36" cy="10" r="1.5"></circle>
-              <circle cx="40" cy="14" r="1.5"></circle>
-              <circle cx="42" cy="20" r="1.5"></circle>
-              <circle cx="40" cy="26" r="1.5"></circle>
-              <circle cx="36" cy="30" r="1.5"></circle>
-              <circle cx="30" cy="32" r="1.5"></circle>
-              <circle cx="24" cy="30" r="1.5"></circle>
-              <circle cx="20" cy="26" r="1.5"></circle>
-              <circle cx="18" cy="20" r="1.5"></circle>
-              <circle cx="20" cy="14" r="1.5"></circle>
-              <circle cx="24" cy="10" r="1.5"></circle>
-            </g>
-          </svg>
-        </span>
-        <span id="landingMadeInEu" data-i18n="madeInEu">Made in EU</span>
-      </span>
       <a class="btn btn-outline" data-active-strategy-link data-i18n="headerCta" href="index.html?view=map">View Active Strategies</a>
     </div>
   </header>
@@ -121,81 +98,6 @@
       </div>
     </section>
 
-    <section class="section-reveal section demo-map-section" id="demoMap">
-      <div class="section-head">
-        <p class="hero-kicker" data-i18n="demoMapKicker">Interaktyvus pavyzdys</p>
-        <h2 data-i18n="demoMapTitle">Strategiju zemelapio mini demonstracija</h2>
-        <p class="demo-map-copy" data-i18n="demoMapCopy">Supaprastintas pavyzdys parodo, kaip institucijos strategija susiejama su pagrindinemis gairemis ir igyvendinanciomis iniciatyvomis.</p>
-      </div>
-
-      <div class="demo-map-canvas" role="img" aria-label="Strategy map example with linked guidelines and initiatives">
-        <svg class="demo-map-lines" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
-          <path class="line-guideline" d="M500 296 C410 250 300 194 198 142"></path>
-          <path class="line-guideline" d="M500 296 C408 336 300 406 198 468"></path>
-          <path class="line-guideline" d="M500 296 C590 250 700 194 802 142"></path>
-          <path class="line-guideline" d="M500 296 C592 336 700 406 802 468"></path>
-          <path class="line-initiative" d="M198 142 C250 258 286 390 334 514"></path>
-          <path class="line-initiative" d="M198 468 C250 486 286 500 334 514"></path>
-          <path class="line-initiative" d="M802 142 C750 258 714 390 666 514"></path>
-          <path class="line-initiative" d="M802 468 C750 486 714 500 666 514"></path>
-          <path class="line-initiative center" d="M500 296 C500 384 500 456 500 552"></path>
-        </svg>
-
-        <div class="demo-map-legend">
-          <span class="demo-map-legend-item guideline" data-i18n="demoLegendGuideline">Gaire</span>
-          <span class="demo-map-legend-item initiative" data-i18n="demoLegendInitiative">Iniciatyva</span>
-        </div>
-
-        <article class="demo-node demo-node-institution">
-          <span class="demo-node-kind institution" data-i18n="demoInstitutionKind">Institucija</span>
-          <h3 data-i18n="demoInstitutionTitle">Skaitmenizacijos strategijos ciklas</h3>
-          <p data-i18n="demoInstitutionCopy">Bendras tikslas ir prioritetu kryptis visai organizacijai.</p>
-        </article>
-
-        <article class="demo-node demo-node-guideline demo-node-g1">
-          <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
-          <h4 data-i18n="demoGuideline1Title">Klientu patirciu gerinimas</h4>
-          <p data-i18n="demoGuideline1Copy">Trumpesnis paslaugu kelias ir aiskesne komunikacija.</p>
-        </article>
-
-        <article class="demo-node demo-node-guideline demo-node-g2">
-          <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
-          <h4 data-i18n="demoGuideline2Title">Duomenu valdysenos stiprinimas</h4>
-          <p data-i18n="demoGuideline2Copy">Vieningi standartai ir kokybiski duomenys sprendimams.</p>
-        </article>
-
-        <article class="demo-node demo-node-guideline demo-node-g3">
-          <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
-          <h4 data-i18n="demoGuideline3Title">Skaitmeniniu paslaugu pletra</h4>
-          <p data-i18n="demoGuideline3Copy">Didesne savitarna ir greitesni procesai.</p>
-        </article>
-
-        <article class="demo-node demo-node-guideline demo-node-g4">
-          <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
-          <h4 data-i18n="demoGuideline4Title">Kompetenciju ugdymas</h4>
-          <p data-i18n="demoGuideline4Copy">Komandu pasirengimas dirbti su naujais irankiais.</p>
-        </article>
-
-        <article class="demo-node demo-node-initiative demo-node-i1">
-          <span class="demo-node-kind initiative" data-i18n="demoInitiativeKind">Iniciatyva</span>
-          <h4 data-i18n="demoInitiative1Title">Vieningas registracijos kelias</h4>
-          <p data-i18n="demoInitiative1Copy">Vienas langas gyventojo uzklausoms ir aptarnavimui.</p>
-        </article>
-
-        <article class="demo-node demo-node-initiative demo-node-i2">
-          <span class="demo-node-kind initiative" data-i18n="demoInitiativeKind">Iniciatyva</span>
-          <h4 data-i18n="demoInitiative2Title">Savitarnos modernizavimas</h4>
-          <p data-i18n="demoInitiative2Copy">Atsinaujinusi naudotojo patirtis pagrindiniuose servisuose.</p>
-        </article>
-
-        <article class="demo-node demo-node-initiative demo-node-i3">
-          <span class="demo-node-kind initiative" data-i18n="demoInitiativeKind">Iniciatyva</span>
-          <h4 data-i18n="demoInitiative3Title">Analitikos platforma</h4>
-          <p data-i18n="demoInitiative3Copy">Sprendimai gristi duomenimis, stebint poveikio rodiklius.</p>
-        </article>
-      </div>
-    </section>
-
     <section class="section-full section-reveal" id="backbone">
       <div class="section-full-shell">
         <p class="section-full-kicker" data-i18n="backboneKicker">Europos skaitmeninis valdymas</p>
@@ -217,6 +119,80 @@
             <strong data-i18n="backboneMetric3Title">Public-ready</strong>
             <p data-i18n="backboneMetric3Copy">View-only embed leidzia viesinti skaidriai ir islaikyti valdymo kontrole.</p>
           </article>
+        </div>
+        <div class="section-full-demo">
+          <div class="section-head">
+            <p class="hero-kicker" data-i18n="demoMapKicker">Interaktyvus pavyzdys</p>
+            <h3 class="section-full-demo-title" data-i18n="demoMapTitle">Strategiju zemelapio mini demonstracija</h3>
+            <p class="demo-map-copy" data-i18n="demoMapCopy">Supaprastintas pavyzdys parodo, kaip institucijos strategija susiejama su pagrindinemis gairemis ir igyvendinanciomis iniciatyvomis.</p>
+          </div>
+
+          <div class="demo-map-canvas demo-map-canvas-inverse" role="img" aria-label="Strategy map example with linked guidelines and initiatives">
+            <svg class="demo-map-lines" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
+              <path class="line-guideline" d="M500 296 C410 250 300 194 198 142"></path>
+              <path class="line-guideline" d="M500 296 C408 336 300 406 198 468"></path>
+              <path class="line-guideline" d="M500 296 C590 250 700 194 802 142"></path>
+              <path class="line-guideline" d="M500 296 C592 336 700 406 802 468"></path>
+              <path class="line-initiative" d="M198 142 C250 258 286 390 334 514"></path>
+              <path class="line-initiative" d="M198 468 C250 486 286 500 334 514"></path>
+              <path class="line-initiative" d="M802 142 C750 258 714 390 666 514"></path>
+              <path class="line-initiative" d="M802 468 C750 486 714 500 666 514"></path>
+              <path class="line-initiative center" d="M500 296 C500 384 500 456 500 552"></path>
+            </svg>
+
+            <div class="demo-map-legend">
+              <span class="demo-map-legend-item guideline" data-i18n="demoLegendGuideline">Gaire</span>
+              <span class="demo-map-legend-item initiative" data-i18n="demoLegendInitiative">Iniciatyva</span>
+            </div>
+
+            <article class="demo-node demo-node-institution">
+              <span class="demo-node-kind institution" data-i18n="demoInstitutionKind">Institucija</span>
+              <h3 data-i18n="demoInstitutionTitle">Skaitmenizacijos strategijos ciklas</h3>
+              <p data-i18n="demoInstitutionCopy">Bendras tikslas ir prioritetu kryptis visai organizacijai.</p>
+            </article>
+
+            <article class="demo-node demo-node-guideline demo-node-g1">
+              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
+              <h4 data-i18n="demoGuideline1Title">Klientu patirciu gerinimas</h4>
+              <p data-i18n="demoGuideline1Copy">Trumpesnis paslaugu kelias ir aiskesne komunikacija.</p>
+            </article>
+
+            <article class="demo-node demo-node-guideline demo-node-g2">
+              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
+              <h4 data-i18n="demoGuideline2Title">Duomenu valdysenos stiprinimas</h4>
+              <p data-i18n="demoGuideline2Copy">Vieningi standartai ir kokybiski duomenys sprendimams.</p>
+            </article>
+
+            <article class="demo-node demo-node-guideline demo-node-g3">
+              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
+              <h4 data-i18n="demoGuideline3Title">Skaitmeniniu paslaugu pletra</h4>
+              <p data-i18n="demoGuideline3Copy">Didesne savitarna ir greitesni procesai.</p>
+            </article>
+
+            <article class="demo-node demo-node-guideline demo-node-g4">
+              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
+              <h4 data-i18n="demoGuideline4Title">Kompetenciju ugdymas</h4>
+              <p data-i18n="demoGuideline4Copy">Komandu pasirengimas dirbti su naujais irankiais.</p>
+            </article>
+
+            <article class="demo-node demo-node-initiative demo-node-i1">
+              <span class="demo-node-kind initiative" data-i18n="demoInitiativeKind">Iniciatyva</span>
+              <h4 data-i18n="demoInitiative1Title">Vieningas registracijos kelias</h4>
+              <p data-i18n="demoInitiative1Copy">Vienas langas gyventojo uzklausoms ir aptarnavimui.</p>
+            </article>
+
+            <article class="demo-node demo-node-initiative demo-node-i2">
+              <span class="demo-node-kind initiative" data-i18n="demoInitiativeKind">Iniciatyva</span>
+              <h4 data-i18n="demoInitiative2Title">Savitarnos modernizavimas</h4>
+              <p data-i18n="demoInitiative2Copy">Atsinaujinusi naudotojo patirtis pagrindiniuose servisuose.</p>
+            </article>
+
+            <article class="demo-node demo-node-initiative demo-node-i3">
+              <span class="demo-node-kind initiative" data-i18n="demoInitiativeKind">Iniciatyva</span>
+              <h4 data-i18n="demoInitiative3Title">Analitikos platforma</h4>
+              <p data-i18n="demoInitiative3Copy">Sprendimai gristi duomenimis, stebint poveikio rodiklius.</p>
+            </article>
+          </div>
         </div>
       </div>
     </section>
