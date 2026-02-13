@@ -56,21 +56,6 @@
   function initNavScroll() {
     if (!navLinks.length) return;
 
-    navLinks.forEach((link) => {
-      link.addEventListener('click', (event) => {
-        const href = String(link.getAttribute('href') || '').trim();
-        if (!href.startsWith('#')) return;
-        const target = document.querySelector(href);
-        if (!(target instanceof HTMLElement)) return;
-        event.preventDefault();
-        navLinks.forEach((item) => item.classList.remove('active'));
-        link.classList.add('active');
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
-
-    if (!('IntersectionObserver' in window)) return;
-
     const sections = navLinks
       .map((link) => {
         const href = String(link.getAttribute('href') || '').trim();
@@ -79,25 +64,54 @@
         if (!(element instanceof HTMLElement)) return null;
         return { link, element };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .sort((left, right) => left.element.offsetTop - right.element.offsetTop);
 
     if (!sections.length) return;
 
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (!visible) return;
-
+    const clearActive = () => {
       navLinks.forEach((link) => link.classList.remove('active'));
-      const match = sections.find((item) => item.element === visible.target);
-      if (match) match.link.classList.add('active');
-    }, {
-      rootMargin: '-28% 0px -56% 0px',
-      threshold: [0.2, 0.45, 0.7]
+    };
+
+    const setActive = (link) => {
+      clearActive();
+      if (link) link.classList.add('active');
+    };
+
+    const updateActiveByScroll = () => {
+      const headerOffset = 144;
+      const scrollTop = window.scrollY || window.pageYOffset || 0;
+      const firstSectionTop = sections[0].element.offsetTop;
+
+      if (scrollTop < Math.max(120, firstSectionTop - headerOffset - 80)) {
+        clearActive();
+        return;
+      }
+
+      const probe = scrollTop + headerOffset;
+      let current = null;
+      sections.forEach((section) => {
+        if (section.element.offsetTop <= probe) current = section;
+      });
+
+      setActive(current?.link || null);
+    };
+
+    navLinks.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const href = String(link.getAttribute('href') || '').trim();
+        if (!href.startsWith('#')) return;
+        const target = document.querySelector(href);
+        if (!(target instanceof HTMLElement)) return;
+        event.preventDefault();
+        setActive(link);
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
 
-    sections.forEach((item) => observer.observe(item.element));
+    window.addEventListener('scroll', updateActiveByScroll, { passive: true });
+    window.addEventListener('resize', updateActiveByScroll);
+    updateActiveByScroll();
   }
 
   loadPublicInstitutions();
