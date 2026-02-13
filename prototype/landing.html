@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="lt">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>digistrategija.lt | Public Strategy OS</title>
-  <meta name="description" content="digistrategija.lt helps institutions co-create strategy, map initiatives, and publish transparent progress." />
+  <meta id="landingMetaDescription" name="description" content="digistrategija.lt padeda institucijoms kartu kurti strategijas, susieti iniciatyvas ir viesinti pazanga." />
   <link rel="icon" type="image/svg+xml" href="assets/digistrategija-favicon.svg?v=20260212b" />
   <link rel="stylesheet" href="landing.css" />
 </head>
@@ -24,13 +24,22 @@
     </a>
 
     <nav class="landing-nav" aria-label="Primary">
-      <a class="landing-nav-link" data-scroll-link href="#how">How it works</a>
-      <a class="landing-nav-link" data-scroll-link href="#usp">Why it stands out</a>
-      <a class="landing-nav-link" data-scroll-link href="#trust">Trust</a>
-      <a class="landing-nav-link" data-scroll-link href="#finalCta">Launch</a>
+      <a class="landing-nav-link" data-scroll-link data-i18n="navHow" href="#how">Kaip tai veikia</a>
+      <a class="landing-nav-link" data-scroll-link data-i18n="navWhy" href="#usp">Kuo issiskiria</a>
+      <a class="landing-nav-link" data-scroll-link data-i18n="navTrust" href="#trust">Pasitikejimas</a>
+      <a class="landing-nav-link" data-scroll-link data-i18n="navLaunch" href="#finalCta">Pradeti</a>
     </nav>
 
     <div class="landing-header-actions">
+      <div class="landing-lang-switch-wrap" data-i18n-skip="1">
+        <label class="landing-lang-switch" for="landingLangSelect">
+          <span id="landingLangLabel" data-i18n="langLabel">Kalba</span>
+          <select id="landingLangSelect" aria-label="Language switch">
+            <option value="lt">LT</option>
+            <option value="en">EN</option>
+          </select>
+        </label>
+      </div>
       <span class="eu-badge">
         <span class="eu-flag" aria-hidden="true">
           <svg viewBox="0 0 60 40" role="img" aria-label="EU flag">
@@ -51,37 +60,36 @@
             </g>
           </svg>
         </span>
-        <span>Made in EU, for EU</span>
+        <span id="landingMadeInEu" data-i18n="madeInEu">Made in EU</span>
       </span>
-      <a class="btn btn-outline" data-active-strategy-link href="index.html?view=map">View Active Strategies</a>
+      <a class="btn btn-outline" data-active-strategy-link data-i18n="headerCta" href="index.html?view=map">View Active Strategies</a>
     </div>
   </header>
 
   <main>
     <section class="hero section-reveal" id="hero">
       <div class="hero-content">
-        <p class="hero-kicker">Public Strategy OS</p>
-        <h1>From ideas to auditable execution for modern public institutions.</h1>
-        <p class="hero-copy">
-          Build guideline structures, connect initiatives, involve teams in transparent voting,
-          and publish strategy maps your community can actually understand.
+        <p class="hero-kicker" data-i18n="heroKicker">Public Strategy OS</p>
+        <h1 data-i18n="heroTitle">From ideas to auditable execution for modern public institutions.</h1>
+        <p class="hero-copy" data-i18n="heroCopy">
+          Kurkite gairiu strukturas, susiekite iniciatyvas, itraukite komandas i skaidru balsavima ir publikuokite strategiju zemelapius, kuriuos supranta visa bendruomene.
         </p>
         <div class="hero-actions">
-          <a class="btn btn-primary" data-active-strategy-link href="index.html?view=map">View Active Strategies</a>
-          <a class="btn btn-outline" href="index.html">Open Workspace</a>
+          <a class="btn btn-primary" data-active-strategy-link data-i18n="heroPrimaryCta" href="index.html?view=map">View Active Strategies</a>
+          <a class="btn btn-outline" data-workspace-link data-i18n="heroSecondaryCta" href="index.html">Open Workspace</a>
         </div>
         <div class="hero-metrics" id="heroMetrics">
           <article>
             <span class="metric-value" id="metricInstitutions">--</span>
-            <span class="metric-label">Active Institutions</span>
+            <span class="metric-label" data-i18n="metricInstitutionsLabel">Aktyvios institucijos</span>
           </article>
           <article>
             <span class="metric-value">24h</span>
-            <span class="metric-label">Secure Invite Validity</span>
+            <span class="metric-label" data-i18n="metricInviteLabel">Saugaus kvietimo galiojimas</span>
           </article>
           <article>
             <span class="metric-value">100%</span>
-            <span class="metric-label">Map-First Visual Planning</span>
+            <span class="metric-label" data-i18n="metricMapLabel">Map-first vizualus planavimas</span>
           </article>
         </div>
       </div>
@@ -97,41 +105,41 @@
           <div class="hero-art-beam hero-art-beam-b"></div>
         </div>
         <div class="glass-card glass-main">
-          <p class="glass-label">Institution</p>
-          <h3>Digital Strategy Cycle</h3>
-          <p>Guidelines, initiatives, ownership and status in one interactive map.</p>
+          <p class="glass-label" data-i18n="glassInstitutionLabel">Institucija</p>
+          <h3 data-i18n="glassMainTitle">Skaitmenizacijos strategijos ciklas</h3>
+          <p data-i18n="glassMainCopy">Gaires, iniciatyvos, atsakomybes ir busena viename interaktyviame zemelapyje.</p>
         </div>
         <div class="glass-card glass-side glass-side-a">
-          <p class="glass-label">Outcome contract</p>
-          <h4>Target + Deadline + Evidence</h4>
+          <p class="glass-label" data-i18n="glassOutcomeLabel">Rezultato kontraktas</p>
+          <h4 data-i18n="glassOutcomeTitle">Tikslas + terminas + irodymas</h4>
         </div>
         <div class="glass-card glass-side glass-side-b">
-          <p class="glass-label">Auditability</p>
-          <h4>Decision history visible end-to-end</h4>
+          <p class="glass-label" data-i18n="glassAuditLabel">Audituojamumas</p>
+          <h4 data-i18n="glassAuditTitle">Sprendimu istorija matoma nuo pradzios iki pabaigos</h4>
         </div>
       </div>
     </section>
 
     <section class="section-full section-reveal" id="backbone">
       <div class="section-full-shell">
-        <p class="section-full-kicker">European digital governance</p>
-        <h2 class="section-full-title">The backbone for institutional strategy delivery.</h2>
+        <p class="section-full-kicker" data-i18n="backboneKicker">Europos skaitmeninis valdymas</p>
+        <h2 class="section-full-title" data-i18n="backboneTitle">Patikimas pagrindas instituciju strategiju igyvendinimui.</h2>
         <div class="section-full-joke" aria-label="Lighthearted note">
-          <p>Made in Europe for Europe?</p>
+          <p data-i18n="backboneJokeQuestion">Made in Europe for Europe?</p>
           <img src="assets/for-sure.gif?v=20260213a" alt="For sure gif reaction" loading="lazy" />
         </div>
         <div class="section-full-metrics">
           <article>
-            <strong>Multi-tenant</strong>
-            <p>One platform, many institutions with role-separated governance.</p>
+            <strong data-i18n="backboneMetric1Title">Multi-tenant</strong>
+            <p data-i18n="backboneMetric1Copy">Viena platforma, daug instituciju su rolemis atskirtu valdymu.</p>
           </article>
           <article>
-            <strong>Audit trail</strong>
-            <p>Decision context remains visible across the full strategy lifecycle.</p>
+            <strong data-i18n="backboneMetric2Title">Audit trail</strong>
+            <p data-i18n="backboneMetric2Copy">Sprendimu kontekstas islieka matomas per visa strategijos cikla.</p>
           </article>
           <article>
-            <strong>Public-ready</strong>
-            <p>View-only embeds enable transparent publication with governance control.</p>
+            <strong data-i18n="backboneMetric3Title">Public-ready</strong>
+            <p data-i18n="backboneMetric3Copy">View-only embed leidzia viesinti skaidriai ir islaikyti valdymo kontrole.</p>
           </article>
         </div>
       </div>
@@ -139,35 +147,35 @@
 
     <section class="section-reveal section" id="usp">
       <div class="section-head">
-        <p class="hero-kicker">Distinct Value</p>
-        <h2>What makes this more than a planning board</h2>
+        <p class="hero-kicker" data-i18n="uspKicker">Isskirtine verte</p>
+        <h2 data-i18n="uspTitle">Kuo tai daugiau nei planavimo lenta</h2>
       </div>
       <div class="feature-grid">
         <article class="feature-card">
-          <h3>Accountability Timeline</h3>
-          <p>Every strategic change is traceable: who changed what, when, and why.</p>
+          <h3 data-i18n="feature1Title">Atskaitomybes laiko juosta</h3>
+          <p data-i18n="feature1Copy">Kiekvienas strateginis pakeitimas atsekamas: kas, kada ir kodel pakeite.</p>
           <ul>
-            <li>Immutable operational history</li>
-            <li>Clear ownership handover</li>
-            <li>Fast governance reviews</li>
+            <li data-i18n="feature1Item1">Nekintama veiklos istorija</li>
+            <li data-i18n="feature1Item2">Aiskus atsakomybiu perdavimas</li>
+            <li data-i18n="feature1Item3">Greitesnes valdymo perziuros</li>
           </ul>
         </article>
         <article class="feature-card">
-          <h3>Outcome Contracts</h3>
-          <p>Turn each initiative into measurable commitment with baseline, target, and deadline.</p>
+          <h3 data-i18n="feature2Title">Rezultatu kontraktai</h3>
+          <p data-i18n="feature2Copy">Paverskite kiekviena iniciatyva pamatuojamu isipareigojimu su baze, tikslu ir terminu.</p>
           <ul>
-            <li>No vague implementation plans</li>
-            <li>Evidence-backed status updates</li>
-            <li>Priority decisions tied to impact</li>
+            <li data-i18n="feature2Item1">Maziau abstrakciu igyvendinimo planu</li>
+            <li data-i18n="feature2Item2">Irodymais gristi busenos atnaujinimai</li>
+            <li data-i18n="feature2Item3">Prioritetai susieti su poveikiu</li>
           </ul>
         </article>
         <article class="feature-card">
-          <h3>Public Trust Dashboard</h3>
-          <p>Embed strategy map view-only access into institutional websites and intranets.</p>
+          <h3 data-i18n="feature3Title">Vieso pasitikejimo dashboard</h3>
+          <p data-i18n="feature3Copy">Integruokite strategijos zemelapi view-only rezimu i institucijos svetaine ar intraneta.</p>
           <ul>
-            <li>Per-institution embed links</li>
-            <li>Usage monitoring in admin views</li>
-            <li>Consistent branding and transparency</li>
+            <li data-i18n="feature3Item1">Atskiri embed linkai pagal institucija</li>
+            <li data-i18n="feature3Item2">Naudojimo stebesena admin aplinkoje</li>
+            <li data-i18n="feature3Item3">Nuoseklus branding ir skaidrumas</li>
           </ul>
         </article>
       </div>
@@ -175,73 +183,72 @@
 
     <section class="section-reveal section" id="how">
       <div class="section-head">
-        <p class="hero-kicker">Flow</p>
-        <h2>How institutions run strategy cycles</h2>
+        <p class="hero-kicker" data-i18n="flowKicker">Eiga</p>
+        <h2 data-i18n="flowTitle">Kaip institucijos vykdo strategijos ciklus</h2>
       </div>
       <div class="timeline">
         <article>
           <span>01</span>
-          <h3>Invite teams by role</h3>
-          <p>Meta admin creates one-time invite links and assigns membership by institution.</p>
+          <h3 data-i18n="flow1Title">Pakvieskite komandas pagal role</h3>
+          <p data-i18n="flow1Copy">Meta admin sukuria vienkartines pakvietimo nuorodas ir priskiria narystes pagal institucijas.</p>
         </article>
         <article>
           <span>02</span>
-          <h3>Shape guideline structure</h3>
-          <p>Participants propose, discuss, vote and refine strategic directions collaboratively.</p>
+          <h3 data-i18n="flow2Title">Suformuokite gairiu struktura</h3>
+          <p data-i18n="flow2Copy">Dalyviai siulo, diskutuoja, balsuoja ir tobulina strategines kryptis kartu.</p>
         </article>
         <article>
           <span>03</span>
-          <h3>Map initiatives to guidelines</h3>
-          <p>Strategy map visualizes dependencies and reveals unassigned priorities instantly.</p>
+          <h3 data-i18n="flow3Title">Susiekite iniciatyvas su gairėmis</h3>
+          <p data-i18n="flow3Copy">Strategiju zemelapis parodo priklausomybes ir iskart isryskina nepriskirtus prioritetus.</p>
         </article>
         <article>
           <span>04</span>
-          <h3>Publish and monitor</h3>
-          <p>Embed view-only maps publicly while admins monitor load and interaction metrics.</p>
+          <h3 data-i18n="flow4Title">Publikuokite ir stebekite</h3>
+          <p data-i18n="flow4Copy">Skelbkite view-only zemelapius viesai, o administratoriai stebi apkrova ir panaudojimo rodiklius.</p>
         </article>
       </div>
     </section>
 
     <section class="section-reveal section trust" id="trust">
       <div>
-        <p class="hero-kicker">Trust by design</p>
-        <h2>Built for institutional governance, not hype</h2>
-        <p>
-          The platform is designed for accountable collaboration: role separation, archived history,
-          controlled public visibility, and configurable operational safeguards.
+        <p class="hero-kicker" data-i18n="trustKicker">Pasitikejimas pagal dizaina</p>
+        <h2 data-i18n="trustTitle">Sukurta instituciniam valdymui, ne triuksmui</h2>
+        <p data-i18n="trustCopy">
+          Platforma kurta atsakingam bendradarbiavimui: aiskios roles, istorijos issaugojimas, kontroliuojamas viesumas ir konfiguruojami saugumo saugikliai.
         </p>
       </div>
       <div class="trust-list">
         <article>
-          <h3>Collaborative workshop model</h3>
-          <p>Participants comment, prioritize and shape guidelines through structured, visible workflows.</p>
+          <h3 data-i18n="trust1Title">Bendradarbystes dirbtuviu modelis</h3>
+          <p data-i18n="trust1Copy">Dalyviai komentuoja, prioritetizuoja ir kuria gaires per strukturuotus, skaidrius procesus.</p>
         </article>
         <article>
-          <h3>Institutional memory by design</h3>
-          <p>Archived users and historical decisions preserve continuity between strategy cycles.</p>
+          <h3 data-i18n="trust2Title">Institucine atmintis pagal dizaina</h3>
+          <p data-i18n="trust2Copy">Archyvuoti vartotojai ir istoriniu sprendimu pedsakai padeda islaikyti testinuma tarp ciklu.</p>
         </article>
         <article>
-          <h3>Operational visibility</h3>
-          <p>Rate limiting and request monitoring help protect infrastructure under heavy load.</p>
+          <h3 data-i18n="trust3Title">Operacinis matomumas</h3>
+          <p data-i18n="trust3Copy">Rate limitai ir uzklausu stebesena padeda apsaugoti infrastruktura esant didelei apkrovai.</p>
         </article>
       </div>
     </section>
 
     <section class="section-reveal section final-cta" id="finalCta">
       <div>
-        <p class="hero-kicker">Ready to see it live?</p>
-        <h2>Explore an active strategy map now.</h2>
-        <p>Open current public strategy workspace and review how guidelines and initiatives connect.</p>
+        <p class="hero-kicker" data-i18n="finalKicker">Pasiruose pamatyti gyvai?</p>
+        <h2 data-i18n="finalTitle">Atverkite aktyvu strategijos zemelapi dabar.</h2>
+        <p data-i18n="finalCopy">Aplankykite viesa strategijos erdve ir pamatykite, kaip susijungia gaires bei iniciatyvos.</p>
       </div>
       <div class="final-actions">
-        <a class="btn btn-primary" data-active-strategy-link href="index.html?view=map">View Active Strategies</a>
+        <a class="btn btn-primary" data-active-strategy-link data-i18n="finalCta" href="index.html?view=map">View Active Strategies</a>
       </div>
     </section>
   </main>
 
   <footer class="landing-footer">
-    <p>digistrategija.lt - Strategy collaboration platform for public institutions.</p>
-    <a href="index.html">Open platform workspace</a>
+    <p data-i18n="footerCopy">digistrategija.lt - strateginio bendradarbiavimo platforma viesosioms institucijoms.</p>
+    <a href="index.html" data-workspace-link data-i18n="footerLink">Atidaryti platformos darbo aplinka</a>
   </footer>
 
   <script src="landing.js"></script>

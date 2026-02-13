@@ -173,7 +173,12 @@ main,
   justify-content: flex-end;
 }
 
-.eu-badge {
+.landing-lang-switch-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-lang-switch {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -187,9 +192,54 @@ main,
   letter-spacing: 0.01em;
 }
 
+.landing-lang-switch select {
+  border: 1px solid rgba(142, 174, 221, 0.7);
+  background: rgba(255, 255, 255, 0.94);
+  color: #254a76;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 9px;
+  min-width: 58px;
+  outline: none;
+}
+
+.landing-lang-switch select:focus {
+  border-color: rgba(62, 124, 201, 0.78);
+  box-shadow: 0 0 0 2px rgba(62, 124, 201, 0.16);
+}
+
+.eu-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(121, 160, 216, 0.72);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(229, 243, 255, 0.9) 100%);
+  color: #2e4e7a;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 8px 18px rgba(48, 92, 161, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  animation: euFloat 5s ease-in-out infinite;
+}
+
+.eu-badge::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 1px dashed rgba(133, 173, 228, 0.28);
+  pointer-events: none;
+}
+
 .eu-flag {
-  width: 18px;
-  height: 12px;
+  width: 30px;
+  height: 20px;
   border-radius: 3px;
   overflow: hidden;
   box-shadow: 0 0 0 1px rgba(80, 118, 181, 0.36);
@@ -806,6 +856,11 @@ h2 {
   to { transform: translateX(-50%) rotate(0deg); }
 }
 
+@keyframes euFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
 @media (max-width: 1080px) {
   body.landing-page {
     padding-top: 124px;
@@ -888,9 +943,16 @@ h2 {
 
   .landing-header-actions {
     gap: 10px;
+    justify-content: center;
   }
 
   .eu-badge {
+    width: 100%;
+    justify-content: center;
+    animation: none;
+  }
+
+  .landing-lang-switch-wrap {
     width: 100%;
     justify-content: center;
   }

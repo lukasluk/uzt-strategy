@@ -1,5 +1,7 @@
 const GUIDE_INTRO_KEY = 'guide_intro_text';
 const ABOUT_TEXT_KEY = 'about_text';
+const LANDING_TRANSLATIONS_LT_KEY = 'landing_translations_lt';
+const LANDING_TRANSLATIONS_EN_KEY = 'landing_translations_en';
 const MAX_CONTENT_TEXT_LENGTH = 40000;
 let contentSettingsSchemaReady = false;
 
@@ -30,6 +32,30 @@ const DEFAULT_ABOUT_TEXT = [
 function normalizeStoredValue(value, fallback) {
   const text = String(value || '').trim();
   return text || fallback;
+}
+
+function safeParseObject(value) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(String(value));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function normalizeTranslationsObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out = {};
+  Object.entries(value).forEach(([key, raw]) => {
+    const normalizedKey = String(key || '').trim();
+    if (!normalizedKey) return;
+    const normalizedValue = String(raw || '').trim();
+    if (!normalizedValue) return;
+    out[normalizedKey] = normalizedValue;
+  });
+  return out;
 }
 
 function createBadRequestError(message) {
@@ -65,18 +91,22 @@ async function loadContentSettings(query) {
   await ensureContentSettingsTable(query);
   const result = await query(
     'select key, value from platform_settings where key = any($1::text[])',
-    [[GUIDE_INTRO_KEY, ABOUT_TEXT_KEY]]
+    [[GUIDE_INTRO_KEY, ABOUT_TEXT_KEY, LANDING_TRANSLATIONS_LT_KEY, LANDING_TRANSLATIONS_EN_KEY]]
   );
   const byKey = Object.fromEntries(result.rows.map((row) => [row.key, row.value]));
   return {
     guideIntroText: normalizeStoredValue(byKey[GUIDE_INTRO_KEY], DEFAULT_GUIDE_INTRO_TEXT),
-    aboutText: normalizeStoredValue(byKey[ABOUT_TEXT_KEY], DEFAULT_ABOUT_TEXT)
+    aboutText: normalizeStoredValue(byKey[ABOUT_TEXT_KEY], DEFAULT_ABOUT_TEXT),
+    landingTranslationsLt: normalizeTranslationsObject(safeParseObject(byKey[LANDING_TRANSLATIONS_LT_KEY])),
+    landingTranslationsEn: normalizeTranslationsObject(safeParseObject(byKey[LANDING_TRANSLATIONS_EN_KEY]))
   };
 }
 
 function normalizeContentSettingsPatch(payload = {}) {
   const hasGuideIntroText = Object.prototype.hasOwnProperty.call(payload, 'guideIntroText');
   const hasAboutText = Object.prototype.hasOwnProperty.call(payload, 'aboutText');
+  const hasLandingTranslationsLt = Object.prototype.hasOwnProperty.call(payload, 'landingTranslationsLt');
+  const hasLandingTranslationsEn = Object.prototype.hasOwnProperty.call(payload, 'landingTranslationsEn');
 
   const patch = {};
   if (hasGuideIntroText) {
@@ -88,6 +118,18 @@ function normalizeContentSettingsPatch(payload = {}) {
     const aboutText = String(payload.aboutText || '').trim();
     if (aboutText.length > MAX_CONTENT_TEXT_LENGTH) throw createBadRequestError('content text too long');
     patch.aboutText = aboutText;
+  }
+  if (hasLandingTranslationsLt) {
+    const normalized = normalizeTranslationsObject(payload.landingTranslationsLt);
+    const serialized = JSON.stringify(normalized);
+    if (serialized.length > MAX_CONTENT_TEXT_LENGTH) throw createBadRequestError('content text too long');
+    patch.landingTranslationsLt = normalized;
+  }
+  if (hasLandingTranslationsEn) {
+    const normalized = normalizeTranslationsObject(payload.landingTranslationsEn);
+    const serialized = JSON.stringify(normalized);
+    if (serialized.length > MAX_CONTENT_TEXT_LENGTH) throw createBadRequestError('content text too long');
+    patch.landingTranslationsEn = normalized;
   }
   return patch;
 }
@@ -110,6 +152,22 @@ async function updateContentSettings(query, patch) {
        values ($1, $2, now())
        on conflict (key) do update set value = excluded.value, updated_at = now()`,
       [ABOUT_TEXT_KEY, value]
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'landingTranslationsLt')) {
+    await query(
+      `insert into platform_settings (key, value, updated_at)
+       values ($1, $2, now())
+       on conflict (key) do update set value = excluded.value, updated_at = now()`,
+      [LANDING_TRANSLATIONS_LT_KEY, JSON.stringify(normalizeTranslationsObject(patch.landingTranslationsLt))]
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'landingTranslationsEn')) {
+    await query(
+      `insert into platform_settings (key, value, updated_at)
+       values ($1, $2, now())
+       on conflict (key) do update set value = excluded.value, updated_at = now()`,
+      [LANDING_TRANSLATIONS_EN_KEY, JSON.stringify(normalizeTranslationsObject(patch.landingTranslationsEn))]
     );
   }
   return loadContentSettings(query);

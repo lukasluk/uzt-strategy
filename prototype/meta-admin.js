@@ -55,7 +55,7 @@ function toUserMessage(error) {
     'userId and valid status required': 'Netinkami vartotojo statuso duomenys.',
     'userId and valid archive action required': 'Netinkami vartotojo archyvavimo duomenys.',
     'membershipId and valid status required': 'Netinkami narystes statuso duomenys.',
-    'guideIntroText or aboutText required': 'Pakeiskite bent viena teksta.',
+    'guideIntroText, aboutText, landingTranslationsLt or landingTranslationsEn required': 'Pakeiskite bent viena teksta.',
     'content text too long': 'Tekstas per ilgas.',
     'reset token required': 'Truksta slaptazodzio keitimo nuorodos.',
     'reset token invalid': 'Nuoroda nebegalioja arba jau panaudota.'
@@ -165,10 +165,10 @@ function renderLogin() {
   root.innerHTML = `
     <section class="card meta-admin-card meta-login-shell" style="max-width: 620px; margin: 30px auto;">
       <h2 class="meta-login-title" style="font-family: 'Fraunces', serif;">Meta Admin prisijungimas</h2>
-      <p class="prompt">Įveskite vienkartinį slaptažodį, kad gautumėte globalią prieigą.</p>
+      <p class="prompt">Iveskite vienkartini slaptazodi, kad gautumete globalia prieiga.</p>
       ${state.error ? `<p class="error">${escapeHtml(state.error)}</p>` : ''}
       <form id="metaAdminLoginForm" class="login-form">
-        <input type="password" name="password" placeholder="Slaptažodis" required />
+        <input type="password" name="password" placeholder="Slaptazodis" required />
         <button type="submit" class="btn btn-primary">Prisijungti</button>
       </form>
     </section>
@@ -403,25 +403,25 @@ function renderMonitoringCards(monitoring) {
         <span class="tag">Nuo ${escapeHtml(formatDateTime(monitoring.startedAt))}</span>
       </div>
       <div class="header-stack">
-        <span class="tag">Užklausų iš viso: ${Number(monitoring.requestTotal || 0)}</span>
-        <span class="tag">Rate limit blokavimų: ${Number(monitoring?.rateLimit?.blockedTotal || 0)}</span>
+        <span class="tag">Uzklausu is viso: ${Number(monitoring.requestTotal || 0)}</span>
+        <span class="tag">Rate limit blokavimu: ${Number(monitoring?.rateLimit?.blockedTotal || 0)}</span>
       </div>
       ${configBadges}
       <div class="card-list meta-admin-subgrid" style="margin-top: 12px;">
         <article class="card meta-admin-subcard">
-          <strong>Užklausos pagal sritį</strong>
+          <strong>Uzklausos pagal sriti</strong>
           <ul class="mini-list">
             ${requestsByCategory.length
               ? requestsByCategory.map((item) => `<li><span>${escapeHtml(item.category)}</span> <span class="tag">${Number(item.count || 0)}</span></li>`).join('')
-              : '<li>Nėra duomenų.</li>'}
+              : '<li>Nera duomenu.</li>'}
           </ul>
         </article>
         <article class="card meta-admin-subcard">
-          <strong>HTTP status grupės</strong>
+          <strong>HTTP status grupes</strong>
           <ul class="mini-list">
             ${requestsByStatusBucket.length
               ? requestsByStatusBucket.map((item) => `<li><span>${escapeHtml(item.status)}</span> <span class="tag">${Number(item.count || 0)}</span></li>`).join('')
-              : '<li>Nėra duomenų.</li>'}
+              : '<li>Nera duomenu.</li>'}
           </ul>
         </article>
         <article class="card meta-admin-subcard">
@@ -429,7 +429,7 @@ function renderMonitoringCards(monitoring) {
           <ul class="mini-list">
             ${limiterHits.length
               ? limiterHits.map((item) => `<li><span>${escapeHtml(item.limiter)}</span> <span class="tag">${Number(item.count || 0)}</span></li>`).join('')
-              : '<li>Blokavimų kol kas nėra.</li>'}
+              : '<li>Blokavimu kol kas nera.</li>'}
           </ul>
         </article>
       </div>
@@ -439,15 +439,15 @@ function renderMonitoringCards(monitoring) {
           <ul class="mini-list">
             ${topPaths.length
               ? topPaths.slice(0, 10).map((item) => `<li><span>${escapeHtml(item.path)}</span> <span class="tag">${Number(item.count || 0)}</span></li>`).join('')
-              : '<li>Nėra duomenų.</li>'}
+              : '<li>Nera duomenu.</li>'}
           </ul>
         </article>
         <article class="card meta-admin-subcard">
-          <strong>Naujausi 429 įvykiai</strong>
+          <strong>Naujausi 429 ivykiai</strong>
           <ul class="mini-list">
             ${recentRateLimitEvents.length
-              ? recentRateLimitEvents.slice(0, 10).map((event) => `<li><span>${escapeHtml(event.limiter)} · ${escapeHtml(event.path)}</span> <span class="tag">${escapeHtml(formatDateTime(event.at))}</span></li>`).join('')
-              : '<li>Nėra 429 įvykių.</li>'}
+              ? recentRateLimitEvents.slice(0, 10).map((event) => `<li><span>${escapeHtml(event.limiter)} - ${escapeHtml(event.path)}</span> <span class="tag">${escapeHtml(formatDateTime(event.at))}</span></li>`).join('')
+              : '<li>Nera 429 ivykiu.</li>'}
           </ul>
         </article>
       </div>
@@ -455,13 +455,13 @@ function renderMonitoringCards(monitoring) {
 
     <section class="card meta-admin-card meta-embed-monitoring-card">
       <div class="header-row">
-        <strong>Embed žemėlapių peržiūros</strong>
+        <strong>Embed zemelapiu perziuros</strong>
         <span class="tag">Viso: ${Number(monitoring?.embedViews?.totalViews || 0)}</span>
       </div>
       <ul class="mini-list">
         ${embedViewsByInstitution.length
           ? embedViewsByInstitution.map((item) => `<li><strong>${escapeHtml(item.institutionName)} (${escapeHtml(item.institutionSlug)})</strong> <span class="tag">${Number(item.views || 0)}</span> <span class="muted">${escapeHtml(formatDateTime(item.lastViewedAt))}</span></li>`).join('')
-          : '<li>Peržiūrų dar nėra.</li>'}
+          : '<li>Perziuru dar nera.</li>'}
       </ul>
     </section>
   `;
@@ -470,19 +470,31 @@ function renderMonitoringCards(monitoring) {
 function renderContentSettingsCard(contentSettings) {
   const guideIntroText = String(contentSettings?.guideIntroText || '');
   const aboutText = String(contentSettings?.aboutText || '');
+  const landingTranslationsLt = contentSettings?.landingTranslationsLt && typeof contentSettings.landingTranslationsLt === 'object'
+    ? contentSettings.landingTranslationsLt
+    : {};
+  const landingTranslationsEn = contentSettings?.landingTranslationsEn && typeof contentSettings.landingTranslationsEn === 'object'
+    ? contentSettings.landingTranslationsEn
+    : {};
+  const landingTranslationsLtJson = JSON.stringify(landingTranslationsLt, null, 2);
+  const landingTranslationsEnJson = JSON.stringify(landingTranslationsEn, null, 2);
   return `
     <section class="card meta-admin-card meta-content-settings-card">
       <div class="header-row">
-        <strong>Viešo turinio tekstai</strong>
-        <span class="tag">Naudojimosi gidas ir Apie</span>
+        <strong>Vieso turinio tekstai</strong>
+        <span class="tag">Naudojimosi gidas, Apie ir Landing</span>
       </div>
-      <p class="prompt">Šie tekstai rodomi viešame puslapyje skiltyse „Naudojimosi gidas“ ir „Apie“.</p>
+      <p class="prompt">Sie tekstai rodomi viesame puslapyje skiltyse „Naudojimosi gidas“, „Apie“ ir landing puslapyje. Landing vertimai priima JSON objekta pagal rakta (pvz. {"heroTitle":"..."}).</p>
       <form id="contentSettingsForm" class="meta-content-settings-form">
         <label class="prompt" for="guideIntroTextField">Naudojimosi gidas (teksto blokas)</label>
         <textarea id="guideIntroTextField" name="guideIntroText" rows="8" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideIntroText)}</textarea>
         <label class="prompt" for="aboutTextField" style="margin-top:10px;">Apie (teksto blokas)</label>
         <textarea id="aboutTextField" name="aboutText" rows="14" ${state.busy ? 'disabled' : ''}>${escapeHtml(aboutText)}</textarea>
-        <button class="btn btn-primary" type="submit" style="margin-top:10px;" ${state.busy ? 'disabled' : ''}>Išsaugoti tekstus</button>
+        <label class="prompt" for="landingTranslationsLtField" style="margin-top:10px;">Landing vertimai LT (JSON)</label>
+        <textarea id="landingTranslationsLtField" name="landingTranslationsLtJson" rows="10" ${state.busy ? 'disabled' : ''}>${escapeHtml(landingTranslationsLtJson)}</textarea>
+        <label class="prompt" for="landingTranslationsEnField" style="margin-top:10px;">Landing vertimai EN (JSON)</label>
+        <textarea id="landingTranslationsEnField" name="landingTranslationsEnJson" rows="10" ${state.busy ? 'disabled' : ''}>${escapeHtml(landingTranslationsEnJson)}</textarea>
+        <button class="btn btn-primary" type="submit" style="margin-top:10px;" ${state.busy ? 'disabled' : ''}>Issaugoti tekstus</button>
       </form>
     </section>
   `;
@@ -694,10 +706,28 @@ function bindDashboardEvents() {
       const fd = new FormData(contentSettingsForm);
       const guideIntroText = String(fd.get('guideIntroText') || '').trim();
       const aboutText = String(fd.get('aboutText') || '').trim();
+      const landingTranslationsLtJson = String(fd.get('landingTranslationsLtJson') || '').trim();
+      const landingTranslationsEnJson = String(fd.get('landingTranslationsEnJson') || '').trim();
+      let landingTranslationsLt = {};
+      let landingTranslationsEn = {};
+      try {
+        landingTranslationsLt = landingTranslationsLtJson ? JSON.parse(landingTranslationsLtJson) : {};
+      } catch {
+        state.notice = 'Landing LT vertimai turi buti teisingas JSON objektas.';
+        render();
+        return;
+      }
+      try {
+        landingTranslationsEn = landingTranslationsEnJson ? JSON.parse(landingTranslationsEnJson) : {};
+      } catch {
+        state.notice = 'Landing EN vertimai turi buti teisingas JSON objektas.';
+        render();
+        return;
+      }
       await runBusy(async () => {
         await api('/api/v1/meta-admin/content-settings', {
           method: 'PUT',
-          body: { guideIntroText, aboutText }
+          body: { guideIntroText, aboutText, landingTranslationsLt, landingTranslationsEn }
         });
         state.notice = 'Tekstai atnaujinti.';
         await loadOverview();
@@ -864,7 +894,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { status: nextStatus }
         });
-        state.notice = `Vartotojo statusas pakeistas į ${nextStatus}.`;
+        state.notice = `Vartotojo statusas pakeistas i ${nextStatus}.`;
         await loadOverview();
       });
     });
@@ -881,7 +911,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { status: nextStatus }
         });
-        state.notice = `Narystės statusas pakeistas į ${nextStatus}.`;
+        state.notice = `Narystes statusas pakeistas i ${nextStatus}.`;
         await loadOverview();
       });
     });
@@ -919,4 +949,5 @@ function render() {
 
   renderDashboard();
 }
+
 
