@@ -7,6 +7,7 @@ const state = {
   error: '',
   notice: '',
   overview: null,
+  selectedMetaUserId: '',
   lastInvite: null,
   lastPasswordReset: null
 };
@@ -197,71 +198,169 @@ function renderLogin() {
   });
 }
 
-function renderUsers(users) {
+function userDisplayName(user) {
+  return String(user?.displayName || user?.email || 'Vartotojas').trim();
+}
+
+function resolveSelectedMetaUser(users) {
   if (!users.length) {
+    state.selectedMetaUserId = '';
+    return null;
+  }
+  const selected = users.find((user) => user.id === state.selectedMetaUserId);
+  if (selected) return selected;
+  state.selectedMetaUserId = users[0].id;
+  return users[0];
+}
+
+function buildUsersByInstitution(users) {
+  const groupsByInstitution = new Map();
+  const unassigned = [];
+
+  users.forEach((user) => {
+    const memberships = Array.isArray(user.memberships) ? user.memberships : [];
+    if (!memberships.length) {
+      unassigned.push({ user, membership: null });
+      return;
+    }
+
+    memberships.forEach((membership) => {
+      const key = String(membership.institutionId || membership.institutionSlug || membership.institutionName || '').trim() || 'unknown';
+      if (!groupsByInstitution.has(key)) {
+        groupsByInstitution.set(key, {
+          key,
+          institutionName: String(membership.institutionName || 'Nepriskirta institucija'),
+          institutionSlug: String(membership.institutionSlug || ''),
+          entries: []
+        });
+      }
+      groupsByInstitution.get(key).entries.push({ user, membership });
+    });
+  });
+
+  const groups = Array.from(groupsByInstitution.values())
+    .map((group) => ({
+      ...group,
+      entries: group.entries.sort((left, right) => userDisplayName(left.user).localeCompare(userDisplayName(right.user), 'lt'))
+    }))
+    .sort((left, right) => left.institutionName.localeCompare(right.institutionName, 'lt'));
+
+  if (unassigned.length) {
+    groups.push({
+      key: 'unassigned',
+      institutionName: 'Be institucijos',
+      institutionSlug: '',
+      entries: unassigned.sort((left, right) => userDisplayName(left.user).localeCompare(userDisplayName(right.user), 'lt'))
+    });
+  }
+
+  return groups;
+}
+
+function renderUsersDirectory(groups, selectedUserId) {
+  if (!groups.length) {
     return '<div class="card meta-admin-subcard"><p class="prompt">Dar nera vartotoju.</p></div>';
   }
 
-  return users.map((user) => {
-    const hasLatestReset = state.lastPasswordReset && state.lastPasswordReset.userId === user.id;
-    const membershipRows = (user.memberships || []).map((membership) => `
-      <li class="meta-membership-item">
-        <div class="meta-membership-main">
-          <strong>${escapeHtml(membership.institutionName)} (${escapeHtml(membership.institutionSlug)})</strong>
-        </div>
-        <div class="meta-membership-controls">
-          ${renderTag(membership.role, 'role')}
-          ${renderTag(membership.status, 'status')}
-          <button class="btn btn-ghost" data-action="toggle-membership-status" data-membership-id="${escapeHtml(membership.id)}" data-next-status="${membership.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
-            ${membership.status === 'active' ? 'Blokuoti naryste' : 'Aktyvuoti naryste'}
-          </button>
-        </div>
-      </li>
-    `).join('');
+  return groups.map((group) => `
+    <section class="meta-user-group">
+      <div class="meta-user-group-head">
+        <strong>${escapeHtml(group.institutionName)}${group.institutionSlug ? ` (${escapeHtml(group.institutionSlug)})` : ''}</strong>
+        ${renderTag(String(group.entries.length), 'count')}
+      </div>
+      <ul class="mini-list meta-user-group-list">
+        ${group.entries.map((entry) => {
+          const user = entry.user;
+          const membership = entry.membership;
+          const isActive = selectedUserId === user.id;
+          return `
+            <li>
+              <button class="meta-user-row${isActive ? ' active' : ''}" type="button" data-action="select-user" data-user-id="${escapeHtml(user.id)}">
+                <span class="meta-user-row-main">
+                  <strong class="meta-user-row-name">${escapeHtml(userDisplayName(user))}</strong>
+                  <span class="meta-user-row-email">${escapeHtml(user.email || '')}</span>
+                </span>
+                <span class="meta-user-row-tags">
+                  ${membership ? renderTag(membership.role, 'role') : ''}
+                  ${renderTag(user.status, 'status')}
+                </span>
+              </button>
+            </li>
+          `;
+        }).join('')}
+      </ul>
+    </section>
+  `).join('');
+}
 
+function renderUserDetail(user) {
+  if (!user) {
     return `
-      <article class="card meta-admin-subcard meta-user-card">
-        <div class="header-row meta-user-head">
-          <strong>${escapeHtml(user.displayName || user.email)}</strong>
-          ${renderTag(user.status, 'status')}
-        </div>
-        <p class="prompt meta-user-email">${escapeHtml(user.email)}</p>
-        <div class="meta-user-actions-grid">
-          <button class="btn btn-ghost" type="button" data-action="toggle-user-status" data-user-id="${escapeHtml(user.id)}" data-next-status="${user.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
-            ${user.status === 'active' ? 'Blokuoti vartotoja' : 'Aktyvuoti vartotoja'}
-          </button>
-          <button class="btn btn-ghost" type="button" data-action="create-password-reset-link" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
-            Slaptazodzio keitimo nuoroda
-          </button>
-        </div>
-        ${user.status !== 'archived' ? `
-          <div class="meta-user-actions-grid meta-user-actions-grid-danger">
-            <button class="btn btn-ghost" type="button" data-action="archive-user-keep" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
-              Archyvuoti (palikti turini)
-            </button>
-            <button class="btn btn-danger" type="button" data-action="archive-user-delete" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
-              Archyvuoti + istrinti turini
-            </button>
-          </div>
-        ` : ''}
-        ${hasLatestReset ? `
-          <div class="card-section meta-reset-panel">
-            <strong>Vienkartine slaptazodzio keitimo nuoroda</strong>
-            <p class="prompt meta-reset-link">${escapeHtml(state.lastPasswordReset.url || '')}</p>
-            <p class="prompt meta-reset-expiry">Galioja iki: ${escapeHtml(formatDateTime(state.lastPasswordReset.expiresAt))}</p>
-            <div class="inline-form">
-              <button class="btn btn-ghost" data-action="copy-password-reset-link" type="button">Kopijuoti nuoroda</button>
-              <a class="btn btn-ghost" href="${escapeHtml(state.lastPasswordReset.url || '#')}" target="_blank" rel="noopener noreferrer">Atidaryti</a>
-            </div>
-          </div>
-        ` : ''}
-        <div class="card-section meta-memberships-panel">
-          <strong>Narystes</strong>
-          <ul class="mini-list meta-membership-list">${membershipRows || '<li>Nera narystciu.</li>'}</ul>
-        </div>
+      <article class="card meta-admin-subcard meta-user-card meta-user-detail-card">
+        <strong>Pasirinkite vartotoja</strong>
+        <p class="prompt">Kaireje pasirinkite vartotoja, kad matytumete jo informacija ir valdymo veiksmus.</p>
       </article>
     `;
-  }).join('');
+  }
+
+  const hasLatestReset = state.lastPasswordReset && state.lastPasswordReset.userId === user.id;
+  const membershipRows = (user.memberships || []).map((membership) => `
+    <li class="meta-membership-item">
+      <div class="meta-membership-main">
+        <strong>${escapeHtml(membership.institutionName)} (${escapeHtml(membership.institutionSlug)})</strong>
+      </div>
+      <div class="meta-membership-controls">
+        ${renderTag(membership.role, 'role')}
+        ${renderTag(membership.status, 'status')}
+        <button class="btn btn-ghost" data-action="toggle-membership-status" data-membership-id="${escapeHtml(membership.id)}" data-next-status="${membership.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
+          ${membership.status === 'active' ? 'Blokuoti naryste' : 'Aktyvuoti naryste'}
+        </button>
+      </div>
+    </li>
+  `).join('');
+
+  return `
+    <article class="card meta-admin-subcard meta-user-card meta-user-detail-card">
+      <div class="header-row meta-user-head">
+        <strong>${escapeHtml(userDisplayName(user))}</strong>
+        ${renderTag(user.status, 'status')}
+      </div>
+      <p class="prompt meta-user-email">${escapeHtml(user.email || '')}</p>
+      <div class="meta-user-actions-grid">
+        <button class="btn btn-ghost" type="button" data-action="toggle-user-status" data-user-id="${escapeHtml(user.id)}" data-next-status="${user.status === 'active' ? 'blocked' : 'active'}" ${state.busy ? 'disabled' : ''}>
+          ${user.status === 'active' ? 'Blokuoti vartotoja' : 'Aktyvuoti vartotoja'}
+        </button>
+        <button class="btn btn-ghost" type="button" data-action="create-password-reset-link" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
+          Slaptazodzio keitimo nuoroda
+        </button>
+      </div>
+      ${user.status !== 'archived' ? `
+        <div class="meta-user-actions-grid meta-user-actions-grid-danger">
+          <button class="btn btn-ghost" type="button" data-action="archive-user-keep" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
+            Archyvuoti (palikti turini)
+          </button>
+          <button class="btn btn-danger" type="button" data-action="archive-user-delete" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
+            Archyvuoti + istrinti turini
+          </button>
+        </div>
+      ` : ''}
+      ${hasLatestReset ? `
+        <div class="card-section meta-reset-panel">
+          <strong>Vienkartine slaptazodzio keitimo nuoroda</strong>
+          <p class="prompt meta-reset-link">${escapeHtml(state.lastPasswordReset.url || '')}</p>
+          <p class="prompt meta-reset-expiry">Galioja iki: ${escapeHtml(formatDateTime(state.lastPasswordReset.expiresAt))}</p>
+          <div class="inline-form">
+            <button class="btn btn-ghost" data-action="copy-password-reset-link" type="button">Kopijuoti nuoroda</button>
+            <a class="btn btn-ghost" href="${escapeHtml(state.lastPasswordReset.url || '#')}" target="_blank" rel="noopener noreferrer">Atidaryti</a>
+          </div>
+        </div>
+      ` : ''}
+      <div class="card-section meta-memberships-panel">
+        <strong>Narystes</strong>
+        <ul class="mini-list meta-membership-list">${membershipRows || '<li>Nera narystciu.</li>'}</ul>
+      </div>
+    </article>
+  `;
 }
 
 function formatDateTime(value) {
@@ -392,6 +491,8 @@ function renderContentSettingsCard(contentSettings) {
 function renderDashboard() {
   const institutions = state.overview?.institutions || [];
   const users = state.overview?.users || [];
+  const selectedUser = resolveSelectedMetaUser(users);
+  const groupedUsers = buildUsersByInstitution(users);
   const pendingInvites = state.overview?.pendingInvites || [];
   const monitoring = state.overview?.monitoring || null;
   const contentSettings = state.overview?.contentSettings || {};
@@ -520,8 +621,13 @@ function renderDashboard() {
           <strong>Visi vartotojai</strong>
           ${renderTag(String(users.length), 'count')}
         </div>
-        <div class="card-list meta-users-grid">
-          ${renderUsers(users)}
+        <div class="meta-users-layout">
+          <aside class="meta-users-directory">
+            ${renderUsersDirectory(groupedUsers, selectedUser?.id || '')}
+          </aside>
+          <div class="meta-user-detail-shell">
+            ${renderUserDetail(selectedUser)}
+          </div>
         </div>
       </section>
     </div>
@@ -555,6 +661,7 @@ function bindDashboardEvents() {
       }
       state.authenticated = false;
       state.overview = null;
+      state.selectedMetaUserId = '';
       state.error = '';
       state.notice = '';
       render();
@@ -705,6 +812,17 @@ function bindDashboardEvents() {
     root.addEventListener('click', async (event) => {
       const target = event.target instanceof Element ? event.target : null;
       if (!target) return;
+      const selectUserButton = target.closest('[data-action="select-user"]');
+      if (selectUserButton instanceof HTMLElement) {
+        const nextUserId = String(selectUserButton.dataset.userId || '').trim();
+        if (nextUserId && nextUserId !== state.selectedMetaUserId) {
+          state.selectedMetaUserId = nextUserId;
+          render();
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       const createButton = target.closest('[data-action="create-password-reset-link"]');
       if (createButton instanceof HTMLElement) {
         event.preventDefault();
