@@ -780,7 +780,11 @@ function renderMapView() {
     const lineSide = fromNode.kind === 'guideline'
       ? normalizeLineSide(fromNode.guideline?.lineSide)
       : 'auto';
-    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)} edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
+    const isParentRoot = edge.type === 'root'
+      && toNode.kind === 'guideline'
+      && String(toNode.guideline?.relationType || '').toLowerCase() === 'parent';
+    const parentRootClass = isParentRoot ? ' edge-root-parent' : '';
+    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}${parentRootClass} edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
   }).join('');
   const initiativeEdgeMarkup = graph.initiativeEdges.map((edge) => {
     const fromNode = nodeById[edge.from];

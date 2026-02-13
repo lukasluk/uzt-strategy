@@ -3013,6 +3013,12 @@ select:focus {
 .strategy-map-edge.edge-root {
   stroke: #2b6fbe;
 }
+.strategy-map-edge.edge-root-parent {
+  stroke: #0e86ff;
+  stroke-width: 6.4;
+  opacity: 0.98;
+  filter: drop-shadow(0 0 2px rgba(14, 134, 255, 0.35));
+}
 .strategy-map-edge.edge-child {
   stroke: #4f80be;
 }
@@ -3055,30 +3061,13 @@ select:focus {
 }
 
 .guideline-node.relation-parent {
-  background: linear-gradient(180deg, #ffffff 0%, #eaf5ff 100%);
-  border-color: #92bbe8;
-  border-left: 7px solid #1f5fa8;
-  padding-top: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #e7f2ff 100%);
+  border: 3px solid #2d86e6;
+  border-left: 9px solid #0f6fd8;
+  padding: 10px 12px;
   box-shadow:
-    0 0 0 2px rgba(56, 129, 211, 0.22),
-    0 12px 24px rgba(22, 69, 126, 0.18);
-}
-.guideline-node.relation-parent::before {
-  content: 'Tėvinė';
-  position: absolute;
-  top: 7px;
-  right: 10px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #1d4f8b;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid #8ab6e8;
-  border-radius: 999px;
-  padding: 2px 7px;
-  line-height: 1.1;
-  pointer-events: none;
+    0 0 0 3px rgba(45, 134, 230, 0.22),
+    0 16px 28px rgba(18, 72, 138, 0.22);
 }
 .guideline-node.relation-child {
   background: linear-gradient(180deg, #ffffff 0%, var(--pastel-soft) 100%);

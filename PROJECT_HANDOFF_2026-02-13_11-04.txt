@@ -1,5 +1,5 @@
 ﻿PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-13 10:52
+Generated: 2026-02-13 11:04
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
@@ -46,6 +46,10 @@ Latest applied source update in this handoff cycle (to be deployed if not yet):
 - Strategy map parent guideline cards were further emphasized:
   - stronger parent card border/accent/shadow
   - added clear "Tėvinė" badge in map nodes for parent guidelines
+- Strategy map parent emphasis refinement:
+  - removed "Tėvinė" badge from map parent cards (cleaner visual)
+  - made parent card border/accent stronger for clearer distinction
+  - highlighted institution -> parent guideline lines with brighter, thicker blue
 
 ==================================================
 2) DEPLOYMENT STATUS - STABLE
