@@ -331,6 +331,11 @@ body.embed-map-page .stage {
   box-shadow: 0 10px 24px rgba(27, 73, 136, 0.08);
 }
 
+.step-pill-shell {
+  display: grid;
+  gap: 6px;
+}
+
 .step-pill {
   background: transparent;
   padding: 12px 12px;
@@ -390,6 +395,57 @@ body.embed-map-page .stage {
   font-size: 16px;
   margin: 0;
   line-height: 1.2;
+}
+
+.step-pill-action {
+  width: 100%;
+  border: 1px solid #c1d7f5;
+  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+  color: #1f4f84;
+  border-radius: 10px;
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.16s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.step-pill-action:hover {
+  border-color: #98bbe8;
+  background: linear-gradient(180deg, #ffffff 0%, #e5f0ff 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(31, 79, 132, 0.14);
+}
+
+.step-pill-action:focus-visible {
+  outline: 2px solid rgba(63, 143, 230, 0.35);
+  outline-offset: 1px;
+}
+
+.step-add-anchor {
+  scroll-margin-top: 14px;
+}
+
+.step-add-anchor.jump-target-pulse {
+  animation: stepAddTargetPulse 0.72s ease;
+}
+
+@keyframes stepAddTargetPulse {
+  0% {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+  35% {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px rgba(63, 143, 230, 0.2);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: none;
+  }
 }
 
 .stage {
@@ -3166,6 +3222,11 @@ select:focus {
     scroll-snap-type: x mandatory;
   }
 
+  .step-pill-shell {
+    min-width: 132px;
+    flex: 0 0 auto;
+  }
+
   .step-pill {
     width: auto;
     min-width: 120px;
@@ -3187,6 +3248,13 @@ select:focus {
 
   .step-pill h4 {
     font-size: 13px;
+  }
+
+  .step-pill-action {
+    min-height: 32px;
+    border-radius: 9px;
+    padding: 6px 8px;
+    font-size: 11px;
   }
 
   .session-name {
@@ -3540,8 +3608,18 @@ select:focus {
     padding: 8px 7px;
   }
 
+  .step-pill-shell {
+    min-width: 116px;
+  }
+
   .step-pill h4 {
     font-size: 12px;
+  }
+
+  .step-pill-action {
+    min-height: 30px;
+    padding: 5px 7px;
+    font-size: 10px;
   }
 
   .step-icon {

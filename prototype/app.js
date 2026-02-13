@@ -112,6 +112,10 @@ const EMBED_QUERY_KEY = 'embed';
 const EMBED_MAP_VALUE = 'map';
 const EMBED_MAP_PATH_PREFIX = '/embed/strategy-map';
 const EMBED_BRAND_LINK = 'https://www.digistrategija.lt';
+const STEP_ADD_SECTION_IDS = Object.freeze({
+  guidelines: 'guidelineAddSection',
+  initiatives: 'initiativeAddSection'
+});
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -161,7 +165,9 @@ const state = {
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapInitiativeFocusId: '',
   mapInitiativeHoverId: '',
-  mapTransform: { x: 120, y: 80, scale: 1 }
+  mapTransform: { x: 120, y: 80, scale: 1 },
+  expandedStepId: '',
+  pendingAddSectionScrollId: ''
 };
 let adminAppLoadPromise = null;
 
@@ -874,9 +880,62 @@ function setActiveView(nextView) {
   render();
 }
 
+function canExpandStepWithAddAction(stepId) {
+  return stepId === 'guidelines' || stepId === 'initiatives';
+}
+
+function quickAddActionLabel(stepId) {
+  if (stepId === 'guidelines') return 'Pridėti naują gairę';
+  if (stepId === 'initiatives') return 'Pridėti naują iniciatyvą';
+  return '';
+}
+
+function scheduleAddSectionScroll(stepId) {
+  const targetId = STEP_ADD_SECTION_IDS[stepId];
+  if (!targetId) return;
+  state.pendingAddSectionScrollId = targetId;
+}
+
+function flushPendingAddSectionScroll() {
+  if (!state.pendingAddSectionScrollId) return;
+  const target = document.getElementById(state.pendingAddSectionScrollId);
+  if (!target) return;
+
+  state.pendingAddSectionScrollId = '';
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  target.classList.remove('jump-target-pulse');
+  void target.offsetWidth;
+  target.classList.add('jump-target-pulse');
+  window.setTimeout(() => target.classList.remove('jump-target-pulse'), 900);
+
+  const focusTarget = target.querySelector('input[type="text"], textarea');
+  if (focusTarget instanceof HTMLElement) {
+    window.setTimeout(() => {
+      focusTarget.focus({ preventScroll: true });
+    }, 260);
+  }
+}
+
+function openStepAddSection(stepId) {
+  if (!canExpandStepWithAddAction(stepId)) return;
+  scheduleAddSectionScroll(stepId);
+  state.expandedStepId = stepId;
+  if (state.activeView !== stepId) {
+    setActiveView(stepId);
+    return;
+  }
+  flushPendingAddSectionScroll();
+}
+
 function renderSteps() {
   if (!elements.steps) return;
   elements.steps.innerHTML = '';
+
+  if (!canExpandStepWithAddAction(state.activeView)) {
+    state.expandedStepId = '';
+  } else if (state.expandedStepId && state.expandedStepId !== state.activeView) {
+    state.expandedStepId = '';
+  }
 
   const canOpenAdmin = canOpenAdminView();
   const items = [
@@ -899,9 +958,16 @@ function renderSteps() {
   }
 
   visibleItems.forEach((item) => {
+    const isActive = state.activeView === item.id;
+    const canExpand = canExpandStepWithAddAction(item.id);
+    const isExpanded = isActive && canExpand && state.expandedStepId === item.id;
+
+    const shell = document.createElement('div');
+    shell.className = `step-pill-shell${isExpanded ? ' expanded' : ''}`;
+
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `step-pill${state.activeView === item.id ? ' active' : ''}${item.locked ? ' locked' : ''}`;
+    button.className = `step-pill${isActive ? ' active' : ''}${item.locked ? ' locked' : ''}${canExpand ? ' step-pill-expandable' : ''}`;
     button.innerHTML = `
       <div class="step-pill-head">
         <span class="step-icon" aria-hidden="true">${item.icon}</span>
@@ -911,14 +977,42 @@ function renderSteps() {
     if (item.locked) {
       button.title = 'Administravimas galimas tik savo institucijos administratoriui';
     }
-    const isActive = state.activeView === item.id;
-    if (isActive) {
+    if (isActive) button.setAttribute('aria-current', 'page');
+    if (canExpand) button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+
+    if (item.locked) {
       button.disabled = true;
-      button.setAttribute('aria-current', 'page');
+    } else if (!canExpand && isActive) {
+      button.disabled = true;
     } else {
-      button.addEventListener('click', () => setActiveView(item.id));
+      button.addEventListener('click', () => {
+        if (!isActive) {
+          state.expandedStepId = canExpand ? item.id : '';
+          setActiveView(item.id);
+          return;
+        }
+        if (!canExpand) return;
+        state.expandedStepId = state.expandedStepId === item.id ? '' : item.id;
+        renderSteps();
+      });
     }
-    elements.steps.appendChild(button);
+
+    shell.appendChild(button);
+
+    if (isExpanded) {
+      const actionBtn = document.createElement('button');
+      actionBtn.type = 'button';
+      actionBtn.className = 'step-pill-action';
+      actionBtn.textContent = quickAddActionLabel(item.id);
+      actionBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openStepAddSection(item.id);
+      });
+      shell.appendChild(actionBtn);
+    }
+
+    elements.steps.appendChild(shell);
   });
 }
 
@@ -1580,6 +1674,7 @@ function renderInitiativesView() {
       }
     </section>
 
+    <section id="initiativeAddSection" class="step-add-anchor">
     ${member ? (writable ? `
       <div class="card initiative-add-card" style="margin-top: 16px;">
         <div class="header-row">
@@ -1621,6 +1716,7 @@ function renderInitiativesView() {
         <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
       </div>
     `)}
+    </section>
   `;
 
   const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
@@ -1846,6 +1942,7 @@ function renderStepView() {
         }
       </section>
     </div>
+    <section id="guidelineAddSection" class="step-add-anchor">
     ${member ? (writable ? `
       <div class="card" style="margin-top: 16px;">
         <div class="header-row">
@@ -1880,6 +1977,7 @@ function renderStepView() {
         <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
       </div>
     `)}
+    </section>
   `;
 
   bindStepEvents();
@@ -2310,5 +2408,6 @@ function render() {
   renderStepView();
   renderUserBar();
   renderVoteFloating();
+  flushPendingAddSectionScroll();
   window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }

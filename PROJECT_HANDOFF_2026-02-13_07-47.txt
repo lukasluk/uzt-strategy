@@ -1,5 +1,5 @@
-PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-13 07:36
+﻿PROJECT HANDOFF - UZT / digistrategija.lt
+Generated: 2026-02-13 07:47
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
@@ -35,6 +35,10 @@ Latest applied source update in this handoff cycle (to be deployed if not yet):
   - compacted header, toolbar, cards, buttons, and form fields
   - improved mobile map controls and overlay layout
   - improved login modal sizing and spacing on small screens
+- Left navigation quick-add expansion for steps:
+  - active "Gairės" menu item can expand and show "Pridėti naują gairę"
+  - active "Iniciatyvos" menu item can expand and show "Pridėti naują iniciatyvą"
+  - quick-add action smooth-scrolls to the matching add section and focuses first input
 
 ==================================================
 2) DEPLOYMENT STATUS - STABLE
@@ -104,7 +108,7 @@ Current focus:
   - reduced top-left DS icon tile by ~40% for a more compact header footprint
   - added initiative page matrix panel (Guideline -> Initiatives) with scrollable table, alternating row colors, and explicit highlight for unassigned guidelines
   - replaced guideline assignment UX from Ctrl/Cmd multiselect to checkbox lists in initiatives flow (member view and institution admin add/edit forms)
-  - widened initiative "Trumpas paai�kinimas" input area to full form width
+  - widened initiative "Trumpas paaiškinimas" input area to full form width
   - stretched "Gairiu ir iniciatyvu susiejimas" panel to match full height of the "Nauja iniciatyva" block
   - switched top-left DS tile to bright yellow styling
   - updated favicon to matching yellow DS theme and bumped favicon cache version across all prototype HTML pages
@@ -179,15 +183,19 @@ curl -fsS https://www.digistrategija.lt/index.html | head -n 120
 ==================================================
 After deploying this update:
 - Verify institution admin UI no longer shows:
-  - "Naujas slapta�odis (min. 8)" inline field
+  - "Naujas slaptažodis (min. 8)" inline field
   - direct password update button
 - Verify participant card shows:
-  - "Slapta�od�io keitimo nuoroda" action
+  - "Slaptažodžio keitimo nuoroda" action
 - Verify invite flow:
   - generated invite URL opens accept-invite page
   - accept page creates password + display name + email validation
 
 END OF HANDOFF
+
+
+
+
 
 
 
