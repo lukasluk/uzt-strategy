@@ -4115,6 +4115,22 @@ body.meta-admin-page .stage {
   background: linear-gradient(180deg, #d95b52 0%, #bf453c 100%);
 }
 
+.meta-membership-add-panel {
+  border: 1px dashed #aac5e6;
+  border-radius: 12px;
+  padding: 10px;
+  background: #f6fbff;
+}
+
+.meta-membership-add-form {
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-membership-add-form select {
+  min-width: 0;
+}
+
 .meta-reset-panel {
   border: 1px dashed #9dc0ea;
   border-radius: 12px;

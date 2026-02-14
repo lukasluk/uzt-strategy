@@ -471,6 +471,77 @@ function registerMetaAdminRoutes({
     res.json({ ok: true, status });
   });
 
+  app.post('/api/v1/meta-admin/users/:userId/memberships', requireMetaAdminSession, async (req, res) => {
+    const userId = String(req.params.userId || '').trim();
+    const institutionId = String(req.body?.institutionId || '').trim();
+    const role = String(req.body?.role || '').trim();
+    if (!userId || !institutionId || !['institution_admin', 'member'].includes(role)) {
+      return res.status(400).json({ error: 'userId, institutionId and role required' });
+    }
+
+    const userRes = await query(
+      'select id, status from platform_users where id = $1',
+      [userId]
+    );
+    if (!userRes.rowCount) return res.status(404).json({ error: 'user not found' });
+    if (String(userRes.rows[0].status || '').trim() === 'archived') {
+      return res.status(409).json({ error: 'user archived' });
+    }
+
+    const institutionRes = await query(
+      'select id from institutions where id = $1',
+      [institutionId]
+    );
+    if (!institutionRes.rowCount) return res.status(404).json({ error: 'institution not found' });
+
+    const existsRes = await query(
+      `select id
+       from institution_memberships
+       where institution_id = $1 and user_id = $2`,
+      [institutionId, userId]
+    );
+    const existedBefore = existsRes.rowCount > 0;
+
+    const membershipRes = await query(
+      `insert into institution_memberships (id, institution_id, user_id, role, status)
+       values ($1, $2, $3, $4, 'active')
+       on conflict (institution_id, user_id)
+       do update set role = excluded.role, status = 'active'
+       returning id, institution_id, user_id, role, status, created_at`,
+      [uuid(), institutionId, userId, role]
+    );
+
+    const membership = membershipRes.rows[0];
+
+    await logAuditEvent({
+      query,
+      uuid,
+      institutionId,
+      action: 'meta_admin.membership.upserted',
+      entityType: 'institution_membership',
+      entityId: membership?.id || null,
+      payload: metaAuditPayload(req, {
+        userId,
+        institutionId,
+        role,
+        existedBefore
+      })
+    });
+
+    res.status(existedBefore ? 200 : 201).json({
+      ok: true,
+      existedBefore,
+      membership: {
+        id: membership.id,
+        institutionId: membership.institution_id,
+        userId: membership.user_id,
+        role: membership.role,
+        status: membership.status,
+        createdAt: membership.created_at
+      }
+    });
+  });
+
   app.post('/api/v1/meta-admin/users/:userId/archive', requireMetaAdminSession, async (req, res) => {
     const userId = String(req.params.userId || '').trim();
     const action = String(req.body?.action || 'keep').trim();

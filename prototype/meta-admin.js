@@ -9,6 +9,7 @@ const state = {
   overview: null,
   metaTab: 'monitoring',
   selectedMetaUserId: '',
+  membershipAddTargetUserId: '',
   lastInvite: null,
   lastPasswordReset: null
 };
@@ -56,6 +57,8 @@ function toUserMessage(error) {
     'userId and valid status required': 'Netinkami vartotojo statuso duomenys.',
     'userId and valid archive action required': 'Netinkami vartotojo archyvavimo duomenys.',
     'membershipId and valid status required': 'Netinkami narystes statuso duomenys.',
+    'userId, institutionId and role required': 'Truksta vartotojo, institucijos arba role duomenu.',
+    'user archived': 'Vartotojas archyvuotas. Pirmiausia aktyvuokite vartotoja.',
     'at least one content setting field required': 'Pakeiskite bent viena teksta.',
     'content text too long': 'Tekstas per ilgas.',
     'reset token required': 'Truksta slaptazodzio keitimo nuorodos.',
@@ -294,7 +297,7 @@ function renderUsersDirectory(groups, selectedUserId) {
   `).join('');
 }
 
-function renderUserDetail(user) {
+function renderUserDetail(user, institutions = []) {
   if (!user) {
     return `
       <article class="card meta-admin-subcard meta-user-card meta-user-detail-card">
@@ -305,6 +308,38 @@ function renderUserDetail(user) {
   }
 
   const hasLatestReset = state.lastPasswordReset && state.lastPasswordReset.userId === user.id;
+  const memberships = Array.isArray(user.memberships) ? user.memberships : [];
+  const assignedInstitutionIds = new Set(
+    memberships
+      .map((membership) => String(membership?.institutionId || '').trim())
+      .filter(Boolean)
+  );
+  const availableInstitutions = (Array.isArray(institutions) ? institutions : [])
+    .filter((institution) => !assignedInstitutionIds.has(String(institution?.id || '').trim()));
+  const showAddMembershipPanel = state.membershipAddTargetUserId === user.id;
+  const addMembershipPanelMarkup = user.status !== 'archived' && showAddMembershipPanel
+    ? `
+      <div class="card-section meta-membership-add-panel">
+        ${availableInstitutions.length
+          ? `
+            <form class="meta-membership-add-form inline-form" data-user-id="${escapeHtml(user.id)}">
+              <select name="institutionId" required ${state.busy ? 'disabled' : ''}>
+                ${availableInstitutions.map((institution) => `
+                  <option value="${escapeHtml(institution.id)}">${escapeHtml(institution.name)} (${escapeHtml(institution.slug)})</option>
+                `).join('')}
+              </select>
+              <select name="role" required ${state.busy ? 'disabled' : ''}>
+                <option value="member">member</option>
+                <option value="institution_admin">institution_admin</option>
+              </select>
+              <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Prideti naryste</button>
+            </form>
+          `
+          : '<p class="prompt">Vartotojas jau turi narystes visose institucijose.</p>'}
+      </div>
+    `
+    : '';
+
   const membershipRows = (user.memberships || []).map((membership) => `
     <li class="meta-membership-item">
       <div class="meta-membership-main">
@@ -334,7 +369,13 @@ function renderUserDetail(user) {
         <button class="btn btn-ghost" type="button" data-action="create-password-reset-link" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
           Slaptazodzio keitimo nuoroda
         </button>
+        ${user.status !== 'archived' ? `
+          <button class="btn btn-ghost" type="button" data-action="toggle-membership-add-panel" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
+            ${showAddMembershipPanel ? 'Uzverti narystes pridejima' : 'Prideti naryste kitoje institucijoje'}
+          </button>
+        ` : ''}
       </div>
+      ${addMembershipPanelMarkup}
       ${user.status !== 'archived' ? `
         <div class="meta-user-actions-grid meta-user-actions-grid-danger">
           <button class="btn btn-ghost" type="button" data-action="archive-user-keep" data-user-id="${escapeHtml(user.id)}" ${state.busy ? 'disabled' : ''}>
@@ -718,7 +759,7 @@ function renderDashboard() {
             ${renderUsersDirectory(groupedUsers, selectedUser?.id || '')}
           </aside>
           <div class="meta-user-detail-shell">
-            ${renderUserDetail(selectedUser)}
+            ${renderUserDetail(selectedUser, institutions)}
           </div>
         </div>
       </section>
@@ -765,6 +806,7 @@ function bindDashboardEvents() {
       state.authenticated = false;
       state.overview = null;
       state.selectedMetaUserId = '';
+      state.membershipAddTargetUserId = '';
       state.error = '';
       state.notice = '';
       render();
@@ -930,6 +972,28 @@ function bindDashboardEvents() {
     });
   }
 
+  async function addMembershipForUser(userId, institutionId, role) {
+    const normalizedUserId = String(userId || '').trim();
+    const normalizedInstitutionId = String(institutionId || '').trim();
+    const normalizedRole = String(role || '').trim();
+    if (!normalizedUserId || !normalizedInstitutionId || !normalizedRole) return;
+
+    await runBusy(async () => {
+      const payload = await api(`/api/v1/meta-admin/users/${encodeURIComponent(normalizedUserId)}/memberships`, {
+        method: 'POST',
+        body: {
+          institutionId: normalizedInstitutionId,
+          role: normalizedRole
+        }
+      });
+      state.notice = payload?.existedBefore
+        ? 'Naryste atnaujinta.'
+        : 'Naryste prideta.';
+      state.membershipAddTargetUserId = normalizedUserId;
+      await loadOverview();
+    });
+  }
+
   if (!root.dataset.resetDelegatedBound) {
     root.dataset.resetDelegatedBound = '1';
     root.addEventListener('click', async (event) => {
@@ -940,6 +1004,9 @@ function bindDashboardEvents() {
         const nextUserId = String(selectUserButton.dataset.userId || '').trim();
         if (nextUserId && nextUserId !== state.selectedMetaUserId) {
           state.selectedMetaUserId = nextUserId;
+          if (state.membershipAddTargetUserId && state.membershipAddTargetUserId !== nextUserId) {
+            state.membershipAddTargetUserId = '';
+          }
           render();
         }
         event.preventDefault();
@@ -972,6 +1039,16 @@ function bindDashboardEvents() {
         event.preventDefault();
         event.stopPropagation();
         await archiveUser(archiveDeleteButton.dataset.userId, 'delete');
+        return;
+      }
+      const toggleMembershipAddButton = target.closest('[data-action="toggle-membership-add-panel"]');
+      if (toggleMembershipAddButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        const userId = String(toggleMembershipAddButton.dataset.userId || '').trim();
+        if (!userId) return;
+        state.membershipAddTargetUserId = state.membershipAddTargetUserId === userId ? '' : userId;
+        render();
       }
     });
   }
@@ -1007,6 +1084,18 @@ function bindDashboardEvents() {
         state.notice = `Narystes statusas pakeistas i ${nextStatus}.`;
         await loadOverview();
       });
+    });
+  });
+
+  root.querySelectorAll('.meta-membership-add-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userId = String(form.dataset.userId || '').trim();
+      const formData = new FormData(form);
+      const institutionId = String(formData.get('institutionId') || '').trim();
+      const role = String(formData.get('role') || '').trim();
+      if (!userId || !institutionId || !role) return;
+      await addMembershipForUser(userId, institutionId, role);
     });
   });
 

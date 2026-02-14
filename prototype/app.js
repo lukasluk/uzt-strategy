@@ -958,7 +958,6 @@ function institutionInfoMarkup() {
     <div class="step-utility-card institution-info-card">
       <div class="institution-info-head">
         <strong>${escapeHtml(info.name)}</strong>
-        <span class="tag">${escapeHtml(info.slug)}</span>
       </div>
       <div class="institution-info-row">
         <span class="institution-info-label">Country</span>
