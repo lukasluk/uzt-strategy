@@ -118,7 +118,7 @@ const INTRO_VISITED_KEY = 'uzt-strategy-v1-intro-visited';
 const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open']);
-const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'guide', 'about']);
+const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'guide']);
 const ADMIN_CACHE_BUST_PARAM = 't';
 const EMBED_QUERY_KEY = 'embed';
 const EMBED_MAP_VALUE = 'map';
@@ -979,8 +979,7 @@ function renderSteps() {
     { id: 'initiatives', icon: '✦', title: 'Iniciatyvos', locked: false },
     { id: 'admin', icon: '⚙', title: 'Admin', locked: !canOpenAdmin },
     { id: 'map', icon: '⌗', title: 'Strategijų žemėlapis', locked: false },
-    { id: 'guide', icon: '☰', title: 'Naudojimosi gidas', locked: false },
-    { id: 'about', icon: 'ℹ', title: 'Apie', locked: false }
+    { id: 'guide', icon: '☰', title: 'Naudojimosi gidas', locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -1050,6 +1049,23 @@ function renderSteps() {
 
     elements.steps.appendChild(shell);
   });
+
+  const institutionShell = document.createElement('div');
+  institutionShell.className = 'step-pill-shell step-utility-shell';
+  institutionShell.innerHTML = `
+    <div class="step-utility-card">
+      ${institutionSelectMarkup()}
+    </div>
+  `;
+  bindInstitutionSwitch(institutionShell);
+  elements.steps.appendChild(institutionShell);
+
+  const languageShell = document.createElement('div');
+  languageShell.className = 'step-pill-shell step-utility-shell step-language-shell';
+  languageShell.innerHTML = `
+    <div class="step-utility-card step-utility-card-language" data-language-switch></div>
+  `;
+  elements.steps.appendChild(languageShell);
 }
 
 function applyIntroGuideState() {
@@ -1832,11 +1848,6 @@ function renderStepView() {
     document.exitFullscreen().catch(() => {});
   }
 
-  if (state.activeView === 'about') {
-    renderAboutView();
-    return;
-  }
-
   if (state.activeView === 'guide') {
     renderGuideView();
     return;
@@ -1862,7 +1873,7 @@ function renderStepView() {
       <div class="card">
         <strong>Pasirinkite instituciją</strong>
         <p class="prompt" style="margin: 8px 0 0;">
-          Viršuje dešinėje pasirinkite instituciją iš išskleidžiamo sąrašo, kad atvertumėte jos viešą gairių puslapį.
+          Kairiajame meniu pasirinkite instituciją iš išskleidžiamo sąrašo, kad atvertumėte jos viešą gairių puslapį.
         </p>
       </div>
     `;
@@ -2145,26 +2156,13 @@ function renderUserBar() {
     return;
   }
   container.hidden = false;
-  const switcher = institutionSelectMarkup();
-
-  if (!state.institutionSlug) {
-    container.innerHTML = `
-      <div class="user-toolbar">
-        ${switcher}
-      </div>
-    `;
-    bindInstitutionSwitch(container);
-    return;
-  }
 
   if (!isAuthenticated()) {
     container.innerHTML = `
       <div class="user-toolbar">
-        ${switcher}
         <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
       </div>
     `;
-    bindInstitutionSwitch(container);
     const openBtn = container.querySelector('#openAuthBtn');
     if (openBtn) openBtn.addEventListener('click', () => showAuthModal('login'));
     return;
@@ -2175,7 +2173,6 @@ function renderUserBar() {
 
   container.innerHTML = `
     <div class="user-toolbar">
-      ${switcher}
       <div class="user-chip">
         <span>${escapeHtml(displayName)}</span>
         <span class="tag">${escapeHtml(roleLabel)}</span>
@@ -2184,7 +2181,6 @@ function renderUserBar() {
     </div>
   `;
 
-  bindInstitutionSwitch(container);
   const logoutBtn = container.querySelector('#logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
@@ -2311,7 +2307,7 @@ function bindGlobal() {
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
   window.addEventListener('uzt-auth-changed', handleAuthChanged);
   window.addEventListener('uzt-language-changed', () => {
-    if (state.activeView === 'guide' || state.activeView === 'about') {
+    if (state.activeView === 'guide') {
       render();
     }
   });

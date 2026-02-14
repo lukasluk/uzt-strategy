@@ -80,15 +80,21 @@ body.embed-map-page .app {
   position: relative;
   z-index: 1;
 }
-.topbar > div:first-child {
+.topbar-main {
   flex: 1 1 620px;
   min-width: 0;
-  display: grid;
-  gap: 10px;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
 }
 .brand-lockup {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
+}
+.topbar-main .intro-shell {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .brand-map-link {
   display: inline-grid;
@@ -334,6 +340,42 @@ body.embed-map-page .stage {
 .step-pill-shell {
   display: grid;
   gap: 6px;
+}
+
+.step-utility-shell {
+  margin-top: 4px;
+}
+
+.step-utility-card {
+  border: 1px solid #c8dbf3;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+  padding: 8px;
+}
+
+.step-utility-card .institution-switcher {
+  width: 100%;
+  min-height: 0;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 7px 9px;
+}
+
+.step-utility-card .institution-switcher select {
+  width: 100%;
+}
+
+.step-utility-card-language .language-switch {
+  width: 100%;
+  border-radius: 10px;
+  justify-content: space-between;
+  padding: 7px 9px;
+}
+
+.step-utility-card-language .language-switch select {
+  min-width: 74px;
 }
 
 .step-pill {
@@ -3220,10 +3262,11 @@ select:focus {
     align-items: stretch;
   }
 
-  .topbar > div:first-child {
+  .topbar-main {
     flex: 1 1 auto;
     width: 100%;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .brand-map-link {
@@ -3264,6 +3307,10 @@ select:focus {
   .step-pill-shell {
     min-width: 132px;
     flex: 0 0 auto;
+  }
+
+  .step-utility-shell {
+    min-width: 220px;
   }
 
   .step-pill {

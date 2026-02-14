@@ -19,23 +19,24 @@
   <div class="app">
     <header class="site-header">
       <div class="topbar">
-        <div>
+        <div class="topbar-main">
           <div class="brand-lockup">
             <a id="brandMapLink" class="brand-map-link" href="?view=map" aria-label="Atidaryti strategijų žemėlapį">
               <img src="assets/ds-mark.svg?v=20260212a" alt="DS logotipas" class="brand-logo brand-logo-mark" />
             </a>
           </div>
+          <section id="introDeck" class="intro-shell"></section>
         </div>
         <div class="top-actions">
           <div class="user-bar user-bar-top" id="userBar"></div>
         </div>
       </div>
-      <section id="introDeck" class="intro-shell"></section>
-      <section id="institutionPicker" class="institution-picker"></section>
     </header>
 
     <div class="layout" id="mainLayout">
-      <aside class="steps" id="steps"></aside>
+      <aside class="steps" id="steps">
+        <div data-language-switch style="display:none"></div>
+      </aside>
       <main class="stage">
         <section class="step-view" id="stepView"></section>
       </main>
@@ -56,7 +57,6 @@
     </section>
 
     <footer class="app-disclaimer">
-      <div class="app-disclaimer-lang" data-language-switch></div>
       <p>
         Tai eksperimentinis įrankis, skirtas padėti jūsų institucijai kurti skaitmenizacijos strategiją
         skaidriai, viešai ir inovatyviai. Norėdami gauti prieigą, susisiekite LinkedIn:
