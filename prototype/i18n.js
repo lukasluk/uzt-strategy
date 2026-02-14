@@ -86,7 +86,18 @@
     ['Centruoti vaizdą', 'Center view'],
     ['Pilnas ekranas', 'Fullscreen'],
     ['Išjungti pilno ekrano režimą', 'Exit fullscreen'],
-    ['Įjungti pilno ekrano režimą', 'Enter fullscreen']
+    ['Įjungti pilno ekrano režimą', 'Enter fullscreen'],
+    ['Kraunamas strategijų žemėlapis...', 'Loading strategy map...'],
+    ['Strategijų žemėlapis dar tuščias', 'Strategy map is still empty'],
+    ['Kai institucijos turės strategijas, jos atsiras šiame žemėlapyje.', 'When institutions have strategies, they will appear on this map.'],
+    ['Žemėlapyje rodoma tik viršuje pasirinktos institucijos strategija.', 'Only the strategy of the currently selected institution is shown in the map.'],
+    ['Strategijos ciklo būsena', 'Strategy cycle status'],
+    ['Rodyti aprašymą ir komentarus', 'Show description and comments'],
+    ['Dar nebalsuota', 'No votes yet'],
+    ['Aprašymas nepateiktas.', 'Description not provided.'],
+    ['Skaitmenizacijos strategija', 'Digital strategy'],
+    ['Elementas', 'Item'],
+    ['Strategijų žemėlapis by digistrategy.eu', 'Strategy map by digistrategy.eu']
   ]);
 
   const RULES_EN = [
@@ -142,7 +153,15 @@
     [/^Slaptažodis$/u, 'Password'],
     [/^Nuo krypties iki konkrečių veiklų\.$/u, 'From direction to concrete actions.'],
     [/^Platformos apimtis: „Gairės“ ir „Iniciatyvos“ etapai\.$/u, 'Platform scope: "Guidelines" and "Initiatives" stages.'],
-    [/^Platformos apimtis:\s*/u, 'Platform scope: ']
+    [/^Platformos apimtis:\s*/u, 'Platform scope: '],
+    [/^Peržiūrėkite pasirinktos institucijos strategijos sluoksnius\.\s*Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos\.$/u, 'Review selected institution strategy layers. In the initiatives layer, guideline cards remain visible, but locked.'],
+    [/^Iniciatyva · Susieta su gairėmis:\s*/u, 'Initiative · Linked guidelines: '],
+    [/^Admin: galite tempti gairių korteles$/u, 'Admin: you can drag guideline cards'],
+    [/^Admin: galite tempti iniciatyvų korteles$/u, 'Admin: you can drag initiative cards'],
+    [/^Nepavyko įkelti strategijų žemėlapio$/u, 'Failed to load strategy map'],
+    [/^Nepavyko ikelti strategiju zemelapio$/u, 'Failed to load strategy map'],
+    [/^Bandyti dar kartą$/u, 'Try again'],
+    [/^Bandyti dar karta$/u, 'Try again']
   ];
 
   function normalizeLang(value) {
