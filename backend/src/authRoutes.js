@@ -45,11 +45,24 @@ function registerAuthRoutes({
     if (row.used_at) return res.status(403).json({ error: 'invite already used' });
     if (new Date(row.expires_at).getTime() < Date.now()) return res.status(403).json({ error: 'invite expired' });
 
+    const existingUserRes = await query(
+      'select id, display_name, status from platform_users where email = $1',
+      [normalizeEmail(row.email)]
+    );
+    const existingUser = existingUserRes.rows[0] || null;
+
     res.json({
       ok: true,
       email: normalizeEmail(row.email),
       role: row.role,
       expiresAt: row.expires_at,
+      existingUser: existingUser
+        ? {
+            id: existingUser.id,
+            displayName: existingUser.display_name || '',
+            status: existingUser.status || 'active'
+          }
+        : null,
       institution: {
         id: row.institution_id,
         slug: row.institution_slug,
@@ -61,9 +74,9 @@ function registerAuthRoutes({
   app.post('/api/v1/invites/accept', inviteAcceptRateLimit, async (req, res) => {
     const token = String(req.body?.token || '').trim();
     const emailInput = normalizeEmail(req.body?.email);
-    const displayName = String(req.body?.displayName || '').trim();
+    const displayNameInput = String(req.body?.displayName || '').trim();
     const password = String(req.body?.password || '');
-    if (!token || !emailInput || !displayName) return res.status(400).json({ error: 'token, email and displayName required' });
+    if (!token || !emailInput) return res.status(400).json({ error: 'token and email required' });
 
     const invite = await query(
       `select id, institution_id, email, role, expires_at, used_at, revoked_at
@@ -91,6 +104,7 @@ function registerAuthRoutes({
     let userRow = user.rows[0];
 
     if (!userRow) {
+      if (!displayNameInput) return res.status(400).json({ error: 'displayName required for new user' });
       if (password.length < 8) return res.status(400).json({ error: 'password must be at least 8 chars' });
       const userId = uuid();
       const salt = crypto.randomBytes(16).toString('hex');
@@ -98,10 +112,36 @@ function registerAuthRoutes({
       await query(
         `insert into platform_users (id, email, display_name, password_salt, password_hash, status)
          values ($1, $2, $3, $4, $5, 'active')`,
-        [userId, email, displayName, salt, hash]
+        [userId, email, displayNameInput, salt, hash]
       );
       user = await query('select id, email, display_name, status from platform_users where id = $1', [userId]);
       userRow = user.rows[0];
+    } else {
+      if (userRow.status !== 'active') {
+        await query(
+          `update platform_users
+           set status = 'active',
+               display_name = case
+                 when $2::text <> '' then $2
+                 else display_name
+               end
+           where id = $1`,
+          [userRow.id, displayNameInput]
+        );
+      } else if (displayNameInput && displayNameInput !== userRow.display_name) {
+        await query(
+          `update platform_users
+           set display_name = $2
+           where id = $1`,
+          [userRow.id, displayNameInput]
+        );
+      }
+
+      const refreshed = await query(
+        'select id, email, display_name, status from platform_users where id = $1',
+        [userRow.id]
+      );
+      userRow = refreshed.rows[0];
     }
 
     await query(

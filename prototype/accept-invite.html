@@ -19,17 +19,17 @@
           <label class="auth-label" for="acceptEmail">El. paštas</label>
           <input id="acceptEmail" type="email" name="email" autocomplete="email" placeholder="El. paštas" required />
 
-          <label class="auth-label" for="acceptDisplayName">Prisijungimo vardas / slapyvardis</label>
+          <label class="auth-label" id="acceptDisplayNameLabel" for="acceptDisplayName">Prisijungimo vardas / slapyvardis</label>
           <input id="acceptDisplayName" type="text" name="displayName" placeholder="Vardas ir pavardė" required />
 
-          <label class="auth-label" for="acceptPassword">Slaptažodis</label>
-          <div class="auth-password-field">
+          <label class="auth-label" for="acceptPassword" data-accept-password>Slaptažodis</label>
+          <div class="auth-password-field" data-accept-password>
             <input id="acceptPassword" type="password" name="password" autocomplete="new-password" placeholder="Sukurkite slaptažodį (min. 8)" minlength="8" required />
             <button id="toggleAcceptPassword" class="auth-password-toggle" type="button" aria-label="Rodyti slaptažodį">Rodyti</button>
           </div>
 
-          <label class="auth-label" for="acceptPasswordRepeat">Pakartokite slaptažodį</label>
-          <div class="auth-password-field">
+          <label class="auth-label" for="acceptPasswordRepeat" data-accept-password>Pakartokite slaptažodį</label>
+          <div class="auth-password-field" data-accept-password>
             <input id="acceptPasswordRepeat" type="password" name="passwordRepeat" autocomplete="new-password" placeholder="Pakartokite slaptažodį" minlength="8" required />
             <button id="toggleAcceptPasswordRepeat" class="auth-password-toggle" type="button" aria-label="Rodyti slaptažodį">Rodyti</button>
           </div>
