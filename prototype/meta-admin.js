@@ -7,6 +7,7 @@ const state = {
   error: '',
   notice: '',
   overview: null,
+  metaTab: 'monitoring',
   selectedMetaUserId: '',
   lastInvite: null,
   lastPasswordReset: null
@@ -55,7 +56,7 @@ function toUserMessage(error) {
     'userId and valid status required': 'Netinkami vartotojo statuso duomenys.',
     'userId and valid archive action required': 'Netinkami vartotojo archyvavimo duomenys.',
     'membershipId and valid status required': 'Netinkami narystes statuso duomenys.',
-    'guideIntroText, aboutText, landingTranslationsLt or landingTranslationsEn required': 'Pakeiskite bent viena teksta.',
+    'at least one content setting field required': 'Pakeiskite bent viena teksta.',
     'content text too long': 'Tekstas per ilgas.',
     'reset token required': 'Truksta slaptazodzio keitimo nuorodos.',
     'reset token invalid': 'Nuoroda nebegalioja arba jau panaudota.'
@@ -397,7 +398,7 @@ function renderMonitoringCards(monitoring) {
     : '';
 
   return `
-    <section class="card meta-admin-card meta-monitoring-card">
+    <section class="card meta-admin-card meta-monitoring-card" data-meta-section="monitoring">
       <div class="header-row">
         <strong>API apkrovos monitoringas</strong>
         <span class="tag">Nuo ${escapeHtml(formatDateTime(monitoring.startedAt))}</span>
@@ -453,7 +454,7 @@ function renderMonitoringCards(monitoring) {
       </div>
     </section>
 
-    <section class="card meta-admin-card meta-embed-monitoring-card">
+    <section class="card meta-admin-card meta-embed-monitoring-card" data-meta-section="monitoring">
       <div class="header-row">
         <strong>Embed zemelapiu perziuros</strong>
         <span class="tag">Viso: ${Number(monitoring?.embedViews?.totalViews || 0)}</span>
@@ -467,9 +468,56 @@ function renderMonitoringCards(monitoring) {
   `;
 }
 
+function renderTopTabs() {
+  const tabs = [
+    { id: 'monitoring', label: 'Monitoringas' },
+    { id: 'content', label: 'Viesas turinys' },
+    { id: 'institutions', label: 'Institucijos' },
+    { id: 'invites', label: 'Kvietimai' },
+    { id: 'users', label: 'Vartotojai' }
+  ];
+
+  return `
+    <section class="card meta-admin-card meta-admin-tabs-card">
+      <div class="meta-admin-top-tabs" role="tablist" aria-label="Meta admin skyriai">
+        ${tabs.map((tab) => `
+          <button
+            type="button"
+            class="btn btn-ghost meta-admin-top-tab${state.metaTab === tab.id ? ' active' : ''}"
+            data-meta-tab="${tab.id}"
+            role="tab"
+            aria-selected="${state.metaTab === tab.id ? 'true' : 'false'}"
+            ${state.busy ? 'disabled' : ''}
+          >${escapeHtml(tab.label)}</button>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function applyMetaTabVisibility() {
+  const allowedTabs = ['monitoring', 'content', 'institutions', 'invites', 'users'];
+  const activeTab = allowedTabs.includes(state.metaTab) ? state.metaTab : 'monitoring';
+  state.metaTab = activeTab;
+
+  root.querySelectorAll('[data-meta-tab]').forEach((button) => {
+    const isActive = button.dataset.metaTab === activeTab;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+
+  root.querySelectorAll('[data-meta-section]').forEach((section) => {
+    const shouldShow = section.dataset.metaSection === activeTab;
+    section.hidden = !shouldShow;
+    section.style.display = shouldShow ? '' : 'none';
+  });
+}
+
 function renderContentSettingsCard(contentSettings) {
-  const guideIntroText = String(contentSettings?.guideIntroText || '');
-  const aboutText = String(contentSettings?.aboutText || '');
+  const guideIntroTextLt = String(contentSettings?.guideIntroTextLt || contentSettings?.guideIntroText || '');
+  const guideIntroTextEn = String(contentSettings?.guideIntroTextEn || '');
+  const aboutTextLt = String(contentSettings?.aboutTextLt || contentSettings?.aboutText || '');
+  const aboutTextEn = String(contentSettings?.aboutTextEn || '');
   const landingTranslationsLt = contentSettings?.landingTranslationsLt && typeof contentSettings.landingTranslationsLt === 'object'
     ? contentSettings.landingTranslationsLt
     : {};
@@ -479,27 +527,58 @@ function renderContentSettingsCard(contentSettings) {
   const landingTranslationsLtJson = JSON.stringify(landingTranslationsLt, null, 2);
   const landingTranslationsEnJson = JSON.stringify(landingTranslationsEn, null, 2);
   return `
-    <section class="card meta-admin-card meta-content-settings-card">
+    <section class="card meta-admin-card meta-content-settings-card" data-meta-section="content">
       <div class="header-row">
         <strong>Vieso turinio tekstai</strong>
-        <span class="tag">Naudojimosi gidas, Apie ir Landing</span>
+        <span class="tag">LT/EN side-by-side</span>
       </div>
-      <p class="prompt">Sie tekstai rodomi viesame puslapyje skiltyse „Naudojimosi gidas“, „Apie“ ir landing puslapyje. Landing vertimai priima JSON objekta pagal rakta (pvz. {"heroTitle":"..."}).</p>
+      <p class="prompt">Keiskite platformos ir landing puslapio viesa turini atskirai lietuviu ir anglu kalbomis.</p>
       <form id="contentSettingsForm" class="meta-content-settings-form">
-        <label class="prompt" for="guideIntroTextField">Naudojimosi gidas (teksto blokas)</label>
-        <textarea id="guideIntroTextField" name="guideIntroText" rows="8" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideIntroText)}</textarea>
-        <label class="prompt" for="aboutTextField" style="margin-top:10px;">Apie (teksto blokas)</label>
-        <textarea id="aboutTextField" name="aboutText" rows="14" ${state.busy ? 'disabled' : ''}>${escapeHtml(aboutText)}</textarea>
-        <label class="prompt" for="landingTranslationsLtField" style="margin-top:10px;">Landing vertimai LT (JSON)</label>
-        <textarea id="landingTranslationsLtField" name="landingTranslationsLtJson" rows="10" ${state.busy ? 'disabled' : ''}>${escapeHtml(landingTranslationsLtJson)}</textarea>
-        <label class="prompt" for="landingTranslationsEnField" style="margin-top:10px;">Landing vertimai EN (JSON)</label>
-        <textarea id="landingTranslationsEnField" name="landingTranslationsEnJson" rows="10" ${state.busy ? 'disabled' : ''}>${escapeHtml(landingTranslationsEnJson)}</textarea>
+        <div class="meta-content-grid">
+          <section class="card meta-admin-subcard meta-content-locale-card">
+            <div class="header-row">
+              <strong>Platforma LT</strong>
+              <span class="tag">index.html</span>
+            </div>
+            <label class="prompt" for="guideIntroTextLtField">Naudojimosi gidas LT</label>
+            <textarea id="guideIntroTextLtField" name="guideIntroTextLt" rows="10" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideIntroTextLt)}</textarea>
+            <label class="prompt" for="aboutTextLtField" style="margin-top:10px;">Apie LT</label>
+            <textarea id="aboutTextLtField" name="aboutTextLt" rows="14" ${state.busy ? 'disabled' : ''}>${escapeHtml(aboutTextLt)}</textarea>
+          </section>
+          <section class="card meta-admin-subcard meta-content-locale-card">
+            <div class="header-row">
+              <strong>Platforma EN</strong>
+              <span class="tag">index.html</span>
+            </div>
+            <label class="prompt" for="guideIntroTextEnField">User guide EN</label>
+            <textarea id="guideIntroTextEnField" name="guideIntroTextEn" rows="10" ${state.busy ? 'disabled' : ''}>${escapeHtml(guideIntroTextEn)}</textarea>
+            <label class="prompt" for="aboutTextEnField" style="margin-top:10px;">About EN</label>
+            <textarea id="aboutTextEnField" name="aboutTextEn" rows="14" ${state.busy ? 'disabled' : ''}>${escapeHtml(aboutTextEn)}</textarea>
+          </section>
+        </div>
+        <div class="meta-content-grid">
+          <section class="card meta-admin-subcard meta-content-locale-card">
+            <div class="header-row">
+              <strong>Landing LT</strong>
+              <span class="tag">landing.html JSON</span>
+            </div>
+            <label class="prompt" for="landingTranslationsLtField">Landing vertimai LT (JSON)</label>
+            <textarea id="landingTranslationsLtField" name="landingTranslationsLtJson" rows="12" ${state.busy ? 'disabled' : ''}>${escapeHtml(landingTranslationsLtJson)}</textarea>
+          </section>
+          <section class="card meta-admin-subcard meta-content-locale-card">
+            <div class="header-row">
+              <strong>Landing EN</strong>
+              <span class="tag">landing.html JSON</span>
+            </div>
+            <label class="prompt" for="landingTranslationsEnField">Landing vertimai EN (JSON)</label>
+            <textarea id="landingTranslationsEnField" name="landingTranslationsEnJson" rows="12" ${state.busy ? 'disabled' : ''}>${escapeHtml(landingTranslationsEnJson)}</textarea>
+          </section>
+        </div>
         <button class="btn btn-primary" type="submit" style="margin-top:10px;" ${state.busy ? 'disabled' : ''}>Issaugoti tekstus</button>
       </form>
     </section>
   `;
 }
-
 function renderDashboard() {
   const institutions = state.overview?.institutions || [];
   const users = state.overview?.users || [];
@@ -529,10 +608,11 @@ function renderDashboard() {
         ${state.notice ? `<p class="prompt meta-admin-notice">${escapeHtml(state.notice)}</p>` : ''}
       </section>
 
+      ${renderTopTabs()}
       ${renderMonitoringCards(monitoring)}
       ${renderContentSettingsCard(contentSettings)}
 
-      <section class="card meta-admin-card">
+      <section class="card meta-admin-card" data-meta-section="institutions">
         <div class="header-row">
           <strong>Nauja institucija</strong>
           ${renderTag(`${institutions.length} institucijos`, 'count')}
@@ -546,7 +626,7 @@ function renderDashboard() {
         </form>
       </section>
 
-      <section class="card meta-admin-card">
+      <section class="card meta-admin-card" data-meta-section="institutions">
         <div class="header-row">
           <strong>Esamos institucijos</strong>
           ${renderTag(String(institutions.length), 'count')}
@@ -576,7 +656,7 @@ function renderDashboard() {
         </div>
       </section>
 
-      <section class="card meta-admin-card">
+      <section class="card meta-admin-card" data-meta-section="invites">
         <div class="header-row">
           <strong>Nauji zmones (invite)</strong>
           ${renderTag('Invite-only', 'scope')}
@@ -610,7 +690,7 @@ function renderDashboard() {
         ` : ''}
       </section>
 
-      <section class="card meta-admin-card">
+      <section class="card meta-admin-card" data-meta-section="invites">
         <div class="header-row">
           <strong>Laukiantys kvietimai</strong>
           ${renderTag(String(pendingInvites.length), 'count')}
@@ -628,7 +708,7 @@ function renderDashboard() {
         </ul>
       </section>
 
-      <section class="card meta-admin-card meta-users-shell">
+      <section class="card meta-admin-card meta-users-shell" data-meta-section="users">
         <div class="header-row">
           <strong>Visi vartotojai</strong>
           ${renderTag(String(users.length), 'count')}
@@ -646,15 +726,26 @@ function renderDashboard() {
   `;
 
   bindDashboardEvents();
+  applyMetaTabVisibility();
 }
 
 function bindDashboardEvents() {
+  const topTabButtons = root.querySelectorAll('[data-meta-tab]');
   const refreshBtn = document.getElementById('refreshOverviewBtn');
   const logoutBtn = document.getElementById('logoutMetaBtn');
   const createInstitutionForm = document.getElementById('createInstitutionForm');
   const createInviteForm = document.getElementById('createInviteForm');
   const copyInviteUrlBtn = document.getElementById('copyInviteUrlBtn');
   const contentSettingsForm = document.getElementById('contentSettingsForm');
+
+  topTabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const nextTab = String(button.dataset.metaTab || '').trim();
+      if (!nextTab || nextTab === state.metaTab) return;
+      state.metaTab = nextTab;
+      applyMetaTabVisibility();
+    });
+  });
 
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
@@ -704,8 +795,10 @@ function bindDashboardEvents() {
     contentSettingsForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const fd = new FormData(contentSettingsForm);
-      const guideIntroText = String(fd.get('guideIntroText') || '').trim();
-      const aboutText = String(fd.get('aboutText') || '').trim();
+      const guideIntroTextLt = String(fd.get('guideIntroTextLt') || '').trim();
+      const guideIntroTextEn = String(fd.get('guideIntroTextEn') || '').trim();
+      const aboutTextLt = String(fd.get('aboutTextLt') || '').trim();
+      const aboutTextEn = String(fd.get('aboutTextEn') || '').trim();
       const landingTranslationsLtJson = String(fd.get('landingTranslationsLtJson') || '').trim();
       const landingTranslationsEnJson = String(fd.get('landingTranslationsEnJson') || '').trim();
       let landingTranslationsLt = {};
@@ -727,7 +820,7 @@ function bindDashboardEvents() {
       await runBusy(async () => {
         await api('/api/v1/meta-admin/content-settings', {
           method: 'PUT',
-          body: { guideIntroText, aboutText, landingTranslationsLt, landingTranslationsEn }
+          body: { guideIntroTextLt, guideIntroTextEn, aboutTextLt, aboutTextEn, landingTranslationsLt, landingTranslationsEn }
         });
         state.notice = 'Tekstai atnaujinti.';
         await loadOverview();

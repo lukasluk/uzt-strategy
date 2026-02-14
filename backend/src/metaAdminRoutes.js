@@ -351,7 +351,7 @@ function registerMetaAdminRoutes({
   app.put('/api/v1/meta-admin/content-settings', requireMetaAdminSession, async (req, res) => {
     const patch = normalizeContentSettingsPatch(req.body || {});
     if (!Object.keys(patch).length) {
-      return res.status(400).json({ error: 'guideIntroText, aboutText, landingTranslationsLt or landingTranslationsEn required' });
+      return res.status(400).json({ error: 'at least one content setting field required' });
     }
 
     const contentSettings = await updateContentSettings(query, patch);

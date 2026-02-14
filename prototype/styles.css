@@ -3849,6 +3849,28 @@ body.meta-admin-page .stage {
   font-weight: 700;
 }
 
+.meta-admin-tabs-card {
+  padding: 10px 12px;
+}
+
+.meta-admin-top-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-admin-top-tab {
+  min-width: 128px;
+  justify-content: center;
+}
+
+.meta-admin-top-tab.active {
+  border-color: #2d76c9;
+  background: linear-gradient(180deg, #2d76c9 0%, #235fa8 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(37, 89, 157, 0.2);
+}
+
 .meta-admin-hero-actions {
   margin-top: 2px;
 }
@@ -4061,6 +4083,17 @@ body.meta-admin-page .stage {
 
 .meta-content-settings-form {
   display: grid;
+  gap: 12px;
+}
+
+.meta-content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.meta-content-locale-card {
+  display: grid;
   gap: 8px;
 }
 
@@ -4156,6 +4189,15 @@ body.meta-admin-page .tag-slug {
 
   .meta-user-actions-grid {
     grid-template-columns: 1fr;
+  }
+
+  .meta-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-admin-top-tab {
+    min-width: 0;
+    flex: 1 1 180px;
   }
 
   .meta-membership-controls .btn {

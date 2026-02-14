@@ -28,7 +28,10 @@
   ].join('\n\n');
   let currentLang = DEFAULT_LANG;
   let preferredStrategySlug = 'uzt';
-  let adminAboutText = '';
+  const adminAboutTextByLang = {
+    lt: '',
+    en: ''
+  };
 
   const adminLandingTranslations = {
     lt: {},
@@ -354,7 +357,7 @@
   }
 
   function resolveAboutText() {
-    const adminText = String(adminAboutText || '').trim();
+    const adminText = String(adminAboutTextByLang[currentLang] || '').trim();
     if (adminText) return adminText;
     return currentLang === 'en' ? DEFAULT_ABOUT_TEXT_EN : DEFAULT_ABOUT_TEXT_LT;
   }
@@ -470,12 +473,14 @@
         : {};
       const ltRaw = settings?.landingTranslationsLt;
       const enRaw = settings?.landingTranslationsEn;
-      adminAboutText = String(settings?.aboutText || '').trim();
+      adminAboutTextByLang.lt = String(settings?.aboutTextLt || settings?.aboutText || '').trim();
+      adminAboutTextByLang.en = String(settings?.aboutTextEn || '').trim();
       adminLandingTranslations.lt = ltRaw && typeof ltRaw === 'object' && !Array.isArray(ltRaw) ? ltRaw : {};
       adminLandingTranslations.en = enRaw && typeof enRaw === 'object' && !Array.isArray(enRaw) ? enRaw : {};
       applyTranslations();
     } catch {
-      adminAboutText = '';
+      adminAboutTextByLang.lt = '';
+      adminAboutTextByLang.en = '';
       adminLandingTranslations.lt = {};
       adminLandingTranslations.en = {};
       renderAboutSection();

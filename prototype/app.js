@@ -99,6 +99,18 @@ const DEFAULT_ABOUT_TEXT = [
   'Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti veikiančius, naudotojams suprantamus įrankius.',
   'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos, kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.'
 ].join('\n\n');
+const DEFAULT_GUIDE_INTRO_TEXT_EN = [
+  'digistrategija.lt is designed to make your institution strategy process practical and collaborative. Build a clear guideline structure and connect concrete initiatives to guideline delivery.',
+  'The platform has 2 core parts:',
+  '1. Card management module (Guidelines and Initiatives) where your colleagues can comment, suggest strategic directions, and vote on proposals.',
+  '2. Strategy map - a visual tool to review structure and links between different strategy elements.',
+  'Publish your interactive strategy map in intranet or internal pages using embed functionality. The system is designed for public institutions that want to run strategy creation more effectively.'
+].join('\n');
+const DEFAULT_ABOUT_TEXT_EN = [
+  'Across public institutions, digital transformation is no longer seen as a set of isolated IT projects but as a systemic shift that affects service quality, data governance, and responsible adoption of emerging technologies.',
+  'That is exactly why digistrategija.lt was created: to provide a practical, transparent workspace where strategy priorities can be discussed, structured, and translated into initiatives with clear ownership.',
+  'The platform helps teams agree faster on what matters most, while preserving context and traceability for long-term institutional continuity.'
+].join('\n\n');
 
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
 const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
@@ -158,8 +170,10 @@ const state = {
   context: null,
   userVotes: {},
   contentSettings: {
-    guideIntroText: DEFAULT_GUIDE_INTRO_TEXT,
-    aboutText: DEFAULT_ABOUT_TEXT
+    guideIntroTextLt: DEFAULT_GUIDE_INTRO_TEXT,
+    guideIntroTextEn: DEFAULT_GUIDE_INTRO_TEXT_EN,
+    aboutTextLt: DEFAULT_ABOUT_TEXT,
+    aboutTextEn: DEFAULT_ABOUT_TEXT_EN
   },
   mapLayer: 'guidelines',
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
@@ -486,17 +500,36 @@ function cycleVisionText() {
 
 function normalizeGuideAboutContent(payload) {
   const source = payload?.contentSettings || payload || {};
-  const guideIntroText = String(source.guideIntroText || '').trim() || DEFAULT_GUIDE_INTRO_TEXT;
-  const aboutText = String(source.aboutText || '').trim() || DEFAULT_ABOUT_TEXT;
-  return { guideIntroText, aboutText };
+  const guideIntroTextLt = String(source.guideIntroTextLt || source.guideIntroText || '').trim() || DEFAULT_GUIDE_INTRO_TEXT;
+  const guideIntroTextEn = String(source.guideIntroTextEn || '').trim() || DEFAULT_GUIDE_INTRO_TEXT_EN;
+  const aboutTextLt = String(source.aboutTextLt || source.aboutText || '').trim() || DEFAULT_ABOUT_TEXT;
+  const aboutTextEn = String(source.aboutTextEn || '').trim() || DEFAULT_ABOUT_TEXT_EN;
+  return { guideIntroTextLt, guideIntroTextEn, aboutTextLt, aboutTextEn };
+}
+
+function currentLanguage() {
+  const normalized = String(window.DigiI18n?.getLanguage?.() || '').trim().toLowerCase();
+  return normalized === 'en' ? 'en' : 'lt';
 }
 
 function guideIntroText() {
-  return String(state.contentSettings?.guideIntroText || '').trim() || DEFAULT_GUIDE_INTRO_TEXT;
+  const lang = currentLanguage();
+  if (lang === 'en') {
+    return String(state.contentSettings?.guideIntroTextEn || '').trim()
+      || String(state.contentSettings?.guideIntroTextLt || '').trim()
+      || DEFAULT_GUIDE_INTRO_TEXT_EN;
+  }
+  return String(state.contentSettings?.guideIntroTextLt || '').trim() || DEFAULT_GUIDE_INTRO_TEXT;
 }
 
 function aboutText() {
-  return String(state.contentSettings?.aboutText || '').trim() || DEFAULT_ABOUT_TEXT;
+  const lang = currentLanguage();
+  if (lang === 'en') {
+    return String(state.contentSettings?.aboutTextEn || '').trim()
+      || String(state.contentSettings?.aboutTextLt || '').trim()
+      || DEFAULT_ABOUT_TEXT_EN;
+  }
+  return String(state.contentSettings?.aboutTextLt || '').trim() || DEFAULT_ABOUT_TEXT;
 }
 
 function renderMultilineText(text) {
@@ -2277,6 +2310,11 @@ function bindGlobal() {
   });
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
   window.addEventListener('uzt-auth-changed', handleAuthChanged);
+  window.addEventListener('uzt-language-changed', () => {
+    if (state.activeView === 'guide' || state.activeView === 'about') {
+      render();
+    }
+  });
   document.addEventListener('fullscreenchange', () => {
     updateMapFullscreenButtonLabel();
     if (state.activeView !== 'map') return;
