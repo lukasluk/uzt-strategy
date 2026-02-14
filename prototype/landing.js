@@ -1,6 +1,10 @@
 (function () {
   const activeStrategyLinks = Array.from(document.querySelectorAll('[data-active-strategy-link]'));
   const metricInstitutions = document.getElementById('metricInstitutions');
+  const metricGuidelines = document.getElementById('metricGuidelines');
+  const metricInitiatives = document.getElementById('metricInitiatives');
+  const glassMetricGuidelines = document.getElementById('glassMetricGuidelines');
+  const glassMetricInitiatives = document.getElementById('glassMetricInitiatives');
   const navLinks = Array.from(document.querySelectorAll('[data-scroll-link]'));
   const languageSelect = document.getElementById('landingLangSelect');
   const metaDescription = document.getElementById('landingMetaDescription');
@@ -31,11 +35,13 @@
       heroCopy: 'Kurkite gairiu strukturas, susiekite iniciatyvas, itraukite komandas i skaidru balsavima ir publikuokite strategiju zemelapius, kuriuos supranta visa bendruomene.',
       heroPrimaryCta: 'Perziureti aktyvias strategijas',
       metricInstitutionsLabel: 'Aktyvios institucijos',
-      metricInviteLabel: 'Saugaus kvietimo galiojimas',
-      metricMapLabel: 'Map-first vizualus planavimas',
+      metricGuidelinesLabel: 'Aktyvios gaires',
+      metricInitiativesLabel: 'Aktyvios iniciatyvos',
       glassInstitutionLabel: 'Institucija',
       glassMainTitle: 'Skaitmenizacijos strategijos ciklas',
       glassMainCopy: 'Gaires, iniciatyvos, atsakomybes ir busena viename interaktyviame zemelapyje.',
+      glassStatsGuidelinesLabel: 'Aktyvios gaires',
+      glassStatsInitiativesLabel: 'Aktyvios iniciatyvos',
       glassOutcomeLabel: 'Rezultato kontraktas',
       glassOutcomeTitle: 'Tikslas + terminas + irodymas',
       glassAuditLabel: 'Audituojamumas',
@@ -129,11 +135,13 @@
       heroCopy: 'Build guideline structures, connect initiatives, involve teams in transparent voting, and publish strategy maps your community can actually understand.',
       heroPrimaryCta: 'View Active Strategies',
       metricInstitutionsLabel: 'Active Institutions',
-      metricInviteLabel: 'Secure Invite Validity',
-      metricMapLabel: 'Map-First Visual Planning',
+      metricGuidelinesLabel: 'Active Guidelines',
+      metricInitiativesLabel: 'Active Initiatives',
       glassInstitutionLabel: 'Institution',
       glassMainTitle: 'Digital Strategy Cycle',
       glassMainCopy: 'Guidelines, initiatives, ownership and status in one interactive map.',
+      glassStatsGuidelinesLabel: 'Active Guidelines',
+      glassStatsInitiativesLabel: 'Active Initiatives',
       glassOutcomeLabel: 'Outcome contract',
       glassOutcomeTitle: 'Target + Deadline + Evidence',
       glassAuditLabel: 'Auditability',
@@ -283,6 +291,82 @@
     setActiveStrategyHref(preferredStrategySlug);
   }
 
+  function setMetricValue(element, value) {
+    if (!(element instanceof HTMLElement)) return;
+    element.textContent = Number.isFinite(value) ? String(value) : '--';
+  }
+
+  function applyActiveContentCounts({ totalGuidelines, totalInitiatives }) {
+    setMetricValue(metricGuidelines, totalGuidelines);
+    setMetricValue(metricInitiatives, totalInitiatives);
+    setMetricValue(glassMetricGuidelines, totalGuidelines);
+    setMetricValue(glassMetricInitiatives, totalInitiatives);
+  }
+
+  function toStrategySummary(payload) {
+    const institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
+    const items = institutions
+      .map((item) => {
+        const slug = String(item?.slug || '').trim();
+        if (!slug) return null;
+        const guidelineCount = Array.isArray(item?.guidelines)
+          ? item.guidelines.filter((entry) => String(entry?.status || '').toLowerCase() === 'active').length
+          : 0;
+        const initiativeCount = Array.isArray(item?.initiatives)
+          ? item.initiatives.filter((entry) => String(entry?.status || '').toLowerCase() === 'active').length
+          : 0;
+        return {
+          slug,
+          hasCycle: Boolean(item?.cycle?.id),
+          guidelineCount,
+          initiativeCount,
+          score: guidelineCount + initiativeCount
+        };
+      })
+      .filter(Boolean);
+    return {
+      items,
+      totalGuidelines: items.reduce((sum, item) => sum + item.guidelineCount, 0),
+      totalInitiatives: items.reduce((sum, item) => sum + item.initiativeCount, 0)
+    };
+  }
+
+  async function loadPreferredSlugWithContent() {
+    try {
+      const response = await fetch('/api/v1/public/strategy-map?source=app', {
+        method: 'GET',
+        credentials: 'same-origin'
+      });
+      if (!response.ok) return { preferredSlug: '', totalGuidelines: null, totalInitiatives: null };
+      const payload = await response.json();
+      const summary = toStrategySummary(payload);
+      const mapped = summary.items;
+      if (!mapped.length) {
+        return { preferredSlug: '', totalGuidelines: 0, totalInitiatives: 0 };
+      }
+
+      const candidates = mapped
+        .filter((item) => item.hasCycle && item.score > 0)
+        .sort((left, right) => right.score - left.score);
+      if (candidates.length) {
+        return {
+          preferredSlug: candidates[0].slug,
+          totalGuidelines: summary.totalGuidelines,
+          totalInitiatives: summary.totalInitiatives
+        };
+      }
+
+      const withCycle = mapped.find((item) => item.hasCycle);
+      return {
+        preferredSlug: withCycle?.slug || '',
+        totalGuidelines: summary.totalGuidelines,
+        totalInitiatives: summary.totalInitiatives
+      };
+    } catch {
+      return { preferredSlug: '', totalGuidelines: null, totalInitiatives: null };
+    }
+  }
+
   async function loadPublicInstitutions() {
     try {
       const response = await fetch('/api/v1/public/institutions', {
@@ -298,10 +382,15 @@
       const preferred = active.find((item) => String(item?.slug || '').trim())
         || institutions.find((item) => String(item?.slug || '').trim())
         || null;
-      if (preferred?.slug) preferredStrategySlug = String(preferred.slug);
+
+      const contentSummary = await loadPreferredSlugWithContent();
+      applyActiveContentCounts(contentSummary);
+      if (contentSummary.preferredSlug) preferredStrategySlug = contentSummary.preferredSlug;
+      else if (preferred?.slug) preferredStrategySlug = String(preferred.slug);
       updateNavigationLinks();
     } catch {
       if (metricInstitutions) metricInstitutions.textContent = '1+';
+      applyActiveContentCounts({ totalGuidelines: null, totalInitiatives: null });
       preferredStrategySlug = 'uzt';
       updateNavigationLinks();
     }
