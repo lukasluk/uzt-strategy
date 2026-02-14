@@ -4,6 +4,8 @@ create table if not exists institutions (
   id uuid primary key,
   name text not null,
   slug text not null unique,
+  country_code text,
+  website_url text,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now()
 );
@@ -277,3 +279,9 @@ alter table if exists strategy_cycles
 alter table if exists strategy_cycles
   add constraint strategy_cycles_state_check
   check (state in ('open', 'closed'));
+
+alter table if exists institutions
+  add column if not exists country_code text;
+
+alter table if exists institutions
+  add column if not exists website_url text;

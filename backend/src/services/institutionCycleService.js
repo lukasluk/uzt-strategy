@@ -1,7 +1,7 @@
 function createInstitutionCycleService({ query }) {
   async function getInstitutionBySlug(slug) {
     const res = await query(
-      'select id, name, slug, status from institutions where slug = $1',
+      'select id, name, slug, country_code, website_url, status from institutions where slug = $1',
       [slug]
     );
     return res.rows[0] || null;

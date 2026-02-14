@@ -1,6 +1,6 @@
-insert into institutions (id, name, slug, status)
+insert into institutions (id, name, slug, country_code, website_url, status)
 values
-  (gen_random_uuid(), 'Uzimtumo tarnyba', 'uzt', 'active')
+  (gen_random_uuid(), 'Uzimtumo tarnyba', 'uzt', 'LT', 'https://uzt.lt', 'active')
 on conflict (slug) do nothing;
 
 insert into strategy_cycles (id, institution_id, title, state, results_published, starts_at)

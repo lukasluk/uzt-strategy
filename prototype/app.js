@@ -128,6 +128,16 @@ const STEP_ADD_SECTION_IDS = Object.freeze({
   guidelines: 'guidelineAddSection',
   initiatives: 'initiativeAddSection'
 });
+const INSTITUTION_INFO_FALLBACK = Object.freeze({
+  uzt: { countryCode: 'LT', websiteUrl: 'https://uzt.lt' },
+  eimin: { countryCode: 'LT', websiteUrl: 'https://eimin.lrv.lt' },
+  govtech: { countryCode: 'LT', websiteUrl: 'https://govtechlab.lt' },
+  vmi: { countryCode: 'LT', websiteUrl: 'https://www.vmi.lt' },
+  vssa: { countryCode: 'LT', websiteUrl: '' }
+});
+const COUNTRY_LABELS = Object.freeze({
+  LT: 'Lithuania'
+});
 
 const elements = {
   steps: document.getElementById('steps'),
@@ -651,6 +661,23 @@ async function api(path, { method = 'GET', body = null, auth = true } = {}) {
   return payload || {};
 }
 
+function normalizeInstitutionRecord(value) {
+  if (!value || typeof value !== 'object') return null;
+  const slug = normalizeSlug(value.slug);
+  const countryCodeRaw = String(value.countryCode ?? value.country_code ?? '').trim().toUpperCase();
+  const websiteRaw = String(value.websiteUrl ?? value.website_url ?? '').trim();
+  return {
+    ...value,
+    id: value.id || null,
+    name: String(value.name || slug || '').trim(),
+    slug,
+    countryCode: countryCodeRaw || '',
+    websiteUrl: websiteRaw || '',
+    status: String(value.status || '').trim(),
+    createdAt: value.createdAt || value.created_at || null
+  };
+}
+
 async function loadPublicData() {
   const base = `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current`;
   const [summaryPayload, guidelinesPayload, initiativesPayload] = await Promise.all([
@@ -659,7 +686,9 @@ async function loadPublicData() {
     api(`${base}/initiatives`, { auth: false })
   ]);
 
-  state.institution = initiativesPayload.institution || guidelinesPayload.institution || summaryPayload.institution || null;
+  state.institution = normalizeInstitutionRecord(
+    initiativesPayload.institution || guidelinesPayload.institution || summaryPayload.institution || null
+  );
   state.cycle = initiativesPayload.cycle || guidelinesPayload.cycle || summaryPayload.cycle || null;
   state.summary = summaryPayload.summary || null;
   state.guidelines = Array.isArray(guidelinesPayload.guidelines) ? guidelinesPayload.guidelines : [];
@@ -671,7 +700,7 @@ async function refreshGuidelines() {
     `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/guidelines`,
     { auth: false }
   );
-  state.institution = payload.institution || state.institution;
+  state.institution = normalizeInstitutionRecord(payload.institution) || state.institution;
   state.cycle = payload.cycle || state.cycle;
   state.guidelines = Array.isArray(payload.guidelines) ? payload.guidelines : [];
 }
@@ -681,7 +710,7 @@ async function refreshInitiatives() {
     `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/initiatives`,
     { auth: false }
   );
-  state.institution = payload.institution || state.institution;
+  state.institution = normalizeInstitutionRecord(payload.institution) || state.institution;
   state.cycle = payload.cycle || state.cycle;
   state.initiatives = Array.isArray(payload.initiatives) ? payload.initiatives : [];
 }
@@ -696,7 +725,9 @@ async function refreshSummary() {
 
 async function loadInstitutions() {
   const payload = await api('/api/v1/public/institutions', { auth: false });
-  state.institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
+  state.institutions = Array.isArray(payload?.institutions)
+    ? payload.institutions.map((institution) => normalizeInstitutionRecord(institution)).filter(Boolean)
+    : [];
   state.institutionsLoaded = true;
 }
 
@@ -884,6 +915,63 @@ function institutionSelectMarkup() {
   `;
 }
 
+function normalizeInstitutionWebsiteUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i.test(raw)) return `https://${raw}`;
+  return '';
+}
+
+function selectedInstitutionInfo() {
+  const currentSlug = normalizeSlug(state.institutionSlug);
+  if (!currentSlug) return null;
+
+  const fromList = (state.institutions || []).find((institution) => normalizeSlug(institution.slug) === currentSlug) || null;
+  const fromCurrent = normalizeSlug(state.institution?.slug) === currentSlug
+    ? normalizeInstitutionRecord(state.institution)
+    : null;
+  const base = fromCurrent || fromList;
+  if (!base) return null;
+
+  const fallback = INSTITUTION_INFO_FALLBACK[currentSlug] || {};
+  return {
+    name: String(base.name || currentSlug).trim(),
+    slug: currentSlug,
+    countryCode: String(base.countryCode || fallback.countryCode || '').trim().toUpperCase(),
+    websiteUrl: normalizeInstitutionWebsiteUrl(base.websiteUrl || fallback.websiteUrl || '')
+  };
+}
+
+function institutionInfoMarkup() {
+  const info = selectedInstitutionInfo();
+  if (!info) return '';
+
+  const countryValue = info.countryCode
+    ? `${COUNTRY_LABELS[info.countryCode] || info.countryCode} (${info.countryCode})`
+    : 'Not set';
+  const websiteValue = info.websiteUrl
+    ? `<a href="${escapeHtml(info.websiteUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(info.websiteUrl)}</a>`
+    : '<span class="institution-info-empty">Not set</span>';
+
+  return `
+    <div class="step-utility-card institution-info-card">
+      <div class="institution-info-head">
+        <strong>${escapeHtml(info.name)}</strong>
+        <span class="tag">${escapeHtml(info.slug)}</span>
+      </div>
+      <div class="institution-info-row">
+        <span class="institution-info-label">Country</span>
+        <span>${escapeHtml(countryValue)}</span>
+      </div>
+      <div class="institution-info-row">
+        <span class="institution-info-label">Website</span>
+        <span class="institution-info-value">${websiteValue}</span>
+      </div>
+    </div>
+  `;
+}
+
 function bindInstitutionSwitch(container) {
   const select = container.querySelector('#institutionSwitchSelect');
   if (!select) return;
@@ -1064,6 +1152,14 @@ function renderSteps() {
   `;
   bindInstitutionSwitch(institutionShell);
   elements.steps.appendChild(institutionShell);
+
+  const institutionInfoHtml = institutionInfoMarkup();
+  if (institutionInfoHtml) {
+    const institutionInfoShell = document.createElement('div');
+    institutionInfoShell.className = 'step-pill-shell step-utility-shell';
+    institutionInfoShell.innerHTML = institutionInfoHtml;
+    elements.steps.appendChild(institutionInfoShell);
+  }
 
   const languageShell = document.createElement('div');
   languageShell.className = 'step-pill-shell step-utility-shell step-language-shell';

@@ -19,7 +19,7 @@ function registerPublicRoutes({
 
   app.get('/api/v1/public/institutions', publicReadGuard, async (_req, res) => {
     const institutions = await query(
-      'select id, name, slug, status, created_at from institutions where status = $1 order by name asc',
+      'select id, name, slug, country_code, website_url, status, created_at from institutions where status = $1 order by name asc',
       ['active']
     );
     res.json({ institutions: institutions.rows });
@@ -41,14 +41,14 @@ function registerPublicRoutes({
 
     const institutionsRes = hasRequestedInstitutionSlug
       ? await query(
-        `select id, name, slug, status, created_at
+        `select id, name, slug, country_code, website_url, status, created_at
          from institutions
          where status = 'active' and slug = $1
          order by name asc`,
         [requestedInstitutionSlug]
       )
       : await query(
-        `select id, name, slug, status, created_at
+        `select id, name, slug, country_code, website_url, status, created_at
          from institutions
          where status = 'active'
          order by name asc`
@@ -238,6 +238,8 @@ function registerPublicRoutes({
           id: institution.id,
           name: institution.name,
           slug: institution.slug,
+          countryCode: institution.country_code || null,
+          websiteUrl: institution.website_url || null,
           status: institution.status,
           createdAt: institution.created_at,
           cycle: cycle
