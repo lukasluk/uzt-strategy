@@ -305,7 +305,7 @@
 
   function setActiveStrategyHref(slug) {
     if (!slug) return;
-    const href = `index.html?institution=${encodeURIComponent(slug)}&view=map&lang=${encodeURIComponent(currentLang)}`;
+    const href = `/index.html?institution=${encodeURIComponent(slug)}&view=map&lang=${encodeURIComponent(currentLang)}`;
     activeStrategyLinks.forEach((link) => {
       link.setAttribute('href', href);
     });

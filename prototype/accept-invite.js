@@ -133,7 +133,7 @@
       }
       showNotice('Paskyra aktyvuota. Nukreipiame į sistemą...');
       setTimeout(() => {
-        const target = slug ? `index.html?institution=${encodeURIComponent(slug)}` : 'index.html';
+        const target = slug ? `/index.html?institution=${encodeURIComponent(slug)}` : '/index.html';
         window.location.href = target;
       }, 700);
     } catch (error) {

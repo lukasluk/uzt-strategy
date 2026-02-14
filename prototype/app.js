@@ -241,6 +241,9 @@ function resolveInstitutionSlug() {
   if (last === 'index.html') {
     return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG || null;
   }
+  if (last === 'app' || last === 'landing.html' || last === 'landing') {
+    return DEFAULT_INSTITUTION_SLUG || null;
+  }
   if (last === 'admin.html') {
     return normalizeSlug(parts[parts.length - 2]) || DEFAULT_INSTITUTION_SLUG || null;
   }
