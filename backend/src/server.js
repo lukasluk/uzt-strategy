@@ -3,6 +3,7 @@ const http = require('http');
 const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const { WebSocketServer } = require('ws');
 const { query } = require('./db');
 const { registerV1Routes } = require('./v1');
@@ -11,6 +12,11 @@ require('dotenv').config();
 
 const app = express();
 app.set('trust proxy', 1);
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false
+}));
 
 const PORT = process.env.PORT || 3000;
 const CORS_ORIGINS = String(process.env.CORS_ORIGINS || [

@@ -3,12 +3,16 @@ const {
   createAuthToken,
   hashPassword,
   normalizeEmail,
-  sha256
+  sha256,
+  timingSafeEqual
 } = require('./security');
 const {
   getActivePasswordResetTokenInfo,
   consumePasswordResetTokenAndSetPassword
 } = require('./passwordResetService');
+
+const DUMMY_PASSWORD_SALT = '00000000000000000000000000000000';
+const DUMMY_PASSWORD_HASH = hashPassword('invalid-password-placeholder', DUMMY_PASSWORD_SALT);
 
 function registerAuthRoutes({
   app,
@@ -149,11 +153,13 @@ function registerAuthRoutes({
       'select id, email, display_name, password_salt, password_hash, status from platform_users where email = $1',
       [email]
     );
-    const user = userRes.rows[0];
-    if (!user || user.status !== 'active') return res.status(401).json({ error: 'invalid credentials' });
-
-    const hash = hashPassword(password, user.password_salt);
-    if (hash !== user.password_hash) return res.status(401).json({ error: 'invalid credentials' });
+    const user = userRes.rows[0] || null;
+    const expectedHash = String(user?.password_hash || DUMMY_PASSWORD_HASH);
+    const attemptedHash = hashPassword(password, user?.password_salt || DUMMY_PASSWORD_SALT);
+    const passwordMatches = timingSafeEqual(attemptedHash, expectedHash);
+    if (!user || user.status !== 'active' || !passwordMatches) {
+      return res.status(401).json({ error: 'invalid credentials' });
+    }
 
     const membershipRes = await query(
       `select role, status from institution_memberships

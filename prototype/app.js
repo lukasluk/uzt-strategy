@@ -891,8 +891,13 @@ function bindInstitutionSwitch(container) {
   select.addEventListener('change', () => {
     const slug = normalizeSlug(select.value);
     if (slug === normalizeSlug(state.institutionSlug)) return;
-    const href = buildCurrentPageHref({ slug, view: state.activeView });
-    window.location.href = href;
+    state.institutionSlug = slug;
+    if (state.activeView === 'admin') {
+      state.activeView = 'guidelines';
+    }
+    state.expandedStepId = '';
+    syncRouteState();
+    bootstrap();
   });
 }
 
