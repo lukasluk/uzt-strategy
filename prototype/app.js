@@ -16,7 +16,7 @@ const steps = [
 const introSlides = [
   {
     title: '1. Pasirinkite instituciją',
-    body: 'digistrategija.lt sistema skirta patogiam jūsų institucijos strategijos rengimo procesui.',
+    body: 'digistrategy.eu sistema skirta patogiam jūsų institucijos strategijos rengimo procesui.',
     points: [
       'Viršuje dešinėje pasirinkite instituciją, kurios strategiją norite peržiūrėti ar administruoti.',
       'Instituciją galima keisti bet kada, duomenys persikrauna automatiškai.'
@@ -83,7 +83,7 @@ const introSlides = [
 const DEFAULT_MISSION_TEXT = 'Organizacijos paskirtis ir vertės kūrimo logika.';
 const DEFAULT_VISION_TEXT = 'Ilgalaikė kryptis ir siekiama pokyčio būsena.';
 const DEFAULT_GUIDE_INTRO_TEXT = [
-  'digistrategija.lt sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.',
+  'digistrategy.eu sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.',
   'Sistema susideda iš 2 pagrindinių dalių:',
   '1. Kortelių valdymo modulio (Gairės ir Iniciatyvos) - čia jūsų kolegos gali komentuoti, siūlyti įvairias strategijos kryptis, balsuoti už vieni kitų teiktus pasiūlymus.',
   '2. Strategijų žemėlapis - patogus vizualinis įrankis peržiūrėti strategijos struktūrą ir ryšius tarp skirtingų jų elementų.',
@@ -95,12 +95,12 @@ const DEFAULT_ABOUT_TEXT = [
   'Vienas iš būdų tai pasiekti - aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:',
   '- Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).\n- Duomenų kokybė ir duomenų valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
   'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi būti suprantamas, įtraukiantis ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.',
-  'Šiame kontekste atsirado www.digistrategija.lt - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
+  'Šiame kontekste atsirado digistrategy.eu - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
   'Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti veikiančius, naudotojams suprantamus įrankius.',
   'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos, kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.'
 ].join('\n\n');
 const DEFAULT_GUIDE_INTRO_TEXT_EN = [
-  'digistrategija.lt is designed to make your institution strategy process practical and collaborative. Build a clear guideline structure and connect concrete initiatives to guideline delivery.',
+  'digistrategy.eu is designed to make your institution strategy process practical and collaborative. Build a clear guideline structure and connect concrete initiatives to guideline delivery.',
   'The platform has 2 core parts:',
   '1. Card management module (Guidelines and Initiatives) where your colleagues can comment, suggest strategic directions, and vote on proposals.',
   '2. Strategy map - a visual tool to review structure and links between different strategy elements.',
@@ -108,7 +108,7 @@ const DEFAULT_GUIDE_INTRO_TEXT_EN = [
 ].join('\n');
 const DEFAULT_ABOUT_TEXT_EN = [
   'Across public institutions, digital transformation is no longer seen as a set of isolated IT projects but as a systemic shift that affects service quality, data governance, and responsible adoption of emerging technologies.',
-  'That is exactly why digistrategija.lt was created: to provide a practical, transparent workspace where strategy priorities can be discussed, structured, and translated into initiatives with clear ownership.',
+  'That is exactly why digistrategy.eu was created: to provide a practical, transparent workspace where strategy priorities can be discussed, structured, and translated into initiatives with clear ownership.',
   'The platform helps teams agree faster on what matters most, while preserving context and traceability for long-term institutional continuity.'
 ].join('\n\n');
 
@@ -123,7 +123,7 @@ const ADMIN_CACHE_BUST_PARAM = 't';
 const EMBED_QUERY_KEY = 'embed';
 const EMBED_MAP_VALUE = 'map';
 const EMBED_MAP_PATH_PREFIX = '/embed/strategy-map';
-const EMBED_BRAND_LINK = 'https://www.digistrategija.lt';
+const EMBED_BRAND_LINK = 'https://digistrategy.eu';
 const STEP_ADD_SECTION_IDS = Object.freeze({
   guidelines: 'guidelineAddSection',
   initiatives: 'initiativeAddSection'
@@ -1156,7 +1156,7 @@ function renderIntroDeck() {
               <span class="structure-arrow" aria-hidden="true">→</span>
               <section class="structure-layer-group" role="group" aria-label="Platformos dalis">
                 <div class="structure-layer-group-head">
-                  <span class="structure-group-badge">Platformos apimtis: www.digistrategija.lt</span>
+                  <span class="structure-group-badge">Platformos apimtis: digistrategy.eu</span>
                 </div>
                 <div class="structure-layer-grid">
                   <article class="structure-step structure-step-layer" role="listitem">

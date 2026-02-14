@@ -20,8 +20,8 @@ app.use(helmet({
 
 const PORT = process.env.PORT || 3000;
 const CORS_ORIGINS = String(process.env.CORS_ORIGINS || [
-  'https://www.digistrategija.lt',
-  'https://digistrategija.lt',
+  'https://digistrategy.eu',
+  'https://www.digistrategy.eu',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://localhost:5173',

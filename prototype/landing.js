@@ -17,13 +17,13 @@
     'Vienas iš būdų tai pasiekti - aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:',
     '- Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).\n- Duomenų kokybė ir duomenų valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
     'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi būti suprantamas, įtraukiantis ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.',
-    'Šiame kontekste atsirado www.digistrategija.lt - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
+    'Šiame kontekste atsirado digistrategy.eu - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
     'Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti veikiančius, naudotojams suprantamus įrankius.',
     'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos, kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.'
   ].join('\n\n');
   const DEFAULT_ABOUT_TEXT_EN = [
     'Across public institutions, digital transformation is no longer seen as a set of isolated IT projects but as a systemic shift that affects service quality, data governance, and responsible adoption of emerging technologies.',
-    'That is exactly why digistrategija.lt was created: to provide a practical, transparent workspace where strategy priorities can be discussed, structured, and translated into initiatives with clear ownership.',
+    'That is exactly why digistrategy.eu was created: to provide a practical, transparent workspace where strategy priorities can be discussed, structured, and translated into initiatives with clear ownership.',
     'The platform helps teams agree faster on what matters most, while preserving context and traceability for long-term institutional continuity.'
   ].join('\n\n');
   let currentLang = DEFAULT_LANG;
@@ -40,8 +40,8 @@
 
   const BASE_TRANSLATIONS = {
     lt: {
-      metaTitle: 'digistrategija.lt | Viešojo sektoriaus strategijų platforma',
-      metaDescription: 'digistrategija.lt padeda institucijoms kartu kurti strategijas, susieti iniciatyvas ir skaidriai viešinti pažangą.',
+      metaTitle: 'digistrategy.eu | Viešojo sektoriaus strategijų platforma',
+      metaDescription: 'digistrategy.eu padeda institucijoms kartu kurti strategijas, susieti iniciatyvas ir skaidriai viešinti pažangą.',
       navHow: 'Kaip veikia',
       navWhy: 'Kodėl išsiskiria',
       navTrust: 'Patikimumas',
@@ -140,12 +140,12 @@
       finalTitle: 'Atverkite aktyvų strategijos žemėlapį dabar.',
       finalCopy: 'Aplankykite viešą strategijos erdvę ir pamatykite, kaip susijungia gairės bei iniciatyvos.',
       finalCta: 'Peržiūrėti aktyvias strategijas',
-      footerCopy: 'digistrategija.lt - strateginio bendradarbiavimo platforma viešojo sektoriaus institucijoms.',
+      footerCopy: 'digistrategy.eu - strateginio bendradarbiavimo platforma viešojo sektoriaus institucijoms.',
       footerAccessLead: 'Norėdami gauti prieigą, susisiekite LinkedIn:'
     },
     en: {
-      metaTitle: 'digistrategija.lt | Public Strategy OS',
-      metaDescription: 'digistrategija.lt helps institutions co-create strategy, map initiatives, and publish transparent progress.',
+      metaTitle: 'digistrategy.eu | Public Strategy OS',
+      metaDescription: 'digistrategy.eu helps institutions co-create strategy, map initiatives, and publish transparent progress.',
       navHow: 'How it works',
       navWhy: 'Why it stands out',
       navTrust: 'Trust',
@@ -244,7 +244,7 @@
       finalTitle: 'Explore an active strategy map now.',
       finalCopy: 'Open current public strategy workspace and review how guidelines and initiatives connect.',
       finalCta: 'View Active Strategies',
-      footerCopy: 'digistrategija.lt - Strategy collaboration platform for public institutions.',
+      footerCopy: 'digistrategy.eu - Strategy collaboration platform for public institutions.',
       footerAccessLead: 'To request access, contact on LinkedIn:'
     }
   };

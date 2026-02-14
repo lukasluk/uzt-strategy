@@ -746,7 +746,7 @@ function renderMapView() {
     ? `
       <p class="embed-map-branding-note">
         <a href="${escapeHtml(EMBED_BRAND_LINK)}" target="_blank" rel="noopener noreferrer">
-          Strategijų žemėlapis by digistrategija.lt
+          Strategijų žemėlapis by digistrategy.eu
         </a>
       </p>
     `
