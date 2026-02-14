@@ -55,20 +55,6 @@
         <div class="hero-actions">
           <a class="btn btn-primary" data-active-strategy-link data-i18n="heroPrimaryCta" href="index.html?view=map">View Active Strategies</a>
         </div>
-        <div class="hero-metrics" id="heroMetrics">
-          <article>
-            <span class="metric-value" id="metricInstitutions">--</span>
-            <span class="metric-label" data-i18n="metricInstitutionsLabel">Aktyvios institucijos</span>
-          </article>
-          <article>
-            <span class="metric-value" id="metricGuidelines">--</span>
-            <span class="metric-label" data-i18n="metricGuidelinesLabel">Aktyvios gaires</span>
-          </article>
-          <article>
-            <span class="metric-value" id="metricInitiatives">--</span>
-            <span class="metric-label" data-i18n="metricInitiativesLabel">Aktyvios iniciatyvos</span>
-          </article>
-        </div>
       </div>
       <div class="hero-visual" aria-hidden="true">
         <div class="hero-art-core">
@@ -87,7 +73,11 @@
           <p data-i18n="glassMainCopy">Gaires, iniciatyvos, atsakomybes ir busena viename interaktyviame zemelapyje.</p>
           <div class="glass-main-summary">
             <article class="glass-main-stat">
-              <span class="glass-main-stat-label" data-i18n="glassStatsGuidelinesLabel">Aktyvios gaires</span>
+              <span class="glass-main-stat-label" data-i18n="glassStatsInstitutionsLabel">Aktyvios institucijos</span>
+              <strong class="glass-main-stat-value" id="glassMetricInstitutions">--</strong>
+            </article>
+            <article class="glass-main-stat">
+              <span class="glass-main-stat-label" data-i18n="glassStatsGuidelinesLabel">Aktyvios gairės</span>
               <strong class="glass-main-stat-value" id="glassMetricGuidelines">--</strong>
             </article>
             <article class="glass-main-stat">
@@ -150,7 +140,7 @@
             </svg>
 
             <div class="demo-map-legend">
-              <span class="demo-map-legend-item guideline" data-i18n="demoLegendGuideline">Gaire</span>
+              <span class="demo-map-legend-item guideline" data-i18n="demoLegendGuideline">Gairė</span>
               <span class="demo-map-legend-item initiative" data-i18n="demoLegendInitiative">Iniciatyva</span>
             </div>
 
@@ -161,25 +151,25 @@
             </article>
 
             <article class="demo-node demo-node-guideline demo-node-g1">
-              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
+              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gairė</span>
               <h4 data-i18n="demoGuideline1Title">Klientu patirciu gerinimas</h4>
               <p data-i18n="demoGuideline1Copy">Trumpesnis paslaugu kelias ir aiskesne komunikacija.</p>
             </article>
 
             <article class="demo-node demo-node-guideline demo-node-g2">
-              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
+              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gairė</span>
               <h4 data-i18n="demoGuideline2Title">Duomenu valdysenos stiprinimas</h4>
               <p data-i18n="demoGuideline2Copy">Vieningi standartai ir kokybiski duomenys sprendimams.</p>
             </article>
 
             <article class="demo-node demo-node-guideline demo-node-g3">
-              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
+              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gairė</span>
               <h4 data-i18n="demoGuideline3Title">Skaitmeniniu paslaugu pletra</h4>
               <p data-i18n="demoGuideline3Copy">Didesne savitarna ir greitesni procesai.</p>
             </article>
 
             <article class="demo-node demo-node-guideline demo-node-g4">
-              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gaire</span>
+              <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gairė</span>
               <h4 data-i18n="demoGuideline4Title">Kompetenciju ugdymas</h4>
               <p data-i18n="demoGuideline4Copy">Komandu pasirengimas dirbti su naujais irankiais.</p>
             </article>
@@ -295,6 +285,14 @@
       </div>
     </section>
 
+    <section class="section-reveal section" id="aboutPlatform">
+      <div class="section-head">
+        <p class="hero-kicker" data-i18n="aboutKicker">Apie platformą</p>
+        <h2 data-i18n="aboutTitle">Kodėl ši platforma sukurta</h2>
+      </div>
+      <div id="landingAboutContent" class="landing-about-content"></div>
+    </section>
+
     <section class="section-reveal section final-cta" id="finalCta">
       <div>
         <p class="hero-kicker" data-i18n="finalKicker">Pasiruose pamatyti gyvai?</p>
@@ -308,7 +306,13 @@
   </main>
 
   <footer class="landing-footer">
-    <p data-i18n="footerCopy">digistrategija.lt - strateginio bendradarbiavimo platforma viesosioms institucijoms.</p>
+    <div class="landing-footer-main">
+      <p data-i18n="footerCopy">digistrategija.lt - strateginio bendradarbiavimo platforma viesosioms institucijoms.</p>
+      <p>
+        <span data-i18n="footerAccessLead">Norėdami gauti prieigą, susisiekite LinkedIn:</span>
+        <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas Lukosevičius</a>.
+      </p>
+    </div>
   </footer>
 
   <script src="landing.js"></script>

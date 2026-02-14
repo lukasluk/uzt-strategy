@@ -1,10 +1,9 @@
 (function () {
   const activeStrategyLinks = Array.from(document.querySelectorAll('[data-active-strategy-link]'));
-  const metricInstitutions = document.getElementById('metricInstitutions');
-  const metricGuidelines = document.getElementById('metricGuidelines');
-  const metricInitiatives = document.getElementById('metricInitiatives');
+  const glassMetricInstitutions = document.getElementById('glassMetricInstitutions');
   const glassMetricGuidelines = document.getElementById('glassMetricGuidelines');
   const glassMetricInitiatives = document.getElementById('glassMetricInitiatives');
+  const landingAboutContent = document.getElementById('landingAboutContent');
   const navLinks = Array.from(document.querySelectorAll('[data-scroll-link]'));
   const languageSelect = document.getElementById('landingLangSelect');
   const metaDescription = document.getElementById('landingMetaDescription');
@@ -12,8 +11,24 @@
   const SUPPORTED_LANGS = ['lt', 'en'];
   const DEFAULT_LANG = 'lt';
   const STORAGE_LANG_KEY = 'landing_lang';
+  const DEFAULT_ABOUT_TEXT_LT = [
+    'Lietuvos viešajame sektoriuje skaitmenizacija vis dažniau suvokiama ne kaip pavienių IT projektų rinkinys, o kaip sisteminis pokytis, apimantis paslaugų kokybę, duomenų valdymą ir naujų technologijų taikymą. Todėl vis didesnę reikšmę įgyja ne tik technologiniai sprendimai, bet ir aiškios, įgyvendinamos skaitmenizacijos strategijos (arba IT plėtros planai).',
+    'Praktika rodo, kad tradiciniai, didelės apimties strateginiai dokumentai dažnai tampa sunkiai pritaikomi greitai besikeičiančioje aplinkoje. Dėl to vis daugiau dėmesio skiriama lanksčioms, įtraukioms ir duomenimis grįstoms strategijų formavimo praktikoms, kurios leidžia greičiau susitarti dėl prioritetų ir krypties.',
+    'Vienas iš būdų tai pasiekti - aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:',
+    '- Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).\n- Duomenų kokybė ir duomenų valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
+    'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi būti suprantamas, įtraukiantis ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.',
+    'Šiame kontekste atsirado www.digistrategija.lt - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
+    'Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti veikiančius, naudotojams suprantamus įrankius.',
+    'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos, kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.'
+  ].join('\n\n');
+  const DEFAULT_ABOUT_TEXT_EN = [
+    'Across public institutions, digital transformation is no longer seen as a set of isolated IT projects but as a systemic shift that affects service quality, data governance, and responsible adoption of emerging technologies.',
+    'That is exactly why digistrategija.lt was created: to provide a practical, transparent workspace where strategy priorities can be discussed, structured, and translated into initiatives with clear ownership.',
+    'The platform helps teams agree faster on what matters most, while preserving context and traceability for long-term institutional continuity.'
+  ].join('\n\n');
   let currentLang = DEFAULT_LANG;
   let preferredStrategySlug = 'uzt';
+  let adminAboutText = '';
 
   const adminLandingTranslations = {
     lt: {},
@@ -22,104 +37,108 @@
 
   const BASE_TRANSLATIONS = {
     lt: {
-      metaTitle: 'digistrategija.lt | Viesojo sektoriaus strategiju platforma',
-      metaDescription: 'digistrategija.lt padeda institucijoms kartu kurti strategijas, susieti iniciatyvas ir viesinti pazanga.',
-      navHow: 'Kaip tai veikia',
-      navWhy: 'Kuo issiskiria',
-      navTrust: 'Pasitikejimas',
-      navLaunch: 'Pradeti',
+      metaTitle: 'digistrategija.lt | Viešojo sektoriaus strategijų platforma',
+      metaDescription: 'digistrategija.lt padeda institucijoms kartu kurti strategijas, susieti iniciatyvas ir skaidriai viešinti pažangą.',
+      navHow: 'Kaip veikia',
+      navWhy: 'Kodėl išsiskiria',
+      navTrust: 'Patikimumas',
+      navLaunch: 'Pradėti',
       langLabel: 'Kalba',
-      headerCta: 'Perziureti aktyvias strategijas',
-      heroKicker: 'Public Strategy OS',
-      heroTitle: 'Nuo ideju iki audituojamo igyvendinimo modernioms viesosioms institucijoms.',
-      heroCopy: 'Kurkite gairiu strukturas, susiekite iniciatyvas, itraukite komandas i skaidru balsavima ir publikuokite strategiju zemelapius, kuriuos supranta visa bendruomene.',
-      heroPrimaryCta: 'Perziureti aktyvias strategijas',
+      headerCta: 'Peržiūrėti aktyvias strategijas',
+      heroKicker: 'Strategijų platforma viešajam sektoriui',
+      heroTitle: 'Nuo idėjų iki audituojamo įgyvendinimo šiuolaikinėms viešojo sektoriaus institucijoms.',
+      heroCopy: 'Kurkite gairių struktūras, susiekite iniciatyvas, įtraukite komandas į skaidrų balsavimą ir publikuokite strategijų žemėlapius, kuriuos supranta visa bendruomenė.',
+      heroPrimaryCta: 'Peržiūrėti aktyvias strategijas',
       metricInstitutionsLabel: 'Aktyvios institucijos',
-      metricGuidelinesLabel: 'Aktyvios gaires',
+      metricGuidelinesLabel: 'Aktyvios gairės',
       metricInitiativesLabel: 'Aktyvios iniciatyvos',
       glassInstitutionLabel: 'Institucija',
       glassMainTitle: 'Skaitmenizacijos strategijos ciklas',
-      glassMainCopy: 'Gaires, iniciatyvos, atsakomybes ir busena viename interaktyviame zemelapyje.',
-      glassStatsGuidelinesLabel: 'Aktyvios gaires',
+      glassMainCopy: 'Gairės, iniciatyvos, atsakomybės ir būsenos viename interaktyviame žemėlapyje.',
+      glassStatsInstitutionsLabel: 'Aktyvios institucijos',
+      glassStatsGuidelinesLabel: 'Aktyvios gairės',
       glassStatsInitiativesLabel: 'Aktyvios iniciatyvos',
-      glassOutcomeLabel: 'Rezultato kontraktas',
-      glassOutcomeTitle: 'Tikslas + terminas + irodymas',
+      glassOutcomeLabel: 'Rezultatų kontraktas',
+      glassOutcomeTitle: 'Tikslas + terminas + įrodymai',
       glassAuditLabel: 'Audituojamumas',
-      glassAuditTitle: 'Sprendimu istorija matoma nuo pradzios iki pabaigos',
+      glassAuditTitle: 'Sprendimų istorija matoma nuo pradžios iki pabaigos',
       demoMapKicker: 'Interaktyvus pavyzdys',
-      demoMapTitle: 'Strategiju zemelapio mini demonstracija',
-      demoMapCopy: 'Supaprastintas pavyzdys parodo, kaip institucijos strategija susiejama su pagrindinemis gairemis ir igyvendinanciomis iniciatyvomis.',
-      demoLegendGuideline: 'Gaire',
+      demoMapTitle: 'Strategijų žemėlapio mini demonstracija',
+      demoMapCopy: 'Šis supaprastintas pavyzdys parodo, kaip institucijos strategija susiejama su pagrindinėmis gairėmis ir jas įgyvendinančiomis iniciatyvomis.',
+      demoLegendGuideline: 'Gairė',
       demoLegendInitiative: 'Iniciatyva',
       demoInstitutionKind: 'Institucija',
       demoInstitutionTitle: 'Skaitmenizacijos strategijos ciklas',
-      demoInstitutionCopy: 'Bendras tikslas ir prioritetu kryptis visai organizacijai.',
-      demoGuidelineKind: 'Gaire',
-      demoGuideline1Title: 'Klientu patirciu gerinimas',
-      demoGuideline1Copy: 'Trumpesnis paslaugu kelias ir aiskesne komunikacija.',
-      demoGuideline2Title: 'Duomenu valdysenos stiprinimas',
-      demoGuideline2Copy: 'Vieningi standartai ir kokybiski duomenys sprendimams.',
-      demoGuideline3Title: 'Skaitmeniniu paslaugu pletra',
-      demoGuideline3Copy: 'Didesne savitarna ir greitesni procesai.',
-      demoGuideline4Title: 'Kompetenciju ugdymas',
-      demoGuideline4Copy: 'Komandu pasirengimas dirbti su naujais irankiais.',
+      demoInstitutionCopy: 'Bendra kryptis ir prioritetai visai organizacijai.',
+      demoGuidelineKind: 'Gairė',
+      demoGuideline1Title: 'Klientų patirčių gerinimas',
+      demoGuideline1Copy: 'Trumpesnis paslaugų kelias ir aiškesnė komunikacija.',
+      demoGuideline2Title: 'Duomenų valdysenos stiprinimas',
+      demoGuideline2Copy: 'Vieningi standartai ir kokybiški duomenys sprendimams.',
+      demoGuideline3Title: 'Skaitmeninių paslaugų plėtra',
+      demoGuideline3Copy: 'Daugiau savitarnos galimybių ir greitesni procesai.',
+      demoGuideline4Title: 'Kompetencijų ugdymas',
+      demoGuideline4Copy: 'Komandų pasirengimas dirbti su naujais įrankiais.',
       demoInitiativeKind: 'Iniciatyva',
       demoInitiative1Title: 'Vieningas registracijos kelias',
-      demoInitiative1Copy: 'Vienas langas gyventojo uzklausoms ir aptarnavimui.',
+      demoInitiative1Copy: 'Vienas langas gyventojų užklausoms ir aptarnavimui.',
       demoInitiative2Title: 'Savitarnos modernizavimas',
-      demoInitiative2Copy: 'Atsinaujinusi naudotojo patirtis pagrindiniuose servisuose.',
+      demoInitiative2Copy: 'Atnaujinta naudotojų patirtis pagrindinėse paslaugose.',
       demoInitiative3Title: 'Analitikos platforma',
-      demoInitiative3Copy: 'Sprendimai gristi duomenimis, stebint poveikio rodiklius.',
+      demoInitiative3Copy: 'Duomenimis grįsti sprendimai, nuolat stebint poveikio rodiklius.',
       backboneKicker: 'Europos skaitmeninis valdymas',
-      backboneTitle: 'Patikimas pagrindas instituciju strategiju igyvendinimui.',
+      backboneTitle: 'Patikimas pagrindas institucijų strategijų įgyvendinimui.',
       backboneJokeQuestion: 'Sukurta Europoje Europai?',
-      backboneMetric1Title: 'Multi-tenant',
-      backboneMetric1Copy: 'Viena platforma, daug instituciju su rolemis atskirtu valdymu.',
-      backboneMetric2Title: 'Audit trail',
-      backboneMetric2Copy: 'Sprendimu kontekstas islieka matomas per visa strategijos cikla.',
-      backboneMetric3Title: 'Public-ready',
-      backboneMetric3Copy: 'View-only embed leidzia viesinti skaidriai ir islaikyti valdymo kontrole.',
-      uspKicker: 'Isskirtine verte',
-      uspTitle: 'Kuo tai daugiau nei planavimo lenta',
-      feature1Title: 'Atskaitomybes laiko juosta',
-      feature1Copy: 'Kiekvienas strateginis pakeitimas atsekamas: kas, kada ir kodel pakeite.',
+      backboneMetric1Title: 'Daugiainstitucė architektūra',
+      backboneMetric1Copy: 'Viena platforma daugeliui institucijų su aiškiai atskirtu valdymu pagal roles.',
+      backboneMetric2Title: 'Audito pėdsakas',
+      backboneMetric2Copy: 'Sprendimų kontekstas išlieka matomas per visą strategijos ciklą.',
+      backboneMetric3Title: 'Parengta viešinimui',
+      backboneMetric3Copy: 'View-only įterpimas leidžia skaidriai viešinti strategiją ir išlaikyti valdymo kontrolę.',
+      uspKicker: 'Išskirtinė vertė',
+      uspTitle: 'Kodėl tai daugiau nei planavimo lenta',
+      feature1Title: 'Atskaitomybės laiko juosta',
+      feature1Copy: 'Kiekvienas strateginis pakeitimas yra atsekamas: kas, kada ir kodėl jį atliko.',
       feature1Item1: 'Nekintama veiklos istorija',
-      feature1Item2: 'Aiskus atsakomybiu perdavimas',
-      feature1Item3: 'Greitesnes valdymo perziuros',
-      feature2Title: 'Rezultatu kontraktai',
-      feature2Copy: 'Paverskite kiekviena iniciatyva pamatuojamu isipareigojimu su baze, tikslu ir terminu.',
-      feature2Item1: 'Maziau abstrakciu igyvendinimo planu',
-      feature2Item2: 'Irodymais gristi busenos atnaujinimai',
+      feature1Item2: 'Aiškus atsakomybių perdavimas',
+      feature1Item3: 'Greitesnės valdymo peržiūros',
+      feature2Title: 'Rezultatų kontraktai',
+      feature2Copy: 'Kiekvieną iniciatyvą paverskite pamatuojamu įsipareigojimu su baze, tikslu ir terminu.',
+      feature2Item1: 'Mažiau abstrakčių įgyvendinimo planų',
+      feature2Item2: 'Įrodymais grįsti būsenos atnaujinimai',
       feature2Item3: 'Prioritetai susieti su poveikiu',
-      feature3Title: 'Vieso pasitikejimo dashboard',
-      feature3Copy: 'Integruokite strategijos zemelapi view-only rezimu i institucijos svetaine ar intraneta.',
-      feature3Item1: 'Atskiri embed linkai pagal institucija',
-      feature3Item2: 'Naudojimo stebesena admin aplinkoje',
-      feature3Item3: 'Nuoseklus branding ir skaidrumas',
+      feature3Title: 'Viešo pasitikėjimo skydelis',
+      feature3Copy: 'Integruokite strategijos žemėlapį view-only režimu į institucijos svetainę ar intranetą.',
+      feature3Item1: 'Atskiri embed URL pagal instituciją',
+      feature3Item2: 'Naudojimo stebėsena administravimo aplinkoje',
+      feature3Item3: 'Nuoseklus prekės ženklas ir skaidrumas',
       flowKicker: 'Eiga',
       flowTitle: 'Kaip institucijos vykdo strategijos ciklus',
-      flow1Title: 'Pakvieskite komandas pagal role',
+      flow1Title: 'Pakvieskite komandas pagal roles',
       flow1Copy: 'Meta admin sukuria vienkartines pakvietimo nuorodas ir priskiria narystes pagal institucijas.',
-      flow2Title: 'Suformuokite gairiu struktura',
-      flow2Copy: 'Dalyviai siulo, diskutuoja, balsuoja ir tobulina strategines kryptis kartu.',
-      flow3Title: 'Susiekite iniciatyvas su gairemis',
-      flow3Copy: 'Strategiju zemelapis parodo priklausomybes ir iskart isryskina nepriskirtus prioritetus.',
-      flow4Title: 'Publikuokite ir stebekite',
-      flow4Copy: 'Skelbkite view-only zemelapius viesai, o administratoriai stebi apkrova ir panaudojimo rodiklius.',
-      trustKicker: 'Pasitikejimas pagal dizaina',
-      trustTitle: 'Sukurta instituciniam valdymui, ne triuksmui',
-      trustCopy: 'Platforma kurta atsakingam bendradarbiavimui: aiskios roles, istorijos issaugojimas, kontroliuojamas viesumas ir konfiguruojami saugumo saugikliai.',
-      trust1Title: 'Bendradarbystes dirbtuviu modelis',
-      trust1Copy: 'Dalyviai komentuoja, prioritetizuoja ir kuria gaires per strukturuotus, skaidrius procesus.',
-      trust2Title: 'Institucine atmintis pagal dizaina',
-      trust2Copy: 'Archyvuoti vartotojai ir istoriniu sprendimu pedsakai padeda islaikyti testinuma tarp ciklu.',
+      flow2Title: 'Suformuokite gairių struktūrą',
+      flow2Copy: 'Dalyviai siūlo, diskutuoja, balsuoja ir kartu tobulina strategines kryptis.',
+      flow3Title: 'Susiekite iniciatyvas su gairėmis',
+      flow3Copy: 'Strategijų žemėlapis parodo priklausomybes ir iškart išryškina nepriskirtus prioritetus.',
+      flow4Title: 'Publikuokite ir stebėkite',
+      flow4Copy: 'Skelbkite view-only žemėlapius viešai, o administratoriai stebi apkrovą ir panaudojimo rodiklius.',
+      trustKicker: 'Patikimumas pagal dizainą',
+      trustTitle: 'Sukurta instituciniam valdymui, ne triukšmui',
+      trustCopy: 'Platforma kurta atsakingam bendradarbiavimui: aiškios rolės, istorijos išsaugojimas, kontroliuojamas viešumas ir konfigūruojami saugumo saugikliai.',
+      trust1Title: 'Bendradarbystės dirbtuvių modelis',
+      trust1Copy: 'Dalyviai komentuoja, prioritetizuoja ir kuria gaires per struktūruotus, skaidrius procesus.',
+      trust2Title: 'Institucinė atmintis pagal dizainą',
+      trust2Copy: 'Archyvuoti vartotojai ir istorinių sprendimų pėdsakai padeda išlaikyti tęstinumą tarp ciklų.',
       trust3Title: 'Operacinis matomumas',
-      trust3Copy: 'Rate limitai ir uzklausu stebesena padeda apsaugoti infrastruktura esant didelei apkrovai.',
-      finalKicker: 'Pasiruose pamatyti gyvai?',
-      finalTitle: 'Atverkite aktyvu strategijos zemelapi dabar.',
-      finalCopy: 'Aplankykite viesa strategijos erdve ir pamatykite, kaip susijungia gaires bei iniciatyvos.',
-      finalCta: 'Perziureti aktyvias strategijas',
-      footerCopy: 'digistrategija.lt - strateginio bendradarbiavimo platforma viesosioms institucijoms.'
+      trust3Copy: 'Užklausų limitai ir stebėsena padeda apsaugoti infrastruktūrą esant didelei apkrovai.',
+      aboutKicker: 'Apie platformą',
+      aboutTitle: 'Kodėl ši platforma sukurta',
+      finalKicker: 'Pasiruošę pamatyti gyvai?',
+      finalTitle: 'Atverkite aktyvų strategijos žemėlapį dabar.',
+      finalCopy: 'Aplankykite viešą strategijos erdvę ir pamatykite, kaip susijungia gairės bei iniciatyvos.',
+      finalCta: 'Peržiūrėti aktyvias strategijas',
+      footerCopy: 'digistrategija.lt - strateginio bendradarbiavimo platforma viešojo sektoriaus institucijoms.',
+      footerAccessLead: 'Norėdami gauti prieigą, susisiekite LinkedIn:'
     },
     en: {
       metaTitle: 'digistrategija.lt | Public Strategy OS',
@@ -140,6 +159,7 @@
       glassInstitutionLabel: 'Institution',
       glassMainTitle: 'Digital Strategy Cycle',
       glassMainCopy: 'Guidelines, initiatives, ownership and status in one interactive map.',
+      glassStatsInstitutionsLabel: 'Active Institutions',
       glassStatsGuidelinesLabel: 'Active Guidelines',
       glassStatsInitiativesLabel: 'Active Initiatives',
       glassOutcomeLabel: 'Outcome contract',
@@ -215,11 +235,14 @@
       trust2Copy: 'Archived users and historical decisions preserve continuity between strategy cycles.',
       trust3Title: 'Operational visibility',
       trust3Copy: 'Rate limiting and request monitoring help protect infrastructure under heavy load.',
+      aboutKicker: 'About the Platform',
+      aboutTitle: 'Why this platform exists',
       finalKicker: 'Ready to see it live?',
       finalTitle: 'Explore an active strategy map now.',
       finalCopy: 'Open current public strategy workspace and review how guidelines and initiatives connect.',
       finalCta: 'View Active Strategies',
-      footerCopy: 'digistrategija.lt - Strategy collaboration platform for public institutions.'
+      footerCopy: 'digistrategija.lt - Strategy collaboration platform for public institutions.',
+      footerAccessLead: 'To request access, contact on LinkedIn:'
     }
   };
 
@@ -277,6 +300,7 @@
       if (typeof translated !== 'string' || !translated.trim()) return;
       element.textContent = translated;
     });
+    renderAboutSection();
   }
 
   function setActiveStrategyHref(slug) {
@@ -296,11 +320,48 @@
     element.textContent = Number.isFinite(value) ? String(value) : '--';
   }
 
+  function applyInstitutionCount(value) {
+    setMetricValue(glassMetricInstitutions, value);
+  }
+
   function applyActiveContentCounts({ totalGuidelines, totalInitiatives }) {
-    setMetricValue(metricGuidelines, totalGuidelines);
-    setMetricValue(metricInitiatives, totalInitiatives);
     setMetricValue(glassMetricGuidelines, totalGuidelines);
     setMetricValue(glassMetricInitiatives, totalInitiatives);
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function renderAboutBlocks(text) {
+    const normalized = String(text || '').replace(/\r\n/g, '\n').trim();
+    if (!normalized) return '';
+    const blocks = normalized.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+    return blocks.map((block) => {
+      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+      if (!lines.length) return '';
+      const bulletLines = lines.filter((line) => /^[-*]\s+/.test(line));
+      if (bulletLines.length === lines.length) {
+        return `<article class="landing-about-block"><ul class="landing-about-list">${bulletLines.map((line) => `<li>${escapeHtml(line.replace(/^[-*]\s+/, ''))}</li>`).join('')}</ul></article>`;
+      }
+      return `<article class="landing-about-block"><p>${lines.map((line) => escapeHtml(line)).join('<br />')}</p></article>`;
+    }).join('');
+  }
+
+  function resolveAboutText() {
+    const adminText = String(adminAboutText || '').trim();
+    if (adminText) return adminText;
+    return currentLang === 'en' ? DEFAULT_ABOUT_TEXT_EN : DEFAULT_ABOUT_TEXT_LT;
+  }
+
+  function renderAboutSection() {
+    if (!(landingAboutContent instanceof HTMLElement)) return;
+    landingAboutContent.innerHTML = renderAboutBlocks(resolveAboutText());
   }
 
   function toStrategySummary(payload) {
@@ -377,7 +438,7 @@
       const payload = await response.json();
       const institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
       const active = institutions.filter((item) => String(item?.status || '').toLowerCase() === 'active');
-      if (metricInstitutions) metricInstitutions.textContent = String(active.length || institutions.length || 0);
+      applyInstitutionCount(active.length || institutions.length || 0);
 
       const preferred = active.find((item) => String(item?.slug || '').trim())
         || institutions.find((item) => String(item?.slug || '').trim())
@@ -389,7 +450,7 @@
       else if (preferred?.slug) preferredStrategySlug = String(preferred.slug);
       updateNavigationLinks();
     } catch {
-      if (metricInstitutions) metricInstitutions.textContent = '1+';
+      applyInstitutionCount(null);
       applyActiveContentCounts({ totalGuidelines: null, totalInitiatives: null });
       preferredStrategySlug = 'uzt';
       updateNavigationLinks();
@@ -409,12 +470,15 @@
         : {};
       const ltRaw = settings?.landingTranslationsLt;
       const enRaw = settings?.landingTranslationsEn;
+      adminAboutText = String(settings?.aboutText || '').trim();
       adminLandingTranslations.lt = ltRaw && typeof ltRaw === 'object' && !Array.isArray(ltRaw) ? ltRaw : {};
       adminLandingTranslations.en = enRaw && typeof enRaw === 'object' && !Array.isArray(enRaw) ? enRaw : {};
       applyTranslations();
     } catch {
+      adminAboutText = '';
       adminLandingTranslations.lt = {};
       adminLandingTranslations.en = {};
+      renderAboutSection();
     }
   }
 
