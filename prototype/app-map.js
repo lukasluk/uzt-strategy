@@ -14,6 +14,9 @@ function estimateInitiativeNodeHeight(totalScore) {
 }
 
 const PARENT_GUIDELINE_SCALE = 1.2;
+const MAP_WORLD_PAD = 320;
+const MAP_NODE_MIN_RENDER_X = -3000;
+const MAP_NODE_MIN_RENDER_Y = -3000;
 
 function resolveAutoSide(fromNode, toNode) {
   const fromCenterX = fromNode.x + fromNode.w / 2;
@@ -277,17 +280,31 @@ function layoutStrategyMap() {
     });
   }
 
+  const minLeft = nodes.reduce((acc, node) => Math.min(acc, node.x), Infinity);
+  const minTop = nodes.reduce((acc, node) => Math.min(acc, node.y), Infinity);
   const maxRight = nodes.reduce((acc, node) => Math.max(acc, node.x + node.w), -Infinity);
   const maxBottom = nodes.reduce((acc, node) => Math.max(acc, node.y + node.h), -Infinity);
-  const pad = 320;
-  const rawWidth = Number.isFinite(maxRight)
-    ? maxRight + pad
+
+  const shiftX = Number.isFinite(minLeft) && minLeft < MAP_WORLD_PAD
+    ? MAP_WORLD_PAD - minLeft
+    : 0;
+  const shiftY = Number.isFinite(minTop) && minTop < MAP_WORLD_PAD
+    ? MAP_WORLD_PAD - minTop
+    : 0;
+  nodes.forEach((node) => {
+    node.x += shiftX;
+    node.y += shiftY;
+  });
+
+  const rawWidth = Number.isFinite(maxRight) && Number.isFinite(minLeft)
+    ? (maxRight - minLeft) + MAP_WORLD_PAD * 2
     : 1800;
-  const rawHeight = Number.isFinite(maxBottom)
-    ? maxBottom + pad
+  const rawHeight = Number.isFinite(maxBottom) && Number.isFinite(minTop)
+    ? (maxBottom - minTop) + MAP_WORLD_PAD * 2
     : 920;
   const width = Math.max(1800, rawWidth);
   const height = Math.max(920, rawHeight);
+  state.mapRenderShift = { x: shiftX, y: shiftY };
   return {
     nodes,
     guidelineEdges,
@@ -481,9 +498,12 @@ async function persistMapNodePosition(nodeElement) {
 
   const kind = String(nodeElement.dataset.kind || '').trim();
   const entityId = String(nodeElement.dataset.entityId || '').trim();
-  const x = Number(nodeElement.dataset.x);
-  const y = Number(nodeElement.dataset.y);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  const renderedX = Number(nodeElement.dataset.x);
+  const renderedY = Number(nodeElement.dataset.y);
+  if (!Number.isFinite(renderedX) || !Number.isFinite(renderedY)) return;
+  const shift = state.mapRenderShift || { x: 0, y: 0 };
+  const x = Math.round(renderedX - Number(shift.x || 0));
+  const y = Math.round(renderedY - Number(shift.y || 0));
 
   const selectedSlug = normalizeSlug(state.institutionSlug);
   const institutions = Array.isArray(state.mapData?.institutions) ? state.mapData.institutions : [];
@@ -492,13 +512,13 @@ async function persistMapNodePosition(nodeElement) {
 
   if (kind === 'institution') {
     if (institution.cycle) {
-      institution.cycle.mapX = Math.round(x);
-      institution.cycle.mapY = Math.round(y);
+      institution.cycle.mapX = x;
+      institution.cycle.mapY = y;
     }
     await api(`/api/v1/admin/cycles/${encodeURIComponent(cycleId)}/map-layout`, {
       method: 'PUT',
       body: {
-        institutionPosition: { x: Math.round(x), y: Math.round(y) }
+        institutionPosition: { x, y }
       }
     });
     return;
@@ -509,13 +529,13 @@ async function persistMapNodePosition(nodeElement) {
       ? institution.guidelines.find((item) => item.id === entityId)
       : null;
     if (guideline) {
-      guideline.mapX = Math.round(x);
-      guideline.mapY = Math.round(y);
+      guideline.mapX = x;
+      guideline.mapY = y;
     }
     await api(`/api/v1/admin/cycles/${encodeURIComponent(cycleId)}/map-layout`, {
       method: 'PUT',
       body: {
-        guidelinePositions: [{ guidelineId: entityId, x: Math.round(x), y: Math.round(y) }]
+        guidelinePositions: [{ guidelineId: entityId, x, y }]
       }
     });
     return;
@@ -526,13 +546,13 @@ async function persistMapNodePosition(nodeElement) {
       ? institution.initiatives.find((item) => item.id === entityId)
       : null;
     if (initiative) {
-      initiative.mapX = Math.round(x);
-      initiative.mapY = Math.round(y);
+      initiative.mapX = x;
+      initiative.mapY = y;
     }
     await api(`/api/v1/admin/cycles/${encodeURIComponent(cycleId)}/map-layout`, {
       method: 'PUT',
       body: {
-        initiativePositions: [{ initiativeId: entityId, x: Math.round(x), y: Math.round(y) }]
+        initiativePositions: [{ initiativeId: entityId, x, y }]
       }
     });
   }
@@ -567,8 +587,8 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (draggedNode) {
       const dx = (event.clientX - dragStartX) / state.mapTransform.scale;
       const dy = (event.clientY - dragStartY) / state.mapTransform.scale;
-      const nextX = Math.max(24, Math.round(nodeOriginX + dx));
-      const nextY = Math.max(24, Math.round(nodeOriginY + dy));
+      const nextX = Math.max(MAP_NODE_MIN_RENDER_X, Math.round(nodeOriginX + dx));
+      const nextY = Math.max(MAP_NODE_MIN_RENDER_Y, Math.round(nodeOriginY + dy));
       draggedNode.dataset.x = String(nextX);
       draggedNode.dataset.y = String(nextY);
       draggedNode.style.left = `${nextX}px`;
