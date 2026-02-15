@@ -347,6 +347,9 @@ function registerAuthRoutes({
       [req.auth.institutionId, req.auth.sub]
     );
     if (membership.rowCount === 0) return res.status(403).json({ error: 'membership not found' });
+    if (String(membership.rows[0].status || '').trim() !== 'active') {
+      return res.status(403).json({ error: 'membership inactive' });
+    }
 
     res.json({
       user: {

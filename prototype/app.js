@@ -745,33 +745,52 @@ async function loadStrategyMap() {
 }
 
 async function loadMemberContext() {
-  const context = await api('/api/v1/me/context');
+  let context = await api('/api/v1/me/context');
   if (!context?.institution?.slug) throw new Error('Nepavyko gauti naudotojo konteksto.');
+
+  const selectedSlug = normalizeSlug(state.institutionSlug);
+  const currentContextSlug = normalizeSlug(context.institution.slug);
+
+  if (selectedSlug && currentContextSlug !== selectedSlug && !state.embedMapMode) {
+    try {
+      await switchInstitutionSession(selectedSlug);
+      context = await api('/api/v1/me/context');
+    } catch {
+      state.accountContext = context;
+      state.role = context.membership?.role || state.role || 'member';
+      state.user = state.user || context.user || null;
+      state.context = null;
+      state.userVotes = {};
+      persistAuthToStorage();
+      return;
+    }
+  }
+
   state.accountContext = context;
   state.role = context.membership?.role || state.role || 'member';
   state.user = state.user || context.user || null;
   persistAuthToStorage();
 
-  if (context.institution.slug === state.institutionSlug) {
-    state.context = context;
-    if (context.cycle?.id) {
-      const votesPayload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycle.id)}/my-votes`);
-      const nextVotes = {};
-      (votesPayload.guidelineVotes || votesPayload.votes || []).forEach((vote) => {
-        nextVotes[vote.guidelineId] = Number(vote.score || 0);
-      });
-      (votesPayload.initiativeVotes || []).forEach((vote) => {
-        nextVotes[vote.initiativeId] = Number(vote.score || 0);
-      });
-      state.userVotes = nextVotes;
-    } else {
-      state.userVotes = {};
-    }
+  if (normalizeSlug(context.institution?.slug) !== selectedSlug) {
+    state.context = null;
+    state.userVotes = {};
     return;
   }
 
-  state.context = null;
-  state.userVotes = {};
+  state.context = context;
+  if (context.cycle?.id) {
+    const votesPayload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycle.id)}/my-votes`);
+    const nextVotes = {};
+    (votesPayload.guidelineVotes || votesPayload.votes || []).forEach((vote) => {
+      nextVotes[vote.guidelineId] = Number(vote.score || 0);
+    });
+    (votesPayload.initiativeVotes || []).forEach((vote) => {
+      nextVotes[vote.initiativeId] = Number(vote.score || 0);
+    });
+    state.userVotes = nextVotes;
+  } else {
+    state.userVotes = {};
+  }
 }
 
 async function switchInstitutionSession(institutionSlug) {
