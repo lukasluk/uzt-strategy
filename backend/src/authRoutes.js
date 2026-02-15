@@ -233,6 +233,57 @@ function registerAuthRoutes({
     });
   });
 
+  app.post('/api/v1/auth/switch-institution', requireAuth, async (req, res) => {
+    const institutionSlug = String(req.body?.institutionSlug || '').trim();
+    if (!institutionSlug) return res.status(400).json({ error: 'institutionSlug required' });
+
+    const institution = await getInstitutionBySlug(query, institutionSlug);
+    if (!institution) return res.status(404).json({ error: 'institution not found' });
+
+    const userRes = await query(
+      'select id, email, display_name, status from platform_users where id = $1',
+      [req.auth.sub]
+    );
+    const user = userRes.rows[0] || null;
+    if (!user || user.status !== 'active') {
+      return res.status(403).json({ error: 'user inactive' });
+    }
+
+    const membershipRes = await query(
+      `select role, status
+       from institution_memberships
+       where institution_id = $1 and user_id = $2`,
+      [institution.id, user.id]
+    );
+    const membership = membershipRes.rows[0] || null;
+    if (!membership || membership.status !== 'active') {
+      return res.status(403).json({ error: 'membership inactive' });
+    }
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      institutionId: institution.id,
+      role: membership.role,
+      exp: Date.now() + authTtlHours * 60 * 60 * 1000
+    };
+
+    res.json({
+      token: createAuthToken(payload, authSecret),
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.display_name
+      },
+      institution: {
+        id: institution.id,
+        slug: institution.slug,
+        name: institution.name
+      },
+      role: membership.role
+    });
+  });
+
   app.get('/api/v1/auth/password-reset/token-info', inviteAcceptRateLimit, async (req, res) => {
     const token = String(req.query?.token || '').trim();
     if (!token) return res.status(400).json({ error: 'reset token required' });

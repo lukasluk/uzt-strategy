@@ -774,6 +774,16 @@ async function loadMemberContext() {
   state.userVotes = {};
 }
 
+async function switchInstitutionSession(institutionSlug) {
+  const nextSlug = normalizeSlug(institutionSlug);
+  if (!nextSlug || !state.token || state.embedMapMode) return;
+  const payload = await api('/api/v1/auth/switch-institution', {
+    method: 'POST',
+    body: { institutionSlug: nextSlug }
+  });
+  if (payload?.token) setSession(payload);
+}
+
 async function bootstrap() {
   state.loading = true;
   state.error = '';
@@ -975,16 +985,29 @@ function bindInstitutionSwitch(container) {
   const select = container.querySelector('#institutionSwitchSelect');
   if (!select) return;
 
-  select.addEventListener('change', () => {
+  select.addEventListener('change', async () => {
     const slug = normalizeSlug(select.value);
     if (slug === normalizeSlug(state.institutionSlug)) return;
+
     state.institutionSlug = slug;
     if (state.activeView === 'admin') {
       state.activeView = 'guidelines';
     }
     state.expandedStepId = '';
     syncRouteState();
-    bootstrap();
+
+    if (isAuthenticated() && !state.embedMapMode) {
+      try {
+        await switchInstitutionSession(slug);
+      } catch (error) {
+        const raw = String(error?.message || '').toLowerCase();
+        if (raw === 'invalid token' || raw === 'unauthorized') {
+          clearSession();
+        }
+      }
+    }
+
+    await bootstrap();
   });
 }
 
