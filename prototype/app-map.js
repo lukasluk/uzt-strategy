@@ -350,6 +350,8 @@ function refreshMapEdges(world) {
 function resetMapInitiativeFocusState() {
   state.mapInitiativeFocusId = '';
   state.mapInitiativeHoverId = '';
+  state.mapGuidelineFocusId = '';
+  state.mapGuidelineHoverId = '';
 }
 
 function applyInitiativeLayerFocusState(viewport, world) {
@@ -363,10 +365,20 @@ function applyInitiativeLayerFocusState(viewport, world) {
 
   viewport.classList.remove('map-initiative-focus-active', 'map-initiative-focus-selected');
   initiativeNodes.forEach((node) => {
-    node.classList.remove('map-initiative-selected', 'map-initiative-hovered', 'map-initiative-dimmed');
+    node.classList.remove(
+      'map-initiative-selected',
+      'map-initiative-hovered',
+      'map-initiative-related',
+      'map-initiative-dimmed'
+    );
   });
   guidelineNodes.forEach((node) => {
-    node.classList.remove('map-guideline-related', 'map-guideline-dimmed');
+    node.classList.remove(
+      'map-guideline-related',
+      'map-guideline-hovered',
+      'map-guideline-selected',
+      'map-guideline-dimmed'
+    );
   });
   if (institutionNode) institutionNode.classList.remove('map-institution-dimmed-strong');
   initiativeEdges.forEach((edge) => edge.classList.remove('map-edge-active'));
@@ -376,56 +388,131 @@ function applyInitiativeLayerFocusState(viewport, world) {
   const initiativeByEntityId = new Map(
     initiativeNodes.map((node) => [String(node.dataset.entityId || '').trim(), node])
   );
+  const guidelineByEntityId = new Map(
+    guidelineNodes.map((node) => [String(node.dataset.entityId || '').trim(), node])
+  );
 
-  let focusEntityId = String(state.mapInitiativeFocusId || '').trim();
-  if (focusEntityId && !initiativeByEntityId.has(focusEntityId)) {
-    focusEntityId = '';
+  let initiativeFocusEntityId = String(state.mapInitiativeFocusId || '').trim();
+  if (initiativeFocusEntityId && !initiativeByEntityId.has(initiativeFocusEntityId)) {
+    initiativeFocusEntityId = '';
     state.mapInitiativeFocusId = '';
   }
 
-  let hoverEntityId = String(state.mapInitiativeHoverId || '').trim();
-  if (hoverEntityId && !initiativeByEntityId.has(hoverEntityId)) {
-    hoverEntityId = '';
+  let initiativeHoverEntityId = String(state.mapInitiativeHoverId || '').trim();
+  if (initiativeHoverEntityId && !initiativeByEntityId.has(initiativeHoverEntityId)) {
+    initiativeHoverEntityId = '';
     state.mapInitiativeHoverId = '';
   }
 
-  const activeEntityId = focusEntityId || hoverEntityId;
-  if (!activeEntityId) return;
+  let guidelineFocusEntityId = String(state.mapGuidelineFocusId || '').trim();
+  if (guidelineFocusEntityId && !guidelineByEntityId.has(guidelineFocusEntityId)) {
+    guidelineFocusEntityId = '';
+    state.mapGuidelineFocusId = '';
+  }
 
-  const activeNode = initiativeByEntityId.get(activeEntityId);
-  if (!activeNode) return;
-  const activeNodeId = String(activeNode.dataset.nodeId || '').trim();
-  if (!activeNodeId) return;
+  let guidelineHoverEntityId = String(state.mapGuidelineHoverId || '').trim();
+  if (guidelineHoverEntityId && !guidelineByEntityId.has(guidelineHoverEntityId)) {
+    guidelineHoverEntityId = '';
+    state.mapGuidelineHoverId = '';
+  }
+
+  let activeKind = '';
+  let activeFocusEntityId = '';
+  let activeHoverEntityId = '';
+  if (initiativeFocusEntityId) {
+    activeKind = 'initiative';
+    activeFocusEntityId = initiativeFocusEntityId;
+  } else if (guidelineFocusEntityId) {
+    activeKind = 'guideline';
+    activeFocusEntityId = guidelineFocusEntityId;
+  } else if (initiativeHoverEntityId) {
+    activeKind = 'initiative';
+    activeHoverEntityId = initiativeHoverEntityId;
+  } else if (guidelineHoverEntityId) {
+    activeKind = 'guideline';
+    activeHoverEntityId = guidelineHoverEntityId;
+  }
+  if (!activeKind) return;
 
   viewport.classList.add('map-initiative-focus-active');
-  if (focusEntityId) viewport.classList.add('map-initiative-focus-selected');
+  if (activeFocusEntityId) viewport.classList.add('map-initiative-focus-selected');
   if (institutionNode) institutionNode.classList.add('map-institution-dimmed-strong');
 
-  const relatedGuidelineNodeIds = new Set();
+  if (activeKind === 'initiative') {
+    const activeEntityId = activeFocusEntityId || activeHoverEntityId;
+    const activeNode = initiativeByEntityId.get(activeEntityId);
+    if (!activeNode) return;
+    const activeNodeId = String(activeNode.dataset.nodeId || '').trim();
+    if (!activeNodeId) return;
+
+    const relatedGuidelineNodeIds = new Set();
+    initiativeEdges.forEach((edge) => {
+      const isActive = String(edge.dataset.from || '').trim() === activeNodeId;
+      edge.classList.toggle('map-edge-active', isActive);
+      if (isActive) {
+        relatedGuidelineNodeIds.add(String(edge.dataset.to || '').trim());
+      }
+    });
+
+    initiativeNodes.forEach((node) => {
+      const nodeId = String(node.dataset.nodeId || '').trim();
+      const isActiveNode = nodeId === activeNodeId;
+      const isSelected = activeFocusEntityId
+        && String(node.dataset.entityId || '').trim() === activeFocusEntityId;
+      const isHovered = !activeFocusEntityId
+        && activeHoverEntityId
+        && String(node.dataset.entityId || '').trim() === activeHoverEntityId;
+
+      node.classList.toggle('map-initiative-selected', Boolean(isSelected));
+      node.classList.toggle('map-initiative-hovered', Boolean(isHovered));
+      node.classList.toggle('map-initiative-related', isActiveNode);
+      node.classList.toggle('map-initiative-dimmed', !isActiveNode);
+    });
+
+    guidelineNodes.forEach((node) => {
+      const nodeId = String(node.dataset.nodeId || '').trim();
+      const isRelated = relatedGuidelineNodeIds.has(nodeId);
+      node.classList.toggle('map-guideline-related', isRelated);
+      node.classList.toggle('map-guideline-dimmed', !isRelated);
+    });
+    return;
+  }
+
+  const activeEntityId = activeFocusEntityId || activeHoverEntityId;
+  const activeGuidelineNode = guidelineByEntityId.get(activeEntityId);
+  if (!activeGuidelineNode) return;
+  const activeGuidelineNodeId = String(activeGuidelineNode.dataset.nodeId || '').trim();
+  if (!activeGuidelineNodeId) return;
+
+  const relatedInitiativeNodeIds = new Set();
   initiativeEdges.forEach((edge) => {
-    const isActive = String(edge.dataset.from || '').trim() === activeNodeId;
-    edge.classList.toggle('map-edge-active', isActive);
-    if (isActive) {
-      relatedGuidelineNodeIds.add(String(edge.dataset.to || '').trim());
+    const isRelated = String(edge.dataset.to || '').trim() === activeGuidelineNodeId;
+    edge.classList.toggle('map-edge-active', isRelated);
+    if (isRelated) {
+      relatedInitiativeNodeIds.add(String(edge.dataset.from || '').trim());
     }
   });
 
   initiativeNodes.forEach((node) => {
     const nodeId = String(node.dataset.nodeId || '').trim();
-    const isActiveNode = nodeId === activeNodeId;
-    const isSelected = focusEntityId && String(node.dataset.entityId || '').trim() === focusEntityId;
-    const isHovered = !focusEntityId && hoverEntityId && String(node.dataset.entityId || '').trim() === hoverEntityId;
-
-    node.classList.toggle('map-initiative-selected', Boolean(isSelected));
-    node.classList.toggle('map-initiative-hovered', Boolean(isHovered));
-    node.classList.toggle('map-initiative-dimmed', !isActiveNode);
+    const isRelated = relatedInitiativeNodeIds.has(nodeId);
+    node.classList.toggle('map-initiative-related', isRelated);
+    node.classList.toggle('map-initiative-dimmed', !isRelated);
   });
 
   guidelineNodes.forEach((node) => {
     const nodeId = String(node.dataset.nodeId || '').trim();
-    const isRelated = relatedGuidelineNodeIds.has(nodeId);
-    node.classList.toggle('map-guideline-related', isRelated);
-    node.classList.toggle('map-guideline-dimmed', !isRelated);
+    const isActiveNode = nodeId === activeGuidelineNodeId;
+    const isSelected = activeFocusEntityId
+      && String(node.dataset.entityId || '').trim() === activeFocusEntityId;
+    const isHovered = !activeFocusEntityId
+      && activeHoverEntityId
+      && String(node.dataset.entityId || '').trim() === activeHoverEntityId;
+
+    node.classList.toggle('map-guideline-related', isActiveNode);
+    node.classList.toggle('map-guideline-selected', Boolean(isSelected));
+    node.classList.toggle('map-guideline-hovered', Boolean(isHovered));
+    node.classList.toggle('map-guideline-dimmed', !isActiveNode);
   });
 }
 
@@ -433,21 +520,27 @@ function bindInitiativeLayerFocusInteractions(viewport, world) {
   if (!(viewport instanceof HTMLElement) || !(world instanceof HTMLElement)) return;
 
   const initiativeNodes = Array.from(world.querySelectorAll('.strategy-map-node[data-kind="initiative"]'));
-  if (!initiativeNodes.length) return;
+  const guidelineNodes = Array.from(world.querySelectorAll('.strategy-map-node[data-kind="guideline"]'));
+  if (!initiativeNodes.length && !guidelineNodes.length) return;
 
   const applyState = () => applyInitiativeLayerFocusState(viewport, world);
+  const hasLockedFocus = () => Boolean(
+    String(state.mapInitiativeFocusId || '').trim()
+    || String(state.mapGuidelineFocusId || '').trim()
+  );
 
   initiativeNodes.forEach((node) => {
     node.addEventListener('mouseenter', () => {
       if (state.mapLayer !== 'initiatives') return;
-      if (state.mapInitiativeFocusId) return;
+      if (hasLockedFocus()) return;
       state.mapInitiativeHoverId = String(node.dataset.entityId || '').trim();
+      state.mapGuidelineHoverId = '';
       applyState();
     });
 
     node.addEventListener('mouseleave', () => {
       if (state.mapLayer !== 'initiatives') return;
-      if (state.mapInitiativeFocusId) return;
+      if (hasLockedFocus()) return;
       const entityId = String(node.dataset.entityId || '').trim();
       if (!entityId || entityId !== String(state.mapInitiativeHoverId || '').trim()) return;
       state.mapInitiativeHoverId = '';
@@ -471,6 +564,50 @@ function bindInitiativeLayerFocusInteractions(viewport, world) {
       } else {
         state.mapInitiativeFocusId = entityId;
         state.mapInitiativeHoverId = '';
+        state.mapGuidelineFocusId = '';
+        state.mapGuidelineHoverId = '';
+      }
+      applyState();
+    });
+  });
+
+  guidelineNodes.forEach((node) => {
+    node.addEventListener('mouseenter', () => {
+      if (state.mapLayer !== 'initiatives') return;
+      if (hasLockedFocus()) return;
+      state.mapGuidelineHoverId = String(node.dataset.entityId || '').trim();
+      state.mapInitiativeHoverId = '';
+      applyState();
+    });
+
+    node.addEventListener('mouseleave', () => {
+      if (state.mapLayer !== 'initiatives') return;
+      if (hasLockedFocus()) return;
+      const entityId = String(node.dataset.entityId || '').trim();
+      if (!entityId || entityId !== String(state.mapGuidelineHoverId || '').trim()) return;
+      state.mapGuidelineHoverId = '';
+      applyState();
+    });
+
+    node.addEventListener('click', (event) => {
+      if (state.mapLayer !== 'initiatives') return;
+      if (!(event.currentTarget instanceof HTMLElement)) return;
+      if (event.currentTarget.dataset.justDragged === '1') return;
+      if (viewport.dataset.justPanned === '1') return;
+      if (event.target instanceof Element && event.target.closest('[data-map-interactive="true"]')) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const entityId = String(event.currentTarget.dataset.entityId || '').trim();
+      if (!entityId) return;
+      if (String(state.mapGuidelineFocusId || '').trim() === entityId) {
+        resetMapInitiativeFocusState();
+      } else {
+        state.mapGuidelineFocusId = entityId;
+        state.mapGuidelineHoverId = '';
+        state.mapInitiativeFocusId = '';
+        state.mapInitiativeHoverId = '';
       }
       applyState();
     });
@@ -478,12 +615,12 @@ function bindInitiativeLayerFocusInteractions(viewport, world) {
 
   viewport.addEventListener('click', (event) => {
     if (state.mapLayer !== 'initiatives') return;
-    if (!state.mapInitiativeFocusId) return;
+    if (!state.mapInitiativeFocusId && !state.mapGuidelineFocusId) return;
     if (viewport.dataset.justPanned === '1') return;
 
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
-    if (target.closest('.strategy-map-node[data-kind="initiative"]')) return;
+    if (target.closest('.strategy-map-node[data-kind="initiative"], .strategy-map-node[data-kind="guideline"]')) return;
     if (target.closest('[data-map-interactive="true"]')) return;
 
     resetMapInitiativeFocusState();

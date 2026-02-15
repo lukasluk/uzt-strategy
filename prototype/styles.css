@@ -2155,9 +2155,12 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .strategy-map-viewport.map-layer-initiatives .guideline-node {
   opacity: 0.2;
-  pointer-events: none;
+  pointer-events: auto;
   filter: saturate(0.45);
   z-index: 2;
+}
+.strategy-map-viewport.map-layer-initiatives .guideline-node * {
+  pointer-events: none;
 }
 .strategy-map-viewport.map-layer-initiatives .institution-node {
   opacity: 0.2;
@@ -2204,10 +2207,22 @@ body.embed-map-page .map-fullscreen-watermark img {
   border-left-color: #b06e15;
   box-shadow: 0 0 0 3px rgba(191, 122, 31, 0.38), 0 18px 34px rgba(140, 88, 22, 0.34);
 }
+.strategy-map-viewport.map-layer-initiatives .initiative-node.map-initiative-related {
+  opacity: 1;
+  filter: none;
+}
 .strategy-map-viewport.map-layer-initiatives .guideline-node.map-guideline-related {
   opacity: 1;
   filter: none;
   z-index: 3;
+}
+.strategy-map-viewport.map-layer-initiatives .guideline-node.map-guideline-hovered {
+  border-color: #4e8dd9;
+  box-shadow: 0 0 0 2px rgba(56, 118, 194, 0.28), 0 14px 28px rgba(37, 85, 145, 0.24);
+}
+.strategy-map-viewport.map-layer-initiatives .guideline-node.map-guideline-selected {
+  border-color: #2f6eb8;
+  box-shadow: 0 0 0 3px rgba(47, 110, 184, 0.32), 0 18px 34px rgba(33, 77, 132, 0.28);
 }
 .strategy-map-viewport.map-layer-initiatives .guideline-node.map-guideline-dimmed {
   opacity: 0.12;

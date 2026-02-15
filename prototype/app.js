@@ -189,6 +189,8 @@ const state = {
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapInitiativeFocusId: '',
   mapInitiativeHoverId: '',
+  mapGuidelineFocusId: '',
+  mapGuidelineHoverId: '',
   mapTransform: { x: 120, y: 80, scale: 1 },
   expandedStepId: '',
   pendingAddSectionScrollId: ''
