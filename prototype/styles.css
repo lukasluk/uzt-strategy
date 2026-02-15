@@ -2157,7 +2157,8 @@ body.embed-map-page .map-fullscreen-watermark img {
   opacity: 0.2;
   pointer-events: auto;
   filter: saturate(0.45);
-  z-index: 2;
+  z-index: 6;
+  cursor: pointer;
 }
 .strategy-map-viewport.map-layer-initiatives .guideline-node * {
   pointer-events: none;

@@ -626,6 +626,60 @@ function bindInitiativeLayerFocusInteractions(viewport, world) {
     resetMapInitiativeFocusState();
     applyState();
   });
+
+  viewport.addEventListener('pointermove', (event) => {
+    if (state.mapLayer !== 'initiatives') return;
+    if (hasLockedFocus()) return;
+
+    const rawTarget = event.target;
+    const target = rawTarget instanceof Element ? rawTarget : null;
+    const node = target ? target.closest('.strategy-map-node[data-kind]') : null;
+    if (!(node instanceof HTMLElement)) {
+      if (state.mapInitiativeHoverId || state.mapGuidelineHoverId) {
+        state.mapInitiativeHoverId = '';
+        state.mapGuidelineHoverId = '';
+        applyState();
+      }
+      return;
+    }
+
+    const kind = String(node.dataset.kind || '').trim();
+    const entityId = String(node.dataset.entityId || '').trim();
+    if (!entityId) return;
+
+    if (kind === 'guideline') {
+      if (state.mapGuidelineHoverId !== entityId || state.mapInitiativeHoverId) {
+        state.mapGuidelineHoverId = entityId;
+        state.mapInitiativeHoverId = '';
+        applyState();
+      }
+      return;
+    }
+
+    if (kind === 'initiative') {
+      if (state.mapInitiativeHoverId !== entityId || state.mapGuidelineHoverId) {
+        state.mapInitiativeHoverId = entityId;
+        state.mapGuidelineHoverId = '';
+        applyState();
+      }
+      return;
+    }
+
+    if (state.mapInitiativeHoverId || state.mapGuidelineHoverId) {
+      state.mapInitiativeHoverId = '';
+      state.mapGuidelineHoverId = '';
+      applyState();
+    }
+  });
+
+  viewport.addEventListener('mouseleave', () => {
+    if (state.mapLayer !== 'initiatives') return;
+    if (hasLockedFocus()) return;
+    if (!state.mapInitiativeHoverId && !state.mapGuidelineHoverId) return;
+    state.mapInitiativeHoverId = '';
+    state.mapGuidelineHoverId = '';
+    applyState();
+  });
 }
 
 async function persistMapNodePosition(nodeElement) {
