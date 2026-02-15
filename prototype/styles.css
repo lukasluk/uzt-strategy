@@ -2157,7 +2157,7 @@ body.embed-map-page .map-fullscreen-watermark img {
   opacity: 0.2;
   pointer-events: auto;
   filter: saturate(0.45);
-  z-index: 6;
+  z-index: 9;
   cursor: pointer;
 }
 .strategy-map-viewport.map-layer-initiatives .guideline-node * {
@@ -2215,15 +2215,19 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategy-map-viewport.map-layer-initiatives .guideline-node.map-guideline-related {
   opacity: 1;
   filter: none;
-  z-index: 3;
+  z-index: 10;
 }
 .strategy-map-viewport.map-layer-initiatives .guideline-node.map-guideline-hovered {
   border-color: #4e8dd9;
   box-shadow: 0 0 0 2px rgba(56, 118, 194, 0.28), 0 14px 28px rgba(37, 85, 145, 0.24);
+  z-index: 11;
 }
 .strategy-map-viewport.map-layer-initiatives .guideline-node.map-guideline-selected {
+  opacity: 1;
+  filter: none;
   border-color: #2f6eb8;
   box-shadow: 0 0 0 3px rgba(47, 110, 184, 0.32), 0 18px 34px rgba(33, 77, 132, 0.28);
+  z-index: 12;
 }
 .strategy-map-viewport.map-layer-initiatives .guideline-node.map-guideline-dimmed {
   opacity: 0.12;
