@@ -277,24 +277,14 @@ function layoutStrategyMap() {
     });
   }
 
-  const minLeft = nodes.reduce((acc, node) => Math.min(acc, node.x), Infinity);
-  const minTop = nodes.reduce((acc, node) => Math.min(acc, node.y), Infinity);
   const maxRight = nodes.reduce((acc, node) => Math.max(acc, node.x + node.w), -Infinity);
   const maxBottom = nodes.reduce((acc, node) => Math.max(acc, node.y + node.h), -Infinity);
-
   const pad = 320;
-  const shiftX = Number.isFinite(minLeft) ? pad - minLeft : 0;
-  const shiftY = Number.isFinite(minTop) ? pad - minTop : 0;
-  nodes.forEach((node) => {
-    node.x += shiftX;
-    node.y += shiftY;
-  });
-
-  const rawWidth = Number.isFinite(maxRight) && Number.isFinite(minLeft)
-    ? (maxRight - minLeft) + pad * 2
+  const rawWidth = Number.isFinite(maxRight)
+    ? maxRight + pad
     : 1800;
-  const rawHeight = Number.isFinite(maxBottom) && Number.isFinite(minTop)
-    ? (maxBottom - minTop) + pad * 2
+  const rawHeight = Number.isFinite(maxBottom)
+    ? maxBottom + pad
     : 920;
   const width = Math.max(1800, rawWidth);
   const height = Math.max(920, rawHeight);
@@ -577,8 +567,8 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (draggedNode) {
       const dx = (event.clientX - dragStartX) / state.mapTransform.scale;
       const dy = (event.clientY - dragStartY) / state.mapTransform.scale;
-      const nextX = Math.round(nodeOriginX + dx);
-      const nextY = Math.round(nodeOriginY + dy);
+      const nextX = Math.max(24, Math.round(nodeOriginX + dx));
+      const nextY = Math.max(24, Math.round(nodeOriginY + dy));
       draggedNode.dataset.x = String(nextX);
       draggedNode.dataset.y = String(nextY);
       draggedNode.style.left = `${nextX}px`;
