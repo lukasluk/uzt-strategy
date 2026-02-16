@@ -212,6 +212,8 @@ create index if not exists idx_memberships_user on institution_memberships(user_
 create index if not exists idx_invites_institution on institution_invites(institution_id);
 create index if not exists idx_invites_email on institution_invites(email);
 create index if not exists idx_strategies_institution on institution_strategies(institution_id);
+alter table if exists strategy_cycles
+  add column if not exists strategy_id uuid references institution_strategies(id) on delete set null;
 create index if not exists idx_cycles_institution on strategy_cycles(institution_id);
 create index if not exists idx_cycles_strategy on strategy_cycles(strategy_id);
 create index if not exists idx_guidelines_cycle on strategy_guidelines(cycle_id);
@@ -242,9 +244,6 @@ alter table if exists strategy_cycles
 
 alter table if exists strategy_cycles
   add column if not exists map_y integer;
-
-alter table if exists strategy_cycles
-  add column if not exists strategy_id uuid references institution_strategies(id) on delete set null;
 
 alter table if exists institution_strategies
   add column if not exists description text;
