@@ -1106,10 +1106,19 @@ function selectedInstitutionInfo() {
   const base = fromCurrent || fromList;
   if (!base) return null;
 
+  const selectedStrategySlug = normalizeSlug(state.strategySlug);
+  const institutionStrategies = Array.isArray(base.strategies) ? base.strategies : [];
+  const activeStrategy = institutionStrategies.find((item) => normalizeSlug(item.slug) === selectedStrategySlug)
+    || state.strategy
+    || institutionStrategies.find((item) => item && item.isDefault)
+    || institutionStrategies[0]
+    || null;
+
   const fallback = INSTITUTION_INFO_FALLBACK[currentSlug] || {};
   return {
     name: String(base.name || currentSlug).trim(),
     slug: currentSlug,
+    strategyTitle: String(activeStrategy?.title || activeStrategy?.slug || '').trim(),
     countryCode: String(base.countryCode || fallback.countryCode || '').trim().toUpperCase(),
     websiteUrl: normalizeInstitutionWebsiteUrl(base.websiteUrl || fallback.websiteUrl || '')
   };
@@ -1130,6 +1139,10 @@ function institutionInfoMarkup() {
     <div class="step-utility-card institution-info-card">
       <div class="institution-info-head">
         <strong>${escapeHtml(info.name)}</strong>
+      </div>
+      <div class="institution-info-row">
+        <span class="institution-info-label">Strategy</span>
+        <span class="institution-info-value">${escapeHtml(info.strategyTitle || '-')}</span>
       </div>
       <div class="institution-info-row">
         <span class="institution-info-label">Country</span>
