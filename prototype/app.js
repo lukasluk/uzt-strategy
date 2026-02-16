@@ -1064,6 +1064,11 @@ function strategySelectMarkup() {
   const strategies = strategiesForSelectedInstitution();
   const hasStrategies = strategies.length > 0;
   const loading = state.loading && !state.institutionsLoaded;
+  const selectedStrategy = strategies.find((item) => normalizeSlug(item.slug) === selectedSlug)
+    || state.strategy
+    || strategies[0]
+    || null;
+  const selectedStrategyTitle = String(selectedStrategy?.title || selectedStrategy?.slug || '-').trim();
   const options = strategies.map((strategy) => {
     const slug = normalizeSlug(strategy.slug);
     const title = String(strategy.title || slug || '-').trim();
@@ -1072,11 +1077,12 @@ function strategySelectMarkup() {
   }).join('');
 
   return `
-    <label class="institution-switcher" title="Pasirinkite strategiją peržiūrai">
+    <label class="institution-switcher strategy-switcher" title="Pasirinkite strategiją peržiūrai">
       <span>Strategija</span>
       <select id="strategySwitchSelect" ${loading || !hasStrategies ? 'disabled' : ''}>
         ${options}
       </select>
+      <span class="switch-selected-preview" title="${escapeHtml(selectedStrategyTitle)}">${escapeHtml(selectedStrategyTitle)}</span>
     </label>
   `;
 }
