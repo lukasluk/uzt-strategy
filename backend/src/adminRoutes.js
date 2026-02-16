@@ -14,6 +14,7 @@ function registerAdminRoutes({
   hashPassword,
   normalizeEmail,
   sha256,
+  slugify,
   inviteTtlHours,
   requireAuth,
   verifyCycleAccess,
@@ -115,6 +116,87 @@ function registerAdminRoutes({
     const inviteUrl = buildInviteAcceptUrl(req, inviteToken);
     const expiresAt = new Date(Date.now() + inviteTtlHours * 60 * 60 * 1000).toISOString();
     res.status(201).json({ inviteToken, inviteUrl, expiresAt, email, role });
+  });
+
+  app.post('/api/v1/admin/strategies', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+
+    const title = String(req.body?.title || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const requestedSlug = String(req.body?.slug || '').trim();
+    if (!title) return res.status(400).json({ error: 'strategy title required' });
+
+    const normalizedSlug = slugify(requestedSlug || title);
+    if (!normalizedSlug) return res.status(400).json({ error: 'invalid strategy slug' });
+
+    const existing = await query(
+      `select id
+       from institution_strategies
+       where institution_id = $1 and slug = $2`,
+      [req.auth.institutionId, normalizedSlug]
+    );
+    if (existing.rowCount > 0) return res.status(409).json({ error: 'strategy slug already exists' });
+
+    const defaultCheck = await query(
+      `select id
+       from institution_strategies
+       where institution_id = $1 and is_default = true
+       limit 1`,
+      [req.auth.institutionId]
+    );
+    const isDefault = defaultCheck.rowCount === 0;
+
+    const strategyId = uuid();
+    const cycleId = uuid();
+    await query(
+      `insert into institution_strategies (id, institution_id, title, slug, description, status, is_default)
+       values ($1, $2, $3, $4, $5, 'active', $6)`,
+      [
+        strategyId,
+        req.auth.institutionId,
+        title,
+        normalizedSlug,
+        description || null,
+        isDefault
+      ]
+    );
+
+    await query(
+      `insert into strategy_cycles (id, institution_id, strategy_id, title, state, results_published, starts_at)
+       values ($1, $2, $3, $4, 'open', false, now())`,
+      [
+        cycleId,
+        req.auth.institutionId,
+        strategyId,
+        `${title} ciklas`
+      ]
+    );
+
+    broadcast({
+      type: 'v1.strategy.created',
+      institutionId: req.auth.institutionId,
+      strategyId,
+      cycleId
+    });
+
+    res.status(201).json({
+      strategy: {
+        id: strategyId,
+        institutionId: req.auth.institutionId,
+        title,
+        slug: normalizedSlug,
+        description: description || null,
+        status: 'active',
+        isDefault
+      },
+      cycle: {
+        id: cycleId,
+        institutionId: req.auth.institutionId,
+        strategyId,
+        title: `${title} ciklas`,
+        state: 'open'
+      }
+    });
   });
 
 

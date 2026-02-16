@@ -10,6 +10,18 @@ create table if not exists institutions (
   created_at timestamptz not null default now()
 );
 
+create table if not exists institution_strategies (
+  id uuid primary key,
+  institution_id uuid not null references institutions(id) on delete cascade,
+  title text not null,
+  slug text not null,
+  description text,
+  status text not null default 'active' check (status in ('active', 'inactive')),
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (institution_id, slug)
+);
+
 create table if not exists platform_users (
   id uuid primary key,
   email text not null unique,
@@ -46,6 +58,7 @@ create table if not exists institution_invites (
 create table if not exists strategy_cycles (
   id uuid primary key,
   institution_id uuid not null references institutions(id) on delete cascade,
+  strategy_id uuid references institution_strategies(id) on delete set null,
   title text not null,
   state text not null default 'open' check (state in ('open', 'closed')),
   results_published boolean not null default false,
@@ -67,6 +80,16 @@ create table if not exists strategy_guidelines (
   created_by uuid references platform_users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table if not exists strategy_guideline_links (
+  id uuid primary key,
+  source_guideline_id uuid not null references strategy_guidelines(id) on delete cascade,
+  target_guideline_id uuid not null references strategy_guidelines(id) on delete cascade,
+  created_by uuid references platform_users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  unique (source_guideline_id, target_guideline_id),
+  check (source_guideline_id <> target_guideline_id)
 );
 
 create table if not exists strategy_comments (
@@ -188,8 +211,12 @@ create index if not exists idx_memberships_institution on institution_membership
 create index if not exists idx_memberships_user on institution_memberships(user_id);
 create index if not exists idx_invites_institution on institution_invites(institution_id);
 create index if not exists idx_invites_email on institution_invites(email);
+create index if not exists idx_strategies_institution on institution_strategies(institution_id);
 create index if not exists idx_cycles_institution on strategy_cycles(institution_id);
+create index if not exists idx_cycles_strategy on strategy_cycles(strategy_id);
 create index if not exists idx_guidelines_cycle on strategy_guidelines(cycle_id);
+create index if not exists idx_guideline_links_source on strategy_guideline_links(source_guideline_id);
+create index if not exists idx_guideline_links_target on strategy_guideline_links(target_guideline_id);
 create index if not exists idx_comments_guideline on strategy_comments(guideline_id);
 create index if not exists idx_votes_guideline on strategy_votes(guideline_id);
 create index if not exists idx_votes_voter on strategy_votes(voter_id);
@@ -215,6 +242,63 @@ alter table if exists strategy_cycles
 
 alter table if exists strategy_cycles
   add column if not exists map_y integer;
+
+alter table if exists strategy_cycles
+  add column if not exists strategy_id uuid references institution_strategies(id) on delete set null;
+
+alter table if exists institution_strategies
+  add column if not exists description text;
+
+alter table if exists institution_strategies
+  add column if not exists is_default boolean not null default false;
+
+insert into institution_strategies (id, institution_id, title, slug, description, status, is_default, created_at)
+select gen_random_uuid(),
+       i.id,
+       coalesce(
+         nullif(regexp_replace(coalesce(c.title, ''), '\s*ciklas\s*$', '', 'i'), ''),
+         i.name || ' strategija'
+       ) as title,
+       'default' as slug,
+       null as description,
+       'active' as status,
+       true as is_default,
+       coalesce(c.created_at, now()) as created_at
+from institutions i
+left join lateral (
+  select sc.title, sc.created_at
+  from strategy_cycles sc
+  where sc.institution_id = i.id
+  order by sc.created_at asc
+  limit 1
+) c on true
+where not exists (
+  select 1
+  from institution_strategies s
+  where s.institution_id = i.id
+);
+
+with ranked_strategies as (
+  select id,
+         row_number() over (partition by institution_id order by is_default desc, created_at asc, id asc) as rn
+  from institution_strategies
+)
+update institution_strategies s
+set is_default = (r.rn = 1)
+from ranked_strategies r
+where s.id = r.id
+  and s.is_default is distinct from (r.rn = 1);
+
+create unique index if not exists idx_strategies_default_institution
+  on institution_strategies(institution_id)
+  where is_default = true;
+
+update strategy_cycles sc
+set strategy_id = s.id
+from institution_strategies s
+where sc.institution_id = s.institution_id
+  and s.is_default = true
+  and sc.strategy_id is null;
 
 alter table if exists strategy_cycles
   add column if not exists mission_text text;

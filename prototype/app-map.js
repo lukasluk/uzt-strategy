@@ -959,6 +959,7 @@ function renderMapView() {
         <h2>Strategijų žemėlapis</h2>
         <div class="header-stack step-header-actions">
           <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
+          <span class="tag">Strategija: ${escapeHtml(graph.institution.strategy?.title || '-')}</span>
           ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvų' : 'gairių'} korteles</span>` : ''}
         </div>
       </div>

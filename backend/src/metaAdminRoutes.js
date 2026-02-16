@@ -151,6 +151,7 @@ function registerMetaAdminRoutes({
 
   async function createInstitutionWithDefaultCycle(name, slug) {
     const institutionId = uuid();
+    const strategyId = uuid();
     const cycleId = uuid();
 
     await query(
@@ -160,12 +161,18 @@ function registerMetaAdminRoutes({
     );
 
     await query(
-      `insert into strategy_cycles (id, institution_id, title, state, results_published, starts_at)
-       values ($1, $2, $3, 'open', false, now())`,
-      [cycleId, institutionId, `${name} strategijos ciklas`]
+      `insert into institution_strategies (id, institution_id, title, slug, status, is_default)
+       values ($1, $2, $3, $4, 'active', true)`,
+      [strategyId, institutionId, 'Skaitmenizacijos strategija', 'default']
     );
 
-    return { institutionId, cycleId, slug };
+    await query(
+      `insert into strategy_cycles (id, institution_id, strategy_id, title, state, results_published, starts_at)
+       values ($1, $2, $3, $4, 'open', false, now())`,
+      [cycleId, institutionId, strategyId, `${name} strategijos ciklas`]
+    );
+
+    return { institutionId, strategyId, cycleId, slug };
   }
 
   async function createInviteForInstitution(req, institutionId, email, role) {

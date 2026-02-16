@@ -22,6 +22,8 @@ function registerAuthRoutes({
   loginRateLimit,
   requireAuth,
   getInstitutionBySlug,
+  getInstitutionStrategies,
+  resolveInstitutionStrategy,
   getCurrentCycle,
   voteBudget,
   authSecret,
@@ -235,6 +237,7 @@ function registerAuthRoutes({
 
   app.post('/api/v1/auth/switch-institution', requireAuth, async (req, res) => {
     const institutionSlug = String(req.body?.institutionSlug || '').trim();
+    const strategySlug = String(req.body?.strategySlug || '').trim().toLowerCase();
     if (!institutionSlug) return res.status(400).json({ error: 'institutionSlug required' });
 
     const institution = await getInstitutionBySlug(query, institutionSlug);
@@ -260,6 +263,18 @@ function registerAuthRoutes({
       return res.status(403).json({ error: 'membership inactive' });
     }
 
+    let strategy = null;
+    let strategies = [];
+    if (strategySlug) {
+      const resolved = await resolveInstitutionStrategy(query, institution.id, strategySlug);
+      strategy = resolved.strategy || null;
+      strategies = Array.isArray(resolved.strategies) ? resolved.strategies : [];
+      if (!strategy) return res.status(404).json({ error: 'strategy not found' });
+    } else {
+      strategies = await getInstitutionStrategies(query, institution.id);
+      strategy = strategies.find((item) => item.is_default) || strategies[0] || null;
+    }
+
     const payload = {
       sub: user.id,
       email: user.email,
@@ -280,7 +295,25 @@ function registerAuthRoutes({
         slug: institution.slug,
         name: institution.name
       },
-      role: membership.role
+      role: membership.role,
+      strategy: strategy
+        ? {
+            id: strategy.id,
+            title: strategy.title,
+            slug: strategy.slug,
+            status: strategy.status,
+            isDefault: Boolean(strategy.is_default),
+            createdAt: strategy.created_at
+          }
+        : null,
+      strategies: strategies.map((item) => ({
+        id: item.id,
+        title: item.title,
+        slug: item.slug,
+        status: item.status,
+        isDefault: Boolean(item.is_default),
+        createdAt: item.created_at
+      }))
     });
   });
 
@@ -328,6 +361,7 @@ function registerAuthRoutes({
   });
 
   app.get('/api/v1/me/context', requireAuth, async (req, res) => {
+    const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await query(
       'select id, name, slug, status from institutions where id = $1',
       [req.auth.institutionId]
@@ -341,7 +375,17 @@ function registerAuthRoutes({
     if (userRes.rowCount === 0) return res.status(404).json({ error: 'user not found' });
     if (userRes.rows[0].status !== 'active') return res.status(403).json({ error: 'user inactive' });
 
-    const cycle = await getCurrentCycle(query, req.auth.institutionId);
+    const resolved = await resolveInstitutionStrategy(query, req.auth.institutionId, requestedStrategySlug);
+    const strategy = resolved.strategy || null;
+    const strategies = Array.isArray(resolved.strategies) ? resolved.strategies : [];
+    if (requestedStrategySlug && !strategy) {
+      return res.status(404).json({ error: 'strategy not found' });
+    }
+
+    const cycle = await getCurrentCycle(query, req.auth.institutionId, {
+      strategyId: strategy?.id || null,
+      allowInstitutionFallback: !strategy?.id
+    });
     const membership = await query(
       `select role, status from institution_memberships where institution_id = $1 and user_id = $2`,
       [req.auth.institutionId, req.auth.sub]
@@ -359,6 +403,24 @@ function registerAuthRoutes({
       },
       institution: institution.rows[0],
       membership: membership.rows[0],
+      strategy: strategy
+        ? {
+            id: strategy.id,
+            title: strategy.title,
+            slug: strategy.slug,
+            status: strategy.status,
+            isDefault: Boolean(strategy.is_default),
+            createdAt: strategy.created_at
+          }
+        : null,
+      strategies: strategies.map((item) => ({
+        id: item.id,
+        title: item.title,
+        slug: item.slug,
+        status: item.status,
+        isDefault: Boolean(item.is_default),
+        createdAt: item.created_at
+      })),
       cycle,
       rules: {
         voteBudget,

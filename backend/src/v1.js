@@ -4,7 +4,8 @@ const {
   hashPassword,
   normalizeEmail,
   resolveClientIp,
-  sha256
+  sha256,
+  slugify
 } = require('./security');
 const { trafficMonitor } = require('./trafficMonitor');
 const { registerMetaAdminRoutes } = require('./metaAdminRoutes');
@@ -100,6 +101,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
   const {
     getInstitutionBySlug,
+    getInstitutionStrategies,
+    resolveInstitutionStrategy,
     getCurrentCycle,
     requireAuth,
     verifyCycleAccess,
@@ -162,7 +165,9 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     publicReadRateLimit,
     trafficMonitor,
     getInstitutionBySlug: (_query, slug) => getInstitutionBySlug(slug),
-    getCurrentCycle: (_query, institutionId) => getCurrentCycle(institutionId),
+    resolveInstitutionStrategy: (_query, institutionId, strategySlug) =>
+      resolveInstitutionStrategy(institutionId, strategySlug),
+    getCurrentCycle: (_query, institutionId, options) => getCurrentCycle(institutionId, options),
     normalizeLineSide
   });
 
@@ -174,7 +179,10 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     loginRateLimit,
     requireAuth,
     getInstitutionBySlug: (_query, slug) => getInstitutionBySlug(slug),
-    getCurrentCycle: (_query, institutionId) => getCurrentCycle(institutionId),
+    getInstitutionStrategies: (_query, institutionId) => getInstitutionStrategies(institutionId),
+    resolveInstitutionStrategy: (_query, institutionId, strategySlug) =>
+      resolveInstitutionStrategy(institutionId, strategySlug),
+    getCurrentCycle: (_query, institutionId, options) => getCurrentCycle(institutionId, options),
     voteBudget: VOTE_BUDGET,
     authSecret: AUTH_SECRET,
     authTtlHours: AUTH_TTL_HOURS
@@ -216,6 +224,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     hashPassword,
     normalizeEmail,
     sha256,
+    slugify,
     inviteTtlHours: INVITE_TTL_HOURS,
     requireAuth,
     verifyCycleAccess,

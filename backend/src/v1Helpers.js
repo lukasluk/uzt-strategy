@@ -23,6 +23,8 @@ function createV1Helpers({ query, authSecret }) {
 
   return {
     getInstitutionBySlug: institutionCycleService.getInstitutionBySlug,
+    getInstitutionStrategies: institutionCycleService.getInstitutionStrategies,
+    resolveInstitutionStrategy: institutionCycleService.resolveInstitutionStrategy,
     getCurrentCycle: institutionCycleService.getCurrentCycle,
     requireAuth,
     verifyCycleAccess: contextLookupService.verifyCycleAccess,

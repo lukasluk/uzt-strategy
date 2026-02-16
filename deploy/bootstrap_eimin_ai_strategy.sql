@@ -33,10 +33,48 @@ set
   status = 'active'
 where slug = 'eimin';
 
-insert into strategy_cycles (id, institution_id, title, state, results_published, starts_at, mission_text, vision_text)
+insert into institution_strategies (id, institution_id, title, slug, description, status, is_default)
 select
   gen_random_uuid(),
   i.id,
+  'Nacionalinė DI strategija',
+  'national-ai-strategy',
+  'Nacionalinės DI strateginės gairės',
+  'active',
+  case when exists (
+    select 1
+    from institution_strategies sx
+    where sx.institution_id = i.id
+      and sx.is_default = true
+  ) then false else true end
+from institutions i
+where i.slug = 'eimin'
+  and not exists (
+    select 1
+    from institution_strategies s
+    where s.institution_id = i.id
+      and s.slug = 'national-ai-strategy'
+  );
+
+with target_strategy as (
+  select s.id as strategy_id, s.institution_id
+  from institution_strategies s
+  join institutions i on i.id = s.institution_id
+  where i.slug = 'eimin'
+    and s.slug = 'national-ai-strategy'
+  limit 1
+)
+update strategy_cycles c
+set strategy_id = ts.strategy_id
+from target_strategy ts
+where c.institution_id = ts.institution_id
+  and c.strategy_id is null;
+
+insert into strategy_cycles (id, institution_id, strategy_id, title, state, results_published, starts_at, mission_text, vision_text)
+select
+  gen_random_uuid(),
+  i.id,
+  s.id,
   'EIMIN DI strategijos ciklas',
   'open',
   false,
@@ -44,11 +82,13 @@ select
   'Sistemingai plėtoti Lietuvos DI ekosistemą per kompetencijas, saugią infrastruktūrą, visuomenei naudingus sprendimus ir ekonominę vertę.',
   'Vizija 2035: valstybė, kurioje DI įgalina žmogų ir tampa pažangios, saugios ir atsakingos skaitmeninės visuomenės pagrindu.'
 from institutions i
+join institution_strategies s on s.institution_id = i.id and s.slug = 'national-ai-strategy'
 where i.slug = 'eimin'
   and not exists (
     select 1
     from strategy_cycles c
     where c.institution_id = i.id
+      and c.strategy_id = s.id
   );
 
 with target_cycle as (

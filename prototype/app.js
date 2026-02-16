@@ -155,6 +155,7 @@ const EMBED_MAP_MODE = resolveEmbedMapMode();
 const state = {
   embedMapMode: EMBED_MAP_MODE,
   institutionSlug: resolveInstitutionSlug(),
+  strategySlug: resolveStrategySlug(),
   activeView: resolveInitialView(),
   introFirstVisit: hydrateIntroFirstVisit(),
   introCollapsed: hydrateIntroCollapsed(),
@@ -167,6 +168,7 @@ const state = {
   institutions: [],
   institutionsLoaded: false,
   institution: null,
+  strategy: null,
   cycle: null,
   summary: null,
   guidelines: [],
@@ -276,6 +278,11 @@ function resolveInstitutionSlug() {
   return normalizeSlug(last) || DEFAULT_INSTITUTION_SLUG || null;
 }
 
+function resolveStrategySlug() {
+  const params = new URLSearchParams(window.location.search);
+  return normalizeSlug(params.get('strategy'));
+}
+
 function resolveEmbedMapMode() {
   const params = new URLSearchParams(window.location.search);
   const embed = String(params.get(EMBED_QUERY_KEY) || '').trim().toLowerCase();
@@ -292,13 +299,17 @@ function resolveInitialView() {
   return ALLOWED_VIEWS.has(view) ? view : 'guidelines';
 }
 
-function buildCurrentPageHref({ slug = state.institutionSlug, view = state.activeView } = {}) {
+function buildCurrentPageHref({ slug = state.institutionSlug, strategySlug = state.strategySlug, view = state.activeView } = {}) {
   const params = new URLSearchParams(window.location.search);
   const nextSlug = normalizeSlug(slug);
+  const nextStrategySlug = normalizeSlug(strategySlug);
   const nextView = state.embedMapMode ? 'map' : (ALLOWED_VIEWS.has(view) ? view : 'guidelines');
 
   if (nextSlug) params.set('institution', nextSlug);
   else params.delete('institution');
+
+  if (nextStrategySlug) params.set('strategy', nextStrategySlug);
+  else params.delete('strategy');
 
   if (state.embedMapMode) params.set(EMBED_QUERY_KEY, EMBED_MAP_VALUE);
   else params.delete(EMBED_QUERY_KEY);
@@ -396,6 +407,7 @@ function clearSession() {
   state.role = null;
   state.accountContext = null;
   state.context = null;
+  state.strategy = null;
   state.userVotes = {};
   state.initiatives = [];
   localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -405,6 +417,8 @@ function setSession(payload) {
   state.token = payload.token || null;
   state.user = payload.user || null;
   state.role = payload.role || null;
+  state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
+  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   state.accountContext = null;
   persistAuthToStorage();
 }
@@ -417,6 +431,7 @@ function syncAuthStateFromStorage() {
     state.role = null;
     state.accountContext = null;
     state.context = null;
+    state.strategy = null;
     state.userVotes = {};
     return;
   }
@@ -428,6 +443,7 @@ function syncAuthStateFromStorage() {
       state.role = null;
       state.accountContext = null;
       state.context = null;
+      state.strategy = null;
       state.userVotes = {};
       return;
     }
@@ -606,6 +622,7 @@ function toUserMessage(error) {
     unauthorized: 'Reikia prisijungti.',
     'invalid token': 'Sesija nebegalioja. Prisijunkite iš naujo.',
     'institution not found': `Institucija "${state.institutionSlug}" nerasta.`,
+    'strategy not found': 'Pasirinkta strategija nerasta.',
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
     'cycle not writable': 'Ciklas nebeleidžia redaguoti (tik skaitymas).',
     'guideline voting disabled': 'Ši gairė išjungta: balsuoti negalima.',
@@ -668,6 +685,7 @@ function normalizeInstitutionRecord(value) {
   const slug = normalizeSlug(value.slug);
   const countryCodeRaw = String(value.countryCode ?? value.country_code ?? '').trim().toUpperCase();
   const websiteRaw = String(value.websiteUrl ?? value.website_url ?? '').trim();
+  const strategiesRaw = Array.isArray(value.strategies) ? value.strategies : [];
   return {
     ...value,
     id: value.id || null,
@@ -676,21 +694,79 @@ function normalizeInstitutionRecord(value) {
     countryCode: countryCodeRaw || '',
     websiteUrl: websiteRaw || '',
     status: String(value.status || '').trim(),
+    createdAt: value.createdAt || value.created_at || null,
+    strategies: strategiesRaw.map((item) => normalizeStrategyRecord(item)).filter(Boolean)
+  };
+}
+
+function normalizeStrategyRecord(value) {
+  if (!value || typeof value !== 'object') return null;
+  const slug = normalizeSlug(value.slug);
+  if (!slug) return null;
+  return {
+    ...value,
+    id: value.id || null,
+    institutionId: value.institutionId || value.institution_id || null,
+    title: String(value.title || slug).trim(),
+    slug,
+    description: String(value.description || '').trim(),
+    status: String(value.status || '').trim() || 'active',
+    isDefault: Boolean(value.isDefault ?? value.is_default),
     createdAt: value.createdAt || value.created_at || null
   };
 }
 
+function strategiesForSelectedInstitution() {
+  const selectedInstitution = (state.institutions || []).find((institution) =>
+    normalizeSlug(institution.slug) === normalizeSlug(state.institutionSlug)
+  ) || null;
+  const strategiesFromInstitution = Array.isArray(selectedInstitution?.strategies)
+    ? selectedInstitution.strategies
+    : [];
+  if (strategiesFromInstitution.length) return strategiesFromInstitution;
+  if (Array.isArray(state.institution?.strategies) && state.institution.strategies.length) return state.institution.strategies;
+  return [];
+}
+
+function ensureSelectedStrategySlug() {
+  const strategies = strategiesForSelectedInstitution();
+  const selectedSlug = normalizeSlug(state.strategySlug);
+  if (!strategies.length) {
+    state.strategySlug = '';
+    return;
+  }
+  if (selectedSlug && strategies.some((item) => normalizeSlug(item.slug) === selectedSlug)) {
+    return;
+  }
+  const fallback = strategies.find((item) => item.isDefault) || strategies[0];
+  state.strategySlug = normalizeSlug(fallback?.slug);
+}
+
 async function loadPublicData() {
+  const params = new URLSearchParams();
+  if (state.strategySlug) params.set('strategy', state.strategySlug);
+  const query = params.toString();
   const base = `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current`;
   const [summaryPayload, guidelinesPayload, initiativesPayload] = await Promise.all([
-    api(`${base}/summary`, { auth: false }),
-    api(`${base}/guidelines`, { auth: false }),
-    api(`${base}/initiatives`, { auth: false })
+    api(`${base}/summary${query ? `?${query}` : ''}`, { auth: false }),
+    api(`${base}/guidelines${query ? `?${query}` : ''}`, { auth: false }),
+    api(`${base}/initiatives${query ? `?${query}` : ''}`, { auth: false })
   ]);
 
   state.institution = normalizeInstitutionRecord(
     initiativesPayload.institution || guidelinesPayload.institution || summaryPayload.institution || null
   );
+  const strategiesPayload = initiativesPayload.strategies || guidelinesPayload.strategies || summaryPayload.strategies;
+  if (Array.isArray(strategiesPayload)) {
+    state.institution = {
+      ...(state.institution || {}),
+      strategies: strategiesPayload.map((item) => normalizeStrategyRecord(item)).filter(Boolean)
+    };
+  }
+  state.strategy = normalizeStrategyRecord(
+    initiativesPayload.strategy || guidelinesPayload.strategy || summaryPayload.strategy || null
+  );
+  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   state.cycle = initiativesPayload.cycle || guidelinesPayload.cycle || summaryPayload.cycle || null;
   state.summary = summaryPayload.summary || null;
   state.guidelines = Array.isArray(guidelinesPayload.guidelines) ? guidelinesPayload.guidelines : [];
@@ -698,30 +774,48 @@ async function loadPublicData() {
 }
 
 async function refreshGuidelines() {
+  const params = new URLSearchParams();
+  if (state.strategySlug) params.set('strategy', state.strategySlug);
   const payload = await api(
-    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/guidelines`,
+    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/guidelines${params.toString() ? `?${params.toString()}` : ''}`,
     { auth: false }
   );
   state.institution = normalizeInstitutionRecord(payload.institution) || state.institution;
+  if (Array.isArray(payload.strategies) && state.institution) {
+    state.institution.strategies = payload.strategies.map((item) => normalizeStrategyRecord(item)).filter(Boolean);
+  }
+  state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
+  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   state.cycle = payload.cycle || state.cycle;
   state.guidelines = Array.isArray(payload.guidelines) ? payload.guidelines : [];
 }
 
 async function refreshInitiatives() {
+  const params = new URLSearchParams();
+  if (state.strategySlug) params.set('strategy', state.strategySlug);
   const payload = await api(
-    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/initiatives`,
+    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/initiatives${params.toString() ? `?${params.toString()}` : ''}`,
     { auth: false }
   );
   state.institution = normalizeInstitutionRecord(payload.institution) || state.institution;
+  if (Array.isArray(payload.strategies) && state.institution) {
+    state.institution.strategies = payload.strategies.map((item) => normalizeStrategyRecord(item)).filter(Boolean);
+  }
+  state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
+  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   state.cycle = payload.cycle || state.cycle;
   state.initiatives = Array.isArray(payload.initiatives) ? payload.initiatives : [];
 }
 
 async function refreshSummary() {
+  const params = new URLSearchParams();
+  if (state.strategySlug) params.set('strategy', state.strategySlug);
   const payload = await api(
-    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/summary`,
+    `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/summary${params.toString() ? `?${params.toString()}` : ''}`,
     { auth: false }
   );
+  state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
+  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   state.summary = payload.summary || state.summary;
 }
 
@@ -741,13 +835,20 @@ async function loadContentSettings() {
 async function loadStrategyMap() {
   const params = new URLSearchParams();
   if (state.institutionSlug) params.set('institution', state.institutionSlug);
+  if (state.strategySlug) params.set('strategy', state.strategySlug);
   params.set('source', state.embedMapMode ? 'embed' : 'app');
   const payload = await api(`/api/v1/public/strategy-map?${params.toString()}`, { auth: false });
   state.mapData = payload || { institutions: [] };
 }
 
 async function loadMemberContext() {
-  let context = await api('/api/v1/me/context');
+  const buildContextPath = () => {
+    const params = new URLSearchParams();
+    if (state.strategySlug) params.set('strategy', state.strategySlug);
+    return `/api/v1/me/context${params.toString() ? `?${params.toString()}` : ''}`;
+  };
+
+  let context = await api(buildContextPath());
   if (!context?.institution?.slug) throw new Error('Nepavyko gauti naudotojo konteksto.');
 
   const selectedSlug = normalizeSlug(state.institutionSlug);
@@ -756,7 +857,7 @@ async function loadMemberContext() {
   if (selectedSlug && currentContextSlug !== selectedSlug && !state.embedMapMode) {
     try {
       await switchInstitutionSession(selectedSlug);
-      context = await api('/api/v1/me/context');
+      context = await api(buildContextPath());
     } catch {
       state.accountContext = context;
       state.role = context.membership?.role || state.role || 'member';
@@ -771,6 +872,8 @@ async function loadMemberContext() {
   state.accountContext = context;
   state.role = context.membership?.role || state.role || 'member';
   state.user = state.user || context.user || null;
+  state.strategy = normalizeStrategyRecord(context.strategy) || state.strategy;
+  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   persistAuthToStorage();
 
   if (normalizeSlug(context.institution?.slug) !== selectedSlug) {
@@ -798,9 +901,13 @@ async function loadMemberContext() {
 async function switchInstitutionSession(institutionSlug) {
   const nextSlug = normalizeSlug(institutionSlug);
   if (!nextSlug || !state.token || state.embedMapMode) return;
+  const nextStrategySlug = normalizeSlug(state.strategySlug);
   const payload = await api('/api/v1/auth/switch-institution', {
     method: 'POST',
-    body: { institutionSlug: nextSlug }
+    body: {
+      institutionSlug: nextSlug,
+      strategySlug: nextStrategySlug || undefined
+    }
   });
   if (payload?.token) setSession(payload);
 }
@@ -812,6 +919,9 @@ async function bootstrap() {
 
   try {
     await loadInstitutions();
+    if (state.institutionSlug) {
+      ensureSelectedStrategySlug();
+    }
     try {
       await loadContentSettings();
     } catch {
@@ -827,6 +937,8 @@ async function bootstrap() {
 
     if (!state.institutionSlug) {
       state.institution = null;
+      state.strategy = null;
+      state.strategySlug = '';
       state.cycle = null;
       state.summary = null;
       state.guidelines = [];
@@ -836,6 +948,7 @@ async function bootstrap() {
     }
 
     await loadPublicData();
+    ensureSelectedStrategySlug();
     if (state.token && !state.embedMapMode) {
       try {
         await loadMemberContext();
@@ -946,6 +1059,28 @@ function institutionSelectMarkup() {
   `;
 }
 
+function strategySelectMarkup() {
+  const selectedSlug = normalizeSlug(state.strategySlug);
+  const strategies = strategiesForSelectedInstitution();
+  const hasStrategies = strategies.length > 0;
+  const loading = state.loading && !state.institutionsLoaded;
+  const options = strategies.map((strategy) => {
+    const slug = normalizeSlug(strategy.slug);
+    const title = String(strategy.title || slug || '-').trim();
+    const selected = slug === selectedSlug ? ' selected' : '';
+    return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(title)}</option>`;
+  }).join('');
+
+  return `
+    <label class="institution-switcher" title="Pasirinkite strategiją peržiūrai">
+      <span>Strategija</span>
+      <select id="strategySwitchSelect" ${loading || !hasStrategies ? 'disabled' : ''}>
+        ${options}
+      </select>
+    </label>
+  `;
+}
+
 function normalizeInstitutionWebsiteUrl(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -1011,6 +1146,11 @@ function bindInstitutionSwitch(container) {
     if (slug === normalizeSlug(state.institutionSlug)) return;
 
     state.institutionSlug = slug;
+    const selectedInstitution = (state.institutions || []).find((institution) => normalizeSlug(institution.slug) === slug) || null;
+    const strategies = Array.isArray(selectedInstitution?.strategies) ? selectedInstitution.strategies : [];
+    const defaultStrategy = strategies.find((item) => item.isDefault) || strategies[0] || null;
+    state.strategySlug = normalizeSlug(defaultStrategy?.slug);
+    state.strategy = defaultStrategy || null;
     if (state.activeView === 'admin') {
       state.activeView = 'guidelines';
     }
@@ -1028,6 +1168,21 @@ function bindInstitutionSwitch(container) {
       }
     }
 
+    await bootstrap();
+  });
+}
+
+function bindStrategySwitch(container) {
+  const select = container.querySelector('#strategySwitchSelect');
+  if (!select) return;
+
+  select.addEventListener('change', async () => {
+    const slug = normalizeSlug(select.value);
+    if (slug === normalizeSlug(state.strategySlug)) return;
+
+    state.strategySlug = slug;
+    state.strategy = (strategiesForSelectedInstitution() || []).find((item) => normalizeSlug(item.slug) === slug) || null;
+    syncRouteState();
     await bootstrap();
   });
 }
@@ -1196,6 +1351,16 @@ function renderSteps() {
   bindInstitutionSwitch(institutionShell);
   elements.steps.appendChild(institutionShell);
 
+  const strategyShell = document.createElement('div');
+  strategyShell.className = 'step-pill-shell step-utility-shell';
+  strategyShell.innerHTML = `
+    <div class="step-utility-card">
+      ${strategySelectMarkup()}
+    </div>
+  `;
+  bindStrategySwitch(strategyShell);
+  elements.steps.appendChild(strategyShell);
+
   const institutionInfoHtml = institutionInfoMarkup();
   if (institutionInfoHtml) {
     const institutionInfoShell = document.createElement('div');
@@ -1272,7 +1437,7 @@ function renderIntroDeck() {
       <div class="intro-guide" role="button" tabindex="0" aria-expanded="true">
         <div class="intro-guide-header">
           <div>
-            <h3>Skaitmenizacijos strategijos dirbtuvės</h3>
+            <h3>${escapeHtml(state.strategy?.title || 'Skaitmenizacijos strategijos dirbtuvės')}</h3>
           </div>
           <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button" aria-expanded="true"></button>
         </div>
@@ -1433,6 +1598,7 @@ function renderAdminView() {
       const mounted = adminApp?.mount?.({
         root: mountPoint,
         institutionSlug: state.institutionSlug,
+        strategySlug: state.strategySlug,
         forceAuthSync: true
       });
       if (!mounted) {
@@ -1846,6 +2012,7 @@ function renderInitiativesView() {
       <div class="header-stack step-header-actions">
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Eksportuoti santrauką</button>
         <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">Strategija: ${escapeHtml(state.strategy?.title || '-')}</span>
         <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
         ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viešas režimas</span>'}
       </div>
@@ -2063,6 +2230,7 @@ function renderStepView() {
       <div class="header-stack step-header-actions">
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Eksportuoti santrauką</button>
         <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">Strategija: ${escapeHtml(state.strategy?.title || '-')}</span>
         <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
         ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">Viešas režimas</span>'}
       </div>
@@ -2386,6 +2554,7 @@ function renderVoteFloating() {
 function buildSummary() {
   const lines = [];
   lines.push(`Institucija: ${state.institution?.name || state.institutionSlug}`);
+  lines.push(`Strategija: ${state.strategy?.title || '-'}`);
   lines.push(`Ciklas: ${state.cycle?.title || '-'}`);
   lines.push(`Būsena: ${state.cycle?.state || '-'}`);
   lines.push('');
@@ -2436,7 +2605,8 @@ function downloadJson() {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `strategy-${state.institutionSlug}.json`;
+  const strategyPart = normalizeSlug(state.strategySlug) || 'default';
+  link.download = `strategy-${state.institutionSlug}-${strategyPart}.json`;
   link.click();
   URL.revokeObjectURL(link.href);
 }
@@ -2483,6 +2653,7 @@ function showAuthModal(initialMode = 'login') {
         <button id="closeAuthModal" class="btn btn-ghost" type="button">Uždaryti</button>
       </div>
       <p class="prompt">Institucija: <strong>${escapeHtml(state.institutionSlug)}</strong></p>
+      <p class="prompt">Strategija: <strong>${escapeHtml(state.strategy?.title || state.strategySlug || '-')}</strong></p>
       <div id="authError" class="error" style="display:none;"></div>
       <p id="authHint" class="prompt auth-hint" style="display:none;"></p>
 

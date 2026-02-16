@@ -26,10 +26,48 @@ set
   status = 'active'
 where slug = 'eu-digital-strategy';
 
-insert into strategy_cycles (id, institution_id, title, state, results_published, starts_at, mission_text, vision_text)
+insert into institution_strategies (id, institution_id, title, slug, description, status, is_default)
 select
   gen_random_uuid(),
   i.id,
+  'EU Digital Strategy',
+  'eu-digital-strategy',
+  'EU Digital Strategy / Digital Decade 2030',
+  'active',
+  case when exists (
+    select 1
+    from institution_strategies sx
+    where sx.institution_id = i.id
+      and sx.is_default = true
+  ) then false else true end
+from institutions i
+where i.slug = 'eu-digital-strategy'
+  and not exists (
+    select 1
+    from institution_strategies s
+    where s.institution_id = i.id
+      and s.slug = 'eu-digital-strategy'
+  );
+
+with target_strategy as (
+  select s.id as strategy_id, s.institution_id
+  from institution_strategies s
+  join institutions i on i.id = s.institution_id
+  where i.slug = 'eu-digital-strategy'
+    and s.slug = 'eu-digital-strategy'
+  limit 1
+)
+update strategy_cycles c
+set strategy_id = ts.strategy_id
+from target_strategy ts
+where c.institution_id = ts.institution_id
+  and c.strategy_id is null;
+
+insert into strategy_cycles (id, institution_id, strategy_id, title, state, results_published, starts_at, mission_text, vision_text)
+select
+  gen_random_uuid(),
+  i.id,
+  s.id,
   'EU Digital Strategy 2030 Cycle',
   'open',
   false,
@@ -37,11 +75,13 @@ select
   'Coordinate Europe''s digital transformation through measurable targets in skills, business, infrastructure and public services.',
   'A sovereign, secure and inclusive European digital ecosystem where people, businesses and public institutions benefit from trustworthy digital services.'
 from institutions i
+join institution_strategies s on s.institution_id = i.id and s.slug = 'eu-digital-strategy'
 where i.slug = 'eu-digital-strategy'
   and not exists (
     select 1
     from strategy_cycles c
     where c.institution_id = i.id
+      and c.strategy_id = s.id
   );
 
 with target_cycle as (

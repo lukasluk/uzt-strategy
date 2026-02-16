@@ -6,12 +6,42 @@ function registerPublicRoutes({
   publicReadRateLimit,
   trafficMonitor,
   getInstitutionBySlug,
+  resolveInstitutionStrategy,
   getCurrentCycle,
   normalizeLineSide
 }) {
   const publicReadGuard = typeof publicReadRateLimit === 'function'
     ? publicReadRateLimit
     : (_req, _res, next) => next();
+
+  function normalizeStrategyOutput(strategy) {
+    if (!strategy) return null;
+    return {
+      id: strategy.id,
+      institutionId: strategy.institution_id,
+      title: strategy.title,
+      slug: strategy.slug,
+      description: strategy.description || null,
+      status: strategy.status,
+      isDefault: Boolean(strategy.is_default),
+      createdAt: strategy.created_at
+    };
+  }
+
+  function normalizeCycleOutput(cycle) {
+    if (!cycle) return null;
+    return {
+      id: cycle.id,
+      title: cycle.title,
+      state: cycle.state,
+      finalizedAt: cycle.finalized_at,
+      missionText: cycle.mission_text || null,
+      visionText: cycle.vision_text || null,
+      createdAt: cycle.created_at,
+      mapX: Number.isFinite(Number(cycle.map_x)) ? Number(cycle.map_x) : null,
+      mapY: Number.isFinite(Number(cycle.map_y)) ? Number(cycle.map_y) : null
+    };
+  }
 
   app.get('/api/v1/health', (_req, res) => {
     res.json({ ok: true, version: 'v1' });
@@ -22,7 +52,30 @@ function registerPublicRoutes({
       'select id, name, slug, country_code, website_url, status, created_at from institutions where status = $1 order by name asc',
       ['active']
     );
-    res.json({ institutions: institutions.rows });
+
+    const institutionIds = institutions.rows.map((item) => item.id);
+    let strategiesByInstitution = {};
+    if (institutionIds.length) {
+      const strategiesRes = await query(
+        `select id, institution_id, title, slug, description, status, is_default, created_at
+         from institution_strategies
+         where institution_id = any($1::uuid[]) and status = 'active'
+         order by institution_id asc, is_default desc, created_at asc`,
+        [institutionIds]
+      );
+      strategiesByInstitution = strategiesRes.rows.reduce((acc, item) => {
+        if (!acc[item.institution_id]) acc[item.institution_id] = [];
+        acc[item.institution_id].push(normalizeStrategyOutput(item));
+        return acc;
+      }, {});
+    }
+
+    res.json({
+      institutions: institutions.rows.map((institution) => ({
+        ...institution,
+        strategies: strategiesByInstitution[institution.id] || []
+      }))
+    });
   });
 
   app.get('/api/v1/public/content-settings', publicReadGuard, async (_req, res) => {
@@ -32,6 +85,7 @@ function registerPublicRoutes({
 
   app.get('/api/v1/public/strategy-map', publicReadGuard, async (req, res) => {
     const requestedInstitutionSlug = String(req.query?.institution || '').trim().toLowerCase();
+    const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const source = String(req.query?.source || '').trim().toLowerCase();
     const hasRequestedInstitutionSlug = Boolean(requestedInstitutionSlug && /^[a-z0-9-]+$/.test(requestedInstitutionSlug));
 
@@ -56,17 +110,40 @@ function registerPublicRoutes({
     const institutions = institutionsRes.rows;
     if (!institutions.length) return res.json({ institutions: [] });
 
-    const institutionIds = institutions.map((row) => row.id);
-    const cyclesRes = await query(
-      `select distinct on (institution_id)
-          id, institution_id, title, state, finalized_at, mission_text, vision_text, created_at, map_x, map_y
-       from strategy_cycles
-       where institution_id = any($1::uuid[])
-       order by institution_id, created_at desc`,
-      [institutionIds]
+    const selectedStrategiesByInstitution = {};
+    const strategiesByInstitution = {};
+    for (const institution of institutions) {
+      const strategySlug = hasRequestedInstitutionSlug && institution.slug === requestedInstitutionSlug
+        ? requestedStrategySlug
+        : '';
+      const resolved = await resolveInstitutionStrategy(query, institution.id, strategySlug);
+      if (strategySlug && !resolved.strategy) {
+        return res.status(404).json({ error: 'strategy not found' });
+      }
+      selectedStrategiesByInstitution[institution.id] = resolved.strategy || null;
+      strategiesByInstitution[institution.id] = Array.isArray(resolved.strategies) ? resolved.strategies : [];
+    }
+
+    const cycleList = await Promise.all(
+      institutions.map(async (institution) => {
+        const selectedStrategy = selectedStrategiesByInstitution[institution.id] || null;
+        const cycle = await getCurrentCycle(query, institution.id, {
+          strategyId: selectedStrategy?.id || null,
+          allowInstitutionFallback: !selectedStrategy?.id
+        });
+        if (!cycle) return null;
+        return {
+          institutionId: institution.id,
+          cycle
+        };
+      })
     );
-    const cyclesByInstitution = Object.fromEntries(cyclesRes.rows.map((row) => [row.institution_id, row]));
-    const cycleIds = cyclesRes.rows.map((row) => row.id);
+    const cyclesByInstitution = cycleList.reduce((acc, item) => {
+      if (!item) return acc;
+      acc[item.institutionId] = item.cycle;
+      return acc;
+    }, {});
+    const cycleIds = cycleList.filter(Boolean).map((item) => item.cycle.id);
 
     const guidelinesByCycle = {};
     const guidelineLookupByCycle = {};
@@ -242,19 +319,9 @@ function registerPublicRoutes({
           websiteUrl: institution.website_url || null,
           status: institution.status,
           createdAt: institution.created_at,
-          cycle: cycle
-            ? {
-                id: cycle.id,
-                title: cycle.title,
-                state: cycle.state,
-                finalizedAt: cycle.finalized_at,
-                missionText: cycle.mission_text || null,
-                visionText: cycle.vision_text || null,
-                createdAt: cycle.created_at,
-                mapX: Number.isFinite(Number(cycle.map_x)) ? Number(cycle.map_x) : null,
-                mapY: Number.isFinite(Number(cycle.map_y)) ? Number(cycle.map_y) : null
-              }
-            : null,
+          strategies: (strategiesByInstitution[institution.id] || []).map((item) => normalizeStrategyOutput(item)),
+          strategy: normalizeStrategyOutput(selectedStrategiesByInstitution[institution.id] || null),
+          cycle: normalizeCycleOutput(cycle),
           guidelines: cycle ? (guidelinesByCycle[cycle.id] || []) : [],
           initiatives: cycle ? (initiativesByCycle[cycle.id] || []) : []
         };
@@ -263,10 +330,19 @@ function registerPublicRoutes({
   });
 
   app.get('/api/v1/public/institutions/:slug/cycles/current/summary', publicReadGuard, async (req, res) => {
+    const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
 
-    const cycle = await getCurrentCycle(query, institution.id);
+    const resolved = await resolveInstitutionStrategy(query, institution.id, requestedStrategySlug);
+    const strategy = resolved.strategy || null;
+    const strategies = Array.isArray(resolved.strategies) ? resolved.strategies : [];
+    if (requestedStrategySlug && !strategy) return res.status(404).json({ error: 'strategy not found' });
+
+    const cycle = await getCurrentCycle(query, institution.id, {
+      strategyId: strategy?.id || null,
+      allowInstitutionFallback: !strategy?.id
+    });
     if (!cycle) return res.status(404).json({ error: 'cycle not found' });
 
     const stats = await query(
@@ -294,16 +370,27 @@ function registerPublicRoutes({
 
     res.json({
       institution,
-      cycle,
+      strategy: normalizeStrategyOutput(strategy),
+      strategies: strategies.map((item) => normalizeStrategyOutput(item)),
+      cycle: normalizeCycleOutput(cycle),
       summary: stats.rows[0]
     });
   });
 
   app.get('/api/v1/public/institutions/:slug/cycles/current/guidelines', publicReadGuard, async (req, res) => {
+    const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
 
-    const cycle = await getCurrentCycle(query, institution.id);
+    const resolved = await resolveInstitutionStrategy(query, institution.id, requestedStrategySlug);
+    const strategy = resolved.strategy || null;
+    const strategies = Array.isArray(resolved.strategies) ? resolved.strategies : [];
+    if (requestedStrategySlug && !strategy) return res.status(404).json({ error: 'strategy not found' });
+
+    const cycle = await getCurrentCycle(query, institution.id, {
+      strategyId: strategy?.id || null,
+      allowInstitutionFallback: !strategy?.id
+    });
     if (!cycle) return res.status(404).json({ error: 'cycle not found' });
 
     const guidelines = await query(
@@ -349,7 +436,9 @@ function registerPublicRoutes({
 
     res.json({
       institution,
-      cycle,
+      strategy: normalizeStrategyOutput(strategy),
+      strategies: strategies.map((item) => normalizeStrategyOutput(item)),
+      cycle: normalizeCycleOutput(cycle),
       guidelines: guidelines.rows.map((g) => ({
         id: g.id,
         title: g.title,
@@ -366,10 +455,19 @@ function registerPublicRoutes({
   });
 
   app.get('/api/v1/public/institutions/:slug/cycles/current/initiatives', publicReadGuard, async (req, res) => {
+    const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
 
-    const cycle = await getCurrentCycle(query, institution.id);
+    const resolved = await resolveInstitutionStrategy(query, institution.id, requestedStrategySlug);
+    const strategy = resolved.strategy || null;
+    const strategies = Array.isArray(resolved.strategies) ? resolved.strategies : [];
+    if (requestedStrategySlug && !strategy) return res.status(404).json({ error: 'strategy not found' });
+
+    const cycle = await getCurrentCycle(query, institution.id, {
+      strategyId: strategy?.id || null,
+      allowInstitutionFallback: !strategy?.id
+    });
     if (!cycle) return res.status(404).json({ error: 'cycle not found' });
 
     const initiativesRes = await query(
@@ -435,7 +533,9 @@ function registerPublicRoutes({
 
     res.json({
       institution,
-      cycle,
+      strategy: normalizeStrategyOutput(strategy),
+      strategies: strategies.map((item) => normalizeStrategyOutput(item)),
+      cycle: normalizeCycleOutput(cycle),
       initiatives: initiativesRes.rows.map((row) => ({
         id: row.id,
         title: row.title,
