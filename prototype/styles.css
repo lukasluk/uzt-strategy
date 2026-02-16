@@ -1910,6 +1910,12 @@ body.embed-map-page .map-fullscreen-watermark img {
   stroke: #bf4f2f;
   stroke-dasharray: 6 6;
 }
+.strategy-map-edge.edge-strategy-link {
+  stroke: #6c62b9;
+  stroke-width: 2.4;
+  stroke-dasharray: 8 6;
+  opacity: 0.66;
+}
 .strategy-map-edge.edge-initiative {
   stroke: url(#mapInitiativeGradient);
   stroke-width: 3.2;
@@ -2283,6 +2289,17 @@ body.embed-map-page .map-fullscreen-watermark img {
   background: #fff0e3;
   color: #b6482d;
   font-weight: 700;
+}
+.map-strategy-link-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #c5bbea;
+  padding: 2px 9px;
+  font-size: 11px;
+  background: #f5f1ff;
+  color: #4d418e;
+  font-weight: 600;
 }
 .map-vote-squares {
   display: flex;
@@ -3047,6 +3064,20 @@ select:focus {
 .guideline-card.guideline-relation-orphan .card-top {
   border-left-color: #3f9b8a;
 }
+.guideline-strategy-links {
+  margin-top: 8px;
+}
+.tag.tag-link-main {
+  background: #f0ecff;
+  border: 1px solid #d1c7ff;
+  color: #463c8f;
+  font-weight: 700;
+}
+.tag.tag-link-ref {
+  background: #f7f4ff;
+  border: 1px solid #ddd5ff;
+  color: #5649a8;
+}
 
 .initiative-card {
   border-color: #c5d0f5;
@@ -3137,6 +3168,11 @@ select:focus {
   background: #ddeaff;
   color: #1f4575;
 }
+.map-strategy-link-chip {
+  border-color: #c8beec;
+  background: #f3efff;
+  color: #4d4396;
+}
 .map-vote-square {
   background: #2b6fbe;
   border-color: #1f4f84;
@@ -3163,6 +3199,12 @@ select:focus {
 }
 .strategy-map-edge.edge-orphan {
   stroke: #82a9dd;
+}
+.strategy-map-edge.edge-strategy-link {
+  stroke: #6a63bf;
+  stroke-width: 2.4;
+  opacity: 0.58;
+  stroke-dasharray: 7 6;
 }
 .institution-node {
   border: var(--map-parent-accent-thickness) solid #2b6fbe;

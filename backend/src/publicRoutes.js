@@ -43,6 +43,95 @@ function registerPublicRoutes({
     };
   }
 
+  async function loadGuidelineStrategyLinksByGuidelineIds(guidelineIds) {
+    const ids = Array.isArray(guidelineIds) ? guidelineIds.filter(Boolean) : [];
+    if (!ids.length) return {};
+
+    const linksRes = await query(
+      `select l.id,
+              l.created_at,
+              l.source_guideline_id,
+              l.target_guideline_id,
+              sg.title as source_guideline_title,
+              tg.title as target_guideline_title,
+              sc.id as source_cycle_id,
+              tc.id as target_cycle_id,
+              si.id as source_institution_id,
+              si.name as source_institution_name,
+              si.slug as source_institution_slug,
+              ti.id as target_institution_id,
+              ti.name as target_institution_name,
+              ti.slug as target_institution_slug,
+              ss.id as source_strategy_id,
+              ss.title as source_strategy_title,
+              ss.slug as source_strategy_slug,
+              ts.id as target_strategy_id,
+              ts.title as target_strategy_title,
+              ts.slug as target_strategy_slug
+       from strategy_guideline_links l
+       join strategy_guidelines sg on sg.id = l.source_guideline_id
+       join strategy_guidelines tg on tg.id = l.target_guideline_id
+       join strategy_cycles sc on sc.id = sg.cycle_id
+       join strategy_cycles tc on tc.id = tg.cycle_id
+       join institutions si on si.id = sc.institution_id
+       join institutions ti on ti.id = tc.institution_id
+       left join institution_strategies ss on ss.id = sc.strategy_id
+       left join institution_strategies ts on ts.id = tc.strategy_id
+       where l.source_guideline_id = any($1::uuid[])
+          or l.target_guideline_id = any($1::uuid[])
+       order by l.created_at asc`,
+      [ids]
+    );
+
+    const linksByGuideline = {};
+    const pushForGuideline = (guidelineId, payload) => {
+      if (!linksByGuideline[guidelineId]) linksByGuideline[guidelineId] = [];
+      linksByGuideline[guidelineId].push(payload);
+    };
+
+    linksRes.rows.forEach((row) => {
+      const sourceId = row.source_guideline_id;
+      const targetId = row.target_guideline_id;
+      const sourcePayload = {
+        id: row.id,
+        direction: 'outgoing',
+        otherGuidelineId: targetId,
+        otherGuidelineTitle: row.target_guideline_title,
+        otherCycleId: row.target_cycle_id,
+        otherInstitutionId: row.target_institution_id,
+        otherInstitutionName: row.target_institution_name,
+        otherInstitutionSlug: row.target_institution_slug,
+        otherStrategyId: row.target_strategy_id,
+        otherStrategyTitle: row.target_strategy_title || 'default',
+        otherStrategySlug: row.target_strategy_slug || 'default',
+        isCrossInstitution: row.source_institution_id !== row.target_institution_id,
+        isCrossStrategy: row.source_strategy_id !== row.target_strategy_id,
+        createdAt: row.created_at
+      };
+      const targetPayload = {
+        id: row.id,
+        direction: 'incoming',
+        otherGuidelineId: sourceId,
+        otherGuidelineTitle: row.source_guideline_title,
+        otherCycleId: row.source_cycle_id,
+        otherInstitutionId: row.source_institution_id,
+        otherInstitutionName: row.source_institution_name,
+        otherInstitutionSlug: row.source_institution_slug,
+        otherStrategyId: row.source_strategy_id,
+        otherStrategyTitle: row.source_strategy_title || 'default',
+        otherStrategySlug: row.source_strategy_slug || 'default',
+        isCrossInstitution: row.source_institution_id !== row.target_institution_id,
+        isCrossStrategy: row.source_strategy_id !== row.target_strategy_id,
+        createdAt: row.created_at
+      };
+
+      pushForGuideline(sourceId, sourcePayload);
+      pushForGuideline(targetId, targetPayload);
+    });
+
+    return linksByGuideline;
+  }
+
   app.get('/api/v1/health', (_req, res) => {
     res.json({ ok: true, version: 'v1' });
   });
@@ -153,6 +242,7 @@ function registerPublicRoutes({
     const initiativeLinksByInitiative = {};
     const voteByInitiative = {};
     const commentsByInitiative = {};
+    const strategyLinksByGuideline = {};
     if (cycleIds.length) {
       const guidelinesRes = await query(
         `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, line_side, map_x, map_y, created_at
@@ -262,6 +352,11 @@ function registerPublicRoutes({
         });
       });
 
+      const loadedLinks = await loadGuidelineStrategyLinksByGuidelineIds(
+        guidelinesRes.rows.map((row) => row.id)
+      );
+      Object.assign(strategyLinksByGuideline, loadedLinks);
+
       guidelinesRes.rows.forEach((row) => {
         if (!guidelinesByCycle[row.cycle_id]) guidelinesByCycle[row.cycle_id] = [];
         const guidelineItem = {
@@ -276,6 +371,8 @@ function registerPublicRoutes({
           mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
           totalScore: voteByGuideline[row.id]?.totalScore || 0,
           voterCount: voteByGuideline[row.id]?.voterCount || 0,
+          strategyLinks: strategyLinksByGuideline[row.id] || [],
+          strategyLinkCount: (strategyLinksByGuideline[row.id] || []).length,
           commentCount: (commentsByGuideline[row.id] || []).length,
           comments: commentsByGuideline[row.id] || [],
           createdAt: row.created_at
@@ -433,6 +530,9 @@ function registerPublicRoutes({
       });
       return acc;
     }, {});
+    const strategyLinksByGuideline = await loadGuidelineStrategyLinksByGuidelineIds(
+      guidelines.rows.map((row) => row.id)
+    );
 
     res.json({
       institution,
@@ -449,6 +549,8 @@ function registerPublicRoutes({
         lineSide: normalizeLineSide(g.line_side) || 'auto',
         totalScore: voteByGuideline[g.id]?.totalScore || 0,
         voterCount: voteByGuideline[g.id]?.voterCount || 0,
+        strategyLinks: strategyLinksByGuideline[g.id] || [],
+        strategyLinkCount: (strategyLinksByGuideline[g.id] || []).length,
         comments: commentsByGuideline[g.id] || []
       }))
     });

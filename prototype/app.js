@@ -1651,6 +1651,35 @@ function normalizeGuidelineRelation(value) {
   return 'orphan';
 }
 
+function normalizeGuidelineStrategyLinks(value) {
+  const list = Array.isArray(value) ? value : [];
+  return list
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const otherGuidelineId = String(item.otherGuidelineId || '').trim();
+      if (!otherGuidelineId) return null;
+      return {
+        id: String(item.id || '').trim(),
+        direction: String(item.direction || '').trim().toLowerCase(),
+        otherGuidelineId,
+        otherGuidelineTitle: String(item.otherGuidelineTitle || '').trim(),
+        otherInstitutionName: String(item.otherInstitutionName || '').trim(),
+        otherInstitutionSlug: normalizeSlug(item.otherInstitutionSlug),
+        otherStrategyTitle: String(item.otherStrategyTitle || '').trim(),
+        otherStrategySlug: normalizeSlug(item.otherStrategySlug),
+        isCrossInstitution: Boolean(item.isCrossInstitution),
+        isCrossStrategy: Boolean(item.isCrossStrategy)
+      };
+    })
+    .filter(Boolean);
+}
+
+function strategyLinkLabel(link) {
+  const institution = link.otherInstitutionSlug || link.otherInstitutionName || '-';
+  const strategy = link.otherStrategyTitle || link.otherStrategySlug || 'default';
+  return `${institution} / ${strategy}`;
+}
+
 function formatCommentDateTime(value) {
   if (!value) return 'Data nenurodyta';
   const date = new Date(value);
@@ -1722,6 +1751,19 @@ function renderGuidelineCard(guideline, options) {
   const relationTag = relation.charAt(0).toUpperCase() + relation.slice(1);
   const guidelineStatus = String(guideline.status || 'active').toLowerCase();
   const votingDisabled = guidelineStatus === 'disabled';
+  const strategyLinks = relationKey === 'parent'
+    ? normalizeGuidelineStrategyLinks(guideline.strategyLinks)
+    : [];
+  const uniqueLinkLabels = Array.from(new Set(strategyLinks.map((item) => strategyLinkLabel(item))));
+  const strategyLinksMarkup = relationKey === 'parent'
+    ? `
+      <div class="header-stack guideline-strategy-links">
+        <span class="tag tag-link-main">Strateginiai rysiai: ${strategyLinks.length}</span>
+        ${uniqueLinkLabels.slice(0, 3).map((label) => `<span class="tag tag-link-ref">${escapeHtml(label)}</span>`).join('')}
+        ${uniqueLinkLabels.length > 3 ? `<span class="tag">+${uniqueLinkLabels.length - 3}</span>` : ''}
+      </div>
+    `
+    : '';
 
   const budget = voteBudget();
   const usedWithoutCurrent = usedVotesTotal() - userScore;
@@ -1742,6 +1784,7 @@ function renderGuidelineCard(guideline, options) {
           ${votingDisabled ? '<span class="tag tag-disabled">Išjungta</span>' : ''}
         </div>
         <p>${escapeHtml(guideline.description || 'Be paaiškinimo')}</p>
+        ${strategyLinksMarkup}
       </div>
       ${options.member ? `
         <div class="vote-panel">

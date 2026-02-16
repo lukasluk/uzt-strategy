@@ -130,6 +130,7 @@ function layoutStrategyMap() {
     return {
       nodes: [],
       guidelineEdges: [],
+      strategyGuidelineEdges: [],
       initiativeEdges: [],
       width: 1200,
       height: 820,
@@ -142,6 +143,7 @@ function layoutStrategyMap() {
     return {
       nodes: [],
       guidelineEdges: [],
+      strategyGuidelineEdges: [],
       initiativeEdges: [],
       width: 1200,
       height: 820,
@@ -156,6 +158,7 @@ function layoutStrategyMap() {
 
   const nodes = [];
   const guidelineEdges = [];
+  const strategyGuidelineEdges = [];
   const initiativeEdges = [];
   const baseX = 140;
   const institutionNodeId = `inst-${institution.id}`;
@@ -241,6 +244,29 @@ function layoutStrategyMap() {
     guidelines.forEach((guideline) => {
       if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
     });
+
+    const strategyLinkPairSet = new Set();
+    guidelines.forEach((guideline) => {
+      const fromNodeId = guidelineNodeIdByEntity[guideline.id];
+      if (!fromNodeId) return;
+      const links = Array.isArray(guideline.strategyLinks) ? guideline.strategyLinks : [];
+      links.forEach((link) => {
+        const otherGuidelineId = String(link?.otherGuidelineId || '').trim();
+        if (!otherGuidelineId) return;
+        const toNodeId = guidelineNodeIdByEntity[otherGuidelineId];
+        if (!toNodeId || toNodeId === fromNodeId) return;
+        const pairKey = [fromNodeId, toNodeId].sort().join('|');
+        if (strategyLinkPairSet.has(pairKey)) return;
+        strategyLinkPairSet.add(pairKey);
+        strategyGuidelineEdges.push({
+          from: fromNodeId,
+          to: toNodeId,
+          type: 'strategy-link',
+          layer: 'guidelines',
+          lineSide: 'auto'
+        });
+      });
+    });
   }
 
   if (initiatives.length) {
@@ -308,6 +334,7 @@ function layoutStrategyMap() {
   return {
     nodes,
     guidelineEdges,
+    strategyGuidelineEdges,
     initiativeEdges,
     width,
     height,
@@ -992,6 +1019,12 @@ function renderMapView() {
     const parentRootClass = isParentRoot ? ' edge-root-parent' : '';
     return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}${parentRootClass} edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
   }).join('');
+  const strategyGuidelineEdgeMarkup = graph.strategyGuidelineEdges.map((edge) => {
+    const fromNode = nodeById[edge.from];
+    const toNode = nodeById[edge.to];
+    if (!fromNode || !toNode) return '';
+    return `<path class="strategy-map-edge edge-strategy-link edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="auto" d="${edgePath(fromNode, toNode, 'auto')}"></path>`;
+  }).join('');
   const initiativeEdgeMarkup = graph.initiativeEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
@@ -1035,10 +1068,19 @@ function renderMapView() {
           ? node.guideline.comments.length
           : Number(node.guideline.commentCount || 0)
       );
+      const strategyLinkCount = Math.max(
+        0,
+        Array.isArray(node.guideline.strategyLinks)
+          ? node.guideline.strategyLinks.length
+          : Number(node.guideline.strategyLinkCount || 0)
+      );
       const scoreForSquares = Math.max(0, Math.round(score));
       const voteSquares = scoreForSquares
         ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
         : '<span class="map-vote-empty">Dar nebalsuota</span>';
+      const strategyLinkChip = relation === 'parent'
+        ? `<span class="map-strategy-link-chip" title="Strateginiai rysiai tarp teviniu gairiu">Rysiai: ${strategyLinkCount}</span>`
+        : '';
 
       return `
         <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}"
@@ -1073,6 +1115,7 @@ function renderMapView() {
             <span class="map-vote-chip" title="Bendras balas">
               <strong>${score}</strong>
             </span>
+            ${strategyLinkChip}
           </div>
           <div class="map-vote-squares">${voteSquares}</div>
         </article>
@@ -1139,6 +1182,7 @@ function renderMapView() {
         <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
           <svg class="strategy-map-lines guideline-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
             ${guidelineEdgeMarkup}
+            ${strategyGuidelineEdgeMarkup}
           </svg>
           <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
             <defs>

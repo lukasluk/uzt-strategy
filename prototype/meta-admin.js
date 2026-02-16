@@ -62,7 +62,14 @@ function toUserMessage(error) {
     'at least one content setting field required': 'Pakeiskite bent viena teksta.',
     'content text too long': 'Tekstas per ilgas.',
     'reset token required': 'Truksta slaptazodzio keitimo nuorodos.',
-    'reset token invalid': 'Nuoroda nebegalioja arba jau panaudota.'
+    'reset token invalid': 'Nuoroda nebegalioja arba jau panaudota.',
+    'sourceGuidelineId and targetGuidelineId required': 'Pasirinkite abi tevines gaires.',
+    'source and target must differ': 'Pasirinktos gaires turi skirtis.',
+    'guideline not found': 'Gaire nerasta.',
+    'parent guideline required': 'Rysis leidziamas tik tarp teviniu gairiu.',
+    'failed to create guideline link': 'Nepavyko sukurti rysio tarp gairiu.',
+    'linkId required': 'Truksta rysio ID.',
+    'guideline link not found': 'Rysis nerastas.'
   };
   return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
 }
@@ -509,9 +516,69 @@ function renderMonitoringCards(monitoring) {
   `;
 }
 
+function guidelineCatalogLabel(item) {
+  const institution = String(item?.institutionName || item?.institutionSlug || 'Institucija');
+  const strategy = String(item?.strategyTitle || item?.strategySlug || 'default');
+  const guideline = String(item?.title || '-');
+  return `${institution} / ${strategy} / ${guideline}`;
+}
+
+function renderGuidelineLinksCard(guidelineLinks) {
+  const parentGuidelines = Array.isArray(guidelineLinks?.parentGuidelines) ? guidelineLinks.parentGuidelines : [];
+  const links = Array.isArray(guidelineLinks?.links) ? guidelineLinks.links : [];
+  const hasEnoughGuidelines = parentGuidelines.length >= 2;
+  const guidelineOptions = parentGuidelines.map((guideline) => `
+    <option value="${escapeHtml(guideline.id)}">${escapeHtml(guidelineCatalogLabel(guideline))}</option>
+  `).join('');
+
+  return `
+    <section class="card meta-admin-card" data-meta-section="links">
+      <div class="header-row">
+        <strong>Strategiju rysiai tarp teviniu gairiu</strong>
+        ${renderTag(String(links.length), 'count')}
+      </div>
+      <p class="prompt">Sioje vietoje meta-admin gali kurti tarp-strateginius ir tarp-institucinius rysius tarp teviniu gairiu.</p>
+      <form id="createGuidelineLinkForm" class="meta-admin-form">
+        <div class="form-row">
+          <select name="sourceGuidelineId" required ${state.busy || !hasEnoughGuidelines ? 'disabled' : ''}>
+            ${guidelineOptions}
+          </select>
+          <select name="targetGuidelineId" required ${state.busy || !hasEnoughGuidelines ? 'disabled' : ''}>
+            ${guidelineOptions}
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit" ${state.busy || !hasEnoughGuidelines ? 'disabled' : ''}>Sukurti rysi</button>
+      </form>
+      ${hasEnoughGuidelines ? '' : '<p class="prompt">Reikia bent dvieju teviniu gairiu, kad butu galima kurti rysius.</p>'}
+      <ul class="mini-list meta-admin-list" style="margin-top:12px;">
+        ${links.length
+          ? links.map((link) => `
+            <li class="meta-admin-list-item">
+              <div>
+                <strong>${escapeHtml(link?.source?.guidelineTitle || '-')}</strong>
+                <span class="muted">(${escapeHtml(link?.source?.institutionSlug || '-')} / ${escapeHtml(link?.source?.strategySlug || '-')})</span>
+                <span class="muted"> -> </span>
+                <strong>${escapeHtml(link?.target?.guidelineTitle || '-')}</strong>
+                <span class="muted">(${escapeHtml(link?.target?.institutionSlug || '-')} / ${escapeHtml(link?.target?.strategySlug || '-')})</span>
+                <div class="header-stack" style="margin-top:6px;">
+                  ${link?.isCrossInstitution ? renderTag('Tarp instituciju', 'scope') : renderTag('Ta pati institucija', 'scope')}
+                  ${link?.isCrossStrategy ? renderTag('Tarp strategiju', 'scope') : renderTag('Ta pati strategija', 'scope')}
+                  <span class="tag">${escapeHtml(formatDateTime(link?.createdAt))}</span>
+                </div>
+              </div>
+              <button class="btn btn-ghost" type="button" data-action="delete-guideline-link" data-link-id="${escapeHtml(link.id)}" ${state.busy ? 'disabled' : ''}>Pasalinti rysi</button>
+            </li>
+          `).join('')
+          : '<li>Nera sukurtu strateginiu rysiu.</li>'}
+      </ul>
+    </section>
+  `;
+}
+
 function renderTopTabs() {
   const tabs = [
     { id: 'monitoring', label: 'Monitoringas' },
+    { id: 'links', label: 'Strategiju rysiai' },
     { id: 'content', label: 'Viesas turinys' },
     { id: 'institutions', label: 'Institucijos' },
     { id: 'invites', label: 'Kvietimai' },
@@ -537,7 +604,7 @@ function renderTopTabs() {
 }
 
 function applyMetaTabVisibility() {
-  const allowedTabs = ['monitoring', 'content', 'institutions', 'invites', 'users'];
+  const allowedTabs = ['monitoring', 'links', 'content', 'institutions', 'invites', 'users'];
   const activeTab = allowedTabs.includes(state.metaTab) ? state.metaTab : 'monitoring';
   state.metaTab = activeTab;
 
@@ -651,6 +718,7 @@ function renderDashboard() {
 
       ${renderTopTabs()}
       ${renderMonitoringCards(monitoring)}
+      ${renderGuidelineLinksCard(state.overview?.guidelineLinks || {})}
       ${renderContentSettingsCard(contentSettings)}
 
       <section class="card meta-admin-card" data-meta-section="institutions">
@@ -776,6 +844,7 @@ function bindDashboardEvents() {
   const logoutBtn = document.getElementById('logoutMetaBtn');
   const createInstitutionForm = document.getElementById('createInstitutionForm');
   const createInviteForm = document.getElementById('createInviteForm');
+  const createGuidelineLinkForm = document.getElementById('createGuidelineLinkForm');
   const copyInviteUrlBtn = document.getElementById('copyInviteUrlBtn');
   const contentSettingsForm = document.getElementById('contentSettingsForm');
 
@@ -829,6 +898,32 @@ function bindDashboardEvents() {
         state.notice = 'Institucija sukurta.';
         await loadOverview();
         createInstitutionForm.reset();
+      });
+    });
+  }
+
+  if (createGuidelineLinkForm) {
+    createGuidelineLinkForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fd = new FormData(createGuidelineLinkForm);
+      const sourceGuidelineId = String(fd.get('sourceGuidelineId') || '').trim();
+      const targetGuidelineId = String(fd.get('targetGuidelineId') || '').trim();
+      if (!sourceGuidelineId || !targetGuidelineId) return;
+      if (sourceGuidelineId === targetGuidelineId) {
+        state.notice = 'Pasirinktos gaires turi skirtis.';
+        render();
+        return;
+      }
+
+      await runBusy(async () => {
+        const payload = await api('/api/v1/meta-admin/guideline-links', {
+          method: 'POST',
+          body: { sourceGuidelineId, targetGuidelineId }
+        });
+        state.notice = payload?.existedBefore
+          ? 'Rysis jau egzistavo.'
+          : 'Strateginis rysis sukurtas.';
+        await loadOverview();
       });
     });
   }
@@ -1011,6 +1106,22 @@ function bindDashboardEvents() {
         }
         event.preventDefault();
         event.stopPropagation();
+        return;
+      }
+      const deleteGuidelineLinkButton = target.closest('[data-action="delete-guideline-link"]');
+      if (deleteGuidelineLinkButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        const linkId = String(deleteGuidelineLinkButton.dataset.linkId || '').trim();
+        if (!linkId) return;
+        if (!window.confirm('Ar tikrai norite pasalinti si strategini rysi?')) return;
+        await runBusy(async () => {
+          await api(`/api/v1/meta-admin/guideline-links/${encodeURIComponent(linkId)}`, {
+            method: 'DELETE'
+          });
+          state.notice = 'Strateginis rysis pasalintas.';
+          await loadOverview();
+        });
         return;
       }
       const createButton = target.closest('[data-action="create-password-reset-link"]');
