@@ -4298,6 +4298,18 @@ body.meta-admin-page .stage {
   gap: 8px;
 }
 
+.meta-guideline-links-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 1.4fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.meta-guideline-links-filters input,
+.meta-guideline-links-filters select {
+  min-width: 0;
+}
+
 body.meta-admin-page .btn {
   border-radius: 12px;
   padding: 9px 14px;
@@ -4393,6 +4405,10 @@ body.meta-admin-page .tag-slug {
   }
 
   .meta-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-guideline-links-filters {
     grid-template-columns: 1fr;
   }
 

@@ -11,7 +11,10 @@ const state = {
   selectedMetaUserId: '',
   membershipAddTargetUserId: '',
   lastInvite: null,
-  lastPasswordReset: null
+  lastPasswordReset: null,
+  guidelineLinksInstitutionFilter: '',
+  guidelineLinksStrategyFilter: '',
+  guidelineLinksSearch: ''
 };
 
 bootstrap();
@@ -523,9 +526,78 @@ function guidelineCatalogLabel(item) {
   return `${institution} / ${strategy} / ${guideline}`;
 }
 
+function normalizeSearchText(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function buildGuidelineLinkFilterOptions(parentGuidelines) {
+  const institutionsMap = new Map();
+  const strategiesMap = new Map();
+  (Array.isArray(parentGuidelines) ? parentGuidelines : []).forEach((guideline) => {
+    const institutionId = String(guideline?.institutionId || '').trim();
+    if (institutionId && !institutionsMap.has(institutionId)) {
+      institutionsMap.set(institutionId, {
+        id: institutionId,
+        label: `${String(guideline?.institutionName || guideline?.institutionSlug || 'Institucija')} (${String(guideline?.institutionSlug || '-')})`
+      });
+    }
+
+    const strategyId = String(guideline?.strategyId || '').trim();
+    if (strategyId && !strategiesMap.has(strategyId)) {
+      const strategyTitle = String(guideline?.strategyTitle || guideline?.strategySlug || 'default');
+      const institutionSlug = String(guideline?.institutionSlug || '-');
+      strategiesMap.set(strategyId, {
+        id: strategyId,
+        label: `${strategyTitle} (${institutionSlug})`
+      });
+    }
+  });
+
+  const sortByLabel = (left, right) => left.label.localeCompare(right.label, 'lt');
+  return {
+    institutions: Array.from(institutionsMap.values()).sort(sortByLabel),
+    strategies: Array.from(strategiesMap.values()).sort(sortByLabel)
+  };
+}
+
 function renderGuidelineLinksCard(guidelineLinks) {
   const parentGuidelines = Array.isArray(guidelineLinks?.parentGuidelines) ? guidelineLinks.parentGuidelines : [];
   const links = Array.isArray(guidelineLinks?.links) ? guidelineLinks.links : [];
+  const { institutions, strategies } = buildGuidelineLinkFilterOptions(parentGuidelines);
+  const institutionFilter = String(state.guidelineLinksInstitutionFilter || '').trim();
+  const strategyFilter = String(state.guidelineLinksStrategyFilter || '').trim();
+  const searchFilter = String(state.guidelineLinksSearch || '').trim();
+  const normalizedSearch = normalizeSearchText(searchFilter);
+  const filteredLinks = links.filter((link) => {
+    const sourceInstitutionId = String(link?.source?.institutionId || '').trim();
+    const targetInstitutionId = String(link?.target?.institutionId || '').trim();
+    if (institutionFilter && sourceInstitutionId !== institutionFilter && targetInstitutionId !== institutionFilter) {
+      return false;
+    }
+
+    const sourceStrategyId = String(link?.source?.strategyId || '').trim();
+    const targetStrategyId = String(link?.target?.strategyId || '').trim();
+    if (strategyFilter && sourceStrategyId !== strategyFilter && targetStrategyId !== strategyFilter) {
+      return false;
+    }
+
+    if (!normalizedSearch) return true;
+    const searchable = [
+      link?.source?.guidelineTitle,
+      link?.target?.guidelineTitle,
+      link?.source?.institutionName,
+      link?.target?.institutionName,
+      link?.source?.institutionSlug,
+      link?.target?.institutionSlug,
+      link?.source?.strategyTitle,
+      link?.target?.strategyTitle,
+      link?.source?.strategySlug,
+      link?.target?.strategySlug
+    ]
+      .map((value) => normalizeSearchText(value))
+      .join(' ');
+    return searchable.includes(normalizedSearch);
+  });
   const hasEnoughGuidelines = parentGuidelines.length >= 2;
   const guidelineOptions = parentGuidelines.map((guideline) => `
     <option value="${escapeHtml(guideline.id)}">${escapeHtml(guidelineCatalogLabel(guideline))}</option>
@@ -535,15 +607,40 @@ function renderGuidelineLinksCard(guidelineLinks) {
     <section class="card meta-admin-card" data-meta-section="links">
       <div class="header-row">
         <strong>Strategiju rysiai tarp teviniu gairiu</strong>
-        ${renderTag(String(links.length), 'count')}
+        ${renderTag(`${filteredLinks.length}/${links.length}`, 'count')}
       </div>
       <p class="prompt">Sioje vietoje meta-admin gali kurti tarp-strateginius ir tarp-institucinius rysius tarp teviniu gairiu.</p>
+      <form id="guidelineLinksFilterForm" class="meta-guideline-links-filters">
+        <select name="institutionFilter" ${state.busy ? 'disabled' : ''}>
+          <option value="">Visos institucijos</option>
+          ${institutions.map((item) => `
+            <option value="${escapeHtml(item.id)}" ${item.id === institutionFilter ? 'selected' : ''}>${escapeHtml(item.label)}</option>
+          `).join('')}
+        </select>
+        <select name="strategyFilter" ${state.busy ? 'disabled' : ''}>
+          <option value="">Visos strategijos</option>
+          ${strategies.map((item) => `
+            <option value="${escapeHtml(item.id)}" ${item.id === strategyFilter ? 'selected' : ''}>${escapeHtml(item.label)}</option>
+          `).join('')}
+        </select>
+        <input
+          type="search"
+          name="search"
+          value="${escapeHtml(searchFilter)}"
+          placeholder="Greita paieska pagal gairiu pavadinimus"
+          ${state.busy ? 'disabled' : ''}
+        />
+        <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Taikyti</button>
+        <button class="btn btn-ghost" type="button" data-action="clear-guideline-link-filters" ${state.busy ? 'disabled' : ''}>Valyti filtrus</button>
+      </form>
       <form id="createGuidelineLinkForm" class="meta-admin-form">
         <div class="form-row">
           <select name="sourceGuidelineId" required ${state.busy || !hasEnoughGuidelines ? 'disabled' : ''}>
+            <option value="">Pasirinkite saltinio tevine gaire</option>
             ${guidelineOptions}
           </select>
           <select name="targetGuidelineId" required ${state.busy || !hasEnoughGuidelines ? 'disabled' : ''}>
+            <option value="">Pasirinkite tikslo tevine gaire</option>
             ${guidelineOptions}
           </select>
         </div>
@@ -551,8 +648,8 @@ function renderGuidelineLinksCard(guidelineLinks) {
       </form>
       ${hasEnoughGuidelines ? '' : '<p class="prompt">Reikia bent dvieju teviniu gairiu, kad butu galima kurti rysius.</p>'}
       <ul class="mini-list meta-admin-list" style="margin-top:12px;">
-        ${links.length
-          ? links.map((link) => `
+        ${filteredLinks.length
+          ? filteredLinks.map((link) => `
             <li class="meta-admin-list-item">
               <div>
                 <strong>${escapeHtml(link?.source?.guidelineTitle || '-')}</strong>
@@ -569,7 +666,7 @@ function renderGuidelineLinksCard(guidelineLinks) {
               <button class="btn btn-ghost" type="button" data-action="delete-guideline-link" data-link-id="${escapeHtml(link.id)}" ${state.busy ? 'disabled' : ''}>Pasalinti rysi</button>
             </li>
           `).join('')
-          : '<li>Nera sukurtu strateginiu rysiu.</li>'}
+          : '<li>Nera rysiu pagal pasirinktus filtrus.</li>'}
       </ul>
     </section>
   `;
@@ -845,6 +942,7 @@ function bindDashboardEvents() {
   const createInstitutionForm = document.getElementById('createInstitutionForm');
   const createInviteForm = document.getElementById('createInviteForm');
   const createGuidelineLinkForm = document.getElementById('createGuidelineLinkForm');
+  const guidelineLinksFilterForm = document.getElementById('guidelineLinksFilterForm');
   const copyInviteUrlBtn = document.getElementById('copyInviteUrlBtn');
   const contentSettingsForm = document.getElementById('contentSettingsForm');
 
@@ -926,6 +1024,21 @@ function bindDashboardEvents() {
         await loadOverview();
       });
     });
+  }
+
+  if (guidelineLinksFilterForm) {
+    const syncGuidelineLinkFilters = () => {
+      const fd = new FormData(guidelineLinksFilterForm);
+      state.guidelineLinksInstitutionFilter = String(fd.get('institutionFilter') || '').trim();
+      state.guidelineLinksStrategyFilter = String(fd.get('strategyFilter') || '').trim();
+      state.guidelineLinksSearch = String(fd.get('search') || '').trim();
+      render();
+    };
+    guidelineLinksFilterForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      syncGuidelineLinkFilters();
+    });
+    guidelineLinksFilterForm.addEventListener('change', syncGuidelineLinkFilters);
   }
 
   if (contentSettingsForm) {
@@ -1106,6 +1219,16 @@ function bindDashboardEvents() {
         }
         event.preventDefault();
         event.stopPropagation();
+        return;
+      }
+      const clearGuidelineLinkFiltersButton = target.closest('[data-action="clear-guideline-link-filters"]');
+      if (clearGuidelineLinkFiltersButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        state.guidelineLinksInstitutionFilter = '';
+        state.guidelineLinksStrategyFilter = '';
+        state.guidelineLinksSearch = '';
+        render();
         return;
       }
       const deleteGuidelineLinkButton = target.closest('[data-action="delete-guideline-link"]');
