@@ -358,13 +358,20 @@ body.embed-map-page .stage {
   min-height: 0;
   border-radius: 10px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+  align-items: start;
   padding: 7px 9px;
+}
+
+.step-utility-card .institution-switcher > span {
+  font-size: 11px;
+  letter-spacing: 0.05em;
 }
 
 .step-utility-card .institution-switcher select {
   width: 100%;
+  min-width: 0;
 }
 
 .step-utility-card-language .language-switch {
