@@ -2906,6 +2906,22 @@ function showAuthModal(initialMode = 'login') {
     return;
   }
   void initialMode;
+  const institutions = Array.isArray(state.institutions) ? state.institutions : [];
+  const currentInstitutionSlug = normalizeSlug(state.institutionSlug);
+  const authInstitutionOptions = institutions
+    .map((institution) => {
+      const slug = normalizeSlug(institution?.slug);
+      if (!slug) return '';
+      const name = String(institution?.name || slug).trim() || slug;
+      const isSelected = slug === currentInstitutionSlug ? ' selected' : '';
+      return `<option value="${escapeHtml(slug)}"${isSelected}>${escapeHtml(name)}</option>`;
+    })
+    .filter(Boolean)
+    .join('');
+  const fallbackInstitutionSlug = String(state.institutionSlug || '').trim();
+  const authInstitutionSelect = authInstitutionOptions
+    ? `<select id="authInstitution" name="institutionSlug" required>${authInstitutionOptions}</select>`
+    : `<select id="authInstitution" name="institutionSlug" required><option value="${escapeHtml(fallbackInstitutionSlug)}" selected>${escapeHtml(fallbackInstitutionSlug || '-')}</option></select>`;
 
   let overlay = document.getElementById('loginOverlay');
   if (overlay) overlay.remove();
@@ -2919,12 +2935,12 @@ function showAuthModal(initialMode = 'login') {
         <h2>Prisijungimas</h2>
         <button id="closeAuthModal" class="btn btn-ghost" type="button">Uždaryti</button>
       </div>
-      <p class="prompt">Institucija: <strong>${escapeHtml(state.institutionSlug)}</strong></p>
-      <p class="prompt">Strategija: <strong>${escapeHtml(state.strategy?.title || state.strategySlug || '-')}</strong></p>
       <div id="authError" class="error" style="display:none;"></div>
       <p id="authHint" class="prompt auth-hint" style="display:none;"></p>
 
       <form id="loginForm" class="login-form login-form-auth">
+        <label class="auth-label" for="authInstitution">Institucija</label>
+        ${authInstitutionSelect}
         <label class="auth-label" for="authEmail">El. paštas</label>
         <input id="authEmail" type="email" name="email" placeholder="El. paštas" autocomplete="email" required />
         <label class="auth-label" for="authPassword">Slaptažodis</label>
@@ -2995,9 +3011,22 @@ function showAuthModal(initialMode = 'login') {
     event.preventDefault();
     clearMessages();
     const fd = new FormData(loginForm);
+    const institutionSlug = normalizeSlug(fd.get('institutionSlug'));
     const email = String(fd.get('email') || '').trim();
     const password = String(fd.get('password') || '');
-    if (!email || !password) return;
+    if (!institutionSlug || !email || !password) return;
+    const selectedInstitution = institutions.find(
+      (institution) => normalizeSlug(institution?.slug) === institutionSlug
+    ) || null;
+    const institutionStrategies = Array.isArray(selectedInstitution?.strategies)
+      ? selectedInstitution.strategies
+      : [];
+    const defaultStrategy = institutionStrategies.find((item) => item?.isDefault) || institutionStrategies[0] || null;
+    const selectedStrategySlug = normalizeSlug(defaultStrategy?.slug)
+      || resolveStrategySlugForInstitution(institutionSlug, state.strategySlug);
+    const selectedStrategy = institutionStrategies.find(
+      (item) => normalizeSlug(item?.slug) === selectedStrategySlug
+    ) || defaultStrategy || null;
 
     try {
       const payload = await api('/api/v1/auth/login', {
@@ -3006,9 +3035,14 @@ function showAuthModal(initialMode = 'login') {
         body: {
           email,
           password,
-          institutionSlug: state.institutionSlug
+          institutionSlug
         }
       });
+      state.institutionSlug = institutionSlug;
+      state.institution = selectedInstitution || state.institution;
+      state.strategySlug = selectedStrategySlug;
+      state.strategy = selectedStrategy;
+      syncRouteState();
       setSession(payload);
       closeModal();
       await bootstrap();
