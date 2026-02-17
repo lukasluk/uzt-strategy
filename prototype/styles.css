@@ -1781,10 +1781,10 @@ textarea {
 }
 .guide-structure {
   margin-top: 14px;
-  border: 1px solid #e2cfb8;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #fffdf9 0%, #f8f0e5 100%);
-  padding: 12px 12px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 .guide-structure-head {
   display: flex;

@@ -1573,10 +1573,20 @@ function maybeAutoCollapseIntroOnFirstScroll() {
 
 function refreshIntroNarrativeTexts() {
   if (!elements.introDeck) return;
+  const titleNode = elements.introDeck.querySelector('[data-guide-title]');
   const missionNode = elements.introDeck.querySelector('[data-guide-mission]');
   const visionNode = elements.introDeck.querySelector('[data-guide-vision]');
+  if (titleNode) titleNode.textContent = cycleWorkshopTitleText();
   if (missionNode) missionNode.textContent = cycleMissionText();
   if (visionNode) visionNode.textContent = cycleVisionText();
+}
+
+function cycleWorkshopTitleText() {
+  const strategyTitle = String(state.strategy?.title || '').trim();
+  if (strategyTitle) return strategyTitle;
+  const cycleTitle = String(state.cycle?.title || '').trim();
+  if (cycleTitle) return cycleTitle;
+  return 'Strategijos dirbtuvės';
 }
 
 function renderIntroDeck() {
@@ -1593,16 +1603,12 @@ function renderIntroDeck() {
       <div class="intro-guide" role="button" tabindex="0" aria-expanded="true">
         <div class="intro-guide-header">
           <div>
-            <h3>${escapeHtml(state.strategy?.title || 'Skaitmenizacijos strategijos dirbtuvės')}</h3>
+            <h3 data-guide-title>${escapeHtml(cycleWorkshopTitleText())}</h3>
           </div>
           <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button" aria-expanded="true"></button>
         </div>
         <div class="intro-guide-body">
           <section class="guide-structure" aria-label="Strategijos struktūra">
-            <div class="guide-structure-head">
-              <h4>Strategijos struktūra</h4>
-              <p>Nuo krypties iki konkrečių veiklų.</p>
-            </div>
             <div class="guide-structure-track" role="list">
               <article class="structure-step structure-step-strategic" role="listitem">
                 <span class="structure-label">Misija</span>
