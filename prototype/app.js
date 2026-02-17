@@ -124,6 +124,7 @@ const EMBED_QUERY_KEY = 'embed';
 const EMBED_MAP_VALUE = 'map';
 const EMBED_MAP_PATH_PREFIX = '/embed/strategy-map';
 const EMBED_BRAND_LINK = 'https://digistrategy.eu';
+const FOCUS_GUIDELINE_QUERY_KEY = 'focusGuideline';
 const STEP_ADD_SECTION_IDS = Object.freeze({
   guidelines: 'guidelineAddSection',
   initiatives: 'initiativeAddSection'
@@ -196,7 +197,7 @@ const state = {
   mapTransform: { x: 120, y: 80, scale: 1 },
   expandedStepId: '',
   pendingAddSectionScrollId: '',
-  pendingGuidelineFocusId: ''
+  pendingGuidelineFocusId: resolveGuidelineFocusId()
 };
 let adminAppLoadPromise = null;
 
@@ -282,6 +283,12 @@ function resolveInstitutionSlug() {
 function resolveStrategySlug() {
   const params = new URLSearchParams(window.location.search);
   return normalizeSlug(params.get('strategy'));
+}
+
+function resolveGuidelineFocusId() {
+  const params = new URLSearchParams(window.location.search);
+  const value = String(params.get(FOCUS_GUIDELINE_QUERY_KEY) || '').trim();
+  return value || '';
 }
 
 function resolveEmbedMapMode() {
@@ -1296,6 +1303,15 @@ function flushPendingGuidelineFocus() {
   void target.offsetWidth;
   target.classList.add('guideline-focus-pulse');
   window.setTimeout(() => target.classList.remove('guideline-focus-pulse'), 1000);
+  clearGuidelineFocusQuery();
+}
+
+function clearGuidelineFocusQuery() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has(FOCUS_GUIDELINE_QUERY_KEY)) return;
+  params.delete(FOCUS_GUIDELINE_QUERY_KEY);
+  const href = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+  window.history.replaceState(null, '', href);
 }
 
 function resolveStrategySlugForInstitution(institutionSlug, preferredStrategySlug = '') {

@@ -433,6 +433,7 @@ function registerAdminRoutes({
     const guidelineIds = guidelinesRes.rows.map((row) => row.id);
     const commentsByGuideline = {};
     const votesByGuideline = {};
+    const strategyLinksByGuideline = {};
     if (guidelineIds.length) {
       const commentsRes = await query(
         `select c.id,
@@ -483,6 +484,79 @@ function registerAdminRoutes({
           updatedAt: row.updated_at
         });
       });
+
+      const strategyLinksRes = await query(
+        `select l.id,
+                l.source_guideline_id,
+                l.target_guideline_id,
+                sg.title as source_guideline_title,
+                tg.title as target_guideline_title,
+                si.slug as source_institution_slug,
+                si.name as source_institution_name,
+                ti.slug as target_institution_slug,
+                ti.name as target_institution_name,
+                ss.slug as source_strategy_slug,
+                ss.title as source_strategy_title,
+                ts.slug as target_strategy_slug,
+                ts.title as target_strategy_title
+         from strategy_guideline_links l
+         join strategy_guidelines sg on sg.id = l.source_guideline_id
+         join strategy_guidelines tg on tg.id = l.target_guideline_id
+         join strategy_cycles sc on sc.id = sg.cycle_id
+         join strategy_cycles tc on tc.id = tg.cycle_id
+         join institutions si on si.id = sc.institution_id
+         join institutions ti on ti.id = tc.institution_id
+         left join institution_strategies ss on ss.id = sc.strategy_id
+         left join institution_strategies ts on ts.id = tc.strategy_id
+         where l.source_guideline_id = any($1::uuid[])
+            or l.target_guideline_id = any($1::uuid[])
+         order by l.created_at desc`,
+        [guidelineIds]
+      );
+
+      const guidelineIdSet = new Set(guidelineIds);
+      strategyLinksRes.rows.forEach((row) => {
+        const sourceId = String(row.source_guideline_id || '').trim();
+        const targetId = String(row.target_guideline_id || '').trim();
+        if (!sourceId || !targetId) return;
+
+        const isCrossInstitution = String(row.source_institution_slug || '').trim()
+          !== String(row.target_institution_slug || '').trim();
+        const isCrossStrategy = String(row.source_strategy_slug || '').trim()
+          !== String(row.target_strategy_slug || '').trim();
+
+        if (guidelineIdSet.has(sourceId)) {
+          if (!strategyLinksByGuideline[sourceId]) strategyLinksByGuideline[sourceId] = [];
+          strategyLinksByGuideline[sourceId].push({
+            id: row.id,
+            direction: 'outgoing',
+            otherGuidelineId: targetId,
+            otherGuidelineTitle: row.target_guideline_title,
+            otherInstitutionName: row.target_institution_name,
+            otherInstitutionSlug: row.target_institution_slug,
+            otherStrategyTitle: row.target_strategy_title || 'default',
+            otherStrategySlug: row.target_strategy_slug || 'default',
+            isCrossInstitution,
+            isCrossStrategy
+          });
+        }
+
+        if (guidelineIdSet.has(targetId)) {
+          if (!strategyLinksByGuideline[targetId]) strategyLinksByGuideline[targetId] = [];
+          strategyLinksByGuideline[targetId].push({
+            id: row.id,
+            direction: 'incoming',
+            otherGuidelineId: sourceId,
+            otherGuidelineTitle: row.source_guideline_title,
+            otherInstitutionName: row.source_institution_name,
+            otherInstitutionSlug: row.source_institution_slug,
+            otherStrategyTitle: row.source_strategy_title || 'default',
+            otherStrategySlug: row.source_strategy_slug || 'default',
+            isCrossInstitution,
+            isCrossStrategy
+          });
+        }
+      });
     }
 
     res.json({
@@ -499,7 +573,9 @@ function registerAdminRoutes({
         voterCount: row.voter_count,
         votes: votesByGuideline[row.id] || [],
         commentCount: (commentsByGuideline[row.id] || []).length,
-        comments: commentsByGuideline[row.id] || []
+        comments: commentsByGuideline[row.id] || [],
+        strategyLinks: strategyLinksByGuideline[row.id] || [],
+        strategyLinkCount: (strategyLinksByGuideline[row.id] || []).length
       }))
     });
   });
