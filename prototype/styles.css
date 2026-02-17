@@ -388,6 +388,61 @@ body.embed-map-page .stage {
   padding: 6px 8px;
 }
 
+.strategy-switcher-card {
+  display: grid;
+  gap: 8px;
+}
+
+.strategy-switcher-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.strategy-switcher-row {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  color: #27476f;
+}
+
+.strategy-switcher-row > span {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  color: #5f799a;
+}
+
+.strategy-switcher-row > strong {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #1f3f69;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strategy-switcher-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.strategy-switcher-toggle {
+  min-height: 32px;
+  padding: 6px 12px;
+}
+
+.strategy-switcher-dialog {
+  display: grid;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.strategy-switcher-dialog[hidden] {
+  display: none;
+}
+
 .step-utility-card-language .language-switch {
   width: 100%;
   border-radius: 10px;
@@ -3640,6 +3695,10 @@ select:focus {
     font-size: 14px;
   }
 
+  .strategy-switcher-row {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
   .user-chip {
     width: 100%;
     min-height: 36px;
@@ -3953,6 +4012,16 @@ select:focus {
 
   .institution-switcher > span {
     display: none;
+  }
+
+  .strategy-switcher-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .strategy-switcher-row > strong {
+    white-space: normal;
+    word-break: break-word;
   }
 
   .user-toolbar {

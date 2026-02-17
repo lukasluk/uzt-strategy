@@ -196,6 +196,7 @@ const state = {
   mapGuidelineHoverId: '',
   mapTransform: { x: 120, y: 80, scale: 1 },
   expandedStepId: '',
+  strategySwitcherDialogOpen: false,
   pendingAddSectionScrollId: '',
   pendingGuidelineFocusId: resolveGuidelineFocusId()
 };
@@ -1072,11 +1073,6 @@ function strategySelectMarkup() {
   const strategies = strategiesForSelectedInstitution();
   const hasStrategies = strategies.length > 0;
   const loading = state.loading && !state.institutionsLoaded;
-  const selectedStrategy = strategies.find((item) => normalizeSlug(item.slug) === selectedSlug)
-    || state.strategy
-    || strategies[0]
-    || null;
-  const selectedStrategyTitle = String(selectedStrategy?.title || selectedStrategy?.slug || '-').trim();
   const options = strategies.map((strategy) => {
     const slug = normalizeSlug(strategy.slug);
     const title = String(strategy.title || slug || '-').trim();
@@ -1090,7 +1086,6 @@ function strategySelectMarkup() {
       <select id="strategySwitchSelect" ${loading || !hasStrategies ? 'disabled' : ''}>
         ${options}
       </select>
-      <span class="switch-selected-preview" title="${escapeHtml(selectedStrategyTitle)}">${escapeHtml(selectedStrategyTitle)}</span>
     </label>
   `;
 }
@@ -1306,6 +1301,53 @@ function flushPendingGuidelineFocus() {
   clearGuidelineFocusQuery();
 }
 
+function strategySwitcherCardMarkup() {
+  const info = selectedInstitutionInfo();
+  const institutionName = String(info?.name || state.institutionSlug || '-').trim() || '-';
+  const strategyTitle = String(info?.strategyTitle || state.strategy?.title || state.strategySlug || '-').trim() || '-';
+  const loading = state.loading && !state.institutionsLoaded;
+  const dialogOpen = Boolean(state.strategySwitcherDialogOpen);
+
+  return `
+    <div class="step-utility-card strategy-switcher-card ${dialogOpen ? 'is-open' : ''}">
+      <div class="strategy-switcher-summary">
+        <div class="strategy-switcher-row">
+          <span>Institution</span>
+          <strong title="${escapeHtml(institutionName)}">${escapeHtml(institutionName)}</strong>
+        </div>
+        <div class="strategy-switcher-row">
+          <span>Strategy</span>
+          <strong title="${escapeHtml(strategyTitle)}">${escapeHtml(strategyTitle)}</strong>
+        </div>
+      </div>
+      <div class="strategy-switcher-actions">
+        <button
+          id="toggleStrategySwitcherDialogBtn"
+          type="button"
+          class="btn btn-ghost btn-sm strategy-switcher-toggle"
+          ${loading ? 'disabled' : ''}
+          aria-expanded="${dialogOpen ? 'true' : 'false'}"
+        >
+          ${dialogOpen ? 'Close' : 'Change'}
+        </button>
+      </div>
+      <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>
+        ${institutionSelectMarkup()}
+        ${strategySelectMarkup()}
+      </div>
+    </div>
+  `;
+}
+
+function bindStrategySwitcherDialog(container) {
+  const toggleButton = container.querySelector('#toggleStrategySwitcherDialogBtn');
+  if (!toggleButton) return;
+  toggleButton.addEventListener('click', () => {
+    state.strategySwitcherDialogOpen = !state.strategySwitcherDialogOpen;
+    renderSteps();
+  });
+}
+
 function clearGuidelineFocusQuery() {
   const params = new URLSearchParams(window.location.search);
   if (!params.has(FOCUS_GUIDELINE_QUERY_KEY)) return;
@@ -1480,31 +1522,11 @@ function renderSteps() {
 
   const institutionShell = document.createElement('div');
   institutionShell.className = 'step-pill-shell step-utility-shell';
-  institutionShell.innerHTML = `
-    <div class="step-utility-card">
-      ${institutionSelectMarkup()}
-    </div>
-  `;
+  institutionShell.innerHTML = strategySwitcherCardMarkup();
+  bindStrategySwitcherDialog(institutionShell);
   bindInstitutionSwitch(institutionShell);
+  bindStrategySwitch(institutionShell);
   elements.steps.appendChild(institutionShell);
-
-  const strategyShell = document.createElement('div');
-  strategyShell.className = 'step-pill-shell step-utility-shell';
-  strategyShell.innerHTML = `
-    <div class="step-utility-card">
-      ${strategySelectMarkup()}
-    </div>
-  `;
-  bindStrategySwitch(strategyShell);
-  elements.steps.appendChild(strategyShell);
-
-  const institutionInfoHtml = institutionInfoMarkup();
-  if (institutionInfoHtml) {
-    const institutionInfoShell = document.createElement('div');
-    institutionInfoShell.className = 'step-pill-shell step-utility-shell';
-    institutionInfoShell.innerHTML = institutionInfoHtml;
-    elements.steps.appendChild(institutionInfoShell);
-  }
 
   const languageShell = document.createElement('div');
   languageShell.className = 'step-pill-shell step-utility-shell step-language-shell';
