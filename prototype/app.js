@@ -1331,8 +1331,10 @@ function strategySwitcherCardMarkup() {
       <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>
         ${institutionSelectMarkup()}
         ${strategySelectMarkup()}
-        <button id="openGuideFromSwitcherBtn" type="button" class="btn btn-ghost strategy-switcher-guide-btn">Naudojimosi gidas</button>
-        <div class="step-utility-card-language" data-language-switch></div>
+        <div class="strategy-switcher-utility-row">
+          <button id="openGuideFromSwitcherBtn" type="button" class="btn btn-ghost strategy-switcher-guide-btn">Naudojimosi gidas</button>
+          <div class="step-utility-card-language strategy-switcher-language" data-language-switch></div>
+        </div>
       </div>
     </div>
   `;
@@ -1343,7 +1345,7 @@ function bindStrategySwitcherDialog(container) {
   if (!toggleButton) return;
   toggleButton.addEventListener('click', () => {
     state.strategySwitcherDialogOpen = !state.strategySwitcherDialogOpen;
-    renderSteps();
+    render();
   });
   const guideButton = container.querySelector('#openGuideFromSwitcherBtn');
   if (guideButton) {
@@ -1503,7 +1505,7 @@ function renderSteps() {
         }
         if (!canExpand) return;
         state.expandedStepId = state.expandedStepId === item.id ? '' : item.id;
-        renderSteps();
+        render();
       });
     }
 

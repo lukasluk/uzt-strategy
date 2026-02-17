@@ -452,9 +452,32 @@ body.embed-map-page .stage {
   padding-top: 4px;
 }
 
+.strategy-switcher-utility-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
 .strategy-switcher-guide-btn {
   width: 100%;
   justify-content: center;
+  min-height: 36px;
+}
+
+.strategy-switcher-language .language-switch {
+  margin: 0;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.strategy-switcher-language .language-switch > span {
+  display: none;
+}
+
+.strategy-switcher-language .language-switch select {
+  min-width: 72px;
 }
 
 .strategy-switcher-dialog[hidden] {
@@ -4040,6 +4063,10 @@ select:focus {
   .strategy-switcher-row > strong {
     white-space: normal;
     word-break: break-word;
+  }
+
+  .strategy-switcher-utility-row {
+    grid-template-columns: 1fr;
   }
 
   .user-toolbar {
