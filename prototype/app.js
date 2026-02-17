@@ -1320,13 +1320,16 @@ function strategySwitcherCardMarkup(options = {}) {
         ${loading ? 'disabled' : ''}
         aria-expanded="${dialogOpen ? 'true' : 'false'}"
       >
-        <div class="strategy-switcher-row">
-          <span>Institution</span>
-          <strong title="${escapeHtml(institutionName)}">${escapeHtml(institutionName)}</strong>
-        </div>
-        <div class="strategy-switcher-row">
-          <span>Strategy</span>
-          <strong title="${escapeHtml(strategyTitle)}">${escapeHtml(strategyTitle)}</strong>
+        <div class="strategy-switcher-inline">
+          <span class="strategy-switcher-item">
+            <span class="strategy-switcher-label">Institution</span>
+            <strong title="${escapeHtml(institutionName)}">${escapeHtml(institutionName)}</strong>
+          </span>
+          <span class="strategy-switcher-separator" aria-hidden="true">•</span>
+          <span class="strategy-switcher-item">
+            <span class="strategy-switcher-label">Strategy</span>
+            <strong title="${escapeHtml(strategyTitle)}">${escapeHtml(strategyTitle)}</strong>
+          </span>
         </div>
       </button>
       <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>
