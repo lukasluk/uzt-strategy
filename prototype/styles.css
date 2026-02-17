@@ -400,6 +400,10 @@ body.embed-map-page .stage {
   max-width: min(460px, 82vw);
   position: relative;
   z-index: 14;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .strategy-switcher-summary {
@@ -426,8 +430,17 @@ body.embed-map-page .stage {
 }
 
 .strategy-switcher-card.is-open .strategy-switcher-summary {
-  border-color: #98bbe8;
+  border-color: #d8c2a7;
   background: #ffffff;
+}
+
+.strategy-switcher-card-topbar .strategy-switcher-summary {
+  border-color: #dfccb6;
+  border-radius: 999px;
+  background: #fffefb;
+  min-height: 42px;
+  padding: 8px 14px;
+  align-items: center;
 }
 
 .strategy-switcher-inline {
@@ -488,6 +501,23 @@ body.embed-map-page .stage {
   box-shadow: 0 12px 28px rgba(24, 66, 122, 0.16);
   padding: 10px;
   z-index: 15;
+}
+
+.strategy-switcher-card-topbar .institution-switcher {
+  border-color: #ddc9b0;
+  background: #fffefb;
+}
+
+.strategy-switcher-card-topbar .strategy-switcher-guide-btn {
+  min-height: 40px;
+  border-color: #ddc9b0;
+  background: #fffefb;
+}
+
+.strategy-switcher-card-topbar .strategy-switcher-language .language-switch {
+  min-height: 40px;
+  border-color: #ddc9b0;
+  background: #fffefb;
 }
 
 .strategy-switcher-utility-row {
