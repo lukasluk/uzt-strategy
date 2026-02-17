@@ -70,6 +70,94 @@ function registerAdminRoutes({
     return `${base}/accept-invite.html?token=${encodeURIComponent(String(token || '').trim())}`;
   }
 
+  async function loadInstitutionParentGuidelineCatalog(institutionId) {
+    const result = await query(
+      `select g.id,
+              g.title as guideline_title,
+              g.status as guideline_status,
+              c.id as cycle_id,
+              c.title as cycle_title,
+              c.state as cycle_state,
+              s.id as strategy_id,
+              s.title as strategy_title,
+              s.slug as strategy_slug
+       from strategy_guidelines g
+       join strategy_cycles c on c.id = g.cycle_id
+       left join institution_strategies s on s.id = c.strategy_id
+       where c.institution_id = $1
+         and g.relation_type = 'parent'
+         and g.status in ('active', 'disabled', 'merged')
+       order by s.title asc nulls last, g.created_at asc`,
+      [institutionId]
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      title: row.guideline_title,
+      status: row.guideline_status,
+      cycleId: row.cycle_id,
+      cycleTitle: row.cycle_title,
+      cycleState: row.cycle_state,
+      strategyId: row.strategy_id,
+      strategyTitle: row.strategy_title || 'default',
+      strategySlug: row.strategy_slug || 'default'
+    }));
+  }
+
+  async function loadInstitutionGuidelineLinksOverview(institutionId) {
+    const result = await query(
+      `select l.id,
+              l.created_at,
+              sg.id as source_guideline_id,
+              sg.title as source_guideline_title,
+              sc.id as source_cycle_id,
+              sc.title as source_cycle_title,
+              ss.id as source_strategy_id,
+              ss.title as source_strategy_title,
+              ss.slug as source_strategy_slug,
+              tg.id as target_guideline_id,
+              tg.title as target_guideline_title,
+              tc.id as target_cycle_id,
+              tc.title as target_cycle_title,
+              ts.id as target_strategy_id,
+              ts.title as target_strategy_title,
+              ts.slug as target_strategy_slug
+       from strategy_guideline_links l
+       join strategy_guidelines sg on sg.id = l.source_guideline_id
+       join strategy_guidelines tg on tg.id = l.target_guideline_id
+       join strategy_cycles sc on sc.id = sg.cycle_id
+       join strategy_cycles tc on tc.id = tg.cycle_id
+       left join institution_strategies ss on ss.id = sc.strategy_id
+       left join institution_strategies ts on ts.id = tc.strategy_id
+       where sc.institution_id = $1
+         and tc.institution_id = $1
+       order by l.created_at desc`,
+      [institutionId]
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      createdAt: row.created_at,
+      isCrossStrategy: row.source_strategy_id !== row.target_strategy_id,
+      source: {
+        guidelineId: row.source_guideline_id,
+        guidelineTitle: row.source_guideline_title,
+        cycleId: row.source_cycle_id,
+        cycleTitle: row.source_cycle_title,
+        strategyId: row.source_strategy_id,
+        strategyTitle: row.source_strategy_title || 'default',
+        strategySlug: row.source_strategy_slug || 'default'
+      },
+      target: {
+        guidelineId: row.target_guideline_id,
+        guidelineTitle: row.target_guideline_title,
+        cycleId: row.target_cycle_id,
+        cycleTitle: row.target_cycle_title,
+        strategyId: row.target_strategy_id,
+        strategyTitle: row.target_strategy_title || 'default',
+        strategySlug: row.target_strategy_slug || 'default'
+      }
+    }));
+  }
+
   app.get('/api/v1/admin/embed-views', requireAuth, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
 
@@ -559,6 +647,11 @@ function registerAdminRoutes({
       });
     }
 
+    const [parentGuidelines, guidelineLinks] = await Promise.all([
+      loadInstitutionParentGuidelineCatalog(req.auth.institutionId),
+      loadInstitutionGuidelineLinksOverview(req.auth.institutionId)
+    ]);
+
     res.json({
       guidelines: guidelinesRes.rows.map((row) => ({
         id: row.id,
@@ -576,8 +669,113 @@ function registerAdminRoutes({
         comments: commentsByGuideline[row.id] || [],
         strategyLinks: strategyLinksByGuideline[row.id] || [],
         strategyLinkCount: (strategyLinksByGuideline[row.id] || []).length
-      }))
+      })),
+      parentGuidelines,
+      guidelineLinks
     });
+  });
+
+  app.post('/api/v1/admin/guideline-links', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const sourceGuidelineIdRaw = String(req.body?.sourceGuidelineId || '').trim();
+    const targetGuidelineIdRaw = String(req.body?.targetGuidelineId || '').trim();
+    if (!sourceGuidelineIdRaw || !targetGuidelineIdRaw) {
+      return res.status(400).json({ error: 'sourceGuidelineId and targetGuidelineId required' });
+    }
+    if (sourceGuidelineIdRaw === targetGuidelineIdRaw) {
+      return res.status(400).json({ error: 'source and target must differ' });
+    }
+
+    const guidelineContextRes = await query(
+      `select g.id,
+              g.relation_type,
+              c.institution_id
+       from strategy_guidelines g
+       join strategy_cycles c on c.id = g.cycle_id
+       where g.id = any($1::uuid[])`,
+      [[sourceGuidelineIdRaw, targetGuidelineIdRaw]]
+    );
+    if (guidelineContextRes.rowCount !== 2) {
+      return res.status(404).json({ error: 'guideline not found' });
+    }
+
+    const byId = Object.fromEntries(guidelineContextRes.rows.map((row) => [row.id, row]));
+    const source = byId[sourceGuidelineIdRaw];
+    const target = byId[targetGuidelineIdRaw];
+    if (!source || !target) return res.status(404).json({ error: 'guideline not found' });
+    if (source.institution_id !== req.auth.institutionId || target.institution_id !== req.auth.institutionId) {
+      return res.status(403).json({ error: 'cross-institution forbidden' });
+    }
+    if (source.relation_type !== 'parent' || target.relation_type !== 'parent') {
+      return res.status(400).json({ error: 'parent guideline required' });
+    }
+
+    const [firstId, secondId] = sourceGuidelineIdRaw < targetGuidelineIdRaw
+      ? [sourceGuidelineIdRaw, targetGuidelineIdRaw]
+      : [targetGuidelineIdRaw, sourceGuidelineIdRaw];
+
+    const linkId = uuid();
+    const insertRes = await query(
+      `insert into strategy_guideline_links (id, source_guideline_id, target_guideline_id, created_by)
+       values ($1, $2, $3, $4)
+       on conflict (source_guideline_id, target_guideline_id) do nothing
+       returning id, created_at`,
+      [linkId, firstId, secondId, req.auth.sub]
+    );
+    const existingRes = insertRes.rowCount
+      ? insertRes
+      : await query(
+        `select id, created_at
+         from strategy_guideline_links
+         where source_guideline_id = $1 and target_guideline_id = $2
+         limit 1`,
+        [firstId, secondId]
+      );
+    const saved = existingRes.rows[0];
+    if (!saved) return res.status(500).json({ error: 'failed to create guideline link' });
+
+    broadcast({
+      type: 'v1.guideline_link.upserted',
+      institutionId: req.auth.institutionId,
+      linkId: saved.id
+    });
+    res.status(insertRes.rowCount ? 201 : 200).json({
+      ok: true,
+      existedBefore: insertRes.rowCount === 0,
+      linkId: saved.id,
+      createdAt: saved.created_at
+    });
+  });
+
+  app.delete('/api/v1/admin/guideline-links/:linkId', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const linkId = String(req.params.linkId || '').trim();
+    if (!linkId) return res.status(400).json({ error: 'linkId required' });
+
+    const deletedRes = await query(
+      `delete from strategy_guideline_links l
+       using strategy_guidelines sg,
+             strategy_guidelines tg,
+             strategy_cycles sc,
+             strategy_cycles tc
+       where l.id = $1
+         and sg.id = l.source_guideline_id
+         and tg.id = l.target_guideline_id
+         and sc.id = sg.cycle_id
+         and tc.id = tg.cycle_id
+         and sc.institution_id = $2
+         and tc.institution_id = $2
+       returning l.id`,
+      [linkId, req.auth.institutionId]
+    );
+    if (!deletedRes.rowCount) return res.status(404).json({ error: 'guideline link not found' });
+
+    broadcast({
+      type: 'v1.guideline_link.deleted',
+      institutionId: req.auth.institutionId,
+      linkId
+    });
+    res.json({ ok: true, linkId });
   });
 
 

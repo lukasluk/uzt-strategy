@@ -364,6 +364,11 @@ function registerMetaAdminRoutes({
     const institutionsRes = await query(
       'select id, name, slug, status, created_at from institutions order by created_at desc'
     );
+    const strategiesRes = await query(
+      `select id, institution_id, title, slug, status, is_default, created_at
+       from institution_strategies
+       order by created_at desc`
+    );
     const usersRes = await query(
       'select id, email, display_name, status, created_at from platform_users order by created_at desc'
     );
@@ -409,6 +414,19 @@ function registerMetaAdminRoutes({
         expiresAt: row.expires_at,
         createdAt: row.created_at
       }));
+    const strategiesByInstitution = strategiesRes.rows.reduce((acc, row) => {
+      if (!acc[row.institution_id]) acc[row.institution_id] = [];
+      acc[row.institution_id].push({
+        id: row.id,
+        institutionId: row.institution_id,
+        title: row.title,
+        slug: row.slug,
+        status: row.status,
+        isDefault: Boolean(row.is_default),
+        createdAt: row.created_at
+      });
+      return acc;
+    }, {});
 
     const monitoringSnapshot = trafficMonitor
       ? trafficMonitor.getSnapshot()
@@ -448,7 +466,8 @@ function registerMetaAdminRoutes({
         name: row.name,
         slug: row.slug,
         status: row.status,
-        createdAt: row.created_at
+        createdAt: row.created_at,
+        strategies: strategiesByInstitution[row.id] || []
       })),
       users: usersRes.rows.map((row) => ({
         id: row.id,
@@ -674,6 +693,47 @@ function registerMetaAdminRoutes({
     });
 
     res.json({ ok: true, institutionId, name });
+  });
+
+  app.put('/api/v1/meta-admin/strategies/:strategyId', requireMetaAdminSession, async (req, res) => {
+    const strategyId = String(req.params.strategyId || '').trim();
+    const title = String(req.body?.title || '').trim();
+    if (!strategyId || !title) {
+      return res.status(400).json({ error: 'strategyId and title required' });
+    }
+
+    const result = await query(
+      `update institution_strategies
+       set title = $1
+       where id = $2
+       returning id, institution_id, title, slug, status, is_default, created_at`,
+      [title, strategyId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'strategy not found' });
+    const updated = result.rows[0];
+
+    await logAuditEvent({
+      query,
+      uuid,
+      institutionId: updated.institution_id,
+      action: 'meta_admin.strategy.updated',
+      entityType: 'institution_strategy',
+      entityId: strategyId,
+      payload: metaAuditPayload(req, { title })
+    });
+
+    res.json({
+      ok: true,
+      strategy: {
+        id: updated.id,
+        institutionId: updated.institution_id,
+        title: updated.title,
+        slug: updated.slug,
+        status: updated.status,
+        isDefault: Boolean(updated.is_default),
+        createdAt: updated.created_at
+      }
+    });
   });
 
   app.put('/api/v1/meta-admin/users/:userId/status', requireMetaAdminSession, async (req, res) => {

@@ -52,6 +52,8 @@ function toUserMessage(error) {
     forbidden: 'Neteisingas slaptazodis arba neleidziama operacija.',
     'name required': 'Iveskite institucijos pavadinima.',
     'institutionId and name required': 'Pasirinkite institucija ir iveskite nauja pavadinima.',
+    'strategyId and title required': 'Pasirinkite strategija ir iveskite nauja pavadinima.',
+    'strategy not found': 'Strategija nerasta.',
     'invalid slug': 'Netinkamas slug.',
     'slug already exists': 'Toks institucijos slug jau egzistuoja.',
     'institutionId and email required': 'Pasirinkite institucija ir iveskite el. pasta.',
@@ -839,7 +841,9 @@ function renderDashboard() {
         </div>
         <div class="card-list meta-admin-subgrid">
           ${institutions.length
-            ? institutions.map((institution) => `
+            ? institutions.map((institution) => {
+              const strategies = Array.isArray(institution?.strategies) ? institution.strategies : [];
+              return `
                 <article class="card meta-admin-subcard">
                   <div class="header-row">
                     <strong>${escapeHtml(institution.name)}</strong>
@@ -856,8 +860,33 @@ function renderDashboard() {
                     />
                     <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
                   </form>
+                  <div class="card-section" style="margin-top:10px;">
+                    <strong>Strategijos</strong>
+                    <ul class="mini-list" style="margin-top:8px;">
+                      ${strategies.length
+                        ? strategies.map((strategy) => `
+                          <li>
+                            <form class="strategy-rename-form inline-form" data-strategy-id="${escapeHtml(strategy.id)}">
+                              <input
+                                type="text"
+                                name="title"
+                                value="${escapeHtml(strategy.title)}"
+                                placeholder="Naujas strategijos pavadinimas"
+                                required
+                                ${state.busy ? 'disabled' : ''}
+                              />
+                              <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
+                              ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
+                              <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+                            </form>
+                          </li>
+                        `).join('')
+                        : '<li><span class="prompt">Strategiju nera.</span></li>'}
+                    </ul>
+                  </div>
                 </article>
-              `).join('')
+              `;
+            }).join('')
             : '<article class="card meta-admin-subcard"><p class="prompt">Instituciju dar nera.</p></article>'}
         </div>
       </section>
@@ -1346,6 +1375,24 @@ function bindDashboardEvents() {
           body: { name }
         });
         state.notice = 'Institucijos pavadinimas atnaujintas.';
+        await loadOverview();
+      });
+    });
+  });
+
+  root.querySelectorAll('.strategy-rename-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const strategyId = String(form.dataset.strategyId || '').trim();
+      const title = String(new FormData(form).get('title') || '').trim();
+      if (!strategyId || !title) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/meta-admin/strategies/${encodeURIComponent(strategyId)}`, {
+          method: 'PUT',
+          body: { title }
+        });
+        state.notice = 'Strategijos pavadinimas atnaujintas.';
         await loadOverview();
       });
     });
