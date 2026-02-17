@@ -18,6 +18,34 @@ const MAP_WORLD_PAD = 320;
 const MAP_NODE_MIN_RENDER_X = -3000;
 const MAP_NODE_MIN_RENDER_Y = -3000;
 
+function mapNormalizeStrategyLinks(value) {
+  if (typeof normalizeGuidelineStrategyLinks === 'function') {
+    return normalizeGuidelineStrategyLinks(value);
+  }
+  const list = Array.isArray(value) ? value : [];
+  return list
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const otherGuidelineId = String(item.otherGuidelineId || '').trim();
+      if (!otherGuidelineId) return null;
+      return {
+        otherGuidelineId,
+        otherInstitutionSlug: String(item.otherInstitutionSlug || '').trim().toLowerCase(),
+        otherStrategySlug: String(item.otherStrategySlug || '').trim().toLowerCase(),
+        otherInstitutionName: String(item.otherInstitutionName || '').trim(),
+        otherStrategyTitle: String(item.otherStrategyTitle || '').trim()
+      };
+    })
+    .filter(Boolean);
+}
+
+function mapStrategyLinkLabel(link) {
+  if (typeof strategyLinkLabel === 'function') return strategyLinkLabel(link);
+  const institution = String(link?.otherInstitutionSlug || link?.otherInstitutionName || '-').trim();
+  const strategy = String(link?.otherStrategyTitle || link?.otherStrategySlug || 'default').trim();
+  return `${institution} / ${strategy}`;
+}
+
 function resolveAutoSide(fromNode, toNode) {
   const fromCenterX = fromNode.x + fromNode.w / 2;
   const fromCenterY = fromNode.y + fromNode.h / 2;
@@ -1038,6 +1066,9 @@ function renderMapView() {
   const nodeMarkup = graph.nodes.map((node) => {
     if (node.kind === 'institution') {
       const cycleState = node.institution.cycle?.state || '-';
+      const strategyTitle = String(
+        node.institution.strategy?.title || state.strategy?.title || 'Strategija'
+      ).trim();
       return `
         <article class="strategy-map-node institution-node ${node.institution.slug === state.institutionSlug ? 'active' : ''}"
                  data-node-id="${escapeHtml(node.id)}"
@@ -1051,7 +1082,7 @@ function renderMapView() {
                  data-draggable="${editable ? 'true' : 'false'}"
                  style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
           <strong>${escapeHtml(node.institution.name)}</strong>
-          <small class="institution-subtitle">Skaitmenizacijos strategija</small>
+          <small class="institution-subtitle">${escapeHtml(strategyTitle)}</small>
           <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
           <small class="institution-cycle-label">Strategijos ciklo būsena</small>
         </article>
@@ -1074,12 +1105,47 @@ function renderMapView() {
           ? node.guideline.strategyLinks.length
           : Number(node.guideline.strategyLinkCount || 0)
       );
+      const strategyLinks = relation === 'parent'
+        ? mapNormalizeStrategyLinks(node.guideline.strategyLinks)
+        : [];
+      const uniqueLinks = [];
+      const seenLinkKeys = new Set();
+      strategyLinks.forEach((link) => {
+        const key = [
+          String(link.otherInstitutionSlug || '').trim().toLowerCase(),
+          String(link.otherStrategySlug || '').trim().toLowerCase(),
+          String(link.otherGuidelineId || '').trim()
+        ].join('|');
+        if (!String(link.otherGuidelineId || '').trim()) return;
+        if (seenLinkKeys.has(key)) return;
+        seenLinkKeys.add(key);
+        uniqueLinks.push(link);
+      });
       const scoreForSquares = Math.max(0, Math.round(score));
       const voteSquares = scoreForSquares
         ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
         : '<span class="map-vote-empty">Dar nebalsuota</span>';
       const strategyLinkChip = relation === 'parent'
         ? `<span class="map-strategy-link-chip" title="Strateginiai rysiai tarp teviniu gairiu">Rysiai: ${strategyLinkCount}</span>`
+        : '';
+      const strategyLinkListMarkup = relation === 'parent' && uniqueLinks.length
+        ? `
+          <div class="map-strategy-link-list">
+            ${uniqueLinks.slice(0, 2).map((link) => `
+              <button
+                type="button"
+                class="map-strategy-link-btn"
+                data-map-interactive="true"
+                data-action="open-strategy-link"
+                data-target-institution="${escapeHtml(link.otherInstitutionSlug)}"
+                data-target-strategy="${escapeHtml(link.otherStrategySlug)}"
+                data-target-guideline="${escapeHtml(link.otherGuidelineId)}"
+                title="Atidaryti susieta gaires konteksta"
+              >${escapeHtml(mapStrategyLinkLabel(link))}</button>
+            `).join('')}
+            ${uniqueLinks.length > 2 ? `<span class="map-strategy-link-more">+${uniqueLinks.length - 2}</span>` : ''}
+          </div>
+        `
         : '';
 
       return `
@@ -1117,6 +1183,7 @@ function renderMapView() {
             </span>
             ${strategyLinkChip}
           </div>
+          ${strategyLinkListMarkup}
           <div class="map-vote-squares">${voteSquares}</div>
         </article>
       `;
@@ -1269,6 +1336,18 @@ function renderMapView() {
       event.preventDefault();
       event.stopPropagation();
       openMapCommentModal(button.dataset.mapCommentKind, button.dataset.mapCommentId);
+    });
+  });
+  elements.stepView.querySelectorAll('[data-action="open-strategy-link"]').forEach((button) => {
+    button.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof navigateToStrategyLink !== 'function') return;
+      await navigateToStrategyLink({
+        targetInstitutionSlug: button.dataset.targetInstitution,
+        targetStrategySlug: button.dataset.targetStrategy,
+        targetGuidelineId: button.dataset.targetGuideline
+      });
     });
   });
 

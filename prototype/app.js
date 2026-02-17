@@ -195,7 +195,8 @@ const state = {
   mapGuidelineHoverId: '',
   mapTransform: { x: 120, y: 80, scale: 1 },
   expandedStepId: '',
-  pendingAddSectionScrollId: ''
+  pendingAddSectionScrollId: '',
+  pendingGuidelineFocusId: ''
 };
 let adminAppLoadPromise = null;
 
@@ -856,7 +857,7 @@ async function loadMemberContext() {
 
   if (selectedSlug && currentContextSlug !== selectedSlug && !state.embedMapMode) {
     try {
-      await switchInstitutionSession(selectedSlug);
+      await switchInstitutionSession(selectedSlug, state.strategySlug);
       context = await api(buildContextPath());
     } catch {
       state.accountContext = context;
@@ -898,10 +899,10 @@ async function loadMemberContext() {
   }
 }
 
-async function switchInstitutionSession(institutionSlug) {
+async function switchInstitutionSession(institutionSlug, strategySlug = state.strategySlug) {
   const nextSlug = normalizeSlug(institutionSlug);
   if (!nextSlug || !state.token || state.embedMapMode) return;
-  const nextStrategySlug = normalizeSlug(state.strategySlug);
+  const nextStrategySlug = normalizeSlug(strategySlug);
   const payload = await api('/api/v1/auth/switch-institution', {
     method: 'POST',
     body: {
@@ -1178,7 +1179,7 @@ function bindInstitutionSwitch(container) {
 
     if (isAuthenticated() && !state.embedMapMode) {
       try {
-        await switchInstitutionSession(slug);
+        await switchInstitutionSession(slug, state.strategySlug);
       } catch (error) {
         const raw = String(error?.message || '').toLowerCase();
         if (raw === 'invalid token' || raw === 'unauthorized') {
@@ -1202,6 +1203,18 @@ function bindStrategySwitch(container) {
     state.strategySlug = slug;
     state.strategy = (strategiesForSelectedInstitution() || []).find((item) => normalizeSlug(item.slug) === slug) || null;
     syncRouteState();
+
+    if (isAuthenticated() && !state.embedMapMode && state.institutionSlug) {
+      try {
+        await switchInstitutionSession(state.institutionSlug, slug);
+      } catch (error) {
+        const raw = String(error?.message || '').toLowerCase();
+        if (raw === 'invalid token' || raw === 'unauthorized') {
+          clearSession();
+        }
+      }
+    }
+
     await bootstrap();
   });
 }
@@ -1260,6 +1273,95 @@ function flushPendingAddSectionScroll() {
       focusTarget.focus({ preventScroll: true });
     }, 260);
   }
+}
+
+function scheduleGuidelineFocus(guidelineId) {
+  const nextId = String(guidelineId || '').trim();
+  state.pendingGuidelineFocusId = nextId || '';
+}
+
+function flushPendingGuidelineFocus() {
+  const pendingId = String(state.pendingGuidelineFocusId || '').trim();
+  if (!pendingId) return;
+  if (state.activeView !== 'guidelines') return;
+  if (!(elements.stepView instanceof HTMLElement)) return;
+
+  const cards = Array.from(elements.stepView.querySelectorAll('[data-guideline-id]'));
+  const target = cards.find((card) => String(card?.dataset?.guidelineId || '').trim() === pendingId);
+  if (!(target instanceof HTMLElement)) return;
+
+  state.pendingGuidelineFocusId = '';
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  target.classList.remove('guideline-focus-pulse');
+  void target.offsetWidth;
+  target.classList.add('guideline-focus-pulse');
+  window.setTimeout(() => target.classList.remove('guideline-focus-pulse'), 1000);
+}
+
+function resolveStrategySlugForInstitution(institutionSlug, preferredStrategySlug = '') {
+  const normalizedInstitutionSlug = normalizeSlug(institutionSlug);
+  const normalizedPreferred = normalizeSlug(preferredStrategySlug);
+  if (!normalizedInstitutionSlug) return '';
+
+  const institution = (state.institutions || []).find((item) => normalizeSlug(item.slug) === normalizedInstitutionSlug) || null;
+  const strategies = Array.isArray(institution?.strategies) ? institution.strategies : [];
+  if (!strategies.length) return normalizedPreferred;
+  if (normalizedPreferred && strategies.some((item) => normalizeSlug(item.slug) === normalizedPreferred)) {
+    return normalizedPreferred;
+  }
+  const fallback = strategies.find((item) => item.isDefault) || strategies[0];
+  return normalizeSlug(fallback?.slug);
+}
+
+async function navigateToStrategyLink(payload = {}) {
+  const targetInstitutionSlug = normalizeSlug(
+    payload.otherInstitutionSlug || payload.targetInstitutionSlug || payload.institutionSlug
+  );
+  const targetGuidelineId = String(
+    payload.otherGuidelineId || payload.targetGuidelineId || payload.guidelineId || ''
+  ).trim();
+
+  if (!targetInstitutionSlug) return;
+
+  const requestedStrategySlug = normalizeSlug(
+    payload.otherStrategySlug || payload.targetStrategySlug || payload.strategySlug
+  );
+  const targetStrategySlug = resolveStrategySlugForInstitution(targetInstitutionSlug, requestedStrategySlug);
+  const currentInstitutionSlug = normalizeSlug(state.institutionSlug);
+  const currentStrategySlug = normalizeSlug(state.strategySlug);
+
+  if (
+    targetInstitutionSlug === currentInstitutionSlug
+    && targetStrategySlug === currentStrategySlug
+    && state.activeView === 'guidelines'
+  ) {
+    scheduleGuidelineFocus(targetGuidelineId);
+    render();
+    return;
+  }
+
+  await runBusy(async () => {
+    state.institutionSlug = targetInstitutionSlug;
+    state.strategySlug = targetStrategySlug;
+    state.strategy = null;
+    state.activeView = 'guidelines';
+    state.expandedStepId = '';
+    scheduleGuidelineFocus(targetGuidelineId);
+    syncRouteState();
+
+    if (isAuthenticated() && !state.embedMapMode) {
+      try {
+        await switchInstitutionSession(targetInstitutionSlug, targetStrategySlug);
+      } catch (error) {
+        const raw = String(error?.message || '').toLowerCase();
+        if (raw === 'invalid token' || raw === 'unauthorized') {
+          clearSession();
+        }
+      }
+    }
+
+    await bootstrap();
+  });
 }
 
 function openStepAddSection(stepId) {
@@ -1754,13 +1856,35 @@ function renderGuidelineCard(guideline, options) {
   const strategyLinks = relationKey === 'parent'
     ? normalizeGuidelineStrategyLinks(guideline.strategyLinks)
     : [];
-  const uniqueLinkLabels = Array.from(new Set(strategyLinks.map((item) => strategyLinkLabel(item))));
+  const uniqueStrategyLinks = [];
+  const seenStrategyLinkKeys = new Set();
+  strategyLinks.forEach((link) => {
+    const key = [
+      normalizeSlug(link.otherInstitutionSlug),
+      normalizeSlug(link.otherStrategySlug),
+      String(link.otherGuidelineId || '').trim()
+    ].join('|');
+    if (!String(link.otherGuidelineId || '').trim()) return;
+    if (seenStrategyLinkKeys.has(key)) return;
+    seenStrategyLinkKeys.add(key);
+    uniqueStrategyLinks.push(link);
+  });
   const strategyLinksMarkup = relationKey === 'parent'
     ? `
       <div class="header-stack guideline-strategy-links">
         <span class="tag tag-link-main">Strateginiai rysiai: ${strategyLinks.length}</span>
-        ${uniqueLinkLabels.slice(0, 3).map((label) => `<span class="tag tag-link-ref">${escapeHtml(label)}</span>`).join('')}
-        ${uniqueLinkLabels.length > 3 ? `<span class="tag">+${uniqueLinkLabels.length - 3}</span>` : ''}
+        ${uniqueStrategyLinks.slice(0, 3).map((link) => `
+          <button
+            type="button"
+            class="tag tag-link-ref tag-link-button"
+            data-action="open-strategy-link"
+            data-target-institution="${escapeHtml(link.otherInstitutionSlug)}"
+            data-target-strategy="${escapeHtml(link.otherStrategySlug)}"
+            data-target-guideline="${escapeHtml(link.otherGuidelineId)}"
+            title="Atidaryti susieta gaires konteksta"
+          >${escapeHtml(strategyLinkLabel(link))}</button>
+        `).join('')}
+        ${uniqueStrategyLinks.length > 3 ? `<span class="tag">+${uniqueStrategyLinks.length - 3}</span>` : ''}
       </div>
     `
     : '';
@@ -1776,7 +1900,7 @@ function renderGuidelineCard(guideline, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card guideline-card guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''}">
+    <article class="card guideline-card guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(guideline.title)}</h4>
@@ -2441,8 +2565,19 @@ function bindStepEvents() {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
       const action = target.dataset.action;
+      if (!action) return;
+
+      if (action === 'open-strategy-link') {
+        await navigateToStrategyLink({
+          targetInstitutionSlug: target.dataset.targetInstitution,
+          targetStrategySlug: target.dataset.targetStrategy,
+          targetGuidelineId: target.dataset.targetGuideline
+        });
+        return;
+      }
+
       const guidelineId = target.dataset.id;
-      if (!action || !guidelineId) return;
+      if (!guidelineId) return;
 
       if (action === 'vote-plus' || action === 'vote-minus') {
         const delta = action === 'vote-plus' ? 1 : -1;
@@ -2544,12 +2679,14 @@ function renderUserBar() {
 
   const displayName = state.user?.displayName || state.user?.email || 'Prisijungęs vartotojas';
   const roleLabel = state.role === 'institution_admin' ? 'Administratorius' : 'Narys';
+  const strategyLabel = String(state.strategy?.title || state.strategySlug || '').trim();
 
   container.innerHTML = `
     <div class="user-toolbar">
       <div class="user-chip">
         <span>${escapeHtml(displayName)}</span>
         <span class="tag">${escapeHtml(roleLabel)}</span>
+        ${strategyLabel ? `<span class="tag tag-subtle">${escapeHtml(strategyLabel)}</span>` : ''}
       </div>
       <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
     </div>
@@ -2823,5 +2960,6 @@ function render() {
   renderUserBar();
   renderVoteFloating();
   flushPendingAddSectionScroll();
+  flushPendingGuidelineFocus();
   window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }
