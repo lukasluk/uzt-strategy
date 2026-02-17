@@ -1173,6 +1173,7 @@ function bindInstitutionSwitch(container) {
     const defaultStrategy = strategies.find((item) => item.isDefault) || strategies[0] || null;
     state.strategySlug = normalizeSlug(defaultStrategy?.slug);
     state.strategy = defaultStrategy || null;
+    state.strategySwitcherDialogOpen = false;
     if (state.activeView === 'admin') {
       state.activeView = 'guidelines';
     }
@@ -1204,6 +1205,7 @@ function bindStrategySwitch(container) {
 
     state.strategySlug = slug;
     state.strategy = (strategiesForSelectedInstitution() || []).find((item) => normalizeSlug(item.slug) === slug) || null;
+    state.strategySwitcherDialogOpen = false;
     syncRouteState();
 
     if (isAuthenticated() && !state.embedMapMode && state.institutionSlug) {
@@ -1310,7 +1312,13 @@ function strategySwitcherCardMarkup() {
 
   return `
     <div class="step-utility-card strategy-switcher-card ${dialogOpen ? 'is-open' : ''}">
-      <div class="strategy-switcher-summary">
+      <button
+        id="toggleStrategySwitcherDialogBtn"
+        type="button"
+        class="strategy-switcher-summary"
+        ${loading ? 'disabled' : ''}
+        aria-expanded="${dialogOpen ? 'true' : 'false'}"
+      >
         <div class="strategy-switcher-row">
           <span>Institution</span>
           <strong title="${escapeHtml(institutionName)}">${escapeHtml(institutionName)}</strong>
@@ -1319,21 +1327,12 @@ function strategySwitcherCardMarkup() {
           <span>Strategy</span>
           <strong title="${escapeHtml(strategyTitle)}">${escapeHtml(strategyTitle)}</strong>
         </div>
-      </div>
-      <div class="strategy-switcher-actions">
-        <button
-          id="toggleStrategySwitcherDialogBtn"
-          type="button"
-          class="btn btn-ghost btn-sm strategy-switcher-toggle"
-          ${loading ? 'disabled' : ''}
-          aria-expanded="${dialogOpen ? 'true' : 'false'}"
-        >
-          ${dialogOpen ? 'Close' : 'Change'}
-        </button>
-      </div>
+      </button>
       <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>
         ${institutionSelectMarkup()}
         ${strategySelectMarkup()}
+        <button id="openGuideFromSwitcherBtn" type="button" class="btn btn-ghost strategy-switcher-guide-btn">Naudojimosi gidas</button>
+        <div class="step-utility-card-language" data-language-switch></div>
       </div>
     </div>
   `;
@@ -1346,6 +1345,13 @@ function bindStrategySwitcherDialog(container) {
     state.strategySwitcherDialogOpen = !state.strategySwitcherDialogOpen;
     renderSteps();
   });
+  const guideButton = container.querySelector('#openGuideFromSwitcherBtn');
+  if (guideButton) {
+    guideButton.addEventListener('click', () => {
+      state.strategySwitcherDialogOpen = false;
+      setActiveView('guide');
+    });
+  }
 }
 
 function clearGuidelineFocusQuery() {
@@ -1448,8 +1454,7 @@ function renderSteps() {
     { id: 'guidelines', icon: '◍', title: 'Gairės', locked: false },
     { id: 'initiatives', icon: '✦', title: 'Iniciatyvos', locked: false },
     { id: 'admin', icon: '⚙', title: 'Admin', locked: !canOpenAdmin },
-    { id: 'map', icon: '⌗', title: 'Strategijų žemėlapis', locked: false },
-    { id: 'guide', icon: '☰', title: 'Naudojimosi gidas', locked: false }
+    { id: 'map', icon: '⌗', title: 'Strategijų žemėlapis', locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -1527,13 +1532,6 @@ function renderSteps() {
   bindInstitutionSwitch(institutionShell);
   bindStrategySwitch(institutionShell);
   elements.steps.appendChild(institutionShell);
-
-  const languageShell = document.createElement('div');
-  languageShell.className = 'step-pill-shell step-utility-shell step-language-shell';
-  languageShell.innerHTML = `
-    <div class="step-utility-card step-utility-card-language" data-language-switch></div>
-  `;
-  elements.steps.appendChild(languageShell);
 }
 
 function applyIntroGuideState() {
