@@ -79,6 +79,33 @@ function toUserMessage(error) {
   return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
 }
 
+function notifySuccess(message) {
+  const text = String(message || '').trim();
+  if (!text) return;
+  if (window.DigiAlerts && typeof window.DigiAlerts.success === 'function') {
+    window.DigiAlerts.success(text);
+  }
+}
+
+function notifyError(message) {
+  const text = String(message || '').trim();
+  if (!text) return;
+  if (window.DigiAlerts && typeof window.DigiAlerts.error === 'function') {
+    window.DigiAlerts.error(text);
+  }
+}
+
+function setNotice(message, type = 'success') {
+  const text = String(message || '').trim();
+  state.notice = text;
+  if (!text) return;
+  if (type === 'error') {
+    notifyError(text);
+  } else {
+    notifySuccess(text);
+  }
+}
+
 async function api(path, { method = 'GET', body = null } = {}) {
   const headers = {};
   if (body !== null) headers['Content-Type'] = 'application/json';
@@ -147,12 +174,12 @@ async function bootstrap() {
 async function runBusy(task) {
   if (state.busy) return;
   state.busy = true;
-  state.notice = '';
+  setNotice('');
   render();
   try {
     await task();
   } catch (error) {
-    state.notice = toUserMessage(error);
+    setNotice(toUserMessage(error), 'error');
   } finally {
     state.busy = false;
     render();
@@ -162,14 +189,14 @@ async function runBusy(task) {
 async function runBusyWithOutcome(task) {
   if (state.busy) return { ok: false, skipped: true, error: '' };
   state.busy = true;
-  state.notice = '';
+  setNotice('');
   render();
   try {
     await task();
     return { ok: true, skipped: false, error: '' };
   } catch (error) {
     const message = toUserMessage(error);
-    state.notice = message;
+    setNotice(message, 'error');
     return { ok: false, skipped: false, error: message };
   } finally {
     state.busy = false;
@@ -207,6 +234,7 @@ function renderLogin() {
       state.authenticated = false;
       state.overview = null;
       state.error = toUserMessage(error);
+      notifyError(state.error);
     } finally {
       state.loading = false;
       render();
@@ -1004,7 +1032,7 @@ function bindDashboardEvents() {
       state.selectedMetaUserId = '';
       state.membershipAddTargetUserId = '';
       state.error = '';
-      state.notice = '';
+      setNotice('');
       render();
     });
   }
@@ -1022,7 +1050,7 @@ function bindDashboardEvents() {
           method: 'POST',
           body: { name, slug }
         });
-        state.notice = 'Institucija sukurta.';
+        setNotice('Institucija sukurta.');
         await loadOverview();
         createInstitutionForm.reset();
       });
@@ -1037,7 +1065,7 @@ function bindDashboardEvents() {
       const targetGuidelineId = String(fd.get('targetGuidelineId') || '').trim();
       if (!sourceGuidelineId || !targetGuidelineId) return;
       if (sourceGuidelineId === targetGuidelineId) {
-        state.notice = 'Pasirinktos gaires turi skirtis.';
+        setNotice('Pasirinktos gaires turi skirtis.', 'error');
         render();
         return;
       }
@@ -1047,9 +1075,9 @@ function bindDashboardEvents() {
           method: 'POST',
           body: { sourceGuidelineId, targetGuidelineId }
         });
-        state.notice = payload?.existedBefore
+        setNotice(payload?.existedBefore
           ? 'Rysis jau egzistavo.'
-          : 'Strateginis rysis sukurtas.';
+          : 'Strateginis rysis sukurtas.');
         await loadOverview();
       });
     });
@@ -1085,14 +1113,14 @@ function bindDashboardEvents() {
       try {
         landingTranslationsLt = landingTranslationsLtJson ? JSON.parse(landingTranslationsLtJson) : {};
       } catch {
-        state.notice = 'Landing LT vertimai turi buti teisingas JSON objektas.';
+        setNotice('Landing LT vertimai turi buti teisingas JSON objektas.', 'error');
         render();
         return;
       }
       try {
         landingTranslationsEn = landingTranslationsEnJson ? JSON.parse(landingTranslationsEnJson) : {};
       } catch {
-        state.notice = 'Landing EN vertimai turi buti teisingas JSON objektas.';
+        setNotice('Landing EN vertimai turi buti teisingas JSON objektas.', 'error');
         render();
         return;
       }
@@ -1101,7 +1129,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { guideIntroTextLt, guideIntroTextEn, aboutTextLt, aboutTextEn, landingTranslationsLt, landingTranslationsEn }
         });
-        state.notice = 'Tekstai atnaujinti.';
+        setNotice('Tekstai atnaujinti.');
         await loadOverview();
       });
     });
@@ -1130,7 +1158,7 @@ function bindDashboardEvents() {
           email: String(payload.email || email),
           role: String(payload.role || role)
         };
-        state.notice = 'Kvietimas sukurtas.';
+        setNotice('Kvietimas sukurtas.');
         await loadOverview();
         createInviteForm.reset();
       });
@@ -1142,7 +1170,7 @@ function bindDashboardEvents() {
       const inviteUrl = String(state.lastInvite?.url || '').trim();
       if (!inviteUrl) return;
       await navigator.clipboard.writeText(inviteUrl);
-      state.notice = 'Pakvietimo nuoroda nukopijuota.';
+      setNotice('Pakvietimo nuoroda nukopijuota.');
       render();
     });
   }
@@ -1161,14 +1189,14 @@ function bindDashboardEvents() {
         url,
         expiresAt: payload?.expiresAt || null
       };
-      state.notice = 'Sugeneruota vienkartine slaptazodzio keitimo nuoroda.';
+      setNotice('Sugeneruota vienkartine slaptazodzio keitimo nuoroda.');
       render();
       if (url) {
         window.prompt('Vienkartine nuoroda (kopijavimui):', url);
       }
     });
     if (!outcome.ok && !outcome.skipped && outcome.error) {
-      window.alert(`Nepavyko sukurti slaptazodzio keitimo nuorodos: ${outcome.error}`);
+      notifyError(`Nepavyko sukurti slaptazodzio keitimo nuorodos: ${outcome.error}`);
     }
   }
 
@@ -1177,10 +1205,10 @@ function bindDashboardEvents() {
     if (!link) return;
     const outcome = await runBusyWithOutcome(async () => {
       await navigator.clipboard.writeText(link);
-      state.notice = 'Slaptazodzio keitimo nuoroda nukopijuota.';
+      setNotice('Slaptazodzio keitimo nuoroda nukopijuota.');
     });
     if (!outcome.ok && !outcome.skipped && outcome.error) {
-      window.alert(`Nepavyko nukopijuoti nuorodos: ${outcome.error}`);
+      notifyError(`Nepavyko nukopijuoti nuorodos: ${outcome.error}`);
     }
   }
 
@@ -1201,9 +1229,9 @@ function bindDashboardEvents() {
       });
       const deleted = payload?.deleted || {};
       if (normalizedAction === 'delete') {
-        state.notice = `Vartotojas archyvuotas ir turinys istrintas (gaires: ${Number(deleted.guidelines || 0)}, iniciatyvos: ${Number(deleted.initiatives || 0)}, koment.: ${Number(deleted.guidelineComments || 0) + Number(deleted.initiativeComments || 0)}).`;
+        setNotice(`Vartotojas archyvuotas ir turinys istrintas (gaires: ${Number(deleted.guidelines || 0)}, iniciatyvos: ${Number(deleted.initiatives || 0)}, koment.: ${Number(deleted.guidelineComments || 0) + Number(deleted.initiativeComments || 0)}).`);
       } else {
-        state.notice = 'Vartotojas archyvuotas. Turinys paliktas.';
+        setNotice('Vartotojas archyvuotas. Turinys paliktas.');
       }
       await loadOverview();
     });
@@ -1223,9 +1251,9 @@ function bindDashboardEvents() {
           role: normalizedRole
         }
       });
-      state.notice = payload?.existedBefore
+      setNotice(payload?.existedBefore
         ? 'Naryste atnaujinta.'
-        : 'Naryste prideta.';
+        : 'Naryste prideta.');
       state.membershipAddTargetUserId = normalizedUserId;
       await loadOverview();
     });
@@ -1271,7 +1299,7 @@ function bindDashboardEvents() {
           await api(`/api/v1/meta-admin/guideline-links/${encodeURIComponent(linkId)}`, {
             method: 'DELETE'
           });
-          state.notice = 'Strateginis rysis pasalintas.';
+          setNotice('Strateginis rysis pasalintas.');
           await loadOverview();
         });
         return;
@@ -1327,7 +1355,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { status: nextStatus }
         });
-        state.notice = `Vartotojo statusas pakeistas i ${nextStatus}.`;
+        setNotice(`Vartotojo statusas pakeistas i ${nextStatus}.`);
         await loadOverview();
       });
     });
@@ -1344,7 +1372,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { status: nextStatus }
         });
-        state.notice = `Narystes statusas pakeistas i ${nextStatus}.`;
+        setNotice(`Narystes statusas pakeistas i ${nextStatus}.`);
         await loadOverview();
       });
     });
@@ -1374,7 +1402,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { name }
         });
-        state.notice = 'Institucijos pavadinimas atnaujintas.';
+        setNotice('Institucijos pavadinimas atnaujintas.');
         await loadOverview();
       });
     });
@@ -1392,7 +1420,7 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: { title }
         });
-        state.notice = 'Strategijos pavadinimas atnaujintas.';
+        setNotice('Strategijos pavadinimas atnaujintas.');
         await loadOverview();
       });
     });
@@ -1412,5 +1440,6 @@ function render() {
 
   renderDashboard();
 }
+
 
 

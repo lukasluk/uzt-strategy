@@ -18,6 +18,14 @@ const MAP_WORLD_PAD = 320;
 const MAP_NODE_MIN_RENDER_X = -3000;
 const MAP_NODE_MIN_RENDER_Y = -3000;
 
+function notifyMapError(message) {
+  const text = String(message || '').trim();
+  if (!text) return;
+  if (window.DigiAlerts && typeof window.DigiAlerts.error === 'function') {
+    window.DigiAlerts.error(text);
+  }
+}
+
 function mapNormalizeStrategyLinks(value) {
   if (typeof normalizeGuidelineStrategyLinks === 'function') {
     return normalizeGuidelineStrategyLinks(value);
@@ -880,6 +888,7 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (!droppedNode || !editable || !didMove) return;
     persistMapNodePosition(droppedNode).catch((error) => {
       state.notice = toUserMessage(error);
+      notifyMapError(state.notice);
       render();
     });
   };
@@ -1397,6 +1406,7 @@ function renderMapView() {
           }
         } catch (error) {
           state.notice = toUserMessage(error);
+          notifyMapError(state.notice);
           render();
           return;
         }

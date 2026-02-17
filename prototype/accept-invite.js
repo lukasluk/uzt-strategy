@@ -17,11 +17,21 @@
   let institutionSlug = '';
   let inviteHasExistingUser = false;
 
+  function notify(type, message) {
+    const text = String(message || '').trim();
+    if (!text || !window.DigiAlerts) return;
+    const method = type === 'error' ? 'error' : 'success';
+    if (typeof window.DigiAlerts[method] === 'function') {
+      window.DigiAlerts[method](text);
+    }
+  }
+
   function showError(message) {
     noticeBox.style.display = 'none';
     noticeBox.textContent = '';
     errorBox.style.display = message ? 'block' : 'none';
     errorBox.textContent = message || '';
+    if (message) notify('error', message);
   }
 
   function showNotice(message) {
@@ -29,6 +39,7 @@
     errorBox.textContent = '';
     noticeBox.style.display = message ? 'block' : 'none';
     noticeBox.textContent = message || '';
+    if (message) notify('success', message);
   }
 
   function setPasswordToggle(buttonId, inputId) {

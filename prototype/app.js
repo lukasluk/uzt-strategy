@@ -659,6 +659,30 @@ function toUserMessage(error) {
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
 
+function notifySuccess(message) {
+  const text = String(message || '').trim();
+  if (!text) return;
+  if (window.DigiAlerts && typeof window.DigiAlerts.success === 'function') {
+    window.DigiAlerts.success(text);
+  }
+}
+
+function notifyError(message) {
+  const text = String(message || '').trim();
+  if (!text) return;
+  if (window.DigiAlerts && typeof window.DigiAlerts.error === 'function') {
+    window.DigiAlerts.error(text);
+  }
+}
+
+function notifyInfo(message) {
+  const text = String(message || '').trim();
+  if (!text) return;
+  if (window.DigiAlerts && typeof window.DigiAlerts.info === 'function') {
+    window.DigiAlerts.info(text);
+  }
+}
+
 async function api(path, { method = 'GET', body = null, auth = true } = {}) {
   const headers = {};
   if (body !== null) headers['Content-Type'] = 'application/json';
@@ -976,6 +1000,7 @@ async function bootstrap() {
     }
   } catch (error) {
     state.error = toUserMessage(error);
+    notifyError(state.error);
   } finally {
     state.loading = false;
     render();
@@ -991,6 +1016,7 @@ async function runBusy(task) {
     await task();
   } catch (error) {
     state.notice = toUserMessage(error);
+    notifyError(state.notice);
   } finally {
     state.busy = false;
     render();
@@ -2863,6 +2889,7 @@ function bindGlobal() {
   });
   document.getElementById('copySummary').addEventListener('click', async () => {
     await navigator.clipboard.writeText(elements.summaryText.value);
+    notifySuccess('Santrauka nukopijuota.');
   });
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
   window.addEventListener('uzt-auth-changed', handleAuthChanged);
@@ -2902,7 +2929,7 @@ function ensureInstitutionSelectionForAuth() {
 
 function showAuthModal(initialMode = 'login') {
   if (!ensureInstitutionSelectionForAuth()) {
-    window.alert('Pirma pasirinkite instituciją.');
+    notifyError('Pirma pasirinkite instituciją.');
     return;
   }
   void initialMode;
@@ -2983,6 +3010,7 @@ function showAuthModal(initialMode = 'login') {
     authHint.style.display = 'none';
     authError.textContent = message;
     authError.style.display = 'block';
+    notifyError(message);
   }
 
   function showHint(message) {
@@ -2990,6 +3018,7 @@ function showAuthModal(initialMode = 'login') {
     authError.style.display = 'none';
     authHint.textContent = message;
     authHint.style.display = 'block';
+    notifyInfo(message);
   }
 
   closeBtn.addEventListener('click', closeModal);

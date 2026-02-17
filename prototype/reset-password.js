@@ -35,6 +35,18 @@ function toUserMessage(error) {
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
 
+function notifySuccess(message) {
+  const text = String(message || '').trim();
+  if (!text || !window.DigiAlerts || typeof window.DigiAlerts.success !== 'function') return;
+  window.DigiAlerts.success(text);
+}
+
+function notifyError(message) {
+  const text = String(message || '').trim();
+  if (!text || !window.DigiAlerts || typeof window.DigiAlerts.error !== 'function') return;
+  window.DigiAlerts.error(text);
+}
+
 function formatDateTime(value) {
   if (!value) return 'N/A';
   const parsed = new Date(value);
@@ -87,6 +99,7 @@ async function bootstrap() {
   } catch (error) {
     state.validToken = false;
     state.error = toUserMessage(error);
+    notifyError(state.error);
   } finally {
     state.loading = false;
     render();
@@ -134,6 +147,7 @@ function render() {
       const passwordRepeat = String(fd.get('passwordRepeat') || '');
       if (password !== passwordRepeat) {
         state.error = 'Slaptažodžiai nesutampa.';
+        notifyError(state.error);
         render();
         return;
       }
@@ -148,8 +162,10 @@ function render() {
           body: { token, password }
         });
         state.success = true;
+        notifySuccess('Slaptažodis pakeistas sėkmingai.');
       } catch (error) {
         state.error = toUserMessage(error);
+        notifyError(state.error);
       } finally {
         state.busy = false;
         render();
