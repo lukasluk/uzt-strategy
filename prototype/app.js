@@ -2882,8 +2882,29 @@ function bindGlobal() {
   window.addEventListener('scroll', maybeAutoCollapseIntroOnFirstScroll, { passive: true });
 }
 
+function ensureInstitutionSelectionForAuth() {
+  if (normalizeSlug(state.institutionSlug)) return true;
+  const institutions = Array.isArray(state.institutions) ? state.institutions : [];
+  const firstInstitution = institutions.find((item) => normalizeSlug(item?.slug)) || null;
+  if (!firstInstitution) return false;
+
+  const fallbackInstitutionSlug = normalizeSlug(firstInstitution.slug);
+  if (!fallbackInstitutionSlug) return false;
+
+  state.institutionSlug = fallbackInstitutionSlug;
+  const strategies = Array.isArray(firstInstitution.strategies) ? firstInstitution.strategies : [];
+  const defaultStrategy = strategies.find((item) => item?.isDefault) || strategies[0] || null;
+  state.strategySlug = normalizeSlug(defaultStrategy?.slug);
+  state.strategy = defaultStrategy || null;
+  syncRouteState();
+  return true;
+}
+
 function showAuthModal(initialMode = 'login') {
-  if (!state.institutionSlug) return;
+  if (!ensureInstitutionSelectionForAuth()) {
+    window.alert('Pirma pasirinkite instituciją.');
+    return;
+  }
   void initialMode;
 
   let overlay = document.getElementById('loginOverlay');
