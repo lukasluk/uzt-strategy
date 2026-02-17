@@ -1303,7 +1303,8 @@ function flushPendingGuidelineFocus() {
   clearGuidelineFocusQuery();
 }
 
-function strategySwitcherCardMarkup() {
+function strategySwitcherCardMarkup(options = {}) {
+  const topbar = Boolean(options.topbar);
   const info = selectedInstitutionInfo();
   const institutionName = String(info?.name || state.institutionSlug || '-').trim() || '-';
   const strategyTitle = String(info?.strategyTitle || state.strategy?.title || state.strategySlug || '-').trim() || '-';
@@ -1311,7 +1312,7 @@ function strategySwitcherCardMarkup() {
   const dialogOpen = Boolean(state.strategySwitcherDialogOpen);
 
   return `
-    <div class="step-utility-card strategy-switcher-card ${dialogOpen ? 'is-open' : ''}">
+    <div class="step-utility-card strategy-switcher-card ${topbar ? 'strategy-switcher-card-topbar' : ''} ${dialogOpen ? 'is-open' : ''}">
       <button
         id="toggleStrategySwitcherDialogBtn"
         type="button"
@@ -1527,13 +1528,6 @@ function renderSteps() {
     elements.steps.appendChild(shell);
   });
 
-  const institutionShell = document.createElement('div');
-  institutionShell.className = 'step-pill-shell step-utility-shell';
-  institutionShell.innerHTML = strategySwitcherCardMarkup();
-  bindStrategySwitcherDialog(institutionShell);
-  bindInstitutionSwitch(institutionShell);
-  bindStrategySwitch(institutionShell);
-  elements.steps.appendChild(institutionShell);
 }
 
 function applyIntroGuideState() {
@@ -2706,10 +2700,14 @@ function renderUserBar() {
 
   if (!isAuthenticated()) {
     container.innerHTML = `
-      <div class="user-toolbar">
+      <div class="user-toolbar user-toolbar-main">
+        ${strategySwitcherCardMarkup({ topbar: true })}
         <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
       </div>
     `;
+    bindStrategySwitcherDialog(container);
+    bindInstitutionSwitch(container);
+    bindStrategySwitch(container);
     const openBtn = container.querySelector('#openAuthBtn');
     if (openBtn) openBtn.addEventListener('click', () => showAuthModal('login'));
     return;
@@ -2717,18 +2715,20 @@ function renderUserBar() {
 
   const displayName = state.user?.displayName || state.user?.email || 'Prisijungęs vartotojas';
   const roleLabel = state.role === 'institution_admin' ? 'Administratorius' : 'Narys';
-  const strategyLabel = String(state.strategy?.title || state.strategySlug || '').trim();
 
   container.innerHTML = `
-    <div class="user-toolbar">
+    <div class="user-toolbar user-toolbar-main">
+      ${strategySwitcherCardMarkup({ topbar: true })}
       <div class="user-chip">
         <span>${escapeHtml(displayName)}</span>
         <span class="tag">${escapeHtml(roleLabel)}</span>
-        ${strategyLabel ? `<span class="tag tag-subtle">${escapeHtml(strategyLabel)}</span>` : ''}
       </div>
       <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
     </div>
   `;
+  bindStrategySwitcherDialog(container);
+  bindInstitutionSwitch(container);
+  bindStrategySwitch(container);
 
   const logoutBtn = container.querySelector('#logoutBtn');
   if (logoutBtn) {

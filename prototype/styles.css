@@ -393,6 +393,12 @@ body.embed-map-page .stage {
   gap: 8px;
 }
 
+.strategy-switcher-card-topbar {
+  min-width: clamp(300px, 34vw, 460px);
+  max-width: min(460px, 82vw);
+  position: relative;
+}
+
 .strategy-switcher-summary {
   display: grid;
   gap: 6px;
@@ -452,6 +458,19 @@ body.embed-map-page .stage {
   padding-top: 4px;
 }
 
+.strategy-switcher-card-topbar .strategy-switcher-dialog {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(460px, 82vw);
+  border: 1px solid #d0e1f7;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f9ff 100%);
+  box-shadow: 0 12px 28px rgba(24, 66, 122, 0.16);
+  padding: 10px;
+  z-index: 55;
+}
+
 .strategy-switcher-utility-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -478,6 +497,16 @@ body.embed-map-page .stage {
 
 .strategy-switcher-language .language-switch select {
   min-width: 72px;
+}
+
+.user-toolbar-main {
+  align-items: center;
+  gap: 10px;
+}
+
+.user-toolbar-main > .btn,
+.user-toolbar-main > .user-chip {
+  flex: 0 0 auto;
 }
 
 .strategy-switcher-dialog[hidden] {
@@ -4067,6 +4096,22 @@ select:focus {
 
   .strategy-switcher-utility-row {
     grid-template-columns: 1fr;
+  }
+
+  .strategy-switcher-card-topbar {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+
+  .strategy-switcher-card-topbar .strategy-switcher-dialog {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    border: 1px solid #d0e1f7;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    padding: 8px;
   }
 
   .user-toolbar {
