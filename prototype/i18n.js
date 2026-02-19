@@ -291,7 +291,9 @@
       if (!key) return;
       const value = source[key] || fallback[key] || '';
       if (!value) return;
-      element.textContent = value;
+      if (element.textContent !== value) {
+        element.textContent = value;
+      }
     };
 
     if (scope instanceof Element && scope.hasAttribute('data-i18n-key')) {
