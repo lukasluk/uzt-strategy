@@ -12,6 +12,21 @@
     }
   };
 
+  const KEYED_TEXT = {
+    lt: {
+      appHomeLink: 'Pagrindinis puslapis',
+      appFooterLead: 'digistrategy.eu platforma skirta padėti jūsų institucijai kurti skaitmenizacijos strategiją skaidriai, viešai ir inovatyviai. Norite prisijungti prie platformos?',
+      appRequestAccessBtn: 'Gauti prieigą',
+      appFooterLinkedInLead: 'arba susisiekite LinkedIn:'
+    },
+    en: {
+      appHomeLink: 'Home page',
+      appFooterLead: 'digistrategy.eu platform helps your institution build a digital strategy in a transparent, public, and innovative way. Want to join the platform?',
+      appRequestAccessBtn: 'Request access',
+      appFooterLinkedInLead: 'or contact on LinkedIn:'
+    }
+  };
+
   const EXACT_TEXT_EN = new Map([
     ['Gairės', 'Guidelines'],
     ['Iniciatyvos', 'Initiatives'],
@@ -265,6 +280,28 @@
     attrTargets.forEach(localizeElementAttributes);
   }
 
+  function localizeKeyedElements(root) {
+    const scope = root instanceof Element || root instanceof Document ? root : document;
+    const source = KEYED_TEXT[state.lang] || KEYED_TEXT.lt || {};
+    const fallback = KEYED_TEXT.lt || {};
+
+    const applyElement = (element) => {
+      if (!(element instanceof Element)) return;
+      const key = String(element.getAttribute('data-i18n-key') || '').trim();
+      if (!key) return;
+      const value = source[key] || fallback[key] || '';
+      if (!value) return;
+      element.textContent = value;
+    };
+
+    if (scope instanceof Element && scope.hasAttribute('data-i18n-key')) {
+      applyElement(scope);
+    }
+
+    const targets = scope.querySelectorAll ? scope.querySelectorAll('[data-i18n-key]') : [];
+    targets.forEach(applyElement);
+  }
+
   function refreshQueryLanguage(lang) {
     const params = new URLSearchParams(window.location.search);
     if (lang === 'lt') params.delete(QUERY_KEY);
@@ -294,15 +331,22 @@
         mutations.forEach((mutation) => {
           mutation.addedNodes.forEach((added) => {
             if (added instanceof Text) localizeTextNode(added);
-            else if (added instanceof Element) localizeDocument(added);
+            else if (added instanceof Element) {
+              localizeDocument(added);
+              localizeKeyedElements(added);
+            }
           });
           if (mutation.target instanceof Text) localizeTextNode(mutation.target);
-          if (mutation.target instanceof Element) localizeElementAttributes(mutation.target);
+          if (mutation.target instanceof Element) {
+            localizeElementAttributes(mutation.target);
+            localizeKeyedElements(mutation.target);
+          }
         });
       });
       state.observer.observe(document.body, { childList: true, subtree: true, characterData: true });
       localizeDocument(document);
     }
+    localizeKeyedElements(document);
 
     window.dispatchEvent(new CustomEvent('uzt-language-changed', { detail: { lang: state.lang } }));
   }
@@ -352,6 +396,7 @@
     window.addEventListener('uzt-rendered', () => {
       mountLanguageSwitches();
       localizeDocument(document.body);
+      localizeKeyedElements(document.body);
     });
   }
 
