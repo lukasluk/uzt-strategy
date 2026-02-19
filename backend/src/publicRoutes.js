@@ -4,7 +4,9 @@ function registerPublicRoutes({
   app,
   query,
   publicReadRateLimit,
+  publicWriteRateLimit,
   trafficMonitor,
+  normalizeEmail,
   getInstitutionBySlug,
   resolveInstitutionStrategy,
   getCurrentCycle,
@@ -12,6 +14,9 @@ function registerPublicRoutes({
 }) {
   const publicReadGuard = typeof publicReadRateLimit === 'function'
     ? publicReadRateLimit
+    : (_req, _res, next) => next();
+  const publicWriteGuard = typeof publicWriteRateLimit === 'function'
+    ? publicWriteRateLimit
     : (_req, _res, next) => next();
 
   function normalizeStrategyOutput(strategy) {
@@ -170,6 +175,69 @@ function registerPublicRoutes({
   app.get('/api/v1/public/content-settings', publicReadGuard, async (_req, res) => {
     const contentSettings = await loadContentSettings(query);
     res.json({ contentSettings });
+  });
+
+  app.post('/api/v1/public/access-requests', publicWriteGuard, async (req, res) => {
+    const institutionId = String(req.body?.institutionId || '').trim();
+    const fullName = String(req.body?.fullName || '').trim();
+    const workEmail = normalizeEmail ? normalizeEmail(req.body?.workEmail) : String(req.body?.workEmail || '').trim().toLowerCase();
+    const phone = String(req.body?.phone || '').trim();
+    const notes = String(req.body?.notes || '').trim();
+
+    if (!institutionId) return res.status(400).json({ error: 'institutionId required' });
+    if (!fullName) return res.status(400).json({ error: 'fullName required' });
+    if (!workEmail) return res.status(400).json({ error: 'workEmail required' });
+    if (!phone) return res.status(400).json({ error: 'phone required' });
+    if (fullName.length > 160) return res.status(400).json({ error: 'fullName too long' });
+    if (workEmail.length > 160) return res.status(400).json({ error: 'workEmail too long' });
+    if (phone.length > 80) return res.status(400).json({ error: 'phone too long' });
+    if (notes.length > 3000) return res.status(400).json({ error: 'notes too long' });
+
+    const institutionRes = await query(
+      `select id, name
+       from institutions
+       where id = $1 and status = 'active'
+       limit 1`,
+      [institutionId]
+    );
+    if (!institutionRes.rowCount) return res.status(404).json({ error: 'institution not found' });
+    const institution = institutionRes.rows[0];
+
+    const createdRes = await query(
+      `insert into access_requests (
+         id,
+         request_code,
+         institution_id,
+         institution_name,
+         full_name,
+         work_email,
+         phone,
+         notes,
+         status
+       )
+       values (
+         gen_random_uuid(),
+         ('REQ-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))),
+         $1,
+         $2,
+         $3,
+         $4,
+         $5,
+         $6,
+         'pending'
+       )
+       returning id, request_code, status, created_at`,
+      [institution.id, institution.name, fullName, workEmail, phone, notes || null]
+    );
+    const created = createdRes.rows[0];
+
+    res.status(201).json({
+      ok: true,
+      requestId: created.id,
+      requestCode: created.request_code,
+      status: created.status,
+      createdAt: created.created_at
+    });
   });
 
   app.get('/api/v1/public/strategy-map', publicReadGuard, async (req, res) => {

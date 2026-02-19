@@ -1087,8 +1087,12 @@ textarea {
   width: 100%;
 }
 .admin-edit-description {
+  width: 100%;
   min-height: 140px;
   line-height: 1.45;
+}
+.admin-cycle-narrative-row {
+  grid-template-columns: minmax(0, 1fr);
 }
 .admin-edit-grid {
   display: grid;
@@ -1519,6 +1523,11 @@ textarea {
 
 .app-disclaimer a:hover {
   text-decoration: underline;
+}
+.app-disclaimer-access-btn {
+  margin: 0 6px;
+  min-height: 36px;
+  padding: 7px 12px;
 }
 .intro-shell {
   margin-top: 0;
@@ -3202,6 +3211,12 @@ select:focus {
   font-size: 12px;
   font-weight: 500;
 }
+.access-request-card {
+  width: min(560px, 94vw);
+}
+.access-request-form textarea {
+  min-height: 96px;
+}
 .tag.tag-subtle {
   background: #eef3ff;
   border-color: #d4deef;
@@ -4593,6 +4608,11 @@ body.meta-admin-page .btn-primary {
 body.meta-admin-page .btn-ghost {
   background: rgba(255, 255, 255, 0.82);
   border-color: #c0d4f1;
+}
+body.meta-admin-page .btn-ghost.active {
+  border-color: #2d76c9;
+  background: linear-gradient(180deg, #2d76c9 0%, #235fa8 100%);
+  color: #ffffff;
 }
 
 body.meta-admin-page .tag {

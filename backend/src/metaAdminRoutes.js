@@ -387,6 +387,26 @@ function registerMetaAdminRoutes({
        order by inv.created_at desc
        limit 300`
     );
+    const accessRequestsRes = await query(
+      `select ar.id,
+              ar.request_code,
+              ar.institution_id,
+              coalesce(i.name, ar.institution_name) as institution_name,
+              coalesce(i.slug, '') as institution_slug,
+              ar.full_name,
+              ar.work_email,
+              ar.phone,
+              ar.notes,
+              ar.status,
+              ar.reviewed_at,
+              ar.reviewed_by_scope,
+              ar.reviewed_by_id,
+              ar.created_at
+       from access_requests ar
+       left join institutions i on i.id = ar.institution_id
+       order by ar.created_at desc
+       limit 500`
+    );
 
     const membershipsByUser = membershipsRes.rows.reduce((acc, row) => {
       if (!acc[row.user_id]) acc[row.user_id] = [];
@@ -478,6 +498,22 @@ function registerMetaAdminRoutes({
         memberships: membershipsByUser[row.id] || []
       })),
       pendingInvites,
+      accessRequests: accessRequestsRes.rows.map((row) => ({
+        id: row.id,
+        requestCode: row.request_code,
+        institutionId: row.institution_id,
+        institutionName: row.institution_name,
+        institutionSlug: row.institution_slug || '',
+        fullName: row.full_name,
+        workEmail: row.work_email,
+        phone: row.phone,
+        notes: row.notes || '',
+        status: row.status,
+        reviewedAt: row.reviewed_at,
+        reviewedByScope: row.reviewed_by_scope,
+        reviewedById: row.reviewed_by_id,
+        createdAt: row.created_at
+      })),
       guidelineLinks: {
         parentGuidelines,
         links: guidelineLinks
@@ -731,6 +767,53 @@ function registerMetaAdminRoutes({
         slug: updated.slug,
         status: updated.status,
         isDefault: Boolean(updated.is_default),
+        createdAt: updated.created_at
+      }
+    });
+  });
+
+  app.put('/api/v1/meta-admin/access-requests/:requestId/status', requireMetaAdminSession, async (req, res) => {
+    const requestId = String(req.params.requestId || '').trim();
+    const status = String(req.body?.status || '').trim();
+    if (!requestId || !['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'requestId and valid status required' });
+    }
+
+    const result = await query(
+      `update access_requests
+       set status = $1,
+           reviewed_at = case when $1 = 'pending' then null else now() end,
+           reviewed_by_scope = case when $1 = 'pending' then null else 'meta_admin' end,
+           reviewed_by_id = case when $1 = 'pending' then null else $2 end
+       where id = $3
+       returning id, institution_id, request_code, status, reviewed_at, reviewed_by_scope, reviewed_by_id, created_at`,
+      [status, req.metaAdmin?.scope || 'meta_admin', requestId]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'access request not found' });
+    const updated = result.rows[0];
+
+    await logAuditEvent({
+      query,
+      uuid,
+      institutionId: updated.institution_id || null,
+      action: 'meta_admin.access_request.status_updated',
+      entityType: 'access_request',
+      entityId: updated.id,
+      payload: metaAuditPayload(req, {
+        requestCode: updated.request_code,
+        status: updated.status
+      })
+    });
+
+    res.json({
+      ok: true,
+      accessRequest: {
+        id: updated.id,
+        requestCode: updated.request_code,
+        status: updated.status,
+        reviewedAt: updated.reviewed_at,
+        reviewedByScope: updated.reviewed_by_scope,
+        reviewedById: updated.reviewed_by_id,
         createdAt: updated.created_at
       }
     });

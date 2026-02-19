@@ -25,6 +25,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   const INVITE_ACCEPT_MAX_ATTEMPTS = Number(process.env.INVITE_ACCEPT_RATE_LIMIT_MAX || 20);
   const PUBLIC_RATE_LIMIT_WINDOW_MS = Number(process.env.PUBLIC_RATE_LIMIT_WINDOW_MS || 60 * 1000);
   const PUBLIC_RATE_LIMIT_MAX = Number(process.env.PUBLIC_RATE_LIMIT_MAX || 180);
+  const PUBLIC_WRITE_RATE_LIMIT_WINDOW_MS = Number(process.env.PUBLIC_WRITE_RATE_LIMIT_WINDOW_MS || 60 * 1000);
+  const PUBLIC_WRITE_RATE_LIMIT_MAX = Number(process.env.PUBLIC_WRITE_RATE_LIMIT_MAX || 20);
   const MEMBER_WRITE_RATE_LIMIT_WINDOW_MS = Number(process.env.MEMBER_WRITE_RATE_LIMIT_WINDOW_MS || 60 * 1000);
   const MEMBER_WRITE_RATE_LIMIT_MAX = Number(process.env.MEMBER_WRITE_RATE_LIMIT_MAX || 90);
   const ADMIN_WRITE_RATE_LIMIT_WINDOW_MS = Number(process.env.ADMIN_WRITE_RATE_LIMIT_WINDOW_MS || 60 * 1000);
@@ -39,6 +41,10 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     publicRead: {
       windowMs: PUBLIC_RATE_LIMIT_WINDOW_MS,
       max: PUBLIC_RATE_LIMIT_MAX
+    },
+    publicWrite: {
+      windowMs: PUBLIC_WRITE_RATE_LIMIT_WINDOW_MS,
+      max: PUBLIC_WRITE_RATE_LIMIT_MAX
     },
     memberWrite: {
       windowMs: MEMBER_WRITE_RATE_LIMIT_WINDOW_MS,
@@ -89,6 +95,14 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     keyPrefix: 'member-write',
     keyFn: (req) => `${resolveClientIp(req)}:${req.auth?.sub || 'unknown'}`,
     onBlocked: onBlocked('member-write')
+  });
+
+  const publicWriteRateLimit = createRateLimiter({
+    windowMs: PUBLIC_WRITE_RATE_LIMIT_WINDOW_MS,
+    max: PUBLIC_WRITE_RATE_LIMIT_MAX,
+    keyPrefix: 'public-write',
+    keyFn: (req) => resolveClientIp(req),
+    onBlocked: onBlocked('public-write')
   });
 
   const adminWriteRateLimit = createRateLimiter({
@@ -163,7 +177,9 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     app,
     query,
     publicReadRateLimit,
+    publicWriteRateLimit,
     trafficMonitor,
+    normalizeEmail,
     getInstitutionBySlug: (_query, slug) => getInstitutionBySlug(slug),
     resolveInstitutionStrategy: (_query, institutionId, strategySlug) =>
       resolveInstitutionStrategy(institutionId, strategySlug),

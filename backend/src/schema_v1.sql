@@ -181,6 +181,22 @@ create table if not exists password_reset_tokens (
   created_at timestamptz not null default now()
 );
 
+create table if not exists access_requests (
+  id uuid primary key,
+  request_code text not null unique,
+  institution_id uuid references institutions(id) on delete set null,
+  institution_name text not null,
+  full_name text not null,
+  work_email text not null,
+  phone text not null,
+  notes text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  reviewed_at timestamptz,
+  reviewed_by_scope text,
+  reviewed_by_id text,
+  created_at timestamptz not null default now()
+);
+
 insert into platform_settings (key, value)
 values
   ('guide_intro_text', $$digistrategy.eu sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.
@@ -230,6 +246,9 @@ create index if not exists idx_initiative_votes_initiative on strategy_initiativ
 create index if not exists idx_initiative_votes_voter on strategy_initiative_votes(voter_id);
 create index if not exists idx_password_reset_user on password_reset_tokens(user_id);
 create index if not exists idx_password_reset_expires on password_reset_tokens(expires_at);
+create index if not exists idx_access_requests_status on access_requests(status);
+create index if not exists idx_access_requests_created_at on access_requests(created_at);
+create index if not exists idx_access_requests_institution on access_requests(institution_id);
 
 alter table if exists strategy_guidelines
   add column if not exists relation_type text not null default 'orphan';

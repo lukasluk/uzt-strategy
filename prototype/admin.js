@@ -134,7 +134,7 @@ function renderDashboard(){
           <span class="tag">Rodoma „Naudojimosi gide“</span>
         </div>
         <div class="admin-add-form">
-          <div class="form-row">
+          <div class="form-row admin-cycle-narrative-row">
             <div>
               <label class="prompt" for="cycleMissionInput" style="display:block;margin:0 0 6px;"><strong>Misija</strong></label>
               <textarea id="cycleMissionInput" class="admin-edit-description" placeholder="Misija" ${state.busy||!cycle?.id?'disabled':''}>${escapeHtml(cycle?.mission_text||'')}</textarea>

@@ -5,6 +5,7 @@
   const glassMetricInitiatives = document.getElementById('glassMetricInitiatives');
   const landingAboutContent = document.getElementById('landingAboutContent');
   const navLinks = Array.from(document.querySelectorAll('[data-scroll-link]'));
+  const accessRequestButtons = Array.from(document.querySelectorAll('[data-open-access-request]'));
   const languageSelect = document.getElementById('landingLangSelect');
   const metaDescription = document.getElementById('landingMetaDescription');
 
@@ -28,6 +29,7 @@
   ].join('\n\n');
   let currentLang = DEFAULT_LANG;
   let preferredStrategySlug = 'uzt';
+  let publicInstitutions = [];
   const adminAboutTextByLang = {
     lt: '',
     en: ''
@@ -141,7 +143,20 @@
       finalCopy: 'Aplankykite viešą strategijos erdvę ir pamatykite, kaip susijungia gairės bei iniciatyvos.',
       finalCta: 'Peržiūrėti aktyvias strategijas',
       footerCopy: 'digistrategy.eu - strateginio bendradarbiavimo platforma viešojo sektoriaus institucijoms.',
-      footerAccessLead: 'Norėdami gauti prieigą, susisiekite LinkedIn:'
+      footerAccessButton: 'Gauti prieigą',
+      footerAccessLead: 'arba susisiekite per LinkedIn:',
+      accessRequestTitle: 'Prieigos užklausa',
+      accessRequestDescription: 'Pateikite trumpą informaciją ir peržiūrėsime jūsų užklausą.',
+      accessRequestInstitution: 'Institucija',
+      accessRequestFullName: 'Vardas ir pavardė',
+      accessRequestEmail: 'Darbinis el. paštas',
+      accessRequestPhone: 'Kontaktinis telefono numeris',
+      accessRequestNotes: 'Papildoma informacija (nebūtina)',
+      accessRequestSubmit: 'Pateikti užklausą',
+      accessRequestClose: 'Užverti',
+      accessRequestSuccess: 'Užklausa gauta. Užregistruota: {REQUEST_CODE}',
+      accessRequestError: 'Nepavyko pateikti užklausos. Pabandykite dar kartą.',
+      accessRequestLinkedInLead: 'Taip pat galite susisiekti tiesiogiai per LinkedIn:'
     },
     en: {
       metaTitle: 'digistrategy.eu | Public Strategy OS',
@@ -245,7 +260,20 @@
       finalCopy: 'Open current public strategy workspace and review how guidelines and initiatives connect.',
       finalCta: 'View Active Strategies',
       footerCopy: 'digistrategy.eu - Strategy collaboration platform for public institutions.',
-      footerAccessLead: 'To request access, contact on LinkedIn:'
+      footerAccessButton: 'Request access',
+      footerAccessLead: 'or contact directly on LinkedIn:',
+      accessRequestTitle: 'Access request',
+      accessRequestDescription: 'Share short details and we will review your request.',
+      accessRequestInstitution: 'Institution',
+      accessRequestFullName: 'Full name',
+      accessRequestEmail: 'Work email',
+      accessRequestPhone: 'Contact phone number',
+      accessRequestNotes: 'Additional information (optional)',
+      accessRequestSubmit: 'Submit request',
+      accessRequestClose: 'Close',
+      accessRequestSuccess: 'Request received. Registered as: {REQUEST_CODE}',
+      accessRequestError: 'Failed to submit request. Please try again.',
+      accessRequestLinkedInLead: 'You can also contact directly on LinkedIn:'
     }
   };
 
@@ -367,6 +395,127 @@
     landingAboutContent.innerHTML = renderAboutBlocks(resolveAboutText());
   }
 
+  function getActiveInstitutions() {
+    return (Array.isArray(publicInstitutions) ? publicInstitutions : [])
+      .filter((item) => String(item?.id || '').trim() && String(item?.name || '').trim());
+  }
+
+  function renderAccessRequestInstitutionOptions() {
+    const institutions = getActiveInstitutions();
+    if (!institutions.length) {
+      return '<option value="">-</option>';
+    }
+    return institutions
+      .map((item) => `<option value="${escapeHtml(String(item.id || ''))}">${escapeHtml(String(item.name || '-'))} (${escapeHtml(String(item.slug || '-'))})</option>`)
+      .join('');
+  }
+
+  function closeAccessRequestModal() {
+    const current = document.getElementById('landingAccessRequestOverlay');
+    if (current) current.remove();
+  }
+
+  function openAccessRequestModal() {
+    const labels = getTranslationBundle(currentLang);
+    closeAccessRequestModal();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'landingAccessRequestOverlay';
+    overlay.className = 'landing-access-overlay';
+    overlay.innerHTML = `
+      <div class="landing-access-card">
+        <div class="header-row">
+          <h3>${escapeHtml(labels.accessRequestTitle || 'Access request')}</h3>
+          <button type="button" class="btn btn-ghost" id="closeLandingAccessRequest">${escapeHtml(labels.accessRequestClose || 'Close')}</button>
+        </div>
+        <p class="prompt">${escapeHtml(labels.accessRequestDescription || '')}</p>
+        <div id="landingAccessRequestStatus" class="landing-access-status" hidden></div>
+        <form id="landingAccessRequestForm" class="landing-access-form">
+          <label for="landingAccessInstitution">${escapeHtml(labels.accessRequestInstitution || 'Institution')}</label>
+          <select id="landingAccessInstitution" name="institutionId" required>
+            ${renderAccessRequestInstitutionOptions()}
+          </select>
+
+          <label for="landingAccessFullName">${escapeHtml(labels.accessRequestFullName || 'Full name')}</label>
+          <input id="landingAccessFullName" type="text" name="fullName" required />
+
+          <label for="landingAccessEmail">${escapeHtml(labels.accessRequestEmail || 'Work email')}</label>
+          <input id="landingAccessEmail" type="email" name="workEmail" required />
+
+          <label for="landingAccessPhone">${escapeHtml(labels.accessRequestPhone || 'Contact phone number')}</label>
+          <input id="landingAccessPhone" type="text" name="phone" required />
+
+          <label for="landingAccessNotes">${escapeHtml(labels.accessRequestNotes || 'Additional information (optional)')}</label>
+          <textarea id="landingAccessNotes" name="notes" rows="4"></textarea>
+
+          <button type="submit" class="btn btn-primary">${escapeHtml(labels.accessRequestSubmit || 'Submit request')}</button>
+        </form>
+        <p class="landing-access-linkedin">
+          ${escapeHtml(labels.accessRequestLinkedInLead || '')}
+          <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas Lukosevičius</a>.
+        </p>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeButton = overlay.querySelector('#closeLandingAccessRequest');
+    const form = overlay.querySelector('#landingAccessRequestForm');
+    const statusNode = overlay.querySelector('#landingAccessRequestStatus');
+
+    function showStatus(message, isError = false) {
+      if (!(statusNode instanceof HTMLElement)) return;
+      statusNode.textContent = String(message || '').trim();
+      statusNode.hidden = false;
+      statusNode.classList.toggle('is-error', Boolean(isError));
+      statusNode.classList.toggle('is-success', !isError);
+    }
+
+    closeButton?.addEventListener('click', closeAccessRequestModal);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) closeAccessRequestModal();
+    });
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const submitButton = form.querySelector('button[type="submit"]');
+      if (!(submitButton instanceof HTMLButtonElement)) return;
+      submitButton.disabled = true;
+      if (statusNode instanceof HTMLElement) {
+        statusNode.hidden = true;
+        statusNode.textContent = '';
+      }
+
+      try {
+        const fd = new FormData(form);
+        const payload = {
+          institutionId: String(fd.get('institutionId') || '').trim(),
+          fullName: String(fd.get('fullName') || '').trim(),
+          workEmail: String(fd.get('workEmail') || '').trim(),
+          phone: String(fd.get('phone') || '').trim(),
+          notes: String(fd.get('notes') || '').trim()
+        };
+
+        const response = await fetch('/api/v1/public/access-requests', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(String(data?.error || 'request failed'));
+
+        const requestCode = String(data?.requestCode || '').trim() || '-';
+        const successTemplate = String(labels.accessRequestSuccess || 'Request received: {REQUEST_CODE}');
+        showStatus(successTemplate.replace('{REQUEST_CODE}', requestCode), false);
+        form.reset();
+      } catch (_error) {
+        showStatus(String(labels.accessRequestError || 'Failed to submit request.'), true);
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+  }
+
   function toStrategySummary(payload) {
     const institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
     const items = institutions
@@ -441,6 +590,12 @@
       const payload = await response.json();
       const institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
       const active = institutions.filter((item) => String(item?.status || '').toLowerCase() === 'active');
+      publicInstitutions = (active.length ? active : institutions).map((item) => ({
+        id: String(item?.id || '').trim(),
+        name: String(item?.name || '').trim(),
+        slug: String(item?.slug || '').trim(),
+        status: String(item?.status || '').trim().toLowerCase()
+      })).filter((item) => item.id && item.name);
       applyInstitutionCount(active.length || institutions.length || 0);
 
       const preferred = active.find((item) => String(item?.slug || '').trim())
@@ -456,6 +611,7 @@
       applyInstitutionCount(null);
       applyActiveContentCounts({ totalGuidelines: null, totalInitiatives: null });
       preferredStrategySlug = 'uzt';
+      publicInstitutions = [];
       updateNavigationLinks();
     }
   }
@@ -613,12 +769,23 @@
     });
   }
 
+  function initAccessRequestButtons() {
+    if (!accessRequestButtons.length) return;
+    accessRequestButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        openAccessRequestModal();
+      });
+    });
+  }
+
   currentLang = readInitialLang();
   initLanguageSwitch();
   setLanguage(currentLang, { updateUrl: true });
   initHeaderMotion();
   loadAdminLandingTranslations();
   loadPublicInstitutions();
+  initAccessRequestButtons();
   initReveal();
   initNavScroll();
 })();

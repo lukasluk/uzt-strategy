@@ -654,7 +654,15 @@ function toUserMessage(error) {
     'initiative not found': 'Iniciatyva nerasta.',
     'at least one guideline required': 'Iniciatyva turi būti priskirta bent vienai gairei.',
     'name required': 'Nurodykite pavadinimą.',
-    'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.'
+    'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.',
+    'institutionId required': 'Pasirinkite instituciją.',
+    'fullName required': 'Įveskite vardą ir pavardę.',
+    'workEmail required': 'Įveskite darbinį el. paštą.',
+    'phone required': 'Įveskite kontaktinį telefono numerį.',
+    'fullName too long': 'Vardas ir pavardė per ilgi.',
+    'workEmail too long': 'El. paštas per ilgas.',
+    'phone too long': 'Telefono numeris per ilgas.',
+    'notes too long': 'Papildoma informacija per ilga.'
   };
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
@@ -2884,6 +2892,10 @@ function downloadJson() {
 }
 
 function bindGlobal() {
+  const openAccessRequestBtn = document.getElementById('openAccessRequestBtn');
+  if (openAccessRequestBtn) {
+    openAccessRequestBtn.addEventListener('click', () => showAccessRequestModal());
+  }
   document.getElementById('closeExport').addEventListener('click', () => {
     elements.exportPanel.hidden = true;
   });
@@ -3077,6 +3089,155 @@ function showAuthModal(initialMode = 'login') {
       await bootstrap();
     } catch (error) {
       showError(toUserMessage(error));
+    }
+  });
+}
+
+function accessRequestUiText() {
+  if (currentLanguage() === 'en') {
+    return {
+      title: 'Access request',
+      description: 'Share short details and we will review your request.',
+      institution: 'Institution',
+      fullName: 'Full name',
+      workEmail: 'Work email',
+      phone: 'Contact phone number',
+      notes: 'Additional information (optional)',
+      submit: 'Submit request',
+      close: 'Close',
+      success: 'Request received. Registered as: ',
+      linkedinLead: 'You can also contact directly on LinkedIn:'
+    };
+  }
+  return {
+    title: 'Prieigos užklausa',
+    description: 'Pateikite trumpą informaciją ir peržiūrėsime jūsų užklausą.',
+    institution: 'Institucija',
+    fullName: 'Vardas ir pavardė',
+    workEmail: 'Darbinis el. paštas',
+    phone: 'Kontaktinis telefono numeris',
+    notes: 'Papildoma informacija (nebūtina)',
+    submit: 'Pateikti užklausą',
+    close: 'Uždaryti',
+    success: 'Užklausa gauta. Užregistruota: ',
+    linkedinLead: 'Taip pat galite susisiekti tiesiogiai per LinkedIn:'
+  };
+}
+
+function buildAccessRequestInstitutionOptions() {
+  const institutions = Array.isArray(state.institutions)
+    ? state.institutions.filter((institution) => normalizeSlug(institution?.slug) && String(institution?.id || '').trim())
+    : [];
+  if (!institutions.length) return '<option value="">-</option>';
+  return institutions
+    .map((institution) => `<option value="${escapeHtml(String(institution.id || ''))}">${escapeHtml(String(institution.name || institution.slug || '-'))} (${escapeHtml(String(institution.slug || '-'))})</option>`)
+    .join('');
+}
+
+function showAccessRequestModal() {
+  const ui = accessRequestUiText();
+
+  let overlay = document.getElementById('accessRequestOverlay');
+  if (overlay) overlay.remove();
+
+  overlay = document.createElement('div');
+  overlay.id = 'accessRequestOverlay';
+  overlay.className = 'login-overlay';
+  overlay.innerHTML = `
+    <div class="login-card access-request-card">
+      <div class="header-row" style="margin-bottom: 8px;">
+        <h2>${escapeHtml(ui.title)}</h2>
+        <button id="closeAccessRequestModal" class="btn btn-ghost" type="button">${escapeHtml(ui.close)}</button>
+      </div>
+      <p class="prompt auth-hint">${escapeHtml(ui.description)}</p>
+      <div id="accessRequestError" class="error" style="display:none;"></div>
+      <div id="accessRequestSuccess" class="prompt auth-hint" style="display:none;"></div>
+
+      <form id="accessRequestForm" class="login-form login-form-auth access-request-form">
+        <label class="auth-label" for="accessRequestInstitution">${escapeHtml(ui.institution)}</label>
+        <select id="accessRequestInstitution" name="institutionId" required>
+          ${buildAccessRequestInstitutionOptions()}
+        </select>
+        <label class="auth-label" for="accessRequestFullName">${escapeHtml(ui.fullName)}</label>
+        <input id="accessRequestFullName" type="text" name="fullName" required />
+        <label class="auth-label" for="accessRequestWorkEmail">${escapeHtml(ui.workEmail)}</label>
+        <input id="accessRequestWorkEmail" type="email" name="workEmail" required />
+        <label class="auth-label" for="accessRequestPhone">${escapeHtml(ui.phone)}</label>
+        <input id="accessRequestPhone" type="text" name="phone" required />
+        <label class="auth-label" for="accessRequestNotes">${escapeHtml(ui.notes)}</label>
+        <textarea id="accessRequestNotes" name="notes" rows="4"></textarea>
+        <button class="btn btn-primary" type="submit">${escapeHtml(ui.submit)}</button>
+      </form>
+      <p class="prompt auth-hint" style="margin-top:8px;">
+        ${escapeHtml(ui.linkedinLead)}
+        <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas Lukosevičius</a>.
+      </p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeButton = overlay.querySelector('#closeAccessRequestModal');
+  const form = overlay.querySelector('#accessRequestForm');
+  const errorNode = overlay.querySelector('#accessRequestError');
+  const successNode = overlay.querySelector('#accessRequestSuccess');
+
+  const closeModal = () => {
+    const current = document.getElementById('accessRequestOverlay');
+    if (current) current.remove();
+  };
+
+  const clearMessages = () => {
+    if (errorNode) {
+      errorNode.textContent = '';
+      errorNode.style.display = 'none';
+    }
+    if (successNode) {
+      successNode.textContent = '';
+      successNode.style.display = 'none';
+    }
+  };
+
+  closeButton?.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeModal();
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (!(submitButton instanceof HTMLButtonElement)) return;
+    submitButton.disabled = true;
+    clearMessages();
+    try {
+      const fd = new FormData(form);
+      const payload = await api('/api/v1/public/access-requests', {
+        method: 'POST',
+        auth: false,
+        body: {
+          institutionId: String(fd.get('institutionId') || '').trim(),
+          fullName: String(fd.get('fullName') || '').trim(),
+          workEmail: String(fd.get('workEmail') || '').trim(),
+          phone: String(fd.get('phone') || '').trim(),
+          notes: String(fd.get('notes') || '').trim()
+        }
+      });
+      const requestCode = String(payload?.requestCode || '').trim();
+      const message = `${ui.success}${requestCode || '-'}`;
+      if (successNode) {
+        successNode.textContent = message;
+        successNode.style.display = 'block';
+      }
+      notifySuccess(message);
+      form.reset();
+    } catch (error) {
+      const message = toUserMessage(error);
+      if (errorNode) {
+        errorNode.textContent = message;
+        errorNode.style.display = 'block';
+      }
+      notifyError(message);
+    } finally {
+      submitButton.disabled = false;
     }
   });
 }

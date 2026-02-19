@@ -14,7 +14,8 @@ const state = {
   lastPasswordReset: null,
   guidelineLinksInstitutionFilter: '',
   guidelineLinksStrategyFilter: '',
-  guidelineLinksSearch: ''
+  guidelineLinksSearch: '',
+  accessRequestStatusFilter: 'pending'
 };
 
 bootstrap();
@@ -75,6 +76,17 @@ function toUserMessage(error) {
     'failed to create guideline link': 'Nepavyko sukurti rysio tarp gairiu.',
     'linkId required': 'Truksta rysio ID.',
     'guideline link not found': 'Rysis nerastas.'
+    ,
+    'institutionId required': 'Pasirinkite institucija.',
+    'fullName required': 'Iveskite varda ir pavarde.',
+    'workEmail required': 'Iveskite darbini el. pasta.',
+    'phone required': 'Iveskite kontaktini telefono numeri.',
+    'fullName too long': 'Vardas ir pavarde per ilgi.',
+    'workEmail too long': 'El. pastas per ilgas.',
+    'phone too long': 'Telefono numeris per ilgas.',
+    'notes too long': 'Papildoma informacija per ilga.',
+    'requestId and valid status required': 'Netinkami uzklausos statuso duomenys.',
+    'access request not found': 'Prieigos uzklausa nerasta.'
   };
   return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
 }
@@ -702,9 +714,78 @@ function renderGuidelineLinksCard(guidelineLinks) {
   `;
 }
 
+function renderAccessRequestsCard(accessRequests) {
+  const requests = Array.isArray(accessRequests) ? accessRequests : [];
+  const counts = requests.reduce((acc, item) => {
+    const status = String(item?.status || 'pending').trim();
+    if (!acc[status]) acc[status] = 0;
+    acc[status] += 1;
+    return acc;
+  }, { pending: 0, approved: 0, rejected: 0 });
+
+  const activeFilter = String(state.accessRequestStatusFilter || 'pending').trim();
+  const filtered = requests.filter((item) => {
+    if (activeFilter === 'all') return true;
+    return String(item?.status || '').trim() === activeFilter;
+  });
+
+  return `
+    <section class="card meta-admin-card" data-meta-section="accessRequests">
+      <div class="header-row">
+        <strong>Prieigos uzklausos</strong>
+        ${renderTag(String(filtered.length), 'count')}
+      </div>
+      <p class="prompt">Formos is landing ir platformos puslapiu. LinkedIn kontaktas paliekamas kaip alternatyvus tiesioginis kanalas.</p>
+      <div class="inline-form">
+        <button class="btn btn-ghost${activeFilter === 'pending' ? ' active' : ''}" type="button" data-action="set-access-request-filter" data-filter="pending" ${state.busy ? 'disabled' : ''}>Laukiama (${Number(counts.pending || 0)})</button>
+        <button class="btn btn-ghost${activeFilter === 'approved' ? ' active' : ''}" type="button" data-action="set-access-request-filter" data-filter="approved" ${state.busy ? 'disabled' : ''}>Patvirtinta (${Number(counts.approved || 0)})</button>
+        <button class="btn btn-ghost${activeFilter === 'rejected' ? ' active' : ''}" type="button" data-action="set-access-request-filter" data-filter="rejected" ${state.busy ? 'disabled' : ''}>Atmesta (${Number(counts.rejected || 0)})</button>
+        <button class="btn btn-ghost${activeFilter === 'all' ? ' active' : ''}" type="button" data-action="set-access-request-filter" data-filter="all" ${state.busy ? 'disabled' : ''}>Visos (${requests.length})</button>
+      </div>
+      <ul class="mini-list meta-admin-list">
+        ${filtered.length
+          ? filtered.map((item) => `
+            <li class="meta-admin-list-item">
+              <div>
+                <div class="header-row" style="margin-bottom:6px;">
+                  <strong>${escapeHtml(item.requestCode || '-')}</strong>
+                  ${renderTag(String(item.status || 'pending'), 'status')}
+                </div>
+                <p class="prompt" style="margin:0;">
+                  <strong>${escapeHtml(item.fullName || '-')}</strong> · ${escapeHtml(item.workEmail || '-')} · ${escapeHtml(item.phone || '-')}
+                </p>
+                <p class="prompt" style="margin:4px 0 0;">
+                  Institucija: ${escapeHtml(item.institutionName || '-')} ${item.institutionSlug ? `(${escapeHtml(item.institutionSlug)})` : ''}
+                </p>
+                ${item.notes ? `<p class="prompt" style="margin:4px 0 0;">Pastaba: ${escapeHtml(item.notes)}</p>` : ''}
+                <div class="header-stack" style="margin-top:6px;">
+                  <span class="tag">${escapeHtml(formatDateTime(item.createdAt))}</span>
+                  ${item.reviewedAt ? `<span class="tag">Perziureta: ${escapeHtml(formatDateTime(item.reviewedAt))}</span>` : ''}
+                </div>
+              </div>
+              <div class="inline-form" style="align-items:flex-start;">
+                ${String(item.status || '') !== 'approved'
+                  ? `<button class="btn btn-ghost" type="button" data-action="update-access-request-status" data-request-id="${escapeHtml(item.id)}" data-next-status="approved" ${state.busy ? 'disabled' : ''}>Patvirtinti</button>`
+                  : ''}
+                ${String(item.status || '') !== 'rejected'
+                  ? `<button class="btn btn-ghost" type="button" data-action="update-access-request-status" data-request-id="${escapeHtml(item.id)}" data-next-status="rejected" ${state.busy ? 'disabled' : ''}>Atmesti</button>`
+                  : ''}
+                ${String(item.status || '') !== 'pending'
+                  ? `<button class="btn btn-ghost" type="button" data-action="update-access-request-status" data-request-id="${escapeHtml(item.id)}" data-next-status="pending" ${state.busy ? 'disabled' : ''}>Grazinti i laukiama</button>`
+                  : ''}
+              </div>
+            </li>
+          `).join('')
+          : '<li>Nera uzklausu pagal pasirinkta filtra.</li>'}
+      </ul>
+    </section>
+  `;
+}
+
 function renderTopTabs() {
   const tabs = [
     { id: 'monitoring', label: 'Monitoringas' },
+    { id: 'accessRequests', label: 'Prieigos uzklausos' },
     { id: 'links', label: 'Strategiju rysiai' },
     { id: 'content', label: 'Viesas turinys' },
     { id: 'institutions', label: 'Institucijos' },
@@ -731,7 +812,7 @@ function renderTopTabs() {
 }
 
 function applyMetaTabVisibility() {
-  const allowedTabs = ['monitoring', 'links', 'content', 'institutions', 'invites', 'users'];
+  const allowedTabs = ['monitoring', 'accessRequests', 'links', 'content', 'institutions', 'invites', 'users'];
   const activeTab = allowedTabs.includes(state.metaTab) ? state.metaTab : 'monitoring';
   state.metaTab = activeTab;
 
@@ -820,6 +901,8 @@ function renderDashboard() {
   const selectedUser = resolveSelectedMetaUser(users);
   const groupedUsers = buildUsersByInstitution(users);
   const pendingInvites = state.overview?.pendingInvites || [];
+  const accessRequests = state.overview?.accessRequests || [];
+  const pendingAccessRequests = accessRequests.filter((item) => String(item?.status || '').trim() === 'pending');
   const monitoring = state.overview?.monitoring || null;
   const contentSettings = state.overview?.contentSettings || {};
 
@@ -834,6 +917,7 @@ function renderDashboard() {
         <div class="header-stack meta-admin-kpis">
           ${renderTag(`${institutions.length} institucijos`, 'count')}
           ${renderTag(`${users.length} vartotojai`, 'count')}
+          ${renderTag(`${pendingAccessRequests.length} laukia perziuros`, 'count')}
           ${renderTag(`${pendingInvites.length} laukia kvietimo`, 'count')}
         </div>
         <div class="inline-form meta-admin-hero-actions">
@@ -845,6 +929,7 @@ function renderDashboard() {
 
       ${renderTopTabs()}
       ${renderMonitoringCards(monitoring)}
+      ${renderAccessRequestsCard(accessRequests)}
       ${renderGuidelineLinksCard(state.overview?.guidelineLinks || {})}
       ${renderContentSettingsCard(contentSettings)}
 
@@ -1276,6 +1361,34 @@ function bindDashboardEvents() {
         }
         event.preventDefault();
         event.stopPropagation();
+        return;
+      }
+      const setAccessRequestFilterButton = target.closest('[data-action="set-access-request-filter"]');
+      if (setAccessRequestFilterButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        const nextFilter = String(setAccessRequestFilterButton.dataset.filter || 'pending').trim();
+        if (!['pending', 'approved', 'rejected', 'all'].includes(nextFilter)) return;
+        if (nextFilter === state.accessRequestStatusFilter) return;
+        state.accessRequestStatusFilter = nextFilter;
+        render();
+        return;
+      }
+      const updateAccessRequestStatusButton = target.closest('[data-action="update-access-request-status"]');
+      if (updateAccessRequestStatusButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        const requestId = String(updateAccessRequestStatusButton.dataset.requestId || '').trim();
+        const nextStatus = String(updateAccessRequestStatusButton.dataset.nextStatus || '').trim();
+        if (!requestId || !['pending', 'approved', 'rejected'].includes(nextStatus)) return;
+        await runBusy(async () => {
+          await api(`/api/v1/meta-admin/access-requests/${encodeURIComponent(requestId)}/status`, {
+            method: 'PUT',
+            body: { status: nextStatus }
+          });
+          setNotice(`Uzklausos statusas pakeistas i ${nextStatus}.`);
+          await loadOverview();
+        });
         return;
       }
       const clearGuidelineLinkFiltersButton = target.closest('[data-action="clear-guideline-link-filters"]');

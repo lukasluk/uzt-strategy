@@ -161,6 +161,11 @@
     [/^Nepavyko įkelti strategijų žemėlapio$/u, 'Failed to load strategy map'],
     [/^Nepavyko ikelti strategiju zemelapio$/u, 'Failed to load strategy map'],
     [/^Bandyti dar kartą$/u, 'Try again'],
+    [/^Norite prisijungti prie platformos\?$/u, 'Want to join the platform?'],
+    [/^Gauti prieigą$/u, 'Request access'],
+    [/^Gauti prieiga$/u, 'Request access'],
+    [/^arba susisiekite LinkedIn:$/u, 'or contact on LinkedIn:'],
+    [/^Pagrindinis puslapis$/u, 'Home page'],
     [/^Bandyti dar karta$/u, 'Try again']
   ];
 
@@ -358,3 +363,4 @@
     init();
   }
 })();
+
