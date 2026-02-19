@@ -166,6 +166,11 @@
     [/^Gauti prieiga$/u, 'Request access'],
     [/^arba susisiekite LinkedIn:$/u, 'or contact on LinkedIn:'],
     [/^Pagrindinis puslapis$/u, 'Home page'],
+    [/^\s*digistrategy\.eu platforma[\s\S]*Norite prisijungti prie platformos\?\s*$/u, 'digistrategy.eu platform helps your institution build a digital strategy in a transparent, public, and innovative way. Want to join the platform?'],
+    [/^\s*Norite prisijungti prie platformos\?\s*$/u, 'Want to join the platform?'],
+    [/^\s*Gauti prieig.*$/u, 'Request access'],
+    [/^\s*arba susisiekite LinkedIn:\s*$/u, 'or contact on LinkedIn:'],
+    [/^\s*Pagrindinis puslapis\s*$/u, 'Home page'],
     [/^Bandyti dar karta$/u, 'Try again']
   ];
 

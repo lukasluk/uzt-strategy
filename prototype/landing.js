@@ -395,21 +395,6 @@
     landingAboutContent.innerHTML = renderAboutBlocks(resolveAboutText());
   }
 
-  function getActiveInstitutions() {
-    return (Array.isArray(publicInstitutions) ? publicInstitutions : [])
-      .filter((item) => String(item?.id || '').trim() && String(item?.name || '').trim());
-  }
-
-  function renderAccessRequestInstitutionOptions() {
-    const institutions = getActiveInstitutions();
-    if (!institutions.length) {
-      return '<option value="">-</option>';
-    }
-    return institutions
-      .map((item) => `<option value="${escapeHtml(String(item.id || ''))}">${escapeHtml(String(item.name || '-'))} (${escapeHtml(String(item.slug || '-'))})</option>`)
-      .join('');
-  }
-
   function closeAccessRequestModal() {
     const current = document.getElementById('landingAccessRequestOverlay');
     if (current) current.remove();
@@ -432,9 +417,7 @@
         <div id="landingAccessRequestStatus" class="landing-access-status" hidden></div>
         <form id="landingAccessRequestForm" class="landing-access-form">
           <label for="landingAccessInstitution">${escapeHtml(labels.accessRequestInstitution || 'Institution')}</label>
-          <select id="landingAccessInstitution" name="institutionId" required>
-            ${renderAccessRequestInstitutionOptions()}
-          </select>
+          <input id="landingAccessInstitution" type="text" name="institutionName" required />
 
           <label for="landingAccessFullName">${escapeHtml(labels.accessRequestFullName || 'Full name')}</label>
           <input id="landingAccessFullName" type="text" name="fullName" required />
@@ -488,7 +471,7 @@
       try {
         const fd = new FormData(form);
         const payload = {
-          institutionId: String(fd.get('institutionId') || '').trim(),
+          institutionName: String(fd.get('institutionName') || '').trim(),
           fullName: String(fd.get('fullName') || '').trim(),
           workEmail: String(fd.get('workEmail') || '').trim(),
           phone: String(fd.get('phone') || '').trim(),

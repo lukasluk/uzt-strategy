@@ -78,6 +78,8 @@ function toUserMessage(error) {
     'guideline link not found': 'Rysis nerastas.'
     ,
     'institutionId required': 'Pasirinkite institucija.',
+    'institutionName required': 'Iveskite institucijos pavadinima.',
+    'institutionName too long': 'Institucijos pavadinimas per ilgas.',
     'fullName required': 'Iveskite varda ir pavarde.',
     'workEmail required': 'Iveskite darbini el. pasta.',
     'phone required': 'Iveskite kontaktini telefono numeri.',

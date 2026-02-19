@@ -179,29 +179,37 @@ function registerPublicRoutes({
 
   app.post('/api/v1/public/access-requests', publicWriteGuard, async (req, res) => {
     const institutionId = String(req.body?.institutionId || '').trim();
+    const institutionNameInput = String(req.body?.institutionName || '').trim();
     const fullName = String(req.body?.fullName || '').trim();
     const workEmail = normalizeEmail ? normalizeEmail(req.body?.workEmail) : String(req.body?.workEmail || '').trim().toLowerCase();
     const phone = String(req.body?.phone || '').trim();
     const notes = String(req.body?.notes || '').trim();
 
-    if (!institutionId) return res.status(400).json({ error: 'institutionId required' });
+    if (!institutionNameInput) return res.status(400).json({ error: 'institutionName required' });
     if (!fullName) return res.status(400).json({ error: 'fullName required' });
     if (!workEmail) return res.status(400).json({ error: 'workEmail required' });
     if (!phone) return res.status(400).json({ error: 'phone required' });
+    if (institutionNameInput.length > 200) return res.status(400).json({ error: 'institutionName too long' });
     if (fullName.length > 160) return res.status(400).json({ error: 'fullName too long' });
     if (workEmail.length > 160) return res.status(400).json({ error: 'workEmail too long' });
     if (phone.length > 80) return res.status(400).json({ error: 'phone too long' });
     if (notes.length > 3000) return res.status(400).json({ error: 'notes too long' });
 
-    const institutionRes = await query(
-      `select id, name
-       from institutions
-       where id = $1 and status = 'active'
-       limit 1`,
-      [institutionId]
-    );
-    if (!institutionRes.rowCount) return res.status(404).json({ error: 'institution not found' });
-    const institution = institutionRes.rows[0];
+    let resolvedInstitutionId = null;
+    let resolvedInstitutionName = institutionNameInput;
+    if (institutionId) {
+      const institutionRes = await query(
+        `select id, name
+         from institutions
+         where id = $1 and status = 'active'
+         limit 1`,
+        [institutionId]
+      );
+      if (!institutionRes.rowCount) return res.status(404).json({ error: 'institution not found' });
+      const institution = institutionRes.rows[0];
+      resolvedInstitutionId = institution.id;
+      resolvedInstitutionName = String(institution.name || institutionNameInput).trim() || institutionNameInput;
+    }
 
     const createdRes = await query(
       `insert into access_requests (
@@ -227,7 +235,7 @@ function registerPublicRoutes({
          'pending'
        )
        returning id, request_code, status, created_at`,
-      [institution.id, institution.name, fullName, workEmail, phone, notes || null]
+      [resolvedInstitutionId, resolvedInstitutionName, fullName, workEmail, phone, notes || null]
     );
     const created = createdRes.rows[0];
 

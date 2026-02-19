@@ -656,6 +656,8 @@ function toUserMessage(error) {
     'name required': 'Nurodykite pavadinimą.',
     'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.',
     'institutionId required': 'Pasirinkite instituciją.',
+    'institutionName required': 'Įveskite institucijos pavadinimą.',
+    'institutionName too long': 'Institucijos pavadinimas per ilgas.',
     'fullName required': 'Įveskite vardą ir pavardę.',
     'workEmail required': 'Įveskite darbinį el. paštą.',
     'phone required': 'Įveskite kontaktinį telefono numerį.',
@@ -3124,16 +3126,6 @@ function accessRequestUiText() {
   };
 }
 
-function buildAccessRequestInstitutionOptions() {
-  const institutions = Array.isArray(state.institutions)
-    ? state.institutions.filter((institution) => normalizeSlug(institution?.slug) && String(institution?.id || '').trim())
-    : [];
-  if (!institutions.length) return '<option value="">-</option>';
-  return institutions
-    .map((institution) => `<option value="${escapeHtml(String(institution.id || ''))}">${escapeHtml(String(institution.name || institution.slug || '-'))} (${escapeHtml(String(institution.slug || '-'))})</option>`)
-    .join('');
-}
-
 function showAccessRequestModal() {
   const ui = accessRequestUiText();
 
@@ -3155,9 +3147,7 @@ function showAccessRequestModal() {
 
       <form id="accessRequestForm" class="login-form login-form-auth access-request-form">
         <label class="auth-label" for="accessRequestInstitution">${escapeHtml(ui.institution)}</label>
-        <select id="accessRequestInstitution" name="institutionId" required>
-          ${buildAccessRequestInstitutionOptions()}
-        </select>
+        <input id="accessRequestInstitution" type="text" name="institutionName" required />
         <label class="auth-label" for="accessRequestFullName">${escapeHtml(ui.fullName)}</label>
         <input id="accessRequestFullName" type="text" name="fullName" required />
         <label class="auth-label" for="accessRequestWorkEmail">${escapeHtml(ui.workEmail)}</label>
@@ -3214,7 +3204,7 @@ function showAccessRequestModal() {
         method: 'POST',
         auth: false,
         body: {
-          institutionId: String(fd.get('institutionId') || '').trim(),
+          institutionName: String(fd.get('institutionName') || '').trim(),
           fullName: String(fd.get('fullName') || '').trim(),
           workEmail: String(fd.get('workEmail') || '').trim(),
           phone: String(fd.get('phone') || '').trim(),
