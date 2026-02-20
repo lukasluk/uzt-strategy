@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 560" role="img" aria-label="Strategy workshop illustration">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#edf5ff"/>
+      <stop offset="1" stop-color="#d6e7fb"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fbff"/>
+      <stop offset="1" stop-color="#e5f1ff"/>
+    </linearGradient>
+    <linearGradient id="shirtA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fb8e8"/>
+      <stop offset="1" stop-color="#5d8ec9"/>
+    </linearGradient>
+    <linearGradient id="shirtB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5d27e"/>
+      <stop offset="1" stop-color="#d6ae55"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="780" height="560" fill="url(#bg)"/>
+  <ellipse cx="395" cy="472" rx="328" ry="40" fill="#b8d0ee" opacity=".45"/>
+
+  <rect x="110" y="74" width="560" height="374" rx="22" fill="url(#panel)" stroke="#8eb3df" stroke-width="4"/>
+  <rect x="140" y="106" width="500" height="278" rx="14" fill="#fafdff" stroke="#a6c3e8" stroke-width="3"/>
+  <rect x="170" y="136" width="120" height="22" rx="11" fill="#d8e8fb"/>
+  <rect x="308" y="136" width="180" height="22" rx="11" fill="#d8e8fb"/>
+  <rect x="500" y="136" width="110" height="22" rx="11" fill="#d8e8fb"/>
+
+  <rect x="170" y="176" width="132" height="16" rx="8" fill="#c5ddf8"/>
+  <rect x="170" y="204" width="98" height="16" rx="8" fill="#c5ddf8"/>
+  <rect x="170" y="232" width="118" height="16" rx="8" fill="#c5ddf8"/>
+
+  <rect x="340" y="178" width="132" height="34" rx="10" fill="#9fc3ec"/>
+  <rect x="486" y="178" width="132" height="34" rx="10" fill="#9fc3ec"/>
+  <rect x="340" y="226" width="208" height="16" rx="8" fill="#c5ddf8"/>
+  <rect x="340" y="252" width="178" height="16" rx="8" fill="#c5ddf8"/>
+  <rect x="340" y="278" width="228" height="16" rx="8" fill="#c5ddf8"/>
+
+  <path d="M472 350 C505 320, 545 320, 588 290" fill="none" stroke="#7ea9db" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="472" cy="350" r="7" fill="#5d8fc9"/>
+  <circle cx="528" cy="324" r="7" fill="#5d8fc9"/>
+  <circle cx="588" cy="290" r="7" fill="#5d8fc9"/>
+
+  <circle cx="410" cy="44" r="28" fill="#ffedbc" stroke="#e5ba63" stroke-width="4"/>
+  <rect x="398" y="68" width="24" height="22" rx="8" fill="#6f9fd4" stroke="#3f6ea8" stroke-width="3"/>
+  <line x1="410" y1="6" x2="410" y2="0" stroke="#e5ba63" stroke-width="4" stroke-linecap="round"/>
+  <line x1="378" y1="16" x2="372" y2="10" stroke="#e5ba63" stroke-width="4" stroke-linecap="round"/>
+  <line x1="442" y1="16" x2="448" y2="10" stroke="#e5ba63" stroke-width="4" stroke-linecap="round"/>
+
+  <g transform="translate(214 268)">
+    <circle cx="66" cy="44" r="32" fill="#ffd8b8"/>
+    <path d="M36 48c8-26 24-40 45-40 20 0 35 12 39 31-15-4-30 2-48 20-11 10-23 14-36 14z" fill="#2f4465"/>
+    <rect x="20" y="86" width="108" height="118" rx="28" fill="url(#shirtA)"/>
+    <path d="M82 98c18 18 36 24 54 24v72H70z" fill="#7ba8da" opacity=".5"/>
+    <rect x="20" y="206" width="46" height="74" rx="20" fill="#3f628f"/>
+    <rect x="82" y="206" width="46" height="74" rx="20" fill="#3f628f"/>
+    <path d="M118 138c48-14 94-24 143-28" fill="none" stroke="#356ba9" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="265" cy="108" r="8" fill="#356ba9"/>
+  </g>
+
+  <g transform="translate(430 302)">
+    <circle cx="50" cy="34" r="28" fill="#ffd8b8"/>
+    <path d="M25 35c2-18 12-31 25-31 12 0 25 10 28 28-14-2-24 4-34 14-9 9-14 12-19 12z" fill="#344f79"/>
+    <rect x="6" y="66" width="88" height="96" rx="24" fill="#7ba8da"/>
+    <rect x="97" y="86" width="30" height="50" rx="8" fill="#9fc2eb"/>
+    <rect x="100" y="89" width="24" height="44" rx="6" fill="#eaf3ff" stroke="#98bbe7" stroke-width="2"/>
+    <rect x="22" y="162" width="30" height="56" rx="14" fill="#486f9f"/>
+    <rect x="60" y="162" width="30" height="56" rx="14" fill="#486f9f"/>
+  </g>
+
+  <g transform="translate(548 284)">
+    <circle cx="50" cy="38" r="30" fill="#ffd8b8"/>
+    <path d="M20 36c2-20 16-34 31-34 13 0 25 8 30 24-18 0-28 8-40 20-8 8-14 12-21 12z" fill="#c48e49"/>
+    <rect x="8" y="72" width="90" height="102" rx="26" fill="url(#shirtB)"/>
+    <path d="M98 102c22 0 48 16 72 34" fill="none" stroke="#496f9f" stroke-width="6" stroke-linecap="round"/>
+    <rect x="20" y="174" width="32" height="64" rx="16" fill="#4e74a4"/>
+    <rect x="58" y="174" width="32" height="64" rx="16" fill="#4e74a4"/>
+  </g>
+
+  <rect x="130" y="92" width="30" height="12" rx="6" fill="#9fc2eb"/>
+  <rect x="622" y="92" width="30" height="12" rx="6" fill="#9fc2eb"/>
+  <circle cx="168" cy="438" r="6" fill="#8eb3df"/>
+  <circle cx="620" cy="438" r="6" fill="#8eb3df"/>
+</svg>

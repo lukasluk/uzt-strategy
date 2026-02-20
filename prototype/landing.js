@@ -369,18 +369,57 @@
       .replaceAll("'", '&#39;');
   }
 
+  function getAboutStepIcon(index) {
+    const icons = [
+      '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="8" width="20" height="26" rx="3"></rect><line x1="14" y1="14" x2="24" y2="14"></line><line x1="14" y1="20" x2="24" y2="20"></line><line x1="14" y1="26" x2="22" y2="26"></line><circle cx="34" cy="30" r="8"></circle><line x1="34" y1="20" x2="34" y2="24"></line><line x1="34" y1="36" x2="34" y2="40"></line><line x1="24" y1="30" x2="28" y2="30"></line><line x1="40" y1="30" x2="44" y2="30"></line></svg>',
+      '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="12" width="34" height="22" rx="4"></rect><polyline points="12,30 20,22 26,26 33,18"></polyline><circle cx="33" cy="18" r="2.5"></circle><rect x="30" y="8" width="12" height="10" rx="3"></rect><line x1="33" y1="13" x2="39" y2="13"></line></svg>',
+      '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="16" cy="22" r="6"></circle><circle cx="31" cy="20" r="6"></circle><path d="M8 36c1.6-4 5.6-6.5 9.9-6.5S26.2 32 27.8 36"></path><path d="M22 36c1.4-3.5 4.9-5.7 8.6-5.7S37.9 32.5 39.3 36"></path><circle cx="23.5" cy="9.5" r="3.5"></circle><line x1="23.5" y1="3" x2="23.5" y2="1"></line><line x1="17" y1="9.5" x2="15" y2="9.5"></line><line x1="32" y1="9.5" x2="30" y2="9.5"></line></svg>'
+    ];
+    return icons[index % icons.length];
+  }
+
+  function normalizeAboutLines(rawBlock) {
+    return String(rawBlock || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+
   function renderAboutBlocks(text) {
     const normalized = String(text || '').replace(/\r\n/g, '\n').trim();
     if (!normalized) return '';
     const blocks = normalized.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
-    return blocks.map((block) => {
-      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+    return blocks.map((block, index) => {
+      const lines = normalizeAboutLines(block);
       if (!lines.length) return '';
       const bulletLines = lines.filter((line) => /^[-*]\s+/.test(line));
       if (bulletLines.length === lines.length) {
-        return `<article class="landing-about-block"><ul class="landing-about-list">${bulletLines.map((line) => `<li>${escapeHtml(line.replace(/^[-*]\s+/, ''))}</li>`).join('')}</ul></article>`;
+        return `
+          <article class="landing-about-block">
+            <div class="landing-about-step">
+              <span class="landing-about-step-icon" aria-hidden="true">${getAboutStepIcon(index)}</span>
+              <span class="landing-about-step-line" aria-hidden="true"></span>
+            </div>
+            <div class="landing-about-copy">
+              <ul class="landing-about-list">${bulletLines.map((line) => `<li>${escapeHtml(line.replace(/^[-*]\s+/, ''))}</li>`).join('')}</ul>
+            </div>
+          </article>
+        `;
       }
-      return `<article class="landing-about-block"><p>${lines.map((line) => escapeHtml(line)).join('<br />')}</p></article>`;
+      const richText = lines
+        .map((line) => `<span>${escapeHtml(line)}</span>`)
+        .join('');
+      return `
+        <article class="landing-about-block">
+          <div class="landing-about-step">
+            <span class="landing-about-step-icon" aria-hidden="true">${getAboutStepIcon(index)}</span>
+            <span class="landing-about-step-line" aria-hidden="true"></span>
+          </div>
+          <div class="landing-about-copy">
+            <p>${richText}</p>
+          </div>
+        </article>
+      `;
     }).join('');
   }
 

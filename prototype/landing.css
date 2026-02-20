@@ -13,6 +13,8 @@
   --landing-shadow: 0 20px 44px rgba(25, 68, 129, 0.14);
   --landing-radius-xl: 26px;
   --landing-radius-lg: 18px;
+  --landing-shell-max: 1480px;
+  --landing-shell-gutter: clamp(16px, 2.4vw, 34px);
 }
 
 * {
@@ -91,7 +93,7 @@ main,
 }
 
 .landing-header {
-  width: min(1240px, calc(100% - 34px));
+  width: min(var(--landing-shell-max), calc(100% - (var(--landing-shell-gutter) * 2)));
   margin: 0 auto;
   padding: 16px 28px;
   border: 1px solid rgba(133, 169, 219, 0.5);
@@ -287,7 +289,7 @@ main,
 }
 
 main {
-  width: min(1240px, calc(100% - 34px));
+  width: min(var(--landing-shell-max), calc(100% - (var(--landing-shell-gutter) * 2)));
   margin: 24px auto 58px;
   display: grid;
   gap: 28px;
@@ -368,8 +370,9 @@ h2 {
 }
 
 .section-full {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
+  width: 100dvw;
+  margin-left: calc(50% - 50dvw);
+  margin-right: calc(50% - 50dvw);
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -395,7 +398,7 @@ h2 {
 }
 
 .section-full-shell {
-  width: min(1240px, calc(100% - 34px));
+  width: min(var(--landing-shell-max), calc(100% - (var(--landing-shell-gutter) * 2)));
   margin: 0 auto;
   padding: clamp(52px, 8vw, 92px) 0;
   position: relative;
@@ -654,7 +657,7 @@ h2 {
 .glass-side {
   position: absolute;
   width: min(70%, 280px);
-  z-index: 2;
+  z-index: 1;
   animation: floatSide 9s ease-in-out infinite;
 }
 
@@ -665,12 +668,13 @@ h2 {
 
 .glass-side-a {
   bottom: 16%;
-  left: 0;
+  left: -1%;
 }
 
 .glass-side-b {
-  top: 2%;
-  right: 0;
+  top: -1%;
+  right: -3%;
+  width: min(66%, 270px);
 }
 
 .section {
@@ -687,6 +691,18 @@ h2 {
 
 .section-head h2 {
   margin-top: 12px;
+}
+
+#aboutPlatform .section-head h2 {
+  font-size: clamp(42px, 5.3vw, 72px);
+  line-height: 1.06;
+  letter-spacing: -0.018em;
+  max-width: 16ch;
+}
+
+#aboutPlatform .hero-kicker {
+  font-size: 13px;
+  letter-spacing: 0.18em;
 }
 
 .section-full-demo {
@@ -993,22 +1009,106 @@ h2 {
 }
 
 .landing-about-content {
-  margin-top: 22px;
+  margin-top: 8px;
   display: grid;
-  gap: 14px;
+  gap: 16px;
+}
+
+.landing-about-layout {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+  align-items: start;
+  gap: clamp(18px, 2.6vw, 34px);
 }
 
 .landing-about-block {
   border: 1px solid rgba(145, 177, 221, 0.55);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(238, 247, 255, 0.9) 100%);
-  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(239, 247, 255, 0.9) 100%);
+  padding: 18px 18px 18px 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+}
+
+.landing-about-step {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 10px;
+}
+
+.landing-about-step-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(139, 172, 220, 0.6);
+  background: radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.98), rgba(227, 240, 255, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 10px 20px rgba(43, 90, 155, 0.14);
+  color: #2c598c;
+}
+
+.landing-about-step-icon svg {
+  width: 42px;
+  height: 42px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.landing-about-step-line {
+  width: 2px;
+  height: 32px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(111, 157, 218, 0.64), rgba(111, 157, 218, 0.05));
+}
+
+.landing-about-block:last-child .landing-about-step-line {
+  opacity: 0;
+}
+
+.landing-about-copy {
+  min-width: 0;
 }
 
 .landing-about-block p {
   margin: 0;
-  color: #4f6787;
-  line-height: 1.68;
+  color: #2f4f78;
+  line-height: 1.5;
+  font-size: clamp(21px, 2.1vw, 28px);
+  font-weight: 500;
+  letter-spacing: 0.005em;
+}
+
+.landing-about-block p span {
+  display: inline;
+}
+
+.landing-about-block p span + span::before {
+  content: ' ';
+}
+
+.landing-about-visual {
+  margin: 0;
+  border: 1px solid rgba(142, 175, 222, 0.6);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0)),
+    linear-gradient(165deg, rgba(241, 249, 255, 0.95), rgba(226, 240, 255, 0.9));
+  padding: clamp(10px, 1.4vw, 14px);
+  box-shadow: 0 18px 30px rgba(33, 78, 139, 0.16);
+}
+
+.landing-about-visual img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .landing-about-list {
@@ -1035,7 +1135,7 @@ h2 {
 }
 
 .landing-footer {
-  width: min(1240px, calc(100% - 34px));
+  width: min(var(--landing-shell-max), calc(100% - (var(--landing-shell-gutter) * 2)));
   margin: 0 auto 46px;
   padding: 22px 24px;
   border: 1px solid rgba(142, 177, 222, 0.55);
@@ -1305,6 +1405,16 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .landing-about-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .landing-about-visual {
+    max-width: 560px;
+    justify-self: center;
+  }
+
   .final-cta {
     flex-direction: column;
     align-items: start;
@@ -1413,6 +1523,37 @@ h2 {
 
   .section-full-title {
     max-width: none;
+  }
+
+  .landing-about-block {
+    grid-template-columns: 1fr;
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .landing-about-step {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    align-items: center;
+  }
+
+  .landing-about-step-line {
+    display: none;
+  }
+
+  .landing-about-step-icon {
+    width: 58px;
+    height: 58px;
+  }
+
+  .landing-about-step-icon svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .landing-about-block p {
+    font-size: clamp(18px, 5.4vw, 24px);
+    line-height: 1.46;
   }
 
   .glass-main {
