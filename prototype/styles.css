@@ -2534,17 +2534,37 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .map-comment-card h3 {
   font-family: 'Fraunces', serif;
-  font-size: 24px;
+  font-size: clamp(30px, 3.6vw, 48px);
   line-height: 1.2;
 }
 .map-comment-description {
   margin: 0;
+  font-size: clamp(22px, 2.2vw, 32px);
+  line-height: 1.35;
+}
+.map-comment-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+.map-comment-actions .btn {
+  min-width: 220px;
+  font-size: 18px;
 }
 .map-comment-card .mini-list {
   margin-top: 0;
   max-height: min(44vh, 400px);
   overflow-y: auto;
   padding-right: 6px;
+}
+.map-comment-card .comment-item {
+  padding: 12px 14px;
+}
+.map-comment-card .comment-body {
+  font-size: clamp(22px, 2.2vw, 32px);
+  line-height: 1.35;
+}
+.map-comment-card .comment-meta {
+  font-size: clamp(18px, 1.6vw, 24px);
 }
 .checkbox-row {
   font-size: 13px;
@@ -3156,7 +3176,6 @@ select:focus {
 .intro-guide-header h3,
 .guideline-group h3,
 .institution-picker-card h3,
-.map-comment-card h3,
 .guide-structure-head h4 {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
@@ -3174,8 +3193,7 @@ select:focus {
   font-size: clamp(22px, 1.35vw, 27px);
   overflow-wrap: anywhere;
 }
-.institution-picker-card h3,
-.map-comment-card h3 {
+.institution-picker-card h3 {
   font-size: clamp(24px, 1.5vw, 28px);
 }
 .prompt,
@@ -3301,6 +3319,10 @@ select:focus {
   100% {
     box-shadow: 0 0 0 0 rgba(45, 111, 190, 0);
   }
+}
+
+.initiative-card.initiative-focus-pulse {
+  animation: guidelineFocusPulse 0.9s ease;
 }
 
 .initiative-card {

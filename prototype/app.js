@@ -125,6 +125,7 @@ const EMBED_MAP_VALUE = 'map';
 const EMBED_MAP_PATH_PREFIX = '/embed/strategy-map';
 const EMBED_BRAND_LINK = 'https://digistrategy.eu';
 const FOCUS_GUIDELINE_QUERY_KEY = 'focusGuideline';
+const FOCUS_INITIATIVE_QUERY_KEY = 'focusInitiative';
 const STEP_ADD_SECTION_IDS = Object.freeze({
   guidelines: 'guidelineAddSection',
   initiatives: 'initiativeAddSection'
@@ -199,7 +200,8 @@ const state = {
   expandedStepId: '',
   strategySwitcherDialogOpen: false,
   pendingAddSectionScrollId: '',
-  pendingGuidelineFocusId: resolveGuidelineFocusId()
+  pendingGuidelineFocusId: resolveGuidelineFocusId(),
+  pendingInitiativeFocusId: resolveInitiativeFocusId()
 };
 let adminAppLoadPromise = null;
 
@@ -290,6 +292,12 @@ function resolveStrategySlug() {
 function resolveGuidelineFocusId() {
   const params = new URLSearchParams(window.location.search);
   const value = String(params.get(FOCUS_GUIDELINE_QUERY_KEY) || '').trim();
+  return value || '';
+}
+
+function resolveInitiativeFocusId() {
+  const params = new URLSearchParams(window.location.search);
+  const value = String(params.get(FOCUS_INITIATIVE_QUERY_KEY) || '').trim();
   return value || '';
 }
 
@@ -1331,6 +1339,11 @@ function scheduleGuidelineFocus(guidelineId) {
   state.pendingGuidelineFocusId = nextId || '';
 }
 
+function scheduleInitiativeFocus(initiativeId) {
+  const nextId = String(initiativeId || '').trim();
+  state.pendingInitiativeFocusId = nextId || '';
+}
+
 function flushPendingGuidelineFocus() {
   const pendingId = String(state.pendingGuidelineFocusId || '').trim();
   if (!pendingId) return;
@@ -1348,6 +1361,25 @@ function flushPendingGuidelineFocus() {
   target.classList.add('guideline-focus-pulse');
   window.setTimeout(() => target.classList.remove('guideline-focus-pulse'), 1000);
   clearGuidelineFocusQuery();
+}
+
+function flushPendingInitiativeFocus() {
+  const pendingId = String(state.pendingInitiativeFocusId || '').trim();
+  if (!pendingId) return;
+  if (state.activeView !== 'initiatives') return;
+  if (!(elements.stepView instanceof HTMLElement)) return;
+
+  const cards = Array.from(elements.stepView.querySelectorAll('[data-initiative-id]'));
+  const target = cards.find((card) => String(card?.dataset?.initiativeId || '').trim() === pendingId);
+  if (!(target instanceof HTMLElement)) return;
+
+  state.pendingInitiativeFocusId = '';
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  target.classList.remove('initiative-focus-pulse');
+  void target.offsetWidth;
+  target.classList.add('initiative-focus-pulse');
+  window.setTimeout(() => target.classList.remove('initiative-focus-pulse'), 1000);
+  clearInitiativeFocusQuery();
 }
 
 function strategySwitcherCardMarkup(options = {}) {
@@ -1411,6 +1443,14 @@ function clearGuidelineFocusQuery() {
   const params = new URLSearchParams(window.location.search);
   if (!params.has(FOCUS_GUIDELINE_QUERY_KEY)) return;
   params.delete(FOCUS_GUIDELINE_QUERY_KEY);
+  const href = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+  window.history.replaceState(null, '', href);
+}
+
+function clearInitiativeFocusQuery() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has(FOCUS_INITIATIVE_QUERY_KEY)) return;
+  params.delete(FOCUS_INITIATIVE_QUERY_KEY);
   const href = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
   window.history.replaceState(null, '', href);
 }
@@ -2217,7 +2257,7 @@ function renderInitiativeCard(initiative, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card initiative-card ${votingDisabled ? 'guideline-disabled' : ''}">
+    <article class="card initiative-card ${votingDisabled ? 'guideline-disabled' : ''}" data-initiative-id="${escapeHtml(initiative.id)}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(initiative.title)}</h4>
@@ -3323,5 +3363,6 @@ function render() {
   renderVoteFloating();
   flushPendingAddSectionScroll();
   flushPendingGuidelineFocus();
+  flushPendingInitiativeFocus();
   window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }

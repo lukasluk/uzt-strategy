@@ -1285,6 +1285,9 @@ function renderMapView() {
           <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uždaryti</button>
         </div>
         <p id="mapCommentDescription" class="prompt map-comment-description"></p>
+        <div class="map-comment-actions">
+          <button id="mapCommentOpenCardBtn" class="btn btn-primary" type="button">Atidaryti kortelę</button>
+        </div>
         <strong>Komentarai</strong>
         <ul id="mapCommentList" class="mini-list"></ul>
       </article>
@@ -1298,11 +1301,14 @@ function renderMapView() {
   const commentModal = elements.stepView.querySelector('#mapCommentModal');
   const commentTitle = elements.stepView.querySelector('#mapCommentTitle');
   const commentDescription = elements.stepView.querySelector('#mapCommentDescription');
+  const commentOpenCardBtn = elements.stepView.querySelector('#mapCommentOpenCardBtn');
   const commentList = elements.stepView.querySelector('#mapCommentList');
   const mapCommentItems = new Map();
   graph.nodes.forEach((node) => {
     if (node.kind === 'guideline' && node.guideline?.id) {
       mapCommentItems.set(`guideline:${node.guideline.id}`, {
+        kind: 'guideline',
+        id: node.guideline.id,
         title: node.guideline.title || 'Gairė',
         description: node.guideline.description || 'Aprašymas nepateiktas.',
         comments: Array.isArray(node.guideline.comments) ? node.guideline.comments : []
@@ -1310,6 +1316,8 @@ function renderMapView() {
     }
     if (node.kind === 'initiative' && node.initiative?.id) {
       mapCommentItems.set(`initiative:${node.initiative.id}`, {
+        kind: 'initiative',
+        id: node.initiative.id,
         title: node.initiative.title || 'Iniciatyva',
         description: node.initiative.description || 'Aprašymas nepateiktas.',
         comments: Array.isArray(node.initiative.comments) ? node.initiative.comments : []
@@ -1329,16 +1337,57 @@ function renderMapView() {
     const comments = Array.isArray(payload.comments) ? payload.comments : [];
     commentTitle.textContent = payload.title;
     commentDescription.textContent = payload.description;
+    if (commentOpenCardBtn) {
+      commentOpenCardBtn.dataset.mapCommentKind = payload.kind || '';
+      commentOpenCardBtn.dataset.mapCommentId = payload.id || '';
+    }
     commentList.innerHTML = comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
       : '<li class="comment-item comment-item-empty">Komentarų dar nėra.</li>';
     commentModal.hidden = false;
   };
 
+  const openCardFromMapComment = () => {
+    if (!commentOpenCardBtn) return;
+    const kind = String(commentOpenCardBtn.dataset.mapCommentKind || '').trim();
+    const id = String(commentOpenCardBtn.dataset.mapCommentId || '').trim();
+    if (!kind || !id) return;
+
+    closeMapCommentModal();
+
+    if (kind === 'initiative') {
+      if (typeof scheduleInitiativeFocus === 'function') {
+        scheduleInitiativeFocus(id);
+      }
+      if (typeof setActiveView === 'function') {
+        setActiveView('initiatives');
+      } else {
+        state.activeView = 'initiatives';
+        if (typeof syncRouteState === 'function') syncRouteState();
+        if (typeof render === 'function') render();
+      }
+      return;
+    }
+
+    if (typeof scheduleGuidelineFocus === 'function') {
+      scheduleGuidelineFocus(id);
+    }
+    if (typeof setActiveView === 'function') {
+      setActiveView('guidelines');
+    } else {
+      state.activeView = 'guidelines';
+      if (typeof syncRouteState === 'function') syncRouteState();
+      if (typeof render === 'function') render();
+    }
+  };
+
   if (commentModal) {
     commentModal.querySelectorAll('[data-map-comment-close="1"]').forEach((button) => {
       button.addEventListener('click', closeMapCommentModal);
     });
+  }
+  if (commentOpenCardBtn) {
+    commentOpenCardBtn.addEventListener('click', openCardFromMapComment);
   }
   elements.stepView.querySelectorAll('[data-map-comment-id]').forEach((button) => {
     button.addEventListener('click', (event) => {
