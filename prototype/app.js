@@ -698,7 +698,7 @@ function notifyInfo(message) {
 async function api(path, { method = 'GET', body = null, auth = true } = {}) {
   const headers = {};
   if (body !== null) headers['Content-Type'] = 'application/json';
-  if (auth) {
+  if (auth === true) {
     if (!state.token) throw new Error('unauthorized');
     headers.Authorization = `Bearer ${state.token}`;
   } else if (auth === 'optional' && state.token) {
