@@ -417,6 +417,53 @@ function resetMapInitiativeFocusState() {
   state.mapGuidelineHoverId = '';
 }
 
+function flushPendingMapNodeFocus(viewport, world) {
+  if (!(viewport instanceof HTMLElement) || !(world instanceof HTMLElement)) return;
+  const focusKind = String(state.pendingMapFocusKind || '').trim().toLowerCase();
+  const focusId = String(state.pendingMapFocusId || '').trim();
+  if (!focusKind || !focusId) return;
+
+  const nodes = Array.from(world.querySelectorAll('.strategy-map-node[data-kind][data-entity-id]'));
+  const target = nodes.find((node) => {
+    if (!(node instanceof HTMLElement)) return false;
+    const nodeKind = String(node.dataset.kind || '').trim().toLowerCase();
+    const nodeId = String(node.dataset.entityId || '').trim();
+    return nodeKind === focusKind && nodeId === focusId;
+  });
+  if (!(target instanceof HTMLElement)) return;
+
+  state.pendingMapFocusKind = '';
+  state.pendingMapFocusId = '';
+
+  const nodeX = Number(target.dataset.x || 0);
+  const nodeY = Number(target.dataset.y || 0);
+  const nodeW = Number(target.dataset.w || target.offsetWidth || 0);
+  const nodeH = Number(target.dataset.h || target.offsetHeight || 0);
+  const centerX = nodeX + nodeW / 2;
+  const centerY = nodeY + nodeH / 2;
+  const scale = Number(state.mapTransform.scale || 1) || 1;
+
+  state.mapTransform.x = viewport.clientWidth / 2 - centerX * scale;
+  state.mapTransform.y = viewport.clientHeight / 2 - centerY * scale;
+  applyMapTransform(viewport, world);
+
+  if (focusKind === 'initiative' && state.mapLayer === 'initiatives') {
+    state.mapInitiativeFocusId = focusId;
+    state.mapGuidelineFocusId = '';
+    state.mapInitiativeHoverId = '';
+    state.mapGuidelineHoverId = '';
+    applyInitiativeLayerFocusState(viewport, world);
+  } else {
+    resetMapInitiativeFocusState();
+    applyInitiativeLayerFocusState(viewport, world);
+  }
+
+  target.classList.remove('map-node-focus-pulse');
+  void target.offsetWidth;
+  target.classList.add('map-node-focus-pulse');
+  window.setTimeout(() => target.classList.remove('map-node-focus-pulse'), 1300);
+}
+
 function applyInitiativeLayerFocusState(viewport, world) {
   if (!(viewport instanceof HTMLElement) || !(world instanceof HTMLElement)) return;
 
@@ -1435,6 +1482,7 @@ function renderMapView() {
     bindMapInteractions(viewport, world, { editable });
     bindInitiativeLayerFocusInteractions(viewport, world);
     applyInitiativeLayerFocusState(viewport, world);
+    flushPendingMapNodeFocus(viewport, world);
   }
   if (resetButtons.length && viewport && world) {
     resetButtons.forEach((button) => {

@@ -201,7 +201,9 @@ const state = {
   strategySwitcherDialogOpen: false,
   pendingAddSectionScrollId: '',
   pendingGuidelineFocusId: resolveGuidelineFocusId(),
-  pendingInitiativeFocusId: resolveInitiativeFocusId()
+  pendingInitiativeFocusId: resolveInitiativeFocusId(),
+  pendingMapFocusKind: '',
+  pendingMapFocusId: ''
 };
 let adminAppLoadPromise = null;
 
@@ -1344,6 +1346,27 @@ function scheduleInitiativeFocus(initiativeId) {
   state.pendingInitiativeFocusId = nextId || '';
 }
 
+function scheduleMapNodeFocus(kind, entityId) {
+  const normalizedKind = String(kind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+  const nextId = String(entityId || '').trim();
+  if (!nextId) return;
+  state.pendingMapFocusKind = normalizedKind;
+  state.pendingMapFocusId = nextId;
+}
+
+function openMapForCard(kind, entityId) {
+  const normalizedKind = String(kind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+  const nextId = String(entityId || '').trim();
+  if (!nextId) return;
+
+  if (typeof resetMapInitiativeFocusState === 'function') {
+    resetMapInitiativeFocusState();
+  }
+  state.mapLayer = normalizedKind === 'initiative' ? 'initiatives' : 'guidelines';
+  scheduleMapNodeFocus(normalizedKind, nextId);
+  setActiveView('map');
+}
+
 function flushPendingGuidelineFocus() {
   const pendingId = String(state.pendingGuidelineFocusId || '').trim();
   if (!pendingId) return;
@@ -2059,7 +2082,7 @@ function renderGuidelineCard(guideline, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card guideline-card guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
+    <article class="card guideline-card is-linkable guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(guideline.title)}</h4>
@@ -2257,7 +2280,7 @@ function renderInitiativeCard(initiative, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card initiative-card ${votingDisabled ? 'guideline-disabled' : ''}" data-initiative-id="${escapeHtml(initiative.id)}">
+    <article class="card initiative-card is-linkable ${votingDisabled ? 'guideline-disabled' : ''}" data-initiative-id="${escapeHtml(initiative.id)}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(initiative.title)}</h4>
@@ -2478,6 +2501,15 @@ function renderInitiativesView() {
     list.addEventListener('click', async (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
+      const clickedInteractive = target.closest('button, input, textarea, select, a, label, form');
+      if (!clickedInteractive) {
+        const card = target.closest('.initiative-card[data-initiative-id]');
+        const initiativeIdFromCard = String(card?.dataset?.initiativeId || '').trim();
+        if (initiativeIdFromCard) {
+          openMapForCard('initiative', initiativeIdFromCard);
+          return;
+        }
+      }
       const action = target.dataset.action;
       const initiativeId = target.dataset.id;
       if (!action || !initiativeId) return;
@@ -2761,6 +2793,15 @@ function bindStepEvents() {
     list.addEventListener('click', async (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
+      const clickedInteractive = target.closest('button, input, textarea, select, a, label, form');
+      if (!clickedInteractive) {
+        const card = target.closest('.guideline-card[data-guideline-id]');
+        const guidelineIdFromCard = String(card?.dataset?.guidelineId || '').trim();
+        if (guidelineIdFromCard) {
+          openMapForCard('guideline', guidelineIdFromCard);
+          return;
+        }
+      }
       const action = target.dataset.action;
       if (!action) return;
 
