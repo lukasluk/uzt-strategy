@@ -1955,6 +1955,7 @@ function buildGuidelineRelationshipGroups(guidelines) {
 
 function renderGuidelineCard(guideline, options) {
   const commentsVisible = Boolean(options.commentsVisible);
+  const showCommentsSection = Boolean(options.authenticated || commentsVisible);
   const commentsHint = commentsReadOnlyHintText(options);
   const userScore = Number(state.userVotes[guideline.id] || 0);
   const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
@@ -2051,16 +2052,18 @@ function renderGuidelineCard(guideline, options) {
           </div>
         </div>
       `}
-      <div class="card-section">
-        <strong>Komentarai</strong>
-        <ul class="mini-list">${safeComments}</ul>
-        ${options.member && options.writable ? `
-          <form data-action="comment" data-id="${escapeHtml(guideline.id)}" class="inline-form">
-            <input type="text" name="comment" placeholder="Įrašykite komentarą" required ${state.busy ? 'disabled' : ''}/>
-            <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Pridėti</button>
-          </form>
-        ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
-      </div>
+      ${showCommentsSection ? `
+        <div class="card-section">
+          <strong>Komentarai</strong>
+          <ul class="mini-list">${safeComments}</ul>
+          ${options.member && options.writable ? `
+            <form data-action="comment" data-id="${escapeHtml(guideline.id)}" class="inline-form">
+              <input type="text" name="comment" placeholder="Įrašykite komentarą" required ${state.busy ? 'disabled' : ''}/>
+              <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Pridėti</button>
+            </form>
+          ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
+        </div>
+      ` : ''}
     </article>
   `;
 }
@@ -2187,6 +2190,7 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
 
 function renderInitiativeCard(initiative, options) {
   const commentsVisible = Boolean(options.commentsVisible);
+  const showCommentsSection = Boolean(options.authenticated || commentsVisible);
   const commentsHint = commentsReadOnlyHintText(options);
   const userScore = Number(state.userVotes[initiative.id] || 0);
   const comments = Array.isArray(initiative.comments) ? initiative.comments : [];
@@ -2249,16 +2253,18 @@ function renderInitiativeCard(initiative, options) {
           </div>
         </div>
       `}
-      <div class="card-section">
-        <strong>Komentarai</strong>
-        <ul class="mini-list">${safeComments}</ul>
-        ${options.member && options.writable ? `
-          <form data-action="initiative-comment" data-id="${escapeHtml(initiative.id)}" class="inline-form">
-            <input type="text" name="comment" placeholder="Įrašykite komentarą" required ${state.busy ? 'disabled' : ''}/>
-            <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Pridėti</button>
-          </form>
-        ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
-      </div>
+      ${showCommentsSection ? `
+        <div class="card-section">
+          <strong>Komentarai</strong>
+          <ul class="mini-list">${safeComments}</ul>
+          ${options.member && options.writable ? `
+            <form data-action="initiative-comment" data-id="${escapeHtml(initiative.id)}" class="inline-form">
+              <input type="text" name="comment" placeholder="Įrašykite komentarą" required ${state.busy ? 'disabled' : ''}/>
+              <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Pridėti</button>
+            </form>
+          ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
+        </div>
+      ` : ''}
     </article>
   `;
 }
