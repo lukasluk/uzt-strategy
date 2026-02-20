@@ -1000,6 +1000,8 @@ function bindMapInteractions(viewport, world, { editable }) {
 }
 
 function renderMapView() {
+  document.body.classList.remove('map-comment-modal-open');
+
   if (state.loading && !state.mapData) {
     elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategijų žemėlapis...</strong></div>';
     return;
@@ -1125,8 +1127,15 @@ function renderMapView() {
       const strategyTitle = String(
         node.institution.strategy?.title || state.strategy?.title || 'Strategija'
       ).trim();
+      const pulseDelayed = Date.now() < Number(state.mapInstitutionPulseDelayUntil || 0);
+      const institutionClass = [
+        'strategy-map-node',
+        'institution-node',
+        node.institution.slug === state.institutionSlug ? 'active' : '',
+        pulseDelayed ? 'pulse-delayed' : ''
+      ].filter(Boolean).join(' ');
       return `
-        <article class="strategy-map-node institution-node ${node.institution.slug === state.institutionSlug ? 'active' : ''}"
+        <article class="${institutionClass}"
                  data-node-id="${escapeHtml(node.id)}"
                  data-kind="institution"
                  data-entity-id="${escapeHtml(node.entityId)}"
@@ -1375,6 +1384,7 @@ function renderMapView() {
   const closeMapCommentModal = () => {
     if (!commentModal) return;
     commentModal.hidden = true;
+    document.body.classList.remove('map-comment-modal-open');
   };
 
   const openMapCommentModal = (kind, itemId) => {
@@ -1392,6 +1402,7 @@ function renderMapView() {
       ? comments.map((comment) => renderCommentItem(comment)).join('')
       : '<li class="comment-item comment-item-empty">Komentarų dar nėra.</li>';
     commentModal.hidden = false;
+    document.body.classList.add('map-comment-modal-open');
   };
 
   const openCardFromMapComment = () => {

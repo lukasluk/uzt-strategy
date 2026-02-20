@@ -126,6 +126,7 @@ const EMBED_MAP_PATH_PREFIX = '/embed/strategy-map';
 const EMBED_BRAND_LINK = 'https://digistrategy.eu';
 const FOCUS_GUIDELINE_QUERY_KEY = 'focusGuideline';
 const FOCUS_INITIATIVE_QUERY_KEY = 'focusInitiative';
+const MAP_INSTITUTION_PULSE_DELAY_MS = 1800;
 const STEP_ADD_SECTION_IDS = Object.freeze({
   guidelines: 'guidelineAddSection',
   initiatives: 'initiativeAddSection'
@@ -203,7 +204,8 @@ const state = {
   pendingGuidelineFocusId: resolveGuidelineFocusId(),
   pendingInitiativeFocusId: resolveInitiativeFocusId(),
   pendingMapFocusKind: '',
-  pendingMapFocusId: ''
+  pendingMapFocusId: '',
+  mapInstitutionPulseDelayUntil: 0
 };
 let adminAppLoadPromise = null;
 
@@ -1362,6 +1364,7 @@ function openMapForCard(kind, entityId) {
   if (typeof resetMapInitiativeFocusState === 'function') {
     resetMapInitiativeFocusState();
   }
+  state.mapInstitutionPulseDelayUntil = Date.now() + MAP_INSTITUTION_PULSE_DELAY_MS;
   state.mapLayer = normalizedKind === 'initiative' ? 'initiatives' : 'guidelines';
   scheduleMapNodeFocus(normalizedKind, nextId);
   setActiveView('map');
