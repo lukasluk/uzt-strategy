@@ -126,7 +126,7 @@ const EMBED_MAP_PATH_PREFIX = '/embed/strategy-map';
 const EMBED_BRAND_LINK = 'https://digistrategy.eu';
 const FOCUS_GUIDELINE_QUERY_KEY = 'focusGuideline';
 const FOCUS_INITIATIVE_QUERY_KEY = 'focusInitiative';
-const MAP_INSTITUTION_PULSE_DELAY_MS = 5000;
+const MAP_INSTITUTION_PULSE_MS = 10000;
 const STEP_ADD_SECTION_IDS = Object.freeze({
   guidelines: 'guidelineAddSection',
   initiatives: 'initiativeAddSection'
@@ -205,7 +205,8 @@ const state = {
   pendingInitiativeFocusId: resolveInitiativeFocusId(),
   pendingMapFocusKind: '',
   pendingMapFocusId: '',
-  mapInstitutionPulseDelayUntil: 0
+  mapInstitutionPulseUntil: 0,
+  mapInstitutionPulseTimerId: 0
 };
 let adminAppLoadPromise = null;
 
@@ -1364,7 +1365,11 @@ function openMapForCard(kind, entityId) {
   if (typeof resetMapInitiativeFocusState === 'function') {
     resetMapInitiativeFocusState();
   }
-  state.mapInstitutionPulseDelayUntil = Date.now() + MAP_INSTITUTION_PULSE_DELAY_MS;
+  state.mapInstitutionPulseUntil = 0;
+  if (state.mapInstitutionPulseTimerId) {
+    window.clearTimeout(state.mapInstitutionPulseTimerId);
+    state.mapInstitutionPulseTimerId = 0;
+  }
   state.mapLayer = normalizedKind === 'initiative' ? 'initiatives' : 'guidelines';
   scheduleMapNodeFocus(normalizedKind, nextId);
   setActiveView('map');
@@ -1616,6 +1621,13 @@ function renderSteps() {
     } else {
       button.addEventListener('click', () => {
         if (!isActive) {
+          if (item.id === 'map') {
+            state.mapInstitutionPulseUntil = Date.now() + MAP_INSTITUTION_PULSE_MS;
+            if (state.mapInstitutionPulseTimerId) {
+              window.clearTimeout(state.mapInstitutionPulseTimerId);
+              state.mapInstitutionPulseTimerId = 0;
+            }
+          }
           state.expandedStepId = canExpand ? item.id : '';
           setActiveView(item.id);
           return;

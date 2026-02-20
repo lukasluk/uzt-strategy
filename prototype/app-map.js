@@ -461,7 +461,7 @@ function flushPendingMapNodeFocus(viewport, world) {
   target.classList.remove('map-node-focus-pulse');
   void target.offsetWidth;
   target.classList.add('map-node-focus-pulse');
-  window.setTimeout(() => target.classList.remove('map-node-focus-pulse'), 1300);
+  window.setTimeout(() => target.classList.remove('map-node-focus-pulse'), 10000);
 }
 
 function applyInitiativeLayerFocusState(viewport, world) {
@@ -1127,12 +1127,12 @@ function renderMapView() {
       const strategyTitle = String(
         node.institution.strategy?.title || state.strategy?.title || 'Strategija'
       ).trim();
-      const pulseDelayed = Date.now() < Number(state.mapInstitutionPulseDelayUntil || 0);
+      const pulseActive = Date.now() < Number(state.mapInstitutionPulseUntil || 0);
       const institutionClass = [
         'strategy-map-node',
         'institution-node',
         node.institution.slug === state.institutionSlug ? 'active' : '',
-        pulseDelayed ? 'pulse-delayed' : ''
+        pulseActive ? 'pulse-active' : ''
       ].filter(Boolean).join(' ');
       return `
         <article class="${institutionClass}"
@@ -1494,6 +1494,21 @@ function renderMapView() {
     bindInitiativeLayerFocusInteractions(viewport, world);
     applyInitiativeLayerFocusState(viewport, world);
     flushPendingMapNodeFocus(viewport, world);
+
+    const remainingInstitutionPulseMs = Math.max(0, Number(state.mapInstitutionPulseUntil || 0) - Date.now());
+    if (state.mapInstitutionPulseTimerId) {
+      window.clearTimeout(state.mapInstitutionPulseTimerId);
+      state.mapInstitutionPulseTimerId = 0;
+    }
+    if (remainingInstitutionPulseMs > 0) {
+      state.mapInstitutionPulseTimerId = window.setTimeout(() => {
+        state.mapInstitutionPulseTimerId = 0;
+        state.mapInstitutionPulseUntil = 0;
+        if (state.activeView === 'map') {
+          renderStepView();
+        }
+      }, remainingInstitutionPulseMs + 30);
+    }
   }
   if (resetButtons.length && viewport && world) {
     resetButtons.forEach((button) => {
