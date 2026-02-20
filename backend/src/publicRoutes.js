@@ -1,4 +1,5 @@
 const { loadContentSettings } = require('./contentSettings');
+const { parseBearer, readAuthToken } = require('./security');
 
 function registerPublicRoutes({
   app,
@@ -10,7 +11,8 @@ function registerPublicRoutes({
   getInstitutionBySlug,
   resolveInstitutionStrategy,
   getCurrentCycle,
-  normalizeLineSide
+  normalizeLineSide,
+  authSecret
 }) {
   const publicReadGuard = typeof publicReadRateLimit === 'function'
     ? publicReadRateLimit
@@ -18,6 +20,18 @@ function registerPublicRoutes({
   const publicWriteGuard = typeof publicWriteRateLimit === 'function'
     ? publicWriteRateLimit
     : (_req, _res, next) => next();
+
+  function resolveOptionalAuth(req) {
+    if (!authSecret) return null;
+    const token = parseBearer(req);
+    if (!token) return null;
+    return readAuthToken(token, authSecret);
+  }
+
+  function canViewCommentsForInstitution(auth, institutionId) {
+    void institutionId;
+    return Boolean(auth?.sub);
+  }
 
   function normalizeStrategyOutput(strategy) {
     if (!strategy) return null;
@@ -253,6 +267,7 @@ function registerPublicRoutes({
     const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const source = String(req.query?.source || '').trim().toLowerCase();
     const hasRequestedInstitutionSlug = Boolean(requestedInstitutionSlug && /^[a-z0-9-]+$/.test(requestedInstitutionSlug));
+    const viewerAuth = resolveOptionalAuth(req);
 
     if (source === 'embed' && hasRequestedInstitutionSlug && trafficMonitor) {
       trafficMonitor.trackEmbedView({ institutionSlug: requestedInstitutionSlug });
@@ -309,6 +324,12 @@ function registerPublicRoutes({
       return acc;
     }, {});
     const cycleIds = cycleList.filter(Boolean).map((item) => item.cycle.id);
+    const commentVisibilityByCycle = cycleList.reduce((acc, item) => {
+      if (!item?.cycle?.id) return acc;
+      acc[item.cycle.id] = canViewCommentsForInstitution(viewerAuth, item.institutionId);
+      return acc;
+    }, {});
+    const commentVisibleCycleIds = cycleIds.filter((cycleId) => commentVisibilityByCycle[cycleId]);
 
     const guidelinesByCycle = {};
     const guidelineLookupByCycle = {};
@@ -347,26 +368,28 @@ function registerPublicRoutes({
         };
       });
 
-      const commentsRes = await query(
-        `select c.id,
-                c.guideline_id,
-                c.body,
-                c.created_at
-         from strategy_comments c
-         join strategy_guidelines g on g.id = c.guideline_id
-         where g.cycle_id = any($1::uuid[])
-           and c.status = 'visible'
-         order by c.created_at asc`,
-        [cycleIds]
-      );
-      commentsRes.rows.forEach((row) => {
-        if (!commentsByGuideline[row.guideline_id]) commentsByGuideline[row.guideline_id] = [];
-        commentsByGuideline[row.guideline_id].push({
-          id: row.id,
-          body: row.body,
-          createdAt: row.created_at
+      if (commentVisibleCycleIds.length) {
+        const commentsRes = await query(
+          `select c.id,
+                  c.guideline_id,
+                  c.body,
+                  c.created_at
+           from strategy_comments c
+           join strategy_guidelines g on g.id = c.guideline_id
+           where g.cycle_id = any($1::uuid[])
+             and c.status = 'visible'
+           order by c.created_at asc`,
+          [commentVisibleCycleIds]
+        );
+        commentsRes.rows.forEach((row) => {
+          if (!commentsByGuideline[row.guideline_id]) commentsByGuideline[row.guideline_id] = [];
+          commentsByGuideline[row.guideline_id].push({
+            id: row.id,
+            body: row.body,
+            createdAt: row.created_at
+          });
         });
-      });
+      }
 
       const initiativesRes = await query(
         `select id, cycle_id, title, description, status, line_side, map_x, map_y, created_at
@@ -407,26 +430,28 @@ function registerPublicRoutes({
         };
       });
 
-      const initiativeCommentsRes = await query(
-        `select c.id,
-                c.initiative_id,
-                c.body,
-                c.created_at
-         from strategy_initiative_comments c
-         join strategy_initiatives i on i.id = c.initiative_id
-         where i.cycle_id = any($1::uuid[])
-           and c.status = 'visible'
-         order by c.created_at asc`,
-        [cycleIds]
-      );
-      initiativeCommentsRes.rows.forEach((row) => {
-        if (!commentsByInitiative[row.initiative_id]) commentsByInitiative[row.initiative_id] = [];
-        commentsByInitiative[row.initiative_id].push({
-          id: row.id,
-          body: row.body,
-          createdAt: row.created_at
+      if (commentVisibleCycleIds.length) {
+        const initiativeCommentsRes = await query(
+          `select c.id,
+                  c.initiative_id,
+                  c.body,
+                  c.created_at
+           from strategy_initiative_comments c
+           join strategy_initiatives i on i.id = c.initiative_id
+           where i.cycle_id = any($1::uuid[])
+             and c.status = 'visible'
+           order by c.created_at asc`,
+          [commentVisibleCycleIds]
+        );
+        initiativeCommentsRes.rows.forEach((row) => {
+          if (!commentsByInitiative[row.initiative_id]) commentsByInitiative[row.initiative_id] = [];
+          commentsByInitiative[row.initiative_id].push({
+            id: row.id,
+            body: row.body,
+            createdAt: row.created_at
+          });
         });
-      });
+      }
 
       const loadedLinks = await loadGuidelineStrategyLinksByGuidelineIds(
         guidelinesRes.rows.map((row) => row.id)
@@ -435,6 +460,9 @@ function registerPublicRoutes({
 
       guidelinesRes.rows.forEach((row) => {
         if (!guidelinesByCycle[row.cycle_id]) guidelinesByCycle[row.cycle_id] = [];
+        const visibleComments = commentVisibilityByCycle[row.cycle_id]
+          ? (commentsByGuideline[row.id] || [])
+          : [];
         const guidelineItem = {
           id: row.id,
           title: row.title,
@@ -449,8 +477,8 @@ function registerPublicRoutes({
           voterCount: voteByGuideline[row.id]?.voterCount || 0,
           strategyLinks: strategyLinksByGuideline[row.id] || [],
           strategyLinkCount: (strategyLinksByGuideline[row.id] || []).length,
-          commentCount: (commentsByGuideline[row.id] || []).length,
-          comments: commentsByGuideline[row.id] || [],
+          commentCount: visibleComments.length,
+          comments: visibleComments,
           createdAt: row.created_at
         };
         guidelinesByCycle[row.cycle_id].push(guidelineItem);
@@ -463,6 +491,9 @@ function registerPublicRoutes({
         const guidelineIds = (initiativeLinksByInitiative[row.id] || []).filter((guidelineId) =>
           Boolean(guidelineLookupByCycle[row.cycle_id]?.[guidelineId])
         );
+        const visibleComments = commentVisibilityByCycle[row.cycle_id]
+          ? (commentsByInitiative[row.id] || [])
+          : [];
         initiativesByCycle[row.cycle_id].push({
           id: row.id,
           title: row.title,
@@ -474,8 +505,8 @@ function registerPublicRoutes({
           guidelineIds,
           totalScore: voteByInitiative[row.id]?.totalScore || 0,
           voterCount: voteByInitiative[row.id]?.voterCount || 0,
-          commentCount: (commentsByInitiative[row.id] || []).length,
-          comments: commentsByInitiative[row.id] || [],
+          commentCount: visibleComments.length,
+          comments: visibleComments,
           createdAt: row.created_at
         });
       });
@@ -506,6 +537,8 @@ function registerPublicRoutes({
     const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
+    const viewerAuth = resolveOptionalAuth(req);
+    const commentsVisible = canViewCommentsForInstitution(viewerAuth, institution.id);
 
     const resolved = await resolveInstitutionStrategy(query, institution.id, requestedStrategySlug);
     const strategy = resolved.strategy || null;
@@ -541,12 +574,19 @@ function registerPublicRoutes({
       [cycle.id]
     );
 
+    const summary = stats.rows[0] || {};
+    if (!commentsVisible) {
+      summary.comments_count = '0';
+      summary.initiative_comments_count = '0';
+    }
+
     res.json({
       institution,
       strategy: normalizeStrategyOutput(strategy),
       strategies: strategies.map((item) => normalizeStrategyOutput(item)),
       cycle: normalizeCycleOutput(cycle),
-      summary: stats.rows[0]
+      commentsVisible,
+      summary
     });
   });
 
@@ -554,6 +594,8 @@ function registerPublicRoutes({
     const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
+    const viewerAuth = resolveOptionalAuth(req);
+    const commentsVisible = canViewCommentsForInstitution(viewerAuth, institution.id);
 
     const resolved = await resolveInstitutionStrategy(query, institution.id, requestedStrategySlug);
     const strategy = resolved.strategy || null;
@@ -585,14 +627,16 @@ function registerPublicRoutes({
       [cycle.id]
     );
 
-    const comments = await query(
-      `select c.id, c.guideline_id, c.body, c.created_at
-       from strategy_comments c
-       join strategy_guidelines g on g.id = c.guideline_id
-       where g.cycle_id = $1 and c.status = 'visible'
-       order by c.created_at asc`,
-      [cycle.id]
-    );
+    const comments = commentsVisible
+      ? await query(
+        `select c.id, c.guideline_id, c.body, c.created_at
+         from strategy_comments c
+         join strategy_guidelines g on g.id = c.guideline_id
+         where g.cycle_id = $1 and c.status = 'visible'
+         order by c.created_at asc`,
+        [cycle.id]
+      )
+      : { rows: [] };
 
     const voteByGuideline = Object.fromEntries(
       votes.rows.map((row) => [row.guideline_id, { totalScore: row.total_score, voterCount: row.voter_count }])
@@ -615,6 +659,7 @@ function registerPublicRoutes({
       strategy: normalizeStrategyOutput(strategy),
       strategies: strategies.map((item) => normalizeStrategyOutput(item)),
       cycle: normalizeCycleOutput(cycle),
+      commentsVisible,
       guidelines: guidelines.rows.map((g) => ({
         id: g.id,
         title: g.title,
@@ -636,6 +681,8 @@ function registerPublicRoutes({
     const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await getInstitutionBySlug(query, req.params.slug);
     if (!institution) return res.status(404).json({ error: 'institution not found' });
+    const viewerAuth = resolveOptionalAuth(req);
+    const commentsVisible = canViewCommentsForInstitution(viewerAuth, institution.id);
 
     const resolved = await resolveInstitutionStrategy(query, institution.id, requestedStrategySlug);
     const strategy = resolved.strategy || null;
@@ -677,14 +724,16 @@ function registerPublicRoutes({
       [cycle.id]
     );
 
-    const commentsRes = await query(
-      `select c.id, c.initiative_id, c.body, c.created_at
-       from strategy_initiative_comments c
-       join strategy_initiatives i on i.id = c.initiative_id
-       where i.cycle_id = $1 and c.status = 'visible'
-       order by c.created_at asc`,
-      [cycle.id]
-    );
+    const commentsRes = commentsVisible
+      ? await query(
+        `select c.id, c.initiative_id, c.body, c.created_at
+         from strategy_initiative_comments c
+         join strategy_initiatives i on i.id = c.initiative_id
+         where i.cycle_id = $1 and c.status = 'visible'
+         order by c.created_at asc`,
+        [cycle.id]
+      )
+      : { rows: [] };
 
     const linksByInitiative = {};
     linksRes.rows.forEach((row) => {
@@ -714,6 +763,7 @@ function registerPublicRoutes({
       strategy: normalizeStrategyOutput(strategy),
       strategies: strategies.map((item) => normalizeStrategyOutput(item)),
       cycle: normalizeCycleOutput(cycle),
+      commentsVisible,
       initiatives: initiativesRes.rows.map((row) => ({
         id: row.id,
         title: row.title,

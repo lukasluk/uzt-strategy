@@ -188,6 +188,7 @@ const state = {
     aboutTextLt: DEFAULT_ABOUT_TEXT,
     aboutTextEn: DEFAULT_ABOUT_TEXT_EN
   },
+  commentsVisible: false,
   mapLayer: 'guidelines',
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapInitiativeFocusId: '',
@@ -417,6 +418,7 @@ function clearSession() {
   state.accountContext = null;
   state.context = null;
   state.strategy = null;
+  state.commentsVisible = false;
   state.userVotes = {};
   state.initiatives = [];
   localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -699,6 +701,8 @@ async function api(path, { method = 'GET', body = null, auth = true } = {}) {
   if (auth) {
     if (!state.token) throw new Error('unauthorized');
     headers.Authorization = `Bearer ${state.token}`;
+  } else if (auth === 'optional' && state.token) {
+    headers.Authorization = `Bearer ${state.token}`;
   }
 
   const response = await fetch(path, {
@@ -791,9 +795,9 @@ async function loadPublicData() {
   const query = params.toString();
   const base = `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current`;
   const [summaryPayload, guidelinesPayload, initiativesPayload] = await Promise.all([
-    api(`${base}/summary${query ? `?${query}` : ''}`, { auth: false }),
-    api(`${base}/guidelines${query ? `?${query}` : ''}`, { auth: false }),
-    api(`${base}/initiatives${query ? `?${query}` : ''}`, { auth: false })
+    api(`${base}/summary${query ? `?${query}` : ''}`, { auth: 'optional' }),
+    api(`${base}/guidelines${query ? `?${query}` : ''}`, { auth: 'optional' }),
+    api(`${base}/initiatives${query ? `?${query}` : ''}`, { auth: 'optional' })
   ]);
 
   state.institution = normalizeInstitutionRecord(
@@ -814,6 +818,9 @@ async function loadPublicData() {
   state.summary = summaryPayload.summary || null;
   state.guidelines = Array.isArray(guidelinesPayload.guidelines) ? guidelinesPayload.guidelines : [];
   state.initiatives = Array.isArray(initiativesPayload.initiatives) ? initiativesPayload.initiatives : [];
+  state.commentsVisible = Boolean(
+    initiativesPayload.commentsVisible ?? guidelinesPayload.commentsVisible ?? summaryPayload.commentsVisible ?? false
+  );
 }
 
 async function refreshGuidelines() {
@@ -821,7 +828,7 @@ async function refreshGuidelines() {
   if (state.strategySlug) params.set('strategy', state.strategySlug);
   const payload = await api(
     `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/guidelines${params.toString() ? `?${params.toString()}` : ''}`,
-    { auth: false }
+    { auth: 'optional' }
   );
   state.institution = normalizeInstitutionRecord(payload.institution) || state.institution;
   if (Array.isArray(payload.strategies) && state.institution) {
@@ -831,6 +838,7 @@ async function refreshGuidelines() {
   if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   state.cycle = payload.cycle || state.cycle;
   state.guidelines = Array.isArray(payload.guidelines) ? payload.guidelines : [];
+  state.commentsVisible = Boolean(payload.commentsVisible ?? state.commentsVisible);
 }
 
 async function refreshInitiatives() {
@@ -838,7 +846,7 @@ async function refreshInitiatives() {
   if (state.strategySlug) params.set('strategy', state.strategySlug);
   const payload = await api(
     `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/initiatives${params.toString() ? `?${params.toString()}` : ''}`,
-    { auth: false }
+    { auth: 'optional' }
   );
   state.institution = normalizeInstitutionRecord(payload.institution) || state.institution;
   if (Array.isArray(payload.strategies) && state.institution) {
@@ -848,6 +856,7 @@ async function refreshInitiatives() {
   if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   state.cycle = payload.cycle || state.cycle;
   state.initiatives = Array.isArray(payload.initiatives) ? payload.initiatives : [];
+  state.commentsVisible = Boolean(payload.commentsVisible ?? state.commentsVisible);
 }
 
 async function refreshSummary() {
@@ -855,11 +864,12 @@ async function refreshSummary() {
   if (state.strategySlug) params.set('strategy', state.strategySlug);
   const payload = await api(
     `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/cycles/current/summary${params.toString() ? `?${params.toString()}` : ''}`,
-    { auth: false }
+    { auth: 'optional' }
   );
   state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
   if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
   state.summary = payload.summary || state.summary;
+  state.commentsVisible = Boolean(payload.commentsVisible ?? state.commentsVisible);
 }
 
 async function loadInstitutions() {
@@ -880,7 +890,7 @@ async function loadStrategyMap() {
   if (state.institutionSlug) params.set('institution', state.institutionSlug);
   if (state.strategySlug) params.set('strategy', state.strategySlug);
   params.set('source', state.embedMapMode ? 'embed' : 'app');
-  const payload = await api(`/api/v1/public/strategy-map?${params.toString()}`, { auth: false });
+  const payload = await api(`/api/v1/public/strategy-map?${params.toString()}`, { auth: 'optional' });
   state.mapData = payload || { institutions: [] };
 }
 
@@ -986,6 +996,7 @@ async function bootstrap() {
       state.summary = null;
       state.guidelines = [];
       state.initiatives = [];
+      state.commentsVisible = false;
       state.userVotes = {};
       return;
     }
@@ -1887,6 +1898,29 @@ function renderCommentItem(comment) {
   `;
 }
 
+function commentsHiddenHintText() {
+  return currentLanguage() === 'en'
+    ? 'Comments are visible only to signed-in users.'
+    : 'Komentarai matomi tik prisijungusiems vartotojams.';
+}
+
+function commentsReadOnlyHintText(options) {
+  if (!options.commentsVisible) return commentsHiddenHintText();
+  if (options.member && !options.writable) {
+    return currentLanguage() === 'en'
+      ? 'Cycle is locked: comments cannot be added.'
+      : 'Ciklas užrakintas: komentuoti negalima.';
+  }
+  if (options.authenticated && !options.member) {
+    return currentLanguage() === 'en'
+      ? 'You are signed in to another institution. Commenting is disabled here.'
+      : 'Prisijungta prie kitos institucijos. Komentuoti čia negalite.';
+  }
+  return currentLanguage() === 'en'
+    ? 'Sign in to add comments.'
+    : 'Prisijunkite, jei norite komentuoti.';
+}
+
 function buildGuidelineRelationshipGroups(guidelines) {
   const list = Array.isArray(guidelines) ? guidelines : [];
   const byId = Object.fromEntries(list.map((guideline) => [guideline.id, guideline]));
@@ -1920,11 +1954,15 @@ function buildGuidelineRelationshipGroups(guidelines) {
 }
 
 function renderGuidelineCard(guideline, options) {
+  const commentsVisible = Boolean(options.commentsVisible);
+  const commentsHint = commentsReadOnlyHintText(options);
   const userScore = Number(state.userVotes[guideline.id] || 0);
   const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
-  const safeComments = comments.length
-    ? comments.map((comment) => renderCommentItem(comment)).join('')
-    : '<li class="comment-item comment-item-empty">Dar nėra komentarų.</li>';
+  const safeComments = commentsVisible
+    ? (comments.length
+      ? comments.map((comment) => renderCommentItem(comment)).join('')
+      : '<li class="comment-item comment-item-empty">Dar nėra komentarų.</li>')
+    : `<li class="comment-item comment-item-empty">${escapeHtml(commentsHiddenHintText())}</li>`;
   const relation = relationLabel(guideline.relationType);
   const relationKey = normalizeGuidelineRelation(guideline.relationType);
   const relationTag = relation.charAt(0).toUpperCase() + relation.slice(1);
@@ -2021,7 +2059,7 @@ function renderGuidelineCard(guideline, options) {
             <input type="text" name="comment" placeholder="Įrašykite komentarą" required ${state.busy ? 'disabled' : ''}/>
             <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Pridėti</button>
           </form>
-        ` : '<p class="prompt" style="margin: 8px 0 0;">Viešai rodomi komentarai. Prisijunkite, jei norite komentuoti.</p>'}
+        ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
       </div>
     </article>
   `;
@@ -2148,11 +2186,15 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
 }
 
 function renderInitiativeCard(initiative, options) {
+  const commentsVisible = Boolean(options.commentsVisible);
+  const commentsHint = commentsReadOnlyHintText(options);
   const userScore = Number(state.userVotes[initiative.id] || 0);
   const comments = Array.isArray(initiative.comments) ? initiative.comments : [];
-  const safeComments = comments.length
-    ? comments.map((comment) => renderCommentItem(comment)).join('')
-    : '<li class="comment-item comment-item-empty">Dar nėra komentarų.</li>';
+  const safeComments = commentsVisible
+    ? (comments.length
+      ? comments.map((comment) => renderCommentItem(comment)).join('')
+      : '<li class="comment-item comment-item-empty">Dar nėra komentarų.</li>')
+    : `<li class="comment-item comment-item-empty">${escapeHtml(commentsHiddenHintText())}</li>`;
   const initiativeStatus = String(initiative.status || 'active').toLowerCase();
   const votingDisabled = initiativeStatus === 'disabled';
   const linkedNames = resolveInitiativeGuidelineNames(initiative);
@@ -2215,7 +2257,7 @@ function renderInitiativeCard(initiative, options) {
             <input type="text" name="comment" placeholder="Įrašykite komentarą" required ${state.busy ? 'disabled' : ''}/>
             <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>Pridėti</button>
           </form>
-        ` : '<p class="prompt" style="margin: 8px 0 0;">Viešai rodomi komentarai. Prisijunkite, jei norite komentuoti.</p>'}
+        ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
       </div>
     </article>
   `;
@@ -2265,9 +2307,11 @@ function renderInitiativesView() {
   const stats = [
     `Būsena: ${String(state.cycle?.state || '-').toUpperCase()}`,
     `Iniciatyvos: ${Number(state.summary?.initiatives_count || initiatives.length || 0)}`,
-    `Komentarai: ${Number(state.summary?.initiative_comments_count || 0)}`,
     `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
   ];
+  if (state.commentsVisible) {
+    stats.splice(2, 0, `Komentarai: ${Number(state.summary?.initiative_comments_count || 0)}`);
+  }
 
   elements.stepView.innerHTML = `
     <div class="step-header">
@@ -2291,7 +2335,12 @@ function renderInitiativesView() {
     <section id="initiativeSection" class="guideline-group">
       ${initiatives.length
         ? `<div class="card-list initiative-list">
-            ${initiatives.map((initiative) => renderInitiativeCard(initiative, { member, writable })).join('')}
+            ${initiatives.map((initiative) => renderInitiativeCard(initiative, {
+              member,
+              writable,
+              authenticated,
+              commentsVisible: state.commentsVisible
+            })).join('')}
           </div>`
         : `<div class="card guideline-empty">
             <strong>Iniciatyvų dar nėra</strong>
@@ -2482,9 +2531,11 @@ function renderStepView() {
   const stats = [
     `Būsena: ${String(state.cycle?.state || '-').toUpperCase()}`,
     `Gairės: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
-    `Komentarai: ${Number(state.summary?.comments_count || 0)}`,
     `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
   ];
+  if (state.commentsVisible) {
+    stats.splice(2, 0, `Komentarai: ${Number(state.summary?.comments_count || 0)}`);
+  }
   const relationGroups = buildGuidelineRelationshipGroups(state.guidelines);
 
   elements.stepView.innerHTML = `
@@ -2522,8 +2573,18 @@ function renderStepView() {
                   <span class="tag">Vaikinių: ${group.children.length}</span>
                 </div>
                 <div class="card-list relationship-cluster-cards">
-                  ${renderGuidelineCard(group.parent, { member, writable })}
-                  ${group.children.map((child) => renderGuidelineCard(child, { member, writable })).join('')}
+                  ${renderGuidelineCard(group.parent, {
+                    member,
+                    writable,
+                    authenticated,
+                    commentsVisible: state.commentsVisible
+                  })}
+                  ${group.children.map((child) => renderGuidelineCard(child, {
+                    member,
+                    writable,
+                    authenticated,
+                    commentsVisible: state.commentsVisible
+                  })).join('')}
                 </div>
               </div>
             `).join('')
@@ -2542,7 +2603,12 @@ function renderStepView() {
           </div>
           <p class="prompt">Šios vaikinės gairės dar neturi teisingai priskirtos tėvinės gairės.</p>
           <div class="card-list">
-            ${relationGroups.unassignedChildren.map((guideline) => renderGuidelineCard(guideline, { member, writable })).join('')}
+            ${relationGroups.unassignedChildren.map((guideline) => renderGuidelineCard(guideline, {
+              member,
+              writable,
+              authenticated,
+              commentsVisible: state.commentsVisible
+            })).join('')}
           </div>
         </section>
       ` : ''}
@@ -2555,7 +2621,12 @@ function renderStepView() {
         <p class="prompt">Savarankiškos gairės, kurios nėra priskirtos tėvinei gairei.</p>
         ${relationGroups.orphanGuidelines.length
           ? `<div class="card-list">
-              ${relationGroups.orphanGuidelines.map((guideline) => renderGuidelineCard(guideline, { member, writable })).join('')}
+              ${relationGroups.orphanGuidelines.map((guideline) => renderGuidelineCard(guideline, {
+                member,
+                writable,
+                authenticated,
+                commentsVisible: state.commentsVisible
+              })).join('')}
             </div>`
           : `<div class="card guideline-empty">
               <strong>Našlaitinių gairių nėra</strong>

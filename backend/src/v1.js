@@ -184,7 +184,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     resolveInstitutionStrategy: (_query, institutionId, strategySlug) =>
       resolveInstitutionStrategy(institutionId, strategySlug),
     getCurrentCycle: (_query, institutionId, options) => getCurrentCycle(institutionId, options),
-    normalizeLineSide
+    normalizeLineSide,
+    authSecret: AUTH_SECRET
   });
 
   registerAuthRoutes({
