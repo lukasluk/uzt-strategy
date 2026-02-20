@@ -1887,7 +1887,10 @@ function formatCommentDateTime(value) {
 
 function renderCommentItem(comment) {
   const canShowAuthorIdentity = isAuthenticated();
-  const rawAuthor = String(comment?.authorName || comment?.authorEmail || '').trim();
+  const authorName = String(comment?.authorName || '').trim();
+  const authorEmail = String(comment?.authorEmail || '').trim();
+  const emailShort = authorEmail.includes('@') ? authorEmail.split('@')[0] : authorEmail;
+  const rawAuthor = authorName || emailShort;
   const author = canShowAuthorIdentity && rawAuthor ? rawAuthor : 'Dalyvis';
   const timestamp = formatCommentDateTime(comment?.createdAt);
   return `
