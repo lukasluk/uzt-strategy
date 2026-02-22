@@ -3327,7 +3327,6 @@ function strategyCreateUiText() {
       strategyTitle: 'Strategy title',
       strategySlug: 'Strategy slug (optional)',
       strategyDescription: 'Short description (optional)',
-      cycleTitle: 'Cycle title (optional)',
       createManual: 'Create strategy',
       localeHint: 'Result language',
       clarification: 'AI clarification',
@@ -3355,7 +3354,6 @@ function strategyCreateUiText() {
     strategyTitle: 'Strategijos pavadinimas',
     strategySlug: 'Strategijos slug (nebūtina)',
     strategyDescription: 'Trumpas aprašymas (nebūtina)',
-    cycleTitle: 'Ciklo pavadinimas (nebūtina)',
     createManual: 'Sukurti strategiją',
     localeHint: 'Rezultato kalba',
     clarification: 'AI patikslinimas',
@@ -3571,6 +3569,10 @@ function startStrategyAiProgress(ui) {
       if (bar instanceof HTMLElement) bar.style.width = '100%';
       if (current instanceof HTMLElement) current.textContent = labels[3];
       if (status instanceof HTMLElement) status.textContent = labels[3];
+      const finalStep = steps[3];
+      if (finalStep instanceof HTMLElement) {
+        finalStep.classList.add('is-done');
+      }
       await sleep(stageMinDurationMs[3]);
       dispose();
     },
@@ -3578,6 +3580,19 @@ function startStrategyAiProgress(ui) {
       dispose();
     }
   };
+}
+
+function closePlatformPopups() {
+  [
+    'strategyAiProgressOverlay',
+    'strategyCreateOverlay',
+    'loginOverlay',
+    'accessRequestOverlay'
+  ].forEach((id) => {
+    const node = document.getElementById(id);
+    if (node) node.remove();
+  });
+  state.strategySwitcherDialogOpen = false;
 }
 
 function showStrategyCreateModal() {
@@ -3625,8 +3640,6 @@ function showStrategyCreateModal() {
 
       <form id="strategyCreateAiForm" class="login-form login-form-auth strategy-create-form" enctype="multipart/form-data" hidden>
         <h3 class="strategy-create-section-title">${escapeHtml(ui.aiSetup)}</h3>
-        <label class="auth-label" for="strategyAiCycleTitle">${escapeHtml(ui.cycleTitle)}</label>
-        <input id="strategyAiCycleTitle" type="text" name="cycleTitle" />
         <label class="auth-label" for="strategyAiLocale">${escapeHtml(ui.localeHint)}</label>
         <select id="strategyAiLocale" name="localeHint">
           <option value="lt">LT</option>
@@ -3651,6 +3664,15 @@ function showStrategyCreateModal() {
   const commonSlugInput = overlay.querySelector('#strategyCreateSlug');
   const commonDescriptionInput = overlay.querySelector('#strategyCreateDescription');
   let generationInProgress = false;
+  const safeRefreshAfterCreate = async () => {
+    try {
+      await bootstrap();
+      return true;
+    } catch (error) {
+      notifyError(toUserMessage(error));
+      return false;
+    }
+  };
 
   const closeModal = () => {
     if (generationInProgress) return;
@@ -3728,9 +3750,11 @@ function showStrategyCreateModal() {
         body: { title, slug, description }
       });
       await syncCreatedStrategy(payload?.strategy?.slug);
-      await bootstrap();
+      state.activeView = 'map';
+      syncRouteState();
+      closePlatformPopups();
+      await safeRefreshAfterCreate();
       notifySuccess(`${ui.successManual} ${String(payload?.strategy?.title || title).trim()}`);
-      closeModal();
     } catch (error) {
       const message = toUserMessage(error);
       setError(message);
@@ -3755,7 +3779,6 @@ function showStrategyCreateModal() {
     try {
       const requestStartedAtIso = new Date().toISOString();
       const fd = new FormData();
-      const cycleTitleInput = overlay.querySelector('#strategyAiCycleTitle');
       const localeInput = overlay.querySelector('#strategyAiLocale');
       const clarificationInput = overlay.querySelector('#strategyAiClarification');
       const docsInput = overlay.querySelector('#strategyAiDocs');
@@ -3764,7 +3787,6 @@ function showStrategyCreateModal() {
       fd.set('strategyTitle', requestedTitle);
       fd.set('strategySlug', requestedSlug);
       fd.set('strategyDescription', String(commonDescriptionInput?.value || '').trim());
-      fd.set('cycleTitle', String(cycleTitleInput?.value || '').trim());
       fd.set('localeHint', String(localeInput?.value || 'lt').trim());
       fd.set('clarification', String(clarificationInput?.value || '').trim());
       const selectedFiles = Array.from(docsInput?.files || []);
@@ -3801,13 +3823,11 @@ function showStrategyCreateModal() {
       if (progress) await progress.markPreparing();
       await syncCreatedStrategy(payload?.strategy?.slug);
       if (progress) await progress.complete();
+      state.activeView = 'map';
+      syncRouteState();
+      closePlatformPopups();
+      await safeRefreshAfterCreate();
       notifySuccess(`${ui.successAi} ${String(payload?.strategy?.title || '-').trim() || '-'}`);
-      closeModal();
-      try {
-        await bootstrap();
-      } catch (refreshError) {
-        notifyError(toUserMessage(refreshError));
-      }
     } catch (error) {
       if (progress) progress.fail();
       const message = toUserMessage(error);
