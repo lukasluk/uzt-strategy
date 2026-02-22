@@ -303,7 +303,6 @@ async function generateStrategyFromAi({
       },
       body: JSON.stringify({
         model,
-        temperature: 0.2,
         max_output_tokens: 9000,
         input: [
           {
