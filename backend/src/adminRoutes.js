@@ -655,6 +655,72 @@ function registerAdminRoutes({
     });
   });
 
+  app.get('/api/v1/admin/strategies/ai-latest', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+
+    const sinceRaw = String(req.query?.since || '').trim();
+    let sinceIso = null;
+    if (sinceRaw) {
+      const parsed = new Date(sinceRaw);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ error: 'invalid since timestamp' });
+      }
+      sinceIso = parsed.toISOString();
+    }
+
+    const result = await query(
+      `select g.id,
+              g.status,
+              g.error_message,
+              g.created_at,
+              s.id as strategy_id,
+              s.title as strategy_title,
+              s.slug as strategy_slug,
+              s.description as strategy_description,
+              s.status as strategy_status,
+              c.id as cycle_id,
+              c.title as cycle_title,
+              c.state as cycle_state
+       from strategy_ai_generations g
+       left join institution_strategies s on s.id = g.strategy_id
+       left join strategy_cycles c on c.id = g.cycle_id
+       where g.institution_id = $1
+         and g.requested_by_scope = 'institution_admin'
+         and coalesce(g.requested_by_id, '') = $2
+         and ($3::timestamptz is null or g.created_at >= $3::timestamptz)
+       order by g.created_at desc
+       limit 1`,
+      [req.auth.institutionId, String(req.auth.sub || ''), sinceIso]
+    );
+
+    if (!result.rowCount) {
+      return res.json({ ok: true, generation: null });
+    }
+
+    const row = result.rows[0];
+    return res.json({
+      ok: true,
+      generation: {
+        id: row.id,
+        status: String(row.status || '').trim() || 'failed',
+        errorMessage: row.error_message || null,
+        createdAt: row.created_at || null,
+        strategy: row.strategy_id ? {
+          id: row.strategy_id,
+          title: row.strategy_title,
+          slug: row.strategy_slug,
+          description: row.strategy_description || null,
+          status: row.strategy_status || 'active'
+        } : null,
+        cycle: row.cycle_id ? {
+          id: row.cycle_id,
+          title: row.cycle_title,
+          state: row.cycle_state
+        } : null
+      }
+    });
+  });
+
   app.post(
     '/api/v1/admin/strategies/ai-generate',
     requireAuth,

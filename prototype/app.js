@@ -702,6 +702,9 @@ function toUserMessage(error) {
     'generated guidelines missing': 'AI nesugeneravo pakankamai gairių.',
     'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvų.',
     'documents upload failed': 'Nepavyko įkelti dokumentų.',
+    'HTTP 504': currentLanguage() === 'en'
+      ? 'AI processing took longer than gateway timeout. Checking server result...'
+      : 'AI apdorojimas truko ilgiau nei gateway limitas. Tikrinamas serverio rezultatas...',
     'strategy limit reached': currentLanguage() === 'en'
       ? 'This institution already reached the maximum number of strategies (5).'
       : 'Ši institucija jau pasiekė maksimalų strategijų limitą (5).'
@@ -3332,10 +3335,11 @@ function strategyCreateUiText() {
       documents: 'PDF documents',
       createAi: 'Generate strategy with AI',
       progressTitle: 'AI generation in progress',
-      progressUploading: 'uploading information',
-      progressAnalyses: 'AI analyses',
-      progressPreparing: 'preparing digistrategy.eu format',
-      progressDone: 'done',
+      progressUploading: 'Uploading documents',
+      progressAnalyses: 'Analyzing with AI',
+      progressPreparing: 'Building digistrategy.eu format',
+      progressDone: 'Finalizing',
+      progressRecovering: 'Waiting for server confirmation',
       successManual: 'Strategy created:',
       successAi: 'AI generated strategy:'
     };
@@ -3359,20 +3363,79 @@ function strategyCreateUiText() {
     documents: 'PDF dokumentai',
     createAi: 'Generuoti strategiją su AI',
     progressTitle: 'AI generavimas vyksta',
-    progressUploading: 'uploading information',
-    progressAnalyses: 'AI analyses',
-    progressPreparing: 'preparing digistrategy.eu format',
-    progressDone: 'done',
+    progressUploading: 'Įkeliami dokumentai',
+    progressAnalyses: 'Analizuojama su AI',
+    progressPreparing: 'Ruošiamas digistrategy.eu formatas',
+    progressDone: 'Užbaigiama',
+    progressRecovering: 'Laukiamas serverio patvirtinimas',
     successManual: 'Strategija sukurta:',
     successAi: 'AI sugeneravo strategiją:'
   };
+}
+
+function isGatewayTimeoutError(error) {
+  const message = String(error?.message || error || '').trim().toUpperCase();
+  return message === 'HTTP 504'
+    || message.includes('HTTP 504')
+    || message.includes('GATEWAY TIMEOUT');
+}
+
+function waitMs(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+}
+
+async function recoverAiGenerationAfterGatewayTimeout({
+  sinceIso,
+  expectedTitle,
+  expectedSlug,
+  timeoutMs = 90000,
+  pollMs = 1800
+} = {}) {
+  const deadline = Date.now() + Math.max(5000, Number(timeoutMs) || 0);
+  const normalizedExpectedSlug = normalizeSlug(expectedSlug);
+  const normalizedExpectedTitle = String(expectedTitle || '').trim().toLowerCase();
+  const queryValue = String(sinceIso || '').trim();
+  const querySuffix = queryValue ? `?since=${encodeURIComponent(queryValue)}` : '';
+
+  while (Date.now() < deadline) {
+    let payload = null;
+    try {
+      payload = await api(`/api/v1/admin/strategies/ai-latest${querySuffix}`, { auth: true });
+    } catch {
+      payload = null;
+    }
+
+    const generation = payload?.generation;
+    if (generation) {
+      const strategy = generation?.strategy || null;
+      const strategySlug = normalizeSlug(strategy?.slug);
+      const strategyTitle = String(strategy?.title || '').trim().toLowerCase();
+      const slugMatches = normalizedExpectedSlug && strategySlug && normalizedExpectedSlug === strategySlug;
+      const titleMatches = normalizedExpectedTitle && strategyTitle && normalizedExpectedTitle === strategyTitle;
+      const hasExpectations = Boolean(normalizedExpectedSlug || normalizedExpectedTitle);
+      const matchesExpected = hasExpectations ? (slugMatches || titleMatches) : true;
+
+      if (generation.status === 'completed' && strategy && matchesExpected) {
+        return {
+          strategy,
+          cycle: generation?.cycle || null
+        };
+      }
+      if (generation.status === 'failed' && matchesExpected) {
+        throw new Error(String(generation.errorMessage || 'ai generation failed'));
+      }
+    }
+
+    await waitMs(pollMs);
+  }
+
+  return null;
 }
 
 function strategyCreateProgressMarkup(ui) {
   return `
     <div class="strategy-ai-progress">
       <div class="header-row" style="margin-bottom:6px;">
-        <strong>${escapeHtml(ui.progressTitle)}</strong>
         <span class="tag" data-progress-current>${escapeHtml(ui.progressUploading)}</span>
       </div>
       <div class="strategy-ai-progress-bar-shell">
@@ -3395,8 +3458,8 @@ function startStrategyAiProgress(ui) {
     ui.progressPreparing,
     ui.progressDone
   ];
-  const thresholds = [0, 2200, 4800, 7600];
-  const minDurationMs = 7600;
+  const stageMinDurationMs = [900, 2400, 1300, 450];
+  const stageTargetProgress = [18, 76, 93, 100];
 
   const existing = document.getElementById('strategyAiProgressOverlay');
   if (existing) existing.remove();
@@ -3420,7 +3483,11 @@ function startStrategyAiProgress(ui) {
   const steps = Array.from(progressOverlay.querySelectorAll('[data-progress-step]'));
   if (!(root instanceof HTMLElement)) return null;
 
-  const startedAt = Date.now();
+  let currentStage = 0;
+  let stageStartedAt = Date.now();
+  let targetProgress = stageTargetProgress[0];
+  let renderedProgress = 0;
+  let disposed = false;
 
   const applyStepState = (activeIndex) => {
     steps.forEach((node) => {
@@ -3437,41 +3504,78 @@ function startStrategyAiProgress(ui) {
     }
   };
 
-  applyStepState(0);
+  const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, Math.max(0, ms)));
+
+  const advanceStage = async (nextStage) => {
+    const targetStage = Math.max(0, Math.min(3, Number(nextStage) || 0));
+    if (disposed || targetStage <= currentStage) return;
+    const elapsed = Date.now() - stageStartedAt;
+    const minDuration = stageMinDurationMs[currentStage] || 0;
+    if (elapsed < minDuration) {
+      await sleep(minDuration - elapsed);
+    }
+    if (disposed) return;
+    currentStage = targetStage;
+    stageStartedAt = Date.now();
+    targetProgress = stageTargetProgress[currentStage] || 100;
+    applyStepState(currentStage);
+  };
+
+  applyStepState(currentStage);
 
   const tick = () => {
-    const elapsed = Date.now() - startedAt;
-    const percent = Math.min(95, Math.max(0, (elapsed / minDurationMs) * 95));
-    if (bar instanceof HTMLElement) {
-      bar.style.width = `${percent.toFixed(1)}%`;
+    if (disposed) return;
+    const elapsedInStage = Date.now() - stageStartedAt;
+
+    // Keep long-running stages feeling alive without jumping to "done".
+    if (currentStage === 1 && elapsedInStage > 2200) {
+      targetProgress = Math.min(86, targetProgress + 0.08);
+    } else if (currentStage === 2 && elapsedInStage > 1200) {
+      targetProgress = Math.min(96, targetProgress + 0.05);
     }
-    let activeStep = 0;
-    if (elapsed >= thresholds[2]) activeStep = 2;
-    else if (elapsed >= thresholds[1]) activeStep = 1;
-    applyStepState(activeStep);
+
+    const delta = Math.max(0.2, (targetProgress - renderedProgress) * 0.08);
+    renderedProgress = Math.min(targetProgress, renderedProgress + delta);
+    if (bar instanceof HTMLElement) {
+      bar.style.width = `${renderedProgress.toFixed(1)}%`;
+    }
   };
 
   tick();
   const timerId = window.setInterval(tick, 120);
 
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    window.clearInterval(timerId);
+    progressOverlay.remove();
+  };
+
   return {
-    startedAt,
+    markAnalysing: () => advanceStage(1),
+    markPreparing: () => advanceStage(2),
+    setStatus: (text) => {
+      const value = String(text || '').trim();
+      if (!value) return;
+      if (current instanceof HTMLElement) current.textContent = value;
+      if (status instanceof HTMLElement) status.textContent = value;
+    },
+    bumpTarget: (value) => {
+      const nextTarget = Number(value);
+      if (!Number.isFinite(nextTarget)) return;
+      targetProgress = Math.max(targetProgress, Math.min(99, nextTarget));
+    },
     complete: async () => {
-      const elapsed = Date.now() - startedAt;
-      const remaining = Math.max(0, minDurationMs - elapsed);
-      if (remaining > 0) {
-        await new Promise((resolve) => window.setTimeout(resolve, remaining));
-      }
-      window.clearInterval(timerId);
-      applyStepState(3);
+      await advanceStage(3);
+      targetProgress = 100;
       if (bar instanceof HTMLElement) bar.style.width = '100%';
       if (current instanceof HTMLElement) current.textContent = labels[3];
-      await new Promise((resolve) => window.setTimeout(resolve, 900));
-      progressOverlay.remove();
+      if (status instanceof HTMLElement) status.textContent = labels[3];
+      await sleep(stageMinDurationMs[3]);
+      dispose();
     },
     fail: () => {
-      window.clearInterval(timerId);
-      progressOverlay.remove();
+      dispose();
     }
   };
 }
@@ -3649,13 +3753,16 @@ function showStrategyCreateModal() {
     });
     const progress = startStrategyAiProgress(ui);
     try {
+      const requestStartedAtIso = new Date().toISOString();
       const fd = new FormData();
       const cycleTitleInput = overlay.querySelector('#strategyAiCycleTitle');
       const localeInput = overlay.querySelector('#strategyAiLocale');
       const clarificationInput = overlay.querySelector('#strategyAiClarification');
       const docsInput = overlay.querySelector('#strategyAiDocs');
-      fd.set('strategyTitle', String(commonTitleInput?.value || '').trim());
-      fd.set('strategySlug', String(commonSlugInput?.value || '').trim());
+      const requestedTitle = String(commonTitleInput?.value || '').trim();
+      const requestedSlug = String(commonSlugInput?.value || '').trim();
+      fd.set('strategyTitle', requestedTitle);
+      fd.set('strategySlug', requestedSlug);
       fd.set('strategyDescription', String(commonDescriptionInput?.value || '').trim());
       fd.set('cycleTitle', String(cycleTitleInput?.value || '').trim());
       fd.set('localeHint', String(localeInput?.value || 'lt').trim());
@@ -3664,19 +3771,43 @@ function showStrategyCreateModal() {
       selectedFiles.forEach((file) => fd.append('documents', file));
       const files = fd.getAll('documents').filter((file) => file instanceof File && file.size > 0);
       if (!files.length) throw new Error('at least one pdf file required');
-
-      const payloadPromise = api('/api/v1/admin/strategies/ai-generate', {
-        method: 'POST',
-        body: fd
-      });
-      const payload = await payloadPromise;
       if (progress) {
-        await progress.complete();
+        await progress.markAnalysing();
       }
+
+      let payload = null;
+      try {
+        payload = await api('/api/v1/admin/strategies/ai-generate', {
+          method: 'POST',
+          body: fd
+        });
+      } catch (error) {
+        if (!isGatewayTimeoutError(error)) throw error;
+        if (progress) {
+          progress.setStatus(ui.progressRecovering || ui.progressPreparing);
+          progress.bumpTarget(97);
+        }
+        const recovered = await recoverAiGenerationAfterGatewayTimeout({
+          sinceIso: requestStartedAtIso,
+          expectedTitle: requestedTitle,
+          expectedSlug: requestedSlug
+        });
+        if (!recovered?.strategy?.slug) throw error;
+        payload = {
+          strategy: recovered.strategy,
+          cycle: recovered.cycle || null
+        };
+      }
+      if (progress) await progress.markPreparing();
       await syncCreatedStrategy(payload?.strategy?.slug);
-      await bootstrap();
+      if (progress) await progress.complete();
       notifySuccess(`${ui.successAi} ${String(payload?.strategy?.title || '-').trim() || '-'}`);
       closeModal();
+      try {
+        await bootstrap();
+      } catch (refreshError) {
+        notifyError(toUserMessage(refreshError));
+      }
     } catch (error) {
       if (progress) progress.fail();
       const message = toUserMessage(error);
