@@ -102,6 +102,7 @@ function toUserMessage(error) {
     'pdf parsing failed': 'Nepavyko perskaityti PDF failo turinio.',
     'pdf content too large': 'Bendras PDF turinys per didelis vienai generacijai.',
     'ai response invalid': 'AI atsakymas negalioja. Pabandykite patikslinti uzklausa.',
+    'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar karta arba patikslinkite kalbos reikalavima.',
     'generated guidelines missing': 'AI negrazino gairiu. Pabandykite su kitokiu patikslinimu.',
     'generated initiatives missing': 'AI negrazino iniciatyvu. Pabandykite su kitokiu patikslinimu.',
     'invalid institution slug': 'Nepavyko sugeneruoti institucijos kodo is pavadinimo.',

@@ -302,6 +302,7 @@ function registerMetaAdminRoutes({
     }
     if (
       message === 'ai response invalid'
+      || message === 'ai response language mismatch'
       || message === 'generated guidelines missing'
       || message === 'generated initiatives missing'
     ) {

@@ -230,8 +230,16 @@ function buildPrompt({ instruction, docs, localeHint = 'lt' }) {
 
   const locale = String(localeHint || 'lt').toLowerCase() === 'en' ? 'en' : 'lt';
   const languageHint = locale === 'en'
-    ? 'Write all generated titles and descriptions in clear English.'
-    : 'Write all generated titles and descriptions in clear Lithuanian.';
+    ? [
+      'Output language MUST be English for every string field in the JSON.',
+      'Translate source ideas to English even if source documents are Lithuanian.',
+      'This applies to: strategyTitle, strategyDescription, cycleTitle, missionText, visionText, guideline titles/descriptions, initiative titles/descriptions.',
+      'Do not output Lithuanian words.'
+    ].join(' ')
+    : [
+      'Output language MUST be Lithuanian for every string field in the JSON.',
+      'This applies to: strategyTitle, strategyDescription, cycleTitle, missionText, visionText, guideline titles/descriptions, initiative titles/descriptions.'
+    ].join(' ');
 
   const system = [
     'You are a public-sector strategy architect.',
@@ -279,18 +287,45 @@ function buildPrompt({ instruction, docs, localeHint = 'lt' }) {
   return { system, user };
 }
 
-async function generateStrategyFromAi({
+function collectGeneratedText(generated) {
+  const parts = [];
+  if (!generated || typeof generated !== 'object') return '';
+  parts.push(
+    generated.strategyTitle || '',
+    generated.strategyDescription || '',
+    generated.cycleTitle || '',
+    generated.missionText || '',
+    generated.visionText || ''
+  );
+  const guidelines = Array.isArray(generated.guidelines) ? generated.guidelines : [];
+  const initiatives = Array.isArray(generated.initiatives) ? generated.initiatives : [];
+  guidelines.forEach((item) => {
+    parts.push(item?.title || '', item?.description || '', item?.parentTitle || '');
+  });
+  initiatives.forEach((item) => {
+    parts.push(item?.title || '', item?.description || '');
+    (Array.isArray(item?.guidelineTitles) ? item.guidelineTitles : []).forEach((g) => parts.push(g || ''));
+  });
+  return parts.join(' ').trim();
+}
+
+function looksLithuanianContent(text) {
+  const value = String(text || '').toLowerCase();
+  if (!value) return false;
+  if (/[ąčęėįšųūž]/i.test(value)) return true;
+  const ltHits = (value.match(/\b(gair(?:e|es|iu)|iniciatyv(?:a|os|u)|uzdavin(?:ys|iai)|strategij(?:a|os|u)|skaitmenin(?:is|e|iu)|paslaug(?:a|os|u)|duomen(?:ys|u|imis))\b/g) || []).length;
+  const enHits = (value.match(/\b(guideline|guidelines|initiative|initiatives|strategy|strategies|digital|service|services|data|mission|vision)\b/g) || []).length;
+  return ltHits > Math.max(2, enHits);
+}
+
+async function requestAiText({
   apiKey,
   model,
-  baseUrl,
-  instruction,
-  docs,
-  localeHint = 'lt',
-  timeoutMs = 120000
+  endpoint,
+  systemText,
+  userText,
+  timeoutMs
 }) {
-  const prompt = buildPrompt({ instruction, docs, localeHint });
-  const endpoint = `${String(baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '')}/responses`;
-
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), Math.max(15000, Number(timeoutMs || 0)));
   let response;
@@ -307,11 +342,11 @@ async function generateStrategyFromAi({
         input: [
           {
             role: 'system',
-            content: [{ type: 'input_text', text: prompt.system }]
+            content: [{ type: 'input_text', text: systemText }]
           },
           {
             role: 'user',
-            content: [{ type: 'input_text', text: prompt.user }]
+            content: [{ type: 'input_text', text: userText }]
           }
         ]
       }),
@@ -341,23 +376,67 @@ async function generateStrategyFromAi({
     throw new Error('ai response invalid');
   }
 
-  let parsed = null;
-  try {
-    parsed = JSON.parse(stripCodeFence(outputText));
-  } catch {
-    throw new Error('ai response invalid');
-  }
-
-  const normalized = normalizeGeneratedStrategy(parsed, {
-    fallbackTitle: cleanText(instruction, 180)
-  });
-  validateGeneratedStrategy(normalized);
-
   return {
     model: String(payload?.model || model || '').trim() || null,
-    normalized,
-    rawText: outputText
+    outputText
   };
+}
+
+async function generateStrategyFromAi({
+  apiKey,
+  model,
+  baseUrl,
+  instruction,
+  docs,
+  localeHint = 'lt',
+  timeoutMs = 120000
+}) {
+  const endpoint = `${String(baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '')}/responses`;
+  const locale = String(localeHint || 'lt').toLowerCase() === 'en' ? 'en' : 'lt';
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const prompt = buildPrompt({ instruction, docs, localeHint: locale });
+    const enforcedUser = attempt === 0
+      ? prompt.user
+      : `${prompt.user}\n\nCRITICAL RETRY RULE: Previous output was not in requested language. Output strictly in ${locale === 'en' ? 'English' : 'Lithuanian'} only.`;
+
+    const aiResponse = await requestAiText({
+      apiKey,
+      model,
+      endpoint,
+      systemText: prompt.system,
+      userText: enforcedUser,
+      timeoutMs
+    });
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(stripCodeFence(aiResponse.outputText));
+    } catch {
+      throw new Error('ai response invalid');
+    }
+
+    const normalized = normalizeGeneratedStrategy(parsed, {
+      fallbackTitle: cleanText(instruction, 180)
+    });
+    validateGeneratedStrategy(normalized);
+
+    if (locale === 'en') {
+      const generatedText = collectGeneratedText(normalized);
+      if (looksLithuanianContent(generatedText)) {
+        if (attempt === 0) continue;
+        throw new Error('ai response language mismatch');
+      }
+    }
+
+    return {
+      model: aiResponse.model,
+      normalized,
+      rawText: aiResponse.outputText
+    };
+  }
+
+  throw new Error('ai response invalid');
 }
 
 module.exports = {
