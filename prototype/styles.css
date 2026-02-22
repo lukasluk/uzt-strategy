@@ -4685,6 +4685,85 @@ body.meta-admin-page .stage {
   border-style: dashed;
 }
 
+.meta-ai-progress {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #bfd5f2;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+  display: grid;
+  gap: 8px;
+}
+
+.meta-ai-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  color: #23466f;
+}
+
+.meta-ai-progress-head strong {
+  color: #153457;
+}
+
+.meta-ai-progress-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid #c6daf2;
+  background: #e7f0fb;
+  overflow: hidden;
+}
+
+.meta-ai-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f79cf 0%, #3b8de4 100%);
+  transition: width 0.35s ease;
+}
+
+.meta-ai-progress-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.meta-ai-progress-steps li {
+  border: 1px solid #c5d8ef;
+  border-radius: 10px;
+  background: #f6faff;
+  color: #5d7798;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 7px 8px;
+  text-transform: none;
+}
+
+.meta-ai-progress-steps li.is-active {
+  border-color: #5f97d8;
+  background: #e6f1ff;
+  color: #1f4f84;
+}
+
+.meta-ai-progress-steps li.is-done {
+  border-color: #68a684;
+  background: #e9f7ef;
+  color: #1f6c43;
+}
+
+@media (max-width: 860px) {
+  .meta-ai-progress-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .meta-guideline-links-filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 1.4fr) auto auto;

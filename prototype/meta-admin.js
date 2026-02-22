@@ -14,11 +14,21 @@ const state = {
   lastPasswordReset: null,
   lastAiGeneration: null,
   lastAiGenerationAt: null,
+  aiGenerationProgress: null,
   guidelineLinksInstitutionFilter: '',
   guidelineLinksStrategyFilter: '',
   guidelineLinksSearch: '',
   accessRequestStatusFilter: 'pending'
 };
+
+const AI_GENERATION_STEPS = [
+  'uploading information',
+  'AI analyses',
+  'preparing digistrategy.eu format',
+  'done'
+];
+const AI_GENERATION_MIN_DURATION_MS = 5000;
+const AI_GENERATION_STEP_TIMINGS_MS = [0, 1400, 3200];
 
 bootstrap();
 
@@ -595,6 +605,84 @@ function guidelineCatalogLabel(item) {
   return `${institution} / ${strategy} / ${guideline}`;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+  });
+}
+
+function clearAiGenerationProgress(progress) {
+  const target = progress || state.aiGenerationProgress;
+  if (!target) return;
+  const timers = Array.isArray(target.timers) ? target.timers : [];
+  timers.forEach((timerId) => window.clearTimeout(timerId));
+}
+
+function startAiGenerationProgress() {
+  clearAiGenerationProgress();
+  const progress = {
+    active: true,
+    startedAt: Date.now(),
+    stepIndex: 0,
+    timers: []
+  };
+  state.aiGenerationProgress = progress;
+
+  AI_GENERATION_STEP_TIMINGS_MS.forEach((offsetMs, index) => {
+    if (index === 0) return;
+    const timerId = window.setTimeout(() => {
+      if (state.aiGenerationProgress !== progress || !progress.active) return;
+      progress.stepIndex = index;
+      render();
+    }, offsetMs);
+    progress.timers.push(timerId);
+  });
+
+  render();
+  return progress;
+}
+
+async function completeAiGenerationProgress(progress) {
+  if (!progress || state.aiGenerationProgress !== progress) return;
+  const elapsed = Date.now() - Number(progress.startedAt || Date.now());
+  if (elapsed < AI_GENERATION_MIN_DURATION_MS) {
+    await sleep(AI_GENERATION_MIN_DURATION_MS - elapsed);
+  }
+  if (state.aiGenerationProgress !== progress) return;
+  progress.stepIndex = AI_GENERATION_STEPS.length - 1;
+  render();
+  await sleep(420);
+}
+
+function renderAiGenerationProgress() {
+  const progress = state.aiGenerationProgress;
+  if (!progress?.active) return '';
+
+  const stepIndex = Math.max(0, Math.min(AI_GENERATION_STEPS.length - 1, Number(progress.stepIndex) || 0));
+  const progressPercentByStep = [22, 52, 82, 100];
+  const progressPercent = progressPercentByStep[stepIndex] || 0;
+
+  return `
+    <div class="meta-ai-progress" role="status" aria-live="polite">
+      <div class="meta-ai-progress-head">
+        <strong>AI generation in progress</strong>
+        <span>${escapeHtml(AI_GENERATION_STEPS[stepIndex])}</span>
+      </div>
+      <div class="meta-ai-progress-bar" aria-hidden="true">
+        <span class="meta-ai-progress-fill" style="width:${progressPercent}%;"></span>
+      </div>
+      <ol class="meta-ai-progress-steps">
+        ${AI_GENERATION_STEPS.map((step, index) => {
+          const statusClass = index < stepIndex
+            ? 'is-done'
+            : (index === stepIndex ? 'is-active' : 'is-pending');
+          return `<li class="${statusClass}">${escapeHtml(step)}</li>`;
+        }).join('')}
+      </ol>
+    </div>
+  `;
+}
+
 function normalizeSearchText(value) {
   return String(value || '').trim().toLowerCase();
 }
@@ -1011,6 +1099,7 @@ function renderDashboard() {
           </div>
           <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Generuoti strategija su AI</button>
         </form>
+        ${renderAiGenerationProgress()}
         ${state.lastAiGeneration?.strategy?.id ? `
           <div class="card meta-admin-subcard meta-ai-result-card" style="margin-top: 12px;">
             <strong>AI generacija sekminga</strong>
@@ -1229,16 +1318,29 @@ function bindDashboardEvents() {
       if (!institutionId && !institutionName) return;
       if (!clarification || !files.length) return;
 
-      await runBusy(async () => {
+      if (state.busy) return;
+      state.busy = true;
+      setNotice('');
+      const progress = startAiGenerationProgress();
+      render();
+      try {
         const payload = await api('/api/v1/meta-admin/strategies/ai-generate', {
           method: 'POST',
           body: fd
         });
+        await loadOverview();
+        await completeAiGenerationProgress(progress);
         state.lastAiGeneration = payload;
         state.lastAiGenerationAt = new Date().toISOString();
         setNotice(`AI sugeneravo nauja strategija: ${String(payload?.strategy?.title || '-').trim() || '-'}.`);
-        await loadOverview();
-      });
+      } catch (error) {
+        setNotice(toUserMessage(error), 'error');
+      } finally {
+        clearAiGenerationProgress(progress);
+        state.aiGenerationProgress = null;
+        state.busy = false;
+        render();
+      }
     });
   }
 

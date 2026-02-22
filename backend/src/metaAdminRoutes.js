@@ -288,6 +288,203 @@ function registerMetaAdminRoutes({
     return String(value || '').trim().toLowerCase() === 'en' ? 'en' : 'lt';
   }
 
+  function normalizeLayoutLabel(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function layoutCollision(occupied, x, y, minDistanceX, minDistanceY) {
+    return occupied.some((point) => (
+      Math.abs(point.x - x) < minDistanceX && Math.abs(point.y - y) < minDistanceY
+    ));
+  }
+
+  function reserveLayoutPosition(occupied, desiredX, desiredY, options = {}) {
+    const x = Math.round(Number(desiredX) || 0);
+    let y = Math.round(Number(desiredY) || 0);
+    const minDistanceX = Math.max(60, Number(options.minDistanceX || 180));
+    const minDistanceY = Math.max(60, Number(options.minDistanceY || 120));
+    const nudgeY = Math.max(24, Number(options.nudgeY || 130));
+    const maxAttempts = Math.max(8, Number(options.maxAttempts || 120));
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      if (!layoutCollision(occupied, x, y, minDistanceX, minDistanceY)) {
+        occupied.push({ x, y });
+        return { x, y };
+      }
+      y += nudgeY;
+    }
+
+    occupied.push({ x, y });
+    return { x, y };
+  }
+
+  function buildAiMapLayout({ guidelineRecords, initiativeRecords }) {
+    const institutionX = 1520;
+    const institutionY = 860;
+    const guidelines = Array.isArray(guidelineRecords) ? guidelineRecords : [];
+    const initiatives = Array.isArray(initiativeRecords) ? initiativeRecords : [];
+
+    const guidelineById = new Map(guidelines.map((item) => [item.id, item]));
+    const childrenByParent = new Map();
+    guidelines.forEach((item) => {
+      const parentId = String(item.parentGuidelineId || '').trim();
+      if (!parentId || !guidelineById.has(parentId) || parentId === item.id) return;
+      if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
+      childrenByParent.get(parentId).push(item);
+    });
+
+    const occupiedGuidelinePoints = [];
+    const guidelinePositions = new Map();
+    const visited = new Set();
+
+    const countSubtree = (nodeId, chain = new Set()) => {
+      if (!nodeId || chain.has(nodeId)) return 1;
+      const nextChain = new Set(chain);
+      nextChain.add(nodeId);
+      const children = childrenByParent.get(nodeId) || [];
+      let total = 1;
+      children.forEach((child) => {
+        total += countSubtree(child.id, nextChain);
+      });
+      return total;
+    };
+
+    const rootCandidates = guidelines.filter((item) => {
+      const parentId = String(item.parentGuidelineId || '').trim();
+      return !parentId || !guidelineById.has(parentId) || parentId === item.id;
+    });
+
+    const rootPriority = (item) => {
+      const relation = String(item.relationType || '').trim().toLowerCase();
+      if (relation === 'parent') return 0;
+      if (relation === 'orphan') return 1;
+      return 2;
+    };
+
+    const roots = rootCandidates
+      .slice()
+      .sort((left, right) => {
+        const byWeight = countSubtree(right.id) - countSubtree(left.id);
+        if (byWeight !== 0) return byWeight;
+        const byType = rootPriority(left) - rootPriority(right);
+        if (byType !== 0) return byType;
+        return String(left.title || '').localeCompare(String(right.title || ''), 'lt');
+      });
+
+    const leftRoots = [];
+    const rightRoots = [];
+    roots.forEach((root, index) => {
+      if (index % 2 === 0) leftRoots.push(root);
+      else rightRoots.push(root);
+    });
+
+    const placeGuidelineTree = (node, side, depth, preferredY) => {
+      if (!node || visited.has(node.id)) return;
+      visited.add(node.id);
+
+      const direction = side === 'left' ? -1 : 1;
+      const baseX = institutionX + (430 * direction) + (depth * 285 * direction);
+      const point = reserveLayoutPosition(
+        occupiedGuidelinePoints,
+        baseX,
+        preferredY,
+        { minDistanceX: 170, minDistanceY: 126, nudgeY: 136 }
+      );
+
+      guidelinePositions.set(node.id, {
+        id: node.id,
+        x: point.x,
+        y: point.y,
+        lineSide: side
+      });
+
+      const children = (childrenByParent.get(node.id) || [])
+        .slice()
+        .sort((left, right) => String(left.title || '').localeCompare(String(right.title || ''), 'lt'));
+      if (!children.length) return;
+
+      const childGap = 176;
+      const childStartY = point.y - ((children.length - 1) * childGap) / 2;
+      children.forEach((child, index) => {
+        placeGuidelineTree(child, side, depth + 1, childStartY + index * childGap);
+      });
+    };
+
+    const placeRootColumn = (columnRoots, side) => {
+      if (!columnRoots.length) return;
+      const rootGap = 232;
+      const startY = institutionY - ((columnRoots.length - 1) * rootGap) / 2;
+      columnRoots.forEach((root, index) => {
+        placeGuidelineTree(root, side, 0, startY + index * rootGap);
+      });
+    };
+
+    placeRootColumn(leftRoots, 'left');
+    placeRootColumn(rightRoots, 'right');
+
+    let fallbackSide = 'left';
+    guidelines.forEach((item) => {
+      if (visited.has(item.id)) return;
+      placeGuidelineTree(item, fallbackSide, 0, institutionY);
+      fallbackSide = fallbackSide === 'left' ? 'right' : 'left';
+    });
+
+    const occupiedInitiativePoints = [];
+    const initiativePositions = new Map();
+
+    const initiativesByAnchor = new Map();
+    initiatives.forEach((initiative) => {
+      const guidelineIds = Array.isArray(initiative.guidelineIds) ? initiative.guidelineIds : [];
+      const anchorId = guidelineIds.find((guidelineId) => guidelinePositions.has(guidelineId)) || '__none__';
+      if (!initiativesByAnchor.has(anchorId)) initiativesByAnchor.set(anchorId, []);
+      initiativesByAnchor.get(anchorId).push(initiative);
+    });
+
+    Array.from(initiativesByAnchor.entries()).forEach(([anchorId, bucket], groupIndex) => {
+      const sortedBucket = bucket
+        .slice()
+        .sort((left, right) => String(left.title || '').localeCompare(String(right.title || ''), 'lt'));
+
+      let anchorX = institutionX;
+      let anchorY = institutionY + 320;
+      let side = groupIndex % 2 === 0 ? 'left' : 'right';
+
+      const anchorPosition = guidelinePositions.get(anchorId);
+      if (anchorPosition) {
+        anchorX = anchorPosition.x;
+        anchorY = anchorPosition.y;
+        side = anchorPosition.x < institutionX ? 'left' : 'right';
+      }
+
+      const direction = side === 'left' ? -1 : 1;
+      const baseX = anchorX + (330 * direction);
+      const rowGap = 144;
+      const startY = anchorY - ((sortedBucket.length - 1) * rowGap) / 2;
+
+      sortedBucket.forEach((initiative, index) => {
+        const point = reserveLayoutPosition(
+          occupiedInitiativePoints,
+          baseX,
+          startY + index * rowGap,
+          { minDistanceX: 188, minDistanceY: 120, nudgeY: 128 }
+        );
+        initiativePositions.set(initiative.id, {
+          id: initiative.id,
+          x: point.x,
+          y: point.y,
+          lineSide: side
+        });
+      });
+    });
+
+    return {
+      institutionX,
+      institutionY,
+      guidelines: Array.from(guidelinePositions.values()),
+      initiatives: Array.from(initiativePositions.values())
+    };
+  }
+
   function mapAiGenerationError(error) {
     const message = String(error?.message || '').trim() || 'internal server error';
     if (
@@ -1030,6 +1227,8 @@ function registerMetaAdminRoutes({
         );
 
         const guidelineIdByTitle = new Map();
+        const guidelineRecords = [];
+        const guidelineRecordById = new Map();
         const childGuidelines = [];
         for (const guideline of generated.guidelines) {
           const guidelineId = uuid();
@@ -1046,7 +1245,17 @@ function registerMetaAdminRoutes({
               guideline.relationType
             ]
           );
-          guidelineIdByTitle.set(String(guideline.title || '').trim().toLowerCase(), guidelineId);
+          const guidelineTitleKey = normalizeLayoutLabel(guideline.title);
+          guidelineIdByTitle.set(guidelineTitleKey, guidelineId);
+          const guidelineRecord = {
+            id: guidelineId,
+            title: guideline.title,
+            relationType: guideline.relationType,
+            parentTitle: guideline.parentTitle || null,
+            parentGuidelineId: null
+          };
+          guidelineRecords.push(guidelineRecord);
+          guidelineRecordById.set(guidelineId, guidelineRecord);
           if (guideline.relationType === 'child' && guideline.parentTitle) {
             childGuidelines.push({
               id: guidelineId,
@@ -1056,7 +1265,7 @@ function registerMetaAdminRoutes({
         }
 
         for (const child of childGuidelines) {
-          const parentId = guidelineIdByTitle.get(String(child.parentTitle || '').trim().toLowerCase());
+          const parentId = guidelineIdByTitle.get(normalizeLayoutLabel(child.parentTitle));
           if (!parentId || parentId === child.id) {
             await transactionClient.query(
               `update strategy_guidelines
@@ -1066,6 +1275,11 @@ function registerMetaAdminRoutes({
                where id = $1`,
               [child.id]
             );
+            const childRecord = guidelineRecordById.get(child.id);
+            if (childRecord) {
+              childRecord.relationType = 'orphan';
+              childRecord.parentGuidelineId = null;
+            }
             continue;
           }
           await transactionClient.query(
@@ -1075,9 +1289,14 @@ function registerMetaAdminRoutes({
              where id = $2`,
             [parentId, child.id]
           );
+          const childRecord = guidelineRecordById.get(child.id);
+          if (childRecord) {
+            childRecord.parentGuidelineId = parentId;
+          }
         }
 
         const fallbackGuidelineId = Array.from(guidelineIdByTitle.values())[0];
+        const initiativeRecords = [];
         for (const initiative of generated.initiatives) {
           const initiativeId = uuid();
           await transactionClient.query(
@@ -1093,20 +1312,74 @@ function registerMetaAdminRoutes({
             ? initiative.guidelineTitles
             : [];
           initiativeGuidelineTitles.forEach((title) => {
-            const guidelineId = guidelineIdByTitle.get(String(title || '').trim().toLowerCase());
+            const guidelineId = guidelineIdByTitle.get(normalizeLayoutLabel(title));
             if (guidelineId) uniqueGuidelineIds.add(guidelineId);
           });
           if (!uniqueGuidelineIds.size && fallbackGuidelineId) {
             uniqueGuidelineIds.add(fallbackGuidelineId);
           }
+          const linkedGuidelineIds = Array.from(uniqueGuidelineIds);
+          initiativeRecords.push({
+            id: initiativeId,
+            title: initiative.title,
+            guidelineIds: linkedGuidelineIds
+          });
 
-          for (const guidelineId of uniqueGuidelineIds) {
+          for (const guidelineId of linkedGuidelineIds) {
             await transactionClient.query(
               `insert into strategy_initiative_guidelines (id, initiative_id, guideline_id)
                values ($1, $2, $3)`,
               [uuid(), initiativeId, guidelineId]
             );
           }
+        }
+
+        const layout = buildAiMapLayout({
+          guidelineRecords,
+          initiativeRecords
+        });
+
+        await transactionClient.query(
+          `update strategy_cycles
+           set map_x = $1, map_y = $2
+           where id = $3`,
+          [layout.institutionX, layout.institutionY, cycleId]
+        );
+
+        for (const guidelineLayout of layout.guidelines) {
+          await transactionClient.query(
+            `update strategy_guidelines
+             set map_x = $1,
+                 map_y = $2,
+                 line_side = $3,
+                 updated_at = now()
+             where id = $4 and cycle_id = $5`,
+            [
+              guidelineLayout.x,
+              guidelineLayout.y,
+              guidelineLayout.lineSide,
+              guidelineLayout.id,
+              cycleId
+            ]
+          );
+        }
+
+        for (const initiativeLayout of layout.initiatives) {
+          await transactionClient.query(
+            `update strategy_initiatives
+             set map_x = $1,
+                 map_y = $2,
+                 line_side = $3,
+                 updated_at = now()
+             where id = $4 and cycle_id = $5`,
+            [
+              initiativeLayout.x,
+              initiativeLayout.y,
+              initiativeLayout.lineSide,
+              initiativeLayout.id,
+              cycleId
+            ]
+          );
         }
 
         await transactionClient.query(
