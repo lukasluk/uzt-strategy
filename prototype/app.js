@@ -3319,6 +3319,8 @@ function strategyCreateUiText() {
       close: 'Close',
       manualTab: 'Manual',
       aiTab: 'AI from PDF',
+      strategySetup: 'Strategy setup',
+      aiSetup: 'AI generation settings',
       strategyTitle: 'Strategy title',
       strategySlug: 'Strategy slug (optional)',
       strategyDescription: 'Short description (optional)',
@@ -3344,6 +3346,8 @@ function strategyCreateUiText() {
     close: 'Uždaryti',
     manualTab: 'Rankinis',
     aiTab: 'AI iš PDF',
+    strategySetup: 'Strategijos nustatymai',
+    aiSetup: 'AI generavimo nustatymai',
     strategyTitle: 'Strategijos pavadinimas',
     strategySlug: 'Strategijos slug (nebūtina)',
     strategyDescription: 'Trumpas aprašymas (nebūtina)',
@@ -3366,48 +3370,61 @@ function strategyCreateUiText() {
 
 function strategyCreateProgressMarkup(ui) {
   return `
-    <div id="strategyAiProgress" class="strategy-ai-progress" hidden>
+    <div class="strategy-ai-progress">
       <div class="header-row" style="margin-bottom:6px;">
         <strong>${escapeHtml(ui.progressTitle)}</strong>
-        <span class="tag" id="strategyAiProgressCurrent">${escapeHtml(ui.progressUploading)}</span>
+        <span class="tag" data-progress-current>${escapeHtml(ui.progressUploading)}</span>
       </div>
       <div class="strategy-ai-progress-bar-shell">
-        <div id="strategyAiProgressBar" class="strategy-ai-progress-bar" style="width: 0%;"></div>
+        <div class="strategy-ai-progress-bar" data-progress-bar style="width: 0%;"></div>
       </div>
       <div class="strategy-ai-progress-steps">
-        <span id="strategyAiStep1" class="strategy-ai-step">${escapeHtml(ui.progressUploading)}</span>
-        <span id="strategyAiStep2" class="strategy-ai-step">${escapeHtml(ui.progressAnalyses)}</span>
-        <span id="strategyAiStep3" class="strategy-ai-step">${escapeHtml(ui.progressPreparing)}</span>
-        <span id="strategyAiStep4" class="strategy-ai-step">${escapeHtml(ui.progressDone)}</span>
+        <span class="strategy-ai-step" data-progress-step="0">${escapeHtml(ui.progressUploading)}</span>
+        <span class="strategy-ai-step" data-progress-step="1">${escapeHtml(ui.progressAnalyses)}</span>
+        <span class="strategy-ai-step" data-progress-step="2">${escapeHtml(ui.progressPreparing)}</span>
+        <span class="strategy-ai-step" data-progress-step="3">${escapeHtml(ui.progressDone)}</span>
       </div>
     </div>
   `;
 }
 
-function startStrategyAiProgress(overlay, ui) {
-  const root = overlay.querySelector('#strategyAiProgress');
-  const bar = overlay.querySelector('#strategyAiProgressBar');
-  const current = overlay.querySelector('#strategyAiProgressCurrent');
-  const steps = [
-    overlay.querySelector('#strategyAiStep1'),
-    overlay.querySelector('#strategyAiStep2'),
-    overlay.querySelector('#strategyAiStep3'),
-    overlay.querySelector('#strategyAiStep4')
-  ];
-  if (!(root instanceof HTMLElement)) return null;
-  root.hidden = false;
-
+function startStrategyAiProgress(ui) {
   const labels = [
     ui.progressUploading,
     ui.progressAnalyses,
     ui.progressPreparing,
     ui.progressDone
   ];
-  const thresholds = [0, 1600, 3400, 5000];
+  const thresholds = [0, 2200, 4800, 7600];
+  const minDurationMs = 7600;
+
+  const existing = document.getElementById('strategyAiProgressOverlay');
+  if (existing) existing.remove();
+
+  const progressOverlay = document.createElement('div');
+  progressOverlay.id = 'strategyAiProgressOverlay';
+  progressOverlay.className = 'login-overlay strategy-ai-progress-overlay';
+  progressOverlay.innerHTML = `
+    <div class="login-card strategy-ai-progress-card" role="status" aria-live="polite">
+      <h3 class="strategy-ai-progress-title">${escapeHtml(ui.progressTitle)}</h3>
+      <p class="prompt strategy-ai-progress-subtitle" id="strategyAiBlockingStatus">${escapeHtml(ui.progressUploading)}</p>
+      ${strategyCreateProgressMarkup(ui)}
+    </div>
+  `;
+  document.body.appendChild(progressOverlay);
+
+  const root = progressOverlay.querySelector('.strategy-ai-progress');
+  const bar = progressOverlay.querySelector('[data-progress-bar]');
+  const current = progressOverlay.querySelector('[data-progress-current]');
+  const status = progressOverlay.querySelector('#strategyAiBlockingStatus');
+  const steps = Array.from(progressOverlay.querySelectorAll('[data-progress-step]'));
+  if (!(root instanceof HTMLElement)) return null;
+
   const startedAt = Date.now();
 
   const applyStepState = (activeIndex) => {
-    steps.forEach((node, index) => {
+    steps.forEach((node) => {
+      const index = Number(node.getAttribute('data-progress-step') || 0);
       if (!(node instanceof HTMLElement)) return;
       node.classList.toggle('is-active', index === activeIndex);
       node.classList.toggle('is-done', index < activeIndex);
@@ -3415,13 +3432,16 @@ function startStrategyAiProgress(overlay, ui) {
     if (current instanceof HTMLElement) {
       current.textContent = labels[activeIndex] || labels[0];
     }
+    if (status instanceof HTMLElement) {
+      status.textContent = labels[activeIndex] || labels[0];
+    }
   };
 
   applyStepState(0);
 
   const tick = () => {
     const elapsed = Date.now() - startedAt;
-    const percent = Math.min(95, Math.max(0, (elapsed / 5000) * 95));
+    const percent = Math.min(95, Math.max(0, (elapsed / minDurationMs) * 95));
     if (bar instanceof HTMLElement) {
       bar.style.width = `${percent.toFixed(1)}%`;
     }
@@ -3438,17 +3458,20 @@ function startStrategyAiProgress(overlay, ui) {
     startedAt,
     complete: async () => {
       const elapsed = Date.now() - startedAt;
-      const remaining = Math.max(0, 5000 - elapsed);
+      const remaining = Math.max(0, minDurationMs - elapsed);
       if (remaining > 0) {
         await new Promise((resolve) => window.setTimeout(resolve, remaining));
       }
       window.clearInterval(timerId);
       applyStepState(3);
       if (bar instanceof HTMLElement) bar.style.width = '100%';
+      if (current instanceof HTMLElement) current.textContent = labels[3];
+      await new Promise((resolve) => window.setTimeout(resolve, 900));
+      progressOverlay.remove();
     },
     fail: () => {
       window.clearInterval(timerId);
-      root.hidden = true;
+      progressOverlay.remove();
     }
   };
 }
@@ -3482,21 +3505,22 @@ function showStrategyCreateModal() {
         <button type="button" class="btn btn-ghost strategy-create-tab" data-mode="ai">${escapeHtml(ui.aiTab)}</button>
       </div>
 
-      <form id="strategyCreateManualForm" class="login-form login-form-auth strategy-create-form">
+      <section class="strategy-create-shared-fields">
+        <h3 class="strategy-create-section-title">${escapeHtml(ui.strategySetup)}</h3>
         <label class="auth-label" for="strategyCreateTitle">${escapeHtml(ui.strategyTitle)}</label>
-        <input id="strategyCreateTitle" type="text" name="title" required />
+        <input id="strategyCreateTitle" type="text" name="strategyTitle" required />
         <label class="auth-label" for="strategyCreateSlug">${escapeHtml(ui.strategySlug)}</label>
-        <input id="strategyCreateSlug" type="text" name="slug" />
+        <input id="strategyCreateSlug" type="text" name="strategySlug" />
         <label class="auth-label" for="strategyCreateDescription">${escapeHtml(ui.strategyDescription)}</label>
-        <textarea id="strategyCreateDescription" name="description" rows="4"></textarea>
+        <textarea id="strategyCreateDescription" name="strategyDescription" rows="4"></textarea>
+      </section>
+
+      <form id="strategyCreateManualForm" class="login-form login-form-auth strategy-create-form">
         <button class="btn btn-primary" type="submit">${escapeHtml(ui.createManual)}</button>
       </form>
 
       <form id="strategyCreateAiForm" class="login-form login-form-auth strategy-create-form" enctype="multipart/form-data" hidden>
-        <label class="auth-label" for="strategyAiTitle">${escapeHtml(ui.strategyTitle)}</label>
-        <input id="strategyAiTitle" type="text" name="strategyTitle" />
-        <label class="auth-label" for="strategyAiSlug">${escapeHtml(ui.strategySlug)}</label>
-        <input id="strategyAiSlug" type="text" name="strategySlug" />
+        <h3 class="strategy-create-section-title">${escapeHtml(ui.aiSetup)}</h3>
         <label class="auth-label" for="strategyAiCycleTitle">${escapeHtml(ui.cycleTitle)}</label>
         <input id="strategyAiCycleTitle" type="text" name="cycleTitle" />
         <label class="auth-label" for="strategyAiLocale">${escapeHtml(ui.localeHint)}</label>
@@ -3510,8 +3534,6 @@ function showStrategyCreateModal() {
         <input id="strategyAiDocs" type="file" name="documents" accept="application/pdf,.pdf" multiple required />
         <button class="btn btn-primary" type="submit">${escapeHtml(ui.createAi)}</button>
       </form>
-
-      ${strategyCreateProgressMarkup(ui)}
     </div>
   `;
   document.body.appendChild(overlay);
@@ -3521,8 +3543,13 @@ function showStrategyCreateModal() {
   const tabButtons = Array.from(overlay.querySelectorAll('.strategy-create-tab'));
   const manualForm = overlay.querySelector('#strategyCreateManualForm');
   const aiForm = overlay.querySelector('#strategyCreateAiForm');
+  const commonTitleInput = overlay.querySelector('#strategyCreateTitle');
+  const commonSlugInput = overlay.querySelector('#strategyCreateSlug');
+  const commonDescriptionInput = overlay.querySelector('#strategyCreateDescription');
+  let generationInProgress = false;
 
   const closeModal = () => {
+    if (generationInProgress) return;
     const current = document.getElementById('strategyCreateOverlay');
     if (current) current.remove();
   };
@@ -3544,6 +3571,9 @@ function showStrategyCreateModal() {
     });
     if (manualForm instanceof HTMLElement) manualForm.hidden = next !== 'manual';
     if (aiForm instanceof HTMLElement) aiForm.hidden = next !== 'ai';
+    if (commonTitleInput instanceof HTMLInputElement) {
+      commonTitleInput.required = next === 'manual';
+    }
     setError('');
   };
 
@@ -3584,10 +3614,9 @@ function showStrategyCreateModal() {
     if (!(submitButton instanceof HTMLButtonElement)) return;
     submitButton.disabled = true;
     try {
-      const fd = new FormData(manualForm);
-      const title = String(fd.get('title') || '').trim();
-      const slug = String(fd.get('slug') || '').trim();
-      const description = String(fd.get('description') || '').trim();
+      const title = String(commonTitleInput?.value || '').trim();
+      const slug = String(commonSlugInput?.value || '').trim();
+      const description = String(commonDescriptionInput?.value || '').trim();
       if (!title) return;
 
       const payload = await api('/api/v1/admin/strategies', {
@@ -3613,9 +3642,26 @@ function showStrategyCreateModal() {
     const submitButton = aiForm.querySelector('button[type="submit"]');
     if (!(submitButton instanceof HTMLButtonElement)) return;
     submitButton.disabled = true;
-    const progress = startStrategyAiProgress(overlay, ui);
+    generationInProgress = true;
+    if (closeButton instanceof HTMLButtonElement) closeButton.disabled = true;
+    tabButtons.forEach((button) => {
+      if (button instanceof HTMLButtonElement) button.disabled = true;
+    });
+    const progress = startStrategyAiProgress(ui);
     try {
-      const fd = new FormData(aiForm);
+      const fd = new FormData();
+      const cycleTitleInput = overlay.querySelector('#strategyAiCycleTitle');
+      const localeInput = overlay.querySelector('#strategyAiLocale');
+      const clarificationInput = overlay.querySelector('#strategyAiClarification');
+      const docsInput = overlay.querySelector('#strategyAiDocs');
+      fd.set('strategyTitle', String(commonTitleInput?.value || '').trim());
+      fd.set('strategySlug', String(commonSlugInput?.value || '').trim());
+      fd.set('strategyDescription', String(commonDescriptionInput?.value || '').trim());
+      fd.set('cycleTitle', String(cycleTitleInput?.value || '').trim());
+      fd.set('localeHint', String(localeInput?.value || 'lt').trim());
+      fd.set('clarification', String(clarificationInput?.value || '').trim());
+      const selectedFiles = Array.from(docsInput?.files || []);
+      selectedFiles.forEach((file) => fd.append('documents', file));
       const files = fd.getAll('documents').filter((file) => file instanceof File && file.size > 0);
       if (!files.length) throw new Error('at least one pdf file required');
 
@@ -3637,6 +3683,11 @@ function showStrategyCreateModal() {
       setError(message);
       notifyError(message);
     } finally {
+      generationInProgress = false;
+      if (closeButton instanceof HTMLButtonElement) closeButton.disabled = false;
+      tabButtons.forEach((button) => {
+        if (button instanceof HTMLButtonElement) button.disabled = false;
+      });
       submitButton.disabled = false;
     }
   });
