@@ -3467,7 +3467,7 @@ function showStrategyCreateModal() {
 
   overlay = document.createElement('div');
   overlay.id = 'strategyCreateOverlay';
-  overlay.className = 'login-overlay';
+  overlay.className = 'login-overlay strategy-create-overlay';
   overlay.innerHTML = `
     <div class="login-card strategy-create-card">
       <div class="header-row" style="margin-bottom: 8px;">

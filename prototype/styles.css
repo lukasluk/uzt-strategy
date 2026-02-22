@@ -2814,6 +2814,10 @@ body.map-comment-modal-open {
   gap: 12px;
   margin-top: 12px;
 }
+
+.login-form[hidden] {
+  display: none !important;
+}
 .login-form-auth {
   gap: 9px;
 }
@@ -2869,8 +2873,18 @@ body.map-comment-modal-open {
   font-size: 13px;
 }
 
+.strategy-create-overlay {
+  overflow-y: auto;
+  align-items: start;
+  justify-items: center;
+  padding: 16px;
+}
+
 .strategy-create-card {
-  width: min(720px, 94vw);
+  width: min(760px, 95vw);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .strategy-create-mode-tabs {
@@ -4258,6 +4272,15 @@ select:focus {
 
   .step-pill-shell {
     min-width: 116px;
+  }
+
+  .strategy-create-overlay {
+    padding: 10px;
+  }
+
+  .strategy-create-card {
+    width: min(100%, 96vw);
+    max-height: calc(100vh - 20px);
   }
 
   .step-pill h4 {
