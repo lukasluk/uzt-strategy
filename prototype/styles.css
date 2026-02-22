@@ -2941,11 +2941,14 @@ body.map-comment-modal-open {
   width: 0;
   background: linear-gradient(90deg, #2f6fb8 0%, #3f8ee6 48%, #2f6fb8 100%);
   background-size: 220% 100%;
+  transform-origin: center;
+  box-shadow: 0 0 0 rgba(63, 142, 230, 0.45);
   animation:
-    strategyAiBarFlow 1.6s linear infinite,
-    strategyAiBarPulse 1.15s ease-in-out infinite;
+    strategyAiBarFlow 1.15s linear infinite,
+    strategyAiBarPulse 0.72s ease-in-out infinite,
+    strategyAiBarGlow 1.1s ease-in-out infinite;
   transition: width 0.25s ease;
-  will-change: width, background-position, opacity;
+  will-change: width, background-position, opacity, transform, box-shadow;
 }
 
 .strategy-ai-progress-steps {
@@ -3033,10 +3036,52 @@ body.map-comment-modal-open {
 
 @keyframes strategyAiBarPulse {
   0%, 100% {
-    opacity: 0.88;
+    opacity: 0.75;
+    transform: scaleY(0.84);
   }
   50% {
     opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes strategyAiBarGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(63, 142, 230, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(63, 142, 230, 0.55);
+  }
+}
+
+.strategy-create-confetti-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.strategy-create-confetti-piece {
+  position: absolute;
+  border-radius: 2px;
+  opacity: 0;
+  animation-name: strategyCreateConfettiFall;
+  animation-timing-function: cubic-bezier(0.18, 0.68, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes strategyCreateConfettiFall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -12px, 0) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--confetti-drift, 0px), 108vh, 0) rotate(var(--confetti-rotate, 360deg));
   }
 }
 .error {
@@ -4875,6 +4920,36 @@ body.meta-admin-page .stage {
   border-style: dashed;
 }
 
+.meta-strategy-row {
+  display: grid;
+  gap: 8px;
+}
+
+.meta-strategy-delete-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #3c5f87;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.meta-strategy-delete-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.meta-strategy-delete-hint {
+  margin: 0;
+  color: #6f87a7;
+}
+
+.meta-strategy-delete-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .meta-ai-progress {
   margin-top: 12px;
   padding: 12px 14px;
@@ -4912,7 +4987,20 @@ body.meta-admin-page .stage {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #2f79cf 0%, #3b8de4 100%);
+  background-size: 220% 100%;
+  animation: strategyAiBarFlow 1.2s linear infinite, metaAiBarPulse 0.9s ease-in-out infinite;
   transition: width 0.35s ease;
+}
+
+@keyframes metaAiBarPulse {
+  0%, 100% {
+    opacity: 0.76;
+    transform: scaleY(0.86);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
 }
 
 .meta-ai-progress-steps {

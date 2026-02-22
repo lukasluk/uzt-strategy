@@ -3382,6 +3382,44 @@ function waitMs(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 }
 
+function showStrategyCreationConfetti({ pieces = 90, durationMs = 2600 } = {}) {
+  const total = Math.max(30, Math.min(180, Number(pieces) || 90));
+  const duration = Math.max(1200, Number(durationMs) || 2600);
+  const existing = document.getElementById('strategyCreateConfettiLayer');
+  if (existing) existing.remove();
+
+  const layer = document.createElement('div');
+  layer.id = 'strategyCreateConfettiLayer';
+  layer.className = 'strategy-create-confetti-layer';
+
+  const colors = ['#2f79cf', '#3f8ee6', '#63b3ff', '#7fd9a5', '#ffcf66', '#f87f7f'];
+  for (let index = 0; index < total; index += 1) {
+    const piece = document.createElement('span');
+    piece.className = 'strategy-create-confetti-piece';
+    const left = Math.random() * 100;
+    const delay = Math.random() * 0.45;
+    const fallDuration = 1.4 + Math.random() * 1.8;
+    const drift = -80 + Math.random() * 160;
+    const rotate = -320 + Math.random() * 640;
+    const size = 6 + Math.random() * 8;
+    piece.style.left = `${left}%`;
+    piece.style.top = `${-10 - Math.random() * 20}%`;
+    piece.style.width = `${size}px`;
+    piece.style.height = `${Math.max(4, size * 0.55)}px`;
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDelay = `${delay}s`;
+    piece.style.animationDuration = `${fallDuration}s`;
+    piece.style.setProperty('--confetti-drift', `${drift}px`);
+    piece.style.setProperty('--confetti-rotate', `${rotate}deg`);
+    layer.appendChild(piece);
+  }
+
+  document.body.appendChild(layer);
+  window.setTimeout(() => {
+    layer.remove();
+  }, duration);
+}
+
 async function recoverAiGenerationAfterGatewayTimeout({
   sinceIso,
   expectedTitle,
@@ -3754,6 +3792,7 @@ function showStrategyCreateModal() {
       syncRouteState();
       closePlatformPopups();
       await safeRefreshAfterCreate();
+      showStrategyCreationConfetti();
       notifySuccess(`${ui.successManual} ${String(payload?.strategy?.title || title).trim()}`);
     } catch (error) {
       const message = toUserMessage(error);
@@ -3827,6 +3866,7 @@ function showStrategyCreateModal() {
       syncRouteState();
       closePlatformPopups();
       await safeRefreshAfterCreate();
+      showStrategyCreationConfetti();
       notifySuccess(`${ui.successAi} ${String(payload?.strategy?.title || '-').trim() || '-'}`);
     } catch (error) {
       if (progress) progress.fail();

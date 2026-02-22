@@ -15,6 +15,7 @@ const state = {
   lastAiGeneration: null,
   lastAiGenerationAt: null,
   aiGenerationProgress: null,
+  strategyDeleteSelectionByInstitution: {},
   guidelineLinksInstitutionFilter: '',
   guidelineLinksStrategyFilter: '',
   guidelineLinksSearch: '',
@@ -56,6 +57,55 @@ function renderTag(value, type = 'default') {
   return `<span class="tag tag-${typeToken} tag-${typeToken}-${token}">${escapeHtml(value)}</span>`;
 }
 
+function getSelectedStrategyIdsForInstitution(institutionId) {
+  const key = String(institutionId || '').trim();
+  if (!key) return [];
+  const raw = state.strategyDeleteSelectionByInstitution?.[key];
+  if (!Array.isArray(raw)) return [];
+  return Array.from(new Set(raw.map((value) => String(value || '').trim()).filter(Boolean)));
+}
+
+function setSelectedStrategyForDeletion(institutionId, strategyId, selected) {
+  const institutionKey = String(institutionId || '').trim();
+  const strategyKey = String(strategyId || '').trim();
+  if (!institutionKey || !strategyKey) return;
+  const current = new Set(getSelectedStrategyIdsForInstitution(institutionKey));
+  if (selected) current.add(strategyKey);
+  else current.delete(strategyKey);
+  state.strategyDeleteSelectionByInstitution = {
+    ...state.strategyDeleteSelectionByInstitution,
+    [institutionKey]: Array.from(current)
+  };
+}
+
+function clearSelectedStrategiesForInstitution(institutionId) {
+  const key = String(institutionId || '').trim();
+  if (!key) return;
+  if (!Object.prototype.hasOwnProperty.call(state.strategyDeleteSelectionByInstitution, key)) return;
+  const next = { ...state.strategyDeleteSelectionByInstitution };
+  delete next[key];
+  state.strategyDeleteSelectionByInstitution = next;
+}
+
+function syncStrategyDeleteSelection(institutions) {
+  const list = Array.isArray(institutions) ? institutions : [];
+  const next = {};
+  list.forEach((institution) => {
+    const institutionId = String(institution?.id || '').trim();
+    if (!institutionId) return;
+    const allowed = new Set(
+      (Array.isArray(institution?.strategies) ? institution.strategies : [])
+        .filter((strategy) => !strategy?.isDefault)
+        .map((strategy) => String(strategy?.id || '').trim())
+        .filter(Boolean)
+    );
+    if (!allowed.size) return;
+    const selected = getSelectedStrategyIdsForInstitution(institutionId).filter((id) => allowed.has(id));
+    if (selected.length) next[institutionId] = selected;
+  });
+  state.strategyDeleteSelectionByInstitution = next;
+}
+
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
@@ -66,6 +116,9 @@ function toUserMessage(error) {
     'name required': 'Iveskite institucijos pavadinima.',
     'institutionId and name required': 'Pasirinkite institucija ir iveskite nauja pavadinima.',
     'strategyId and title required': 'Pasirinkite strategija ir iveskite nauja pavadinima.',
+    'institutionId and strategyIds required': 'Pasirinkite institucija ir bent viena strategija trynimui.',
+    'invalid strategyIds': 'Netinkami strategiju ID.',
+    'cannot delete default strategy': 'Numatytosios strategijos trinti negalima.',
     'strategy not found': 'Strategija nerasta.',
     'invalid slug': 'Netinkamas slug.',
     'slug already exists': 'Toks institucijos slug jau egzistuoja.',
@@ -1013,6 +1066,7 @@ function renderContentSettingsCard(contentSettings) {
 }
 function renderDashboard() {
   const institutions = state.overview?.institutions || [];
+  syncStrategyDeleteSelection(institutions);
   const users = state.overview?.users || [];
   const selectedUser = resolveSelectedMetaUser(users);
   const groupedUsers = buildUsersByInstitution(users);
@@ -1121,6 +1175,8 @@ function renderDashboard() {
           ${institutions.length
             ? institutions.map((institution) => {
               const strategies = Array.isArray(institution?.strategies) ? institution.strategies : [];
+              const selectedDeleteIds = getSelectedStrategyIdsForInstitution(institution.id);
+              const selectedDeleteCount = selectedDeleteIds.length;
               return `
                 <article class="card meta-admin-subcard">
                   <div class="header-row">
@@ -1144,23 +1200,51 @@ function renderDashboard() {
                       ${strategies.length
                         ? strategies.map((strategy) => `
                           <li>
-                            <form class="strategy-rename-form inline-form" data-strategy-id="${escapeHtml(strategy.id)}">
-                              <input
-                                type="text"
-                                name="title"
-                                value="${escapeHtml(strategy.title)}"
-                                placeholder="Naujas strategijos pavadinimas"
-                                required
-                                ${state.busy ? 'disabled' : ''}
-                              />
-                              <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
-                              ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
-                              <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
-                            </form>
+                            <div class="meta-strategy-row">
+                              <form class="strategy-rename-form inline-form" data-strategy-id="${escapeHtml(strategy.id)}">
+                                <input
+                                  type="text"
+                                  name="title"
+                                  value="${escapeHtml(strategy.title)}"
+                                  placeholder="Naujas strategijos pavadinimas"
+                                  required
+                                  ${state.busy ? 'disabled' : ''}
+                                />
+                                <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
+                                ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
+                                <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+                              </form>
+                              ${strategy.isDefault
+                                ? '<p class="prompt meta-strategy-delete-hint">Numatytoji strategija netrinama.</p>'
+                                : `
+                                  <label class="meta-strategy-delete-toggle">
+                                    <input
+                                      type="checkbox"
+                                      data-action="toggle-strategy-delete-selection"
+                                      data-institution-id="${escapeHtml(institution.id)}"
+                                      data-strategy-id="${escapeHtml(strategy.id)}"
+                                      ${selectedDeleteIds.includes(String(strategy.id || '').trim()) ? 'checked' : ''}
+                                      ${state.busy ? 'disabled' : ''}
+                                    />
+                                    <span>Pasirinkti trynimui</span>
+                                  </label>
+                                `}
+                            </div>
                           </li>
                         `).join('')
                         : '<li><span class="prompt">Strategiju nera.</span></li>'}
                     </ul>
+                    <div class="meta-strategy-delete-actions">
+                      <button
+                        type="button"
+                        class="btn btn-danger"
+                        data-action="delete-selected-strategies"
+                        data-institution-id="${escapeHtml(institution.id)}"
+                        ${state.busy || selectedDeleteCount < 1 ? 'disabled' : ''}
+                      >
+                        Istrinti pasirinktas (${selectedDeleteCount})
+                      </button>
+                    </div>
                   </div>
                 </article>
               `;
@@ -1547,6 +1631,35 @@ function bindDashboardEvents() {
     });
   }
 
+  async function deleteSelectedStrategies(institutionId) {
+    const normalizedInstitutionId = String(institutionId || '').trim();
+    if (!normalizedInstitutionId) return;
+    const selectedStrategyIds = getSelectedStrategyIdsForInstitution(normalizedInstitutionId);
+    if (!selectedStrategyIds.length) {
+      setNotice('Pasirinkite bent viena strategija trynimui.', 'error');
+      render();
+      return;
+    }
+
+    if (!window.confirm(`Ar tikrai norite istrinti pasirinktas strategijas (${selectedStrategyIds.length})?`)) {
+      return;
+    }
+
+    await runBusy(async () => {
+      const payload = await api('/api/v1/meta-admin/strategies/delete-selected', {
+        method: 'POST',
+        body: {
+          institutionId: normalizedInstitutionId,
+          strategyIds: selectedStrategyIds
+        }
+      });
+      clearSelectedStrategiesForInstitution(normalizedInstitutionId);
+      const deletedCount = Number(payload?.deleted?.strategyCount || selectedStrategyIds.length);
+      setNotice(`Istrinta strategiju: ${deletedCount}.`);
+      await loadOverview();
+    });
+  }
+
   if (!root.dataset.resetDelegatedBound) {
     root.dataset.resetDelegatedBound = '1';
     root.addEventListener('click', async (event) => {
@@ -1618,6 +1731,13 @@ function bindDashboardEvents() {
           setNotice('Strateginis rysis pasalintas.');
           await loadOverview();
         });
+        return;
+      }
+      const deleteSelectedStrategiesButton = target.closest('[data-action="delete-selected-strategies"]');
+      if (deleteSelectedStrategiesButton instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        await deleteSelectedStrategies(deleteSelectedStrategiesButton.dataset.institutionId);
         return;
       }
       const createButton = target.closest('[data-action="create-password-reset-link"]');
@@ -1739,6 +1859,17 @@ function bindDashboardEvents() {
         setNotice('Strategijos pavadinimas atnaujintas.');
         await loadOverview();
       });
+    });
+  });
+
+  root.querySelectorAll('[data-action="toggle-strategy-delete-selection"]').forEach((input) => {
+    if (!(input instanceof HTMLInputElement)) return;
+    input.addEventListener('change', () => {
+      const institutionId = String(input.dataset.institutionId || '').trim();
+      const strategyId = String(input.dataset.strategyId || '').trim();
+      if (!institutionId || !strategyId) return;
+      setSelectedStrategyForDeletion(institutionId, strategyId, input.checked);
+      render();
     });
   });
 }

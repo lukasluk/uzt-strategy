@@ -229,6 +229,10 @@ function registerMetaAdminRoutes({
     return { inviteId, inviteToken, inviteUrl, expiresAt, email, role };
   }
 
+  function isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+  }
+
   const aiStrategyUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
@@ -1135,6 +1139,120 @@ function registerMetaAdminRoutes({
         createdAt: updated.created_at
       }
     });
+  });
+
+  app.post('/api/v1/meta-admin/strategies/delete-selected', requireMetaAdminSession, async (req, res) => {
+    const institutionId = String(req.body?.institutionId || '').trim();
+    const strategyIdsRaw = Array.isArray(req.body?.strategyIds) ? req.body.strategyIds : [];
+    if (!institutionId || !strategyIdsRaw.length) {
+      return res.status(400).json({ error: 'institutionId and strategyIds required' });
+    }
+    if (!isUuid(institutionId)) {
+      return res.status(400).json({ error: 'institutionId and strategyIds required' });
+    }
+
+    const strategyIds = Array.from(
+      new Set(
+        strategyIdsRaw
+          .map((value) => String(value || '').trim())
+          .filter(Boolean)
+      )
+    );
+    if (!strategyIds.length || strategyIds.some((value) => !isUuid(value))) {
+      return res.status(400).json({ error: 'invalid strategyIds' });
+    }
+
+    const transactionClient = await pool.connect();
+    try {
+      await transactionClient.query('BEGIN');
+
+      const institutionRes = await transactionClient.query(
+        `select id
+         from institutions
+         where id = $1
+         for update`,
+        [institutionId]
+      );
+      if (!institutionRes.rowCount) {
+        await transactionClient.query('ROLLBACK');
+        return res.status(404).json({ error: 'institution not found' });
+      }
+
+      const strategyRes = await transactionClient.query(
+        `select id, title, slug, is_default
+         from institution_strategies
+         where institution_id = $1 and id = any($2::uuid[])
+         for update`,
+        [institutionId, strategyIds]
+      );
+      if (strategyRes.rowCount !== strategyIds.length) {
+        await transactionClient.query('ROLLBACK');
+        return res.status(404).json({ error: 'strategy not found' });
+      }
+
+      const defaultStrategies = strategyRes.rows.filter((row) => Boolean(row.is_default));
+      if (defaultStrategies.length) {
+        await transactionClient.query('ROLLBACK');
+        return res.status(400).json({ error: 'cannot delete default strategy' });
+      }
+
+      const deletedCyclesRes = await transactionClient.query(
+        `delete from strategy_cycles
+         where strategy_id = any($1::uuid[])
+         returning id`,
+        [strategyIds]
+      );
+
+      const deletedStrategiesRes = await transactionClient.query(
+        `delete from institution_strategies
+         where institution_id = $1
+           and id = any($2::uuid[])
+           and coalesce(is_default, false) = false
+         returning id, title, slug`,
+        [institutionId, strategyIds]
+      );
+      if (deletedStrategiesRes.rowCount !== strategyIds.length) {
+        await transactionClient.query('ROLLBACK');
+        return res.status(400).json({ error: 'cannot delete default strategy' });
+      }
+
+      await transactionClient.query('COMMIT');
+
+      await logAuditEvent({
+        query,
+        uuid,
+        institutionId,
+        action: 'meta_admin.strategies.deleted',
+        entityType: 'institution_strategy',
+        payload: metaAuditPayload(req, {
+          strategyIds,
+          deletedStrategyCount: deletedStrategiesRes.rowCount,
+          deletedCycleCount: deletedCyclesRes.rowCount
+        })
+      });
+
+      res.json({
+        ok: true,
+        deleted: {
+          strategyCount: Number(deletedStrategiesRes.rowCount || 0),
+          cycleCount: Number(deletedCyclesRes.rowCount || 0),
+          strategies: deletedStrategiesRes.rows.map((row) => ({
+            id: row.id,
+            title: row.title,
+            slug: row.slug
+          }))
+        }
+      });
+    } catch (error) {
+      try {
+        await transactionClient.query('ROLLBACK');
+      } catch {
+        // ignore rollback errors
+      }
+      throw error;
+    } finally {
+      transactionClient.release();
+    }
   });
 
   app.post(
