@@ -1196,23 +1196,30 @@ function renderDashboard() {
                   </form>
                   <div class="card-section" style="margin-top:10px;">
                     <strong>Strategijos</strong>
-                    <ul class="mini-list" style="margin-top:8px;">
+                    <ul class="mini-list meta-strategy-list" style="margin-top:8px;">
                       ${strategies.length
                         ? strategies.map((strategy) => `
-                          <li>
+                          <li class="meta-strategy-item">
                             <div class="meta-strategy-row">
-                              <form class="strategy-rename-form inline-form" data-strategy-id="${escapeHtml(strategy.id)}">
-                                <input
-                                  type="text"
-                                  name="title"
-                                  value="${escapeHtml(strategy.title)}"
-                                  placeholder="Naujas strategijos pavadinimas"
-                                  required
-                                  ${state.busy ? 'disabled' : ''}
-                                />
-                                <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
-                                ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
-                                <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+                              <div class="meta-strategy-item-head">
+                                <strong class="meta-strategy-item-title">${escapeHtml(strategy.title || '-')}</strong>
+                                <div class="meta-strategy-item-tags">
+                                  <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
+                                  ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
+                                </div>
+                              </div>
+                              <form class="strategy-rename-form meta-strategy-rename-form" data-strategy-id="${escapeHtml(strategy.id)}">
+                                <div class="meta-strategy-rename-row">
+                                  <input
+                                    type="text"
+                                    name="title"
+                                    value="${escapeHtml(strategy.title)}"
+                                    placeholder="Naujas strategijos pavadinimas"
+                                    required
+                                    ${state.busy ? 'disabled' : ''}
+                                  />
+                                  <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+                                </div>
                               </form>
                               ${strategy.isDefault
                                 ? '<p class="prompt meta-strategy-delete-hint">Numatytoji strategija netrinama.</p>'

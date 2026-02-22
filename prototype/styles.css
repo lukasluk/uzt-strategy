@@ -4925,6 +4925,59 @@ body.meta-admin-page .stage {
   gap: 8px;
 }
 
+.meta-strategy-list {
+  display: grid;
+  gap: 10px;
+}
+
+.meta-strategy-item {
+  border: 1px solid #d3e3f7;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fcfeff 0%, #f5faff 100%);
+  padding: 10px;
+}
+
+.meta-strategy-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-strategy-item-title {
+  color: #1f4674;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.meta-strategy-item-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.meta-strategy-item-tags .tag {
+  margin-right: 0;
+}
+
+.meta-strategy-rename-form {
+  margin-top: 0;
+}
+
+.meta-strategy-rename-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-strategy-rename-row input[type="text"] {
+  width: 100%;
+  min-width: 0;
+}
+
 .meta-strategy-delete-toggle {
   display: inline-flex;
   align-items: center;
@@ -4948,6 +5001,12 @@ body.meta-admin-page .stage {
   margin-top: 8px;
   display: flex;
   justify-content: flex-end;
+}
+
+@media (max-width: 780px) {
+  .meta-strategy-rename-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .meta-ai-progress {
