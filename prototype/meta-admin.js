@@ -120,7 +120,8 @@ function toUserMessage(error) {
     'ai provider error: HTTP 401': 'AI tiekejas atmete API rakta (401).',
     'ai provider error: HTTP 403': 'AI tiekejas atmete prieiga (403).',
     'ai provider error: HTTP 429': 'AI tiekejas laikinai riboja uzklausas (429).',
-    'ai provider error: HTTP 500': 'AI tiekejas laikinai nepasiekiamas (500).'
+    'ai provider error: HTTP 500': 'AI tiekejas laikinai nepasiekiamas (500).',
+    'strategy limit reached': 'Siai institucijai jau pasiektas maksimalus strategiju limitas (5).'
   };
   return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
 }

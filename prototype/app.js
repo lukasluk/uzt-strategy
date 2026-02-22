@@ -701,7 +701,10 @@ function toUserMessage(error) {
     'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar kartą.',
     'generated guidelines missing': 'AI nesugeneravo pakankamai gairių.',
     'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvų.',
-    'documents upload failed': 'Nepavyko įkelti dokumentų.'
+    'documents upload failed': 'Nepavyko įkelti dokumentų.',
+    'strategy limit reached': currentLanguage() === 'en'
+      ? 'This institution already reached the maximum number of strategies (5).'
+      : 'Ši institucija jau pasiekė maksimalų strategijų limitą (5).'
   };
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }

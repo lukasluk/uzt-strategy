@@ -76,6 +76,16 @@ function registerMetaAdminRoutes({
     30000,
     Number(process.env.AI_STRATEGY_MAX_COMBINED_TEXT_CHARS || 120000)
   );
+  const STRATEGY_MAX_PER_INSTITUTION = Math.max(
+    1,
+    Number(process.env.STRATEGY_MAX_PER_INSTITUTION || 5)
+  );
+  const META_ADMIN_STRATEGY_CREATE_RATE_LIMIT_WINDOW_MS = Number(
+    process.env.META_ADMIN_STRATEGY_CREATE_RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000
+  );
+  const META_ADMIN_STRATEGY_CREATE_RATE_LIMIT_MAX = Number(
+    process.env.META_ADMIN_STRATEGY_CREATE_RATE_LIMIT_MAX || 5
+  );
 
   const metaAdminAuthConfigured = Boolean(META_ADMIN_PASSWORD_HASH)
     || (ALLOW_LEGACY_META_ADMIN_PASSWORD && Boolean(META_ADMIN_PASSWORD));
@@ -233,6 +243,22 @@ function registerMetaAdminRoutes({
         return done(new Error('only pdf files allowed'));
       }
       return done(null, true);
+    }
+  });
+
+  const metaAdminStrategyCreateRateLimit = createRateLimiter({
+    windowMs: META_ADMIN_STRATEGY_CREATE_RATE_LIMIT_WINDOW_MS,
+    max: META_ADMIN_STRATEGY_CREATE_RATE_LIMIT_MAX,
+    keyPrefix: 'meta-admin-strategy-create',
+    keyFn: (req) => `${resolveClientIp(req)}:${req.metaAdmin?.sub || 'unknown'}`,
+    onBlocked: ({ req, retryAfter }) => {
+      if (!trafficMonitor) return;
+      trafficMonitor.trackRateLimitBlocked({
+        limiter: 'meta-admin-strategy-create',
+        ip: resolveClientIp(req),
+        path: req.path || req.originalUrl || '',
+        retryAfterSeconds: retryAfter
+      });
     }
   });
 
@@ -509,6 +535,25 @@ function registerMetaAdminRoutes({
       return { status: 502, error: message };
     }
     return { status: 500, error: 'internal server error' };
+  }
+
+  async function countInstitutionStrategies(dbClient, institutionId) {
+    const result = await dbClient.query(
+      `select count(*)::int as total
+       from institution_strategies
+       where institution_id = $1`,
+      [institutionId]
+    );
+    return Number(result.rows?.[0]?.total || 0);
+  }
+
+  async function ensureStrategyCapacity(dbClient, institutionId) {
+    const total = await countInstitutionStrategies(dbClient, institutionId);
+    if (total >= STRATEGY_MAX_PER_INSTITUTION) {
+      const error = new Error('strategy limit reached');
+      error.code = 'STRATEGY_LIMIT_REACHED';
+      throw error;
+    }
   }
 
   async function loadParentGuidelineCatalog() {
@@ -1095,6 +1140,7 @@ function registerMetaAdminRoutes({
   app.post(
     '/api/v1/meta-admin/strategies/ai-generate',
     requireMetaAdminSession,
+    metaAdminStrategyCreateRateLimit,
     aiStrategyUploadMiddleware,
     async (req, res) => {
       if (!AI_STRATEGY_API_KEY) {
@@ -1119,6 +1165,18 @@ function registerMetaAdminRoutes({
       }
       if (!files.length) {
         return res.status(400).json({ error: 'at least one pdf file required' });
+      }
+
+      if (institutionIdInput) {
+        const strategyCountRes = await query(
+          `select count(*)::int as total
+           from institution_strategies
+           where institution_id = $1`,
+          [institutionIdInput]
+        );
+        if (Number(strategyCountRes.rows?.[0]?.total || 0) >= STRATEGY_MAX_PER_INSTITUTION) {
+          return res.status(409).json({ error: 'strategy limit reached' });
+        }
       }
 
       let docs = [];
@@ -1168,7 +1226,7 @@ function registerMetaAdminRoutes({
             `select id, name, slug
              from institutions
              where id = $1
-             limit 1`,
+             for update`,
             [institutionIdInput]
           );
           if (!existingInstitution.rowCount) {
@@ -1193,6 +1251,8 @@ function registerMetaAdminRoutes({
             [institutionId, institutionName, institutionSlug]
           );
         }
+
+        await ensureStrategyCapacity(transactionClient, institutionId);
 
         const baseStrategySlug = slugify(strategySlugInput || finalStrategyTitle);
         if (!baseStrategySlug) {
@@ -1420,6 +1480,9 @@ function registerMetaAdminRoutes({
           await transactionClient.query('ROLLBACK');
         } catch {
           // ignore rollback errors
+        }
+        if (error?.message === 'strategy limit reached' || error?.code === 'STRATEGY_LIMIT_REACHED') {
+          return res.status(409).json({ error: 'strategy limit reached' });
         }
         throw error;
       } finally {

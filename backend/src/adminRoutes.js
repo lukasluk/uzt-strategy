@@ -15,6 +15,7 @@ function registerAdminRoutes({
   broadcast,
   uuid,
   adminWriteRateLimit,
+  strategyCreateRateLimit,
   trafficMonitor,
   crypto,
   hashPassword,
@@ -57,6 +58,9 @@ function registerAdminRoutes({
   const adminWriteGuard = typeof adminWriteRateLimit === 'function'
     ? adminWriteRateLimit
     : (_req, _res, next) => next();
+  const strategyCreateGuard = typeof strategyCreateRateLimit === 'function'
+    ? strategyCreateRateLimit
+    : (_req, _res, next) => next();
   const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 24 * 60);
   const PASSWORD_RESET_BASE_URL = String(process.env.PASSWORD_RESET_BASE_URL || '').trim();
   const INVITE_BASE_URL = String(process.env.INVITE_BASE_URL || PASSWORD_RESET_BASE_URL || '').trim();
@@ -81,6 +85,10 @@ function registerAdminRoutes({
   const AI_STRATEGY_MAX_COMBINED_TEXT_CHARS = Math.max(
     30000,
     Number(process.env.AI_STRATEGY_MAX_COMBINED_TEXT_CHARS || 120000)
+  );
+  const STRATEGY_MAX_PER_INSTITUTION = Math.max(
+    1,
+    Number(process.env.STRATEGY_MAX_PER_INSTITUTION || 5)
   );
 
   function resolveAbsoluteBase(req, configuredBase) {
@@ -355,6 +363,25 @@ function registerAdminRoutes({
     return { status: 500, error: 'internal server error' };
   }
 
+  async function countInstitutionStrategies(dbClient, institutionId) {
+    const result = await dbClient.query(
+      `select count(*)::int as total
+       from institution_strategies
+       where institution_id = $1`,
+      [institutionId]
+    );
+    return Number(result.rows?.[0]?.total || 0);
+  }
+
+  async function ensureStrategyCapacity(dbClient, institutionId) {
+    const total = await countInstitutionStrategies(dbClient, institutionId);
+    if (total >= STRATEGY_MAX_PER_INSTITUTION) {
+      const error = new Error('strategy limit reached');
+      error.code = 'STRATEGY_LIMIT_REACHED';
+      throw error;
+    }
+  }
+
   async function ensureUniqueStrategySlug(client, institutionId, baseSlug) {
     let slug = String(baseSlug || '').trim();
     if (!slug) slug = `strategy-${Date.now()}`;
@@ -510,7 +537,7 @@ function registerAdminRoutes({
     res.status(201).json({ inviteToken, inviteUrl, expiresAt, email, role });
   });
 
-  app.post('/api/v1/admin/strategies', requireAuth, adminWriteGuard, async (req, res) => {
+  app.post('/api/v1/admin/strategies', requireAuth, strategyCreateGuard, adminWriteGuard, async (req, res) => {
     if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
 
     const title = String(req.body?.title || '').trim();
@@ -521,48 +548,85 @@ function registerAdminRoutes({
     const normalizedSlug = slugify(requestedSlug || title);
     if (!normalizedSlug) return res.status(400).json({ error: 'invalid strategy slug' });
 
-    const existing = await query(
-      `select id
-       from institution_strategies
-       where institution_id = $1 and slug = $2`,
-      [req.auth.institutionId, normalizedSlug]
-    );
-    if (existing.rowCount > 0) return res.status(409).json({ error: 'strategy slug already exists' });
-
-    const defaultCheck = await query(
-      `select id
-       from institution_strategies
-       where institution_id = $1 and is_default = true
-       limit 1`,
-      [req.auth.institutionId]
-    );
-    const isDefault = defaultCheck.rowCount === 0;
-
     const strategyId = uuid();
     const cycleId = uuid();
-    await query(
-      `insert into institution_strategies (id, institution_id, title, slug, description, status, is_default)
-       values ($1, $2, $3, $4, $5, 'active', $6)`,
-      [
-        strategyId,
-        req.auth.institutionId,
-        title,
-        normalizedSlug,
-        description || null,
-        isDefault
-      ]
-    );
+    let isDefault = false;
+    const transactionClient = await pool.connect();
+    try {
+      await transactionClient.query('BEGIN');
 
-    await query(
-      `insert into strategy_cycles (id, institution_id, strategy_id, title, state, results_published, starts_at)
-       values ($1, $2, $3, $4, 'open', false, now())`,
-      [
-        cycleId,
-        req.auth.institutionId,
-        strategyId,
-        `${title} ciklas`
-      ]
-    );
+      const institutionRes = await transactionClient.query(
+        `select id
+         from institutions
+         where id = $1
+         for update`,
+        [req.auth.institutionId]
+      );
+      if (!institutionRes.rowCount) {
+        await transactionClient.query('ROLLBACK');
+        return res.status(404).json({ error: 'institution not found' });
+      }
+
+      await ensureStrategyCapacity(transactionClient, req.auth.institutionId);
+
+      const existing = await transactionClient.query(
+        `select id
+         from institution_strategies
+         where institution_id = $1 and slug = $2`,
+        [req.auth.institutionId, normalizedSlug]
+      );
+      if (existing.rowCount > 0) {
+        await transactionClient.query('ROLLBACK');
+        return res.status(409).json({ error: 'strategy slug already exists' });
+      }
+
+      const defaultCheck = await transactionClient.query(
+        `select id
+         from institution_strategies
+         where institution_id = $1 and is_default = true
+         limit 1`,
+        [req.auth.institutionId]
+      );
+      isDefault = defaultCheck.rowCount === 0;
+
+      await transactionClient.query(
+        `insert into institution_strategies (id, institution_id, title, slug, description, status, is_default)
+         values ($1, $2, $3, $4, $5, 'active', $6)`,
+        [
+          strategyId,
+          req.auth.institutionId,
+          title,
+          normalizedSlug,
+          description || null,
+          isDefault
+        ]
+      );
+
+      await transactionClient.query(
+        `insert into strategy_cycles (id, institution_id, strategy_id, title, state, results_published, starts_at)
+         values ($1, $2, $3, $4, 'open', false, now())`,
+        [
+          cycleId,
+          req.auth.institutionId,
+          strategyId,
+          `${title} ciklas`
+        ]
+      );
+
+      await transactionClient.query('COMMIT');
+    } catch (error) {
+      try {
+        await transactionClient.query('ROLLBACK');
+      } catch {
+        // ignore rollback errors
+      }
+      if (error?.message === 'strategy limit reached' || error?.code === 'STRATEGY_LIMIT_REACHED') {
+        return res.status(409).json({ error: 'strategy limit reached' });
+      }
+      throw error;
+    } finally {
+      transactionClient.release();
+    }
 
     broadcast({
       type: 'v1.strategy.created',
@@ -594,6 +658,7 @@ function registerAdminRoutes({
   app.post(
     '/api/v1/admin/strategies/ai-generate',
     requireAuth,
+    strategyCreateGuard,
     adminWriteGuard,
     aiStrategyUploadMiddleware,
     async (req, res) => {
@@ -615,6 +680,16 @@ function registerAdminRoutes({
       }
       if (!files.length) {
         return res.status(400).json({ error: 'at least one pdf file required' });
+      }
+
+      const strategyCountRes = await query(
+        `select count(*)::int as total
+         from institution_strategies
+         where institution_id = $1`,
+        [req.auth.institutionId]
+      );
+      if (Number(strategyCountRes.rows?.[0]?.total || 0) >= STRATEGY_MAX_PER_INSTITUTION) {
+        return res.status(409).json({ error: 'strategy limit reached' });
       }
 
       let docs = [];
@@ -671,6 +746,20 @@ function registerAdminRoutes({
           await transactionClient.query('ROLLBACK');
           return res.status(400).json({ error: 'invalid strategy slug' });
         }
+
+        const institutionLockRes = await transactionClient.query(
+          `select id
+           from institutions
+           where id = $1
+           for update`,
+          [req.auth.institutionId]
+        );
+        if (!institutionLockRes.rowCount) {
+          await transactionClient.query('ROLLBACK');
+          return res.status(404).json({ error: 'institution not found' });
+        }
+
+        await ensureStrategyCapacity(transactionClient, req.auth.institutionId);
         strategySlug = await ensureUniqueStrategySlug(transactionClient, req.auth.institutionId, baseStrategySlug);
 
         const defaultStrategyCheck = await transactionClient.query(
@@ -871,6 +960,9 @@ function registerAdminRoutes({
           await transactionClient.query('ROLLBACK');
         } catch {
           // ignore rollback errors
+        }
+        if (error?.message === 'strategy limit reached' || error?.code === 'STRATEGY_LIMIT_REACHED') {
+          return res.status(409).json({ error: 'strategy limit reached' });
         }
         throw error;
       } finally {

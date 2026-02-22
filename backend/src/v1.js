@@ -31,6 +31,12 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   const MEMBER_WRITE_RATE_LIMIT_MAX = Number(process.env.MEMBER_WRITE_RATE_LIMIT_MAX || 90);
   const ADMIN_WRITE_RATE_LIMIT_WINDOW_MS = Number(process.env.ADMIN_WRITE_RATE_LIMIT_WINDOW_MS || 60 * 1000);
   const ADMIN_WRITE_RATE_LIMIT_MAX = Number(process.env.ADMIN_WRITE_RATE_LIMIT_MAX || 120);
+  const STRATEGY_CREATE_RATE_LIMIT_WINDOW_MS = Number(
+    process.env.STRATEGY_CREATE_RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000
+  );
+  const STRATEGY_CREATE_RATE_LIMIT_MAX = Number(
+    process.env.STRATEGY_CREATE_RATE_LIMIT_MAX || 5
+  );
 
   const rateLimitConfig = {
     auth: {
@@ -53,6 +59,10 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     adminWrite: {
       windowMs: ADMIN_WRITE_RATE_LIMIT_WINDOW_MS,
       max: ADMIN_WRITE_RATE_LIMIT_MAX
+    },
+    strategyCreate: {
+      windowMs: STRATEGY_CREATE_RATE_LIMIT_WINDOW_MS,
+      max: STRATEGY_CREATE_RATE_LIMIT_MAX
     }
   };
 
@@ -111,6 +121,14 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     keyPrefix: 'admin-write',
     keyFn: (req) => `${resolveClientIp(req)}:${req.auth?.sub || 'unknown'}`,
     onBlocked: onBlocked('admin-write')
+  });
+
+  const strategyCreateRateLimit = createRateLimiter({
+    windowMs: STRATEGY_CREATE_RATE_LIMIT_WINDOW_MS,
+    max: STRATEGY_CREATE_RATE_LIMIT_MAX,
+    keyPrefix: 'strategy-create',
+    keyFn: (req) => `${resolveClientIp(req)}:${req.auth?.sub || 'unknown'}`,
+    onBlocked: onBlocked('strategy-create')
   });
 
   const {
@@ -236,6 +254,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     broadcast,
     uuid,
     adminWriteRateLimit,
+    strategyCreateRateLimit,
     trafficMonitor,
     crypto,
     hashPassword,
