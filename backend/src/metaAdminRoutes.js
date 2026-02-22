@@ -288,6 +288,31 @@ function registerMetaAdminRoutes({
     return String(value || '').trim().toLowerCase() === 'en' ? 'en' : 'lt';
   }
 
+  function mapAiGenerationError(error) {
+    const message = String(error?.message || '').trim() || 'internal server error';
+    if (
+      message === 'pdf parsing failed'
+      || message === 'pdf content too large'
+      || message === 'only pdf files allowed'
+      || message === 'pdf file too large'
+      || message === 'too many pdf files'
+      || message === 'documents upload failed'
+    ) {
+      return { status: 400, error: message };
+    }
+    if (
+      message === 'ai response invalid'
+      || message === 'generated guidelines missing'
+      || message === 'generated initiatives missing'
+    ) {
+      return { status: 422, error: message };
+    }
+    if (message.startsWith('ai provider error:')) {
+      return { status: 502, error: message };
+    }
+    return { status: 500, error: 'internal server error' };
+  }
+
   async function loadParentGuidelineCatalog() {
     const result = await query(
       `select g.id,
@@ -898,19 +923,26 @@ function registerMetaAdminRoutes({
         return res.status(400).json({ error: 'at least one pdf file required' });
       }
 
-      const docs = await extractPdfTexts(files, {
-        maxCombinedChars: AI_STRATEGY_MAX_COMBINED_TEXT_CHARS
-      });
+      let docs = [];
+      let generatedResult = null;
+      try {
+        docs = await extractPdfTexts(files, {
+          maxCombinedChars: AI_STRATEGY_MAX_COMBINED_TEXT_CHARS
+        });
 
-      const generatedResult = await generateStrategyFromAi({
-        apiKey: AI_STRATEGY_API_KEY,
-        model: AI_STRATEGY_MODEL,
-        baseUrl: AI_STRATEGY_API_BASE_URL,
-        instruction: clarification,
-        docs,
-        localeHint,
-        timeoutMs: AI_STRATEGY_TIMEOUT_MS
-      });
+        generatedResult = await generateStrategyFromAi({
+          apiKey: AI_STRATEGY_API_KEY,
+          model: AI_STRATEGY_MODEL,
+          baseUrl: AI_STRATEGY_API_BASE_URL,
+          instruction: clarification,
+          docs,
+          localeHint,
+          timeoutMs: AI_STRATEGY_TIMEOUT_MS
+        });
+      } catch (error) {
+        const mapped = mapAiGenerationError(error);
+        return res.status(mapped.status).json({ error: mapped.error });
+      }
 
       const generated = generatedResult.normalized;
       const finalStrategyTitle = strategyTitleInput
