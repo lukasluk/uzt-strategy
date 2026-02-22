@@ -527,6 +527,12 @@ body.embed-map-page .stage {
   align-items: center;
 }
 
+.strategy-switcher-create-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 38px;
+}
+
 .strategy-switcher-guide-btn {
   width: 100%;
   justify-content: center;
@@ -2862,6 +2868,81 @@ body.map-comment-modal-open {
   color: #355b8b;
   font-size: 13px;
 }
+
+.strategy-create-card {
+  width: min(720px, 94vw);
+}
+
+.strategy-create-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.strategy-create-form {
+  margin-top: 10px;
+}
+
+.strategy-create-form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.strategy-ai-progress {
+  margin-top: 12px;
+  border: 1px solid #c6d9f4;
+  border-radius: 14px;
+  background: #f7fbff;
+  padding: 10px;
+}
+
+.strategy-ai-progress-bar-shell {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid #9fc3ed;
+  background: #eaf3ff;
+  overflow: hidden;
+}
+
+.strategy-ai-progress-bar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #2f6fb8 0%, #3f8ee6 100%);
+  transition: width 0.25s ease;
+}
+
+.strategy-ai-progress-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.strategy-ai-step {
+  border: 1px solid #c7dbf4;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #4d6f97;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.strategy-ai-step.is-active {
+  border-color: #6fa2d7;
+  background: #eaf4ff;
+  color: #1f4e82;
+}
+
+.strategy-ai-step.is-done {
+  border-color: #86c6a2;
+  background: #e7f7ed;
+  color: #1f6b3f;
+}
 .error {
   color: #b33a2b;
   font-size: 13px;
@@ -4240,6 +4321,10 @@ select:focus {
 
   .strategy-switcher-utility-row {
     grid-template-columns: 1fr;
+  }
+
+  .strategy-ai-progress-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .strategy-switcher-card-topbar {

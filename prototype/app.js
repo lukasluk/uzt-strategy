@@ -510,6 +510,15 @@ function canEditMapLayout() {
   return Boolean(homeSlug && currentSlug && homeSlug === currentSlug);
 }
 
+function canManageSelectedInstitution() {
+  if (state.embedMapMode) return false;
+  if (!isAuthenticated()) return false;
+  if (state.role !== 'institution_admin') return false;
+  const homeSlug = normalizeSlug(state.accountContext?.institution?.slug);
+  const currentSlug = normalizeSlug(state.institutionSlug);
+  return Boolean(homeSlug && currentSlug && homeSlug === currentSlug);
+}
+
 function cycleIsWritable() {
   return WRITABLE_CYCLE_STATES.has(String(state.cycle?.state || '').toLowerCase());
 }
@@ -679,7 +688,20 @@ function toUserMessage(error) {
     'fullName too long': 'Vardas ir pavardė per ilgi.',
     'workEmail too long': 'El. paštas per ilgas.',
     'phone too long': 'Telefono numeris per ilgas.',
-    'notes too long': 'Papildoma informacija per ilga.'
+    'notes too long': 'Papildoma informacija per ilga.',
+    'ai api key not configured': 'AI API raktas nesukonfigūruotas serveryje.',
+    'clarification required': 'Nurodykite AI patikslinimą.',
+    'at least one pdf file required': 'Įkelkite bent vieną PDF failą.',
+    'only pdf files allowed': 'Leidžiami tik PDF failai.',
+    'pdf file too large': 'PDF failas per didelis.',
+    'too many pdf files': 'Įkelta per daug PDF failų.',
+    'pdf parsing failed': 'Nepavyko nuskaityti PDF turinio.',
+    'pdf content too large': 'PDF turinys per didelės apimties.',
+    'ai response invalid': 'AI atsakymas netinkamo formato.',
+    'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar kartą.',
+    'generated guidelines missing': 'AI nesugeneravo pakankamai gairių.',
+    'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvų.',
+    'documents upload failed': 'Nepavyko įkelti dokumentų.'
   };
   return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
@@ -710,7 +732,8 @@ function notifyInfo(message) {
 
 async function api(path, { method = 'GET', body = null, auth = true } = {}) {
   const headers = {};
-  if (body !== null) headers['Content-Type'] = 'application/json';
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== null && !isFormData) headers['Content-Type'] = 'application/json';
   if (auth === true) {
     if (!state.token) throw new Error('unauthorized');
     headers.Authorization = `Bearer ${state.token}`;
@@ -721,7 +744,9 @@ async function api(path, { method = 'GET', body = null, auth = true } = {}) {
   const response = await fetch(path, {
     method,
     headers,
-    body: body !== null ? JSON.stringify(body) : undefined
+    body: body === null
+      ? undefined
+      : (isFormData ? body : JSON.stringify(body))
   });
 
   const raw = await response.text();
@@ -1420,6 +1445,9 @@ function strategySwitcherCardMarkup(options = {}) {
   const strategyTitle = String(info?.strategyTitle || state.strategy?.title || state.strategySlug || '-').trim() || '-';
   const loading = state.loading && !state.institutionsLoaded;
   const dialogOpen = Boolean(state.strategySwitcherDialogOpen);
+  const showCreateStrategyAction = canManageSelectedInstitution();
+  const createButtonLabel = currentLanguage() === 'en' ? 'Create strategy' : 'Sukurti strategiją';
+  const guideButtonLabel = currentLanguage() === 'en' ? 'User guide' : 'Naudojimosi gidas';
 
   return `
     <div class="step-utility-card strategy-switcher-card ${topbar ? 'strategy-switcher-card-topbar' : ''} ${dialogOpen ? 'is-open' : ''}">
@@ -1445,8 +1473,11 @@ function strategySwitcherCardMarkup(options = {}) {
       <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>
         ${institutionSelectMarkup()}
         ${strategySelectMarkup()}
+        ${showCreateStrategyAction
+    ? `<button id="openStrategyCreateModalBtn" type="button" class="btn btn-primary strategy-switcher-create-btn">${escapeHtml(createButtonLabel)}</button>`
+    : ''}
         <div class="strategy-switcher-utility-row">
-          <button id="openGuideFromSwitcherBtn" type="button" class="btn btn-ghost strategy-switcher-guide-btn">Naudojimosi gidas</button>
+          <button id="openGuideFromSwitcherBtn" type="button" class="btn btn-ghost strategy-switcher-guide-btn">${escapeHtml(guideButtonLabel)}</button>
           <div class="step-utility-card-language strategy-switcher-language" data-language-switch></div>
         </div>
       </div>
@@ -1466,6 +1497,12 @@ function bindStrategySwitcherDialog(container) {
     guideButton.addEventListener('click', () => {
       state.strategySwitcherDialogOpen = false;
       setActiveView('guide');
+    });
+  }
+  const createStrategyButton = container.querySelector('#openStrategyCreateModalBtn');
+  if (createStrategyButton) {
+    createStrategyButton.addEventListener('click', () => {
+      showStrategyCreateModal();
     });
   }
 }
@@ -3269,6 +3306,339 @@ function showAuthModal(initialMode = 'login') {
       showError(toUserMessage(error));
     }
   });
+}
+
+function strategyCreateUiText() {
+  if (currentLanguage() === 'en') {
+    return {
+      title: 'Create strategy',
+      subtitle: 'Create a new strategy for the selected institution.',
+      close: 'Close',
+      manualTab: 'Manual',
+      aiTab: 'AI from PDF',
+      strategyTitle: 'Strategy title',
+      strategySlug: 'Strategy slug (optional)',
+      strategyDescription: 'Short description (optional)',
+      cycleTitle: 'Cycle title (optional)',
+      createManual: 'Create strategy',
+      localeHint: 'Result language',
+      clarification: 'AI clarification',
+      clarificationPlaceholder: 'Scope, tone, priorities, constraints.',
+      documents: 'PDF documents',
+      createAi: 'Generate strategy with AI',
+      progressTitle: 'AI generation in progress',
+      progressUploading: 'uploading information',
+      progressAnalyses: 'AI analyses',
+      progressPreparing: 'preparing digistrategy.eu format',
+      progressDone: 'done',
+      successManual: 'Strategy created:',
+      successAi: 'AI generated strategy:'
+    };
+  }
+  return {
+    title: 'Sukurti strategiją',
+    subtitle: 'Sukurkite naują strategiją pasirinktai institucijai.',
+    close: 'Uždaryti',
+    manualTab: 'Rankinis',
+    aiTab: 'AI iš PDF',
+    strategyTitle: 'Strategijos pavadinimas',
+    strategySlug: 'Strategijos slug (nebūtina)',
+    strategyDescription: 'Trumpas aprašymas (nebūtina)',
+    cycleTitle: 'Ciklo pavadinimas (nebūtina)',
+    createManual: 'Sukurti strategiją',
+    localeHint: 'Rezultato kalba',
+    clarification: 'AI patikslinimas',
+    clarificationPlaceholder: 'Koks lygis, tonas, prioritetai, ko vengti.',
+    documents: 'PDF dokumentai',
+    createAi: 'Generuoti strategiją su AI',
+    progressTitle: 'AI generavimas vyksta',
+    progressUploading: 'uploading information',
+    progressAnalyses: 'AI analyses',
+    progressPreparing: 'preparing digistrategy.eu format',
+    progressDone: 'done',
+    successManual: 'Strategija sukurta:',
+    successAi: 'AI sugeneravo strategiją:'
+  };
+}
+
+function strategyCreateProgressMarkup(ui) {
+  return `
+    <div id="strategyAiProgress" class="strategy-ai-progress" hidden>
+      <div class="header-row" style="margin-bottom:6px;">
+        <strong>${escapeHtml(ui.progressTitle)}</strong>
+        <span class="tag" id="strategyAiProgressCurrent">${escapeHtml(ui.progressUploading)}</span>
+      </div>
+      <div class="strategy-ai-progress-bar-shell">
+        <div id="strategyAiProgressBar" class="strategy-ai-progress-bar" style="width: 0%;"></div>
+      </div>
+      <div class="strategy-ai-progress-steps">
+        <span id="strategyAiStep1" class="strategy-ai-step">${escapeHtml(ui.progressUploading)}</span>
+        <span id="strategyAiStep2" class="strategy-ai-step">${escapeHtml(ui.progressAnalyses)}</span>
+        <span id="strategyAiStep3" class="strategy-ai-step">${escapeHtml(ui.progressPreparing)}</span>
+        <span id="strategyAiStep4" class="strategy-ai-step">${escapeHtml(ui.progressDone)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function startStrategyAiProgress(overlay, ui) {
+  const root = overlay.querySelector('#strategyAiProgress');
+  const bar = overlay.querySelector('#strategyAiProgressBar');
+  const current = overlay.querySelector('#strategyAiProgressCurrent');
+  const steps = [
+    overlay.querySelector('#strategyAiStep1'),
+    overlay.querySelector('#strategyAiStep2'),
+    overlay.querySelector('#strategyAiStep3'),
+    overlay.querySelector('#strategyAiStep4')
+  ];
+  if (!(root instanceof HTMLElement)) return null;
+  root.hidden = false;
+
+  const labels = [
+    ui.progressUploading,
+    ui.progressAnalyses,
+    ui.progressPreparing,
+    ui.progressDone
+  ];
+  const thresholds = [0, 1600, 3400, 5000];
+  const startedAt = Date.now();
+
+  const applyStepState = (activeIndex) => {
+    steps.forEach((node, index) => {
+      if (!(node instanceof HTMLElement)) return;
+      node.classList.toggle('is-active', index === activeIndex);
+      node.classList.toggle('is-done', index < activeIndex);
+    });
+    if (current instanceof HTMLElement) {
+      current.textContent = labels[activeIndex] || labels[0];
+    }
+  };
+
+  applyStepState(0);
+
+  const tick = () => {
+    const elapsed = Date.now() - startedAt;
+    const percent = Math.min(95, Math.max(0, (elapsed / 5000) * 95));
+    if (bar instanceof HTMLElement) {
+      bar.style.width = `${percent.toFixed(1)}%`;
+    }
+    let activeStep = 0;
+    if (elapsed >= thresholds[2]) activeStep = 2;
+    else if (elapsed >= thresholds[1]) activeStep = 1;
+    applyStepState(activeStep);
+  };
+
+  tick();
+  const timerId = window.setInterval(tick, 120);
+
+  return {
+    startedAt,
+    complete: async () => {
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, 5000 - elapsed);
+      if (remaining > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, remaining));
+      }
+      window.clearInterval(timerId);
+      applyStepState(3);
+      if (bar instanceof HTMLElement) bar.style.width = '100%';
+    },
+    fail: () => {
+      window.clearInterval(timerId);
+      root.hidden = true;
+    }
+  };
+}
+
+function showStrategyCreateModal() {
+  if (!canManageSelectedInstitution()) {
+    notifyError(currentLanguage() === 'en'
+      ? 'Only institution admin can create strategies in selected institution.'
+      : 'Strategijas šioje institucijoje gali kurti tik institucijos administratorius.');
+    return;
+  }
+
+  const ui = strategyCreateUiText();
+  let overlay = document.getElementById('strategyCreateOverlay');
+  if (overlay) overlay.remove();
+
+  overlay = document.createElement('div');
+  overlay.id = 'strategyCreateOverlay';
+  overlay.className = 'login-overlay';
+  overlay.innerHTML = `
+    <div class="login-card strategy-create-card">
+      <div class="header-row" style="margin-bottom: 8px;">
+        <h2>${escapeHtml(ui.title)}</h2>
+        <button id="closeStrategyCreateModal" class="btn btn-ghost" type="button">${escapeHtml(ui.close)}</button>
+      </div>
+      <p class="prompt auth-hint">${escapeHtml(ui.subtitle)}</p>
+      <div id="strategyCreateError" class="error" style="display:none;"></div>
+
+      <div class="strategy-create-mode-tabs">
+        <button type="button" class="btn btn-ghost strategy-create-tab is-active" data-mode="manual">${escapeHtml(ui.manualTab)}</button>
+        <button type="button" class="btn btn-ghost strategy-create-tab" data-mode="ai">${escapeHtml(ui.aiTab)}</button>
+      </div>
+
+      <form id="strategyCreateManualForm" class="login-form login-form-auth strategy-create-form">
+        <label class="auth-label" for="strategyCreateTitle">${escapeHtml(ui.strategyTitle)}</label>
+        <input id="strategyCreateTitle" type="text" name="title" required />
+        <label class="auth-label" for="strategyCreateSlug">${escapeHtml(ui.strategySlug)}</label>
+        <input id="strategyCreateSlug" type="text" name="slug" />
+        <label class="auth-label" for="strategyCreateDescription">${escapeHtml(ui.strategyDescription)}</label>
+        <textarea id="strategyCreateDescription" name="description" rows="4"></textarea>
+        <button class="btn btn-primary" type="submit">${escapeHtml(ui.createManual)}</button>
+      </form>
+
+      <form id="strategyCreateAiForm" class="login-form login-form-auth strategy-create-form" enctype="multipart/form-data" hidden>
+        <label class="auth-label" for="strategyAiTitle">${escapeHtml(ui.strategyTitle)}</label>
+        <input id="strategyAiTitle" type="text" name="strategyTitle" />
+        <label class="auth-label" for="strategyAiSlug">${escapeHtml(ui.strategySlug)}</label>
+        <input id="strategyAiSlug" type="text" name="strategySlug" />
+        <label class="auth-label" for="strategyAiCycleTitle">${escapeHtml(ui.cycleTitle)}</label>
+        <input id="strategyAiCycleTitle" type="text" name="cycleTitle" />
+        <label class="auth-label" for="strategyAiLocale">${escapeHtml(ui.localeHint)}</label>
+        <select id="strategyAiLocale" name="localeHint">
+          <option value="lt">LT</option>
+          <option value="en">EN</option>
+        </select>
+        <label class="auth-label" for="strategyAiClarification">${escapeHtml(ui.clarification)}</label>
+        <textarea id="strategyAiClarification" name="clarification" rows="4" placeholder="${escapeHtml(ui.clarificationPlaceholder)}" required></textarea>
+        <label class="auth-label" for="strategyAiDocs">${escapeHtml(ui.documents)}</label>
+        <input id="strategyAiDocs" type="file" name="documents" accept="application/pdf,.pdf" multiple required />
+        <button class="btn btn-primary" type="submit">${escapeHtml(ui.createAi)}</button>
+      </form>
+
+      ${strategyCreateProgressMarkup(ui)}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeButton = overlay.querySelector('#closeStrategyCreateModal');
+  const errorNode = overlay.querySelector('#strategyCreateError');
+  const tabButtons = Array.from(overlay.querySelectorAll('.strategy-create-tab'));
+  const manualForm = overlay.querySelector('#strategyCreateManualForm');
+  const aiForm = overlay.querySelector('#strategyCreateAiForm');
+
+  const closeModal = () => {
+    const current = document.getElementById('strategyCreateOverlay');
+    if (current) current.remove();
+  };
+
+  const setError = (message) => {
+    if (!(errorNode instanceof HTMLElement)) return;
+    const text = String(message || '').trim();
+    errorNode.textContent = text;
+    errorNode.style.display = text ? 'block' : 'none';
+  };
+
+  const setMode = (mode) => {
+    const next = mode === 'ai' ? 'ai' : 'manual';
+    tabButtons.forEach((button) => {
+      const active = String(button.dataset.mode || '') === next;
+      button.classList.toggle('is-active', active);
+      button.classList.toggle('btn-primary', active);
+      button.classList.toggle('btn-ghost', !active);
+    });
+    if (manualForm instanceof HTMLElement) manualForm.hidden = next !== 'manual';
+    if (aiForm instanceof HTMLElement) aiForm.hidden = next !== 'ai';
+    setError('');
+  };
+
+  const syncCreatedStrategy = async (strategySlug) => {
+    const nextSlug = normalizeSlug(strategySlug);
+    if (!nextSlug) return;
+    state.strategySlug = nextSlug;
+    state.strategy = null;
+    state.strategySwitcherDialogOpen = false;
+    syncRouteState();
+    if (isAuthenticated() && !state.embedMapMode) {
+      try {
+        await switchInstitutionSession(state.institutionSlug, nextSlug);
+      } catch (error) {
+        const raw = String(error?.message || '').toLowerCase();
+        if (raw === 'invalid token' || raw === 'unauthorized') {
+          clearSession();
+        }
+      }
+    }
+  };
+
+  closeButton?.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeModal();
+  });
+
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      setMode(String(button.dataset.mode || 'manual'));
+    });
+  });
+
+  manualForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    setError('');
+    const submitButton = manualForm.querySelector('button[type="submit"]');
+    if (!(submitButton instanceof HTMLButtonElement)) return;
+    submitButton.disabled = true;
+    try {
+      const fd = new FormData(manualForm);
+      const title = String(fd.get('title') || '').trim();
+      const slug = String(fd.get('slug') || '').trim();
+      const description = String(fd.get('description') || '').trim();
+      if (!title) return;
+
+      const payload = await api('/api/v1/admin/strategies', {
+        method: 'POST',
+        body: { title, slug, description }
+      });
+      await syncCreatedStrategy(payload?.strategy?.slug);
+      await bootstrap();
+      notifySuccess(`${ui.successManual} ${String(payload?.strategy?.title || title).trim()}`);
+      closeModal();
+    } catch (error) {
+      const message = toUserMessage(error);
+      setError(message);
+      notifyError(message);
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+
+  aiForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    setError('');
+    const submitButton = aiForm.querySelector('button[type="submit"]');
+    if (!(submitButton instanceof HTMLButtonElement)) return;
+    submitButton.disabled = true;
+    const progress = startStrategyAiProgress(overlay, ui);
+    try {
+      const fd = new FormData(aiForm);
+      const files = fd.getAll('documents').filter((file) => file instanceof File && file.size > 0);
+      if (!files.length) throw new Error('at least one pdf file required');
+
+      const payloadPromise = api('/api/v1/admin/strategies/ai-generate', {
+        method: 'POST',
+        body: fd
+      });
+      const payload = await payloadPromise;
+      if (progress) {
+        await progress.complete();
+      }
+      await syncCreatedStrategy(payload?.strategy?.slug);
+      await bootstrap();
+      notifySuccess(`${ui.successAi} ${String(payload?.strategy?.title || '-').trim() || '-'}`);
+      closeModal();
+    } catch (error) {
+      if (progress) progress.fail();
+      const message = toUserMessage(error);
+      setError(message);
+      notifyError(message);
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+
+  setMode('manual');
 }
 
 function accessRequestUiText() {
