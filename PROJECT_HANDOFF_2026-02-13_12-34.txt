@@ -209,6 +209,26 @@ After deploying this update:
   - generated invite URL opens accept-invite page
   - accept page creates password + display name + email validation
 
+==================================================
+10) CRITICAL PRODUCTION-SAFETY NOTE (2026-02-22)
+==================================================
+Platform is actively used in production. Any deployment that touches strategy-creation logic
+MUST follow extra caution:
+
+- Always run deploy/deploy.sh (never partial manual overwrite).
+- Confirm DB backup path printed by deploy script before continuing.
+- Run health checks immediately after deploy:
+  - curl -fsS http://127.0.0.1:3000/api/v1/health
+  - curl -fsS https://digistrategy.eu/api/v1/health
+- Validate one read path and one write path in production UI/API.
+- If migration/health fails, stop and rollback via release backup.
+
+New feature safety requirement:
+- AI-assisted strategy generation MUST create only new strategy/cycle data and must not mutate existing data.
+- Keep strict upload limits and input validation enabled.
+- Upload parser upgraded to multer@2.x for safer dependency baseline.
+- Default AI model for PDF strategy generation set to gpt-5-mini (override via AI_STRATEGY_MODEL).
+
 END OF HANDOFF
 
 

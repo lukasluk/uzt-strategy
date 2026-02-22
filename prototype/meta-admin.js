@@ -12,6 +12,7 @@ const state = {
   membershipAddTargetUserId: '',
   lastInvite: null,
   lastPasswordReset: null,
+  lastAiGeneration: null,
   guidelineLinksInstitutionFilter: '',
   guidelineLinksStrategyFilter: '',
   guidelineLinksSearch: '',
@@ -88,7 +89,26 @@ function toUserMessage(error) {
     'phone too long': 'Telefono numeris per ilgas.',
     'notes too long': 'Papildoma informacija per ilga.',
     'requestId and valid status required': 'Netinkami uzklausos statuso duomenys.',
-    'access request not found': 'Prieigos uzklausa nerasta.'
+    'access request not found': 'Prieigos uzklausa nerasta.',
+    'ai api key not configured': 'Serveris dar nesukonfiguruotas AI integracijai (truksta API rakto).',
+    'institutionId or institutionName required': 'Pasirinkite esama institucija arba iveskite naujos institucijos pavadinima.',
+    'clarification required': 'Iveskite patikslinima, ko norite is AI.',
+    'at least one pdf file required': 'Ikelkite bent viena PDF faila.',
+    'only pdf files allowed': 'Leidziami tik PDF failai.',
+    'pdf file too large': 'PDF failas per didelis.',
+    'too many pdf files': 'Per daug PDF failu vienu metu.',
+    'documents upload failed': 'Nepavyko ikelti dokumentu.',
+    'pdf parsing failed': 'Nepavyko perskaityti PDF failo turinio.',
+    'pdf content too large': 'Bendras PDF turinys per didelis vienai generacijai.',
+    'ai response invalid': 'AI atsakymas negalioja. Pabandykite patikslinti uzklausa.',
+    'generated guidelines missing': 'AI negrazino gairiu. Pabandykite su kitokiu patikslinimu.',
+    'generated initiatives missing': 'AI negrazino iniciatyvu. Pabandykite su kitokiu patikslinimu.',
+    'invalid institution slug': 'Nepavyko sugeneruoti institucijos kodo is pavadinimo.',
+    'invalid strategy slug': 'Nepavyko sugeneruoti strategijos kodo is pavadinimo.',
+    'ai provider error: HTTP 401': 'AI tiekejas atmete API rakta (401).',
+    'ai provider error: HTTP 403': 'AI tiekejas atmete prieiga (403).',
+    'ai provider error: HTTP 429': 'AI tiekejas laikinai riboja uzklausas (429).',
+    'ai provider error: HTTP 500': 'AI tiekejas laikinai nepasiekiamas (500).'
   };
   return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
 }
@@ -122,13 +142,16 @@ function setNotice(message, type = 'success') {
 
 async function api(path, { method = 'GET', body = null } = {}) {
   const headers = {};
-  if (body !== null) headers['Content-Type'] = 'application/json';
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== null && !isFormData) headers['Content-Type'] = 'application/json';
 
   const response = await fetch(path, {
     method,
     headers,
     credentials: 'same-origin',
-    body: body !== null ? JSON.stringify(body) : undefined
+    body: body === null
+      ? undefined
+      : (isFormData ? body : JSON.stringify(body))
   });
 
   const raw = await response.text();
@@ -951,6 +974,53 @@ function renderDashboard() {
 
       <section class="card meta-admin-card" data-meta-section="institutions">
         <div class="header-row">
+          <strong>AI strategija is PDF</strong>
+          ${renderTag('Atsargiai: kuria nauja strategija', 'scope')}
+        </div>
+        <p class="prompt">Meta-admin gali ikelti PDF dokumentus ir sugeneruoti nauja strategija su gairiu/iniciatyvu struktura. Esami duomenys neperrasomi.</p>
+        <form id="createAiStrategyForm" class="meta-admin-form meta-ai-create-form" enctype="multipart/form-data">
+          <div class="form-row">
+            <select name="institutionId" ${state.busy ? 'disabled' : ''}>
+              <option value="">Sukurti naujai institucijai (zemiau)</option>
+              ${institutions.map((institution) => `<option value="${escapeHtml(institution.id)}">${escapeHtml(institution.name)} (${escapeHtml(institution.slug)})</option>`).join('')}
+            </select>
+            <input type="text" name="institutionName" placeholder="Naujos institucijos pavadinimas (jei nepasirinkta auksciau)" ${state.busy ? 'disabled' : ''}/>
+          </div>
+          <div class="form-row">
+            <input type="text" name="strategyTitle" placeholder="Strategijos pavadinimas (nebutina, AI gali sugeneruoti)" ${state.busy ? 'disabled' : ''}/>
+            <input type="text" name="strategySlug" placeholder="Strategijos slug (nebūtina)" ${state.busy ? 'disabled' : ''}/>
+          </div>
+          <div class="form-row">
+            <input type="text" name="cycleTitle" placeholder="Ciklo pavadinimas (nebūtina)" ${state.busy ? 'disabled' : ''}/>
+            <select name="localeHint" ${state.busy ? 'disabled' : ''}>
+              <option value="lt">LT rezultatas</option>
+              <option value="en">EN result</option>
+            </select>
+          </div>
+          <textarea
+            name="clarification"
+            rows="4"
+            placeholder="Patikslinimas AI: kokio lygio, kokio tono, kokie prioritetai, ko vengti."
+            required
+            ${state.busy ? 'disabled' : ''}
+          ></textarea>
+          <div class="form-row">
+            <input type="file" name="documents" accept="application/pdf,.pdf" multiple required ${state.busy ? 'disabled' : ''}/>
+          </div>
+          <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Generuoti strategija su AI</button>
+        </form>
+        ${state.lastAiGeneration?.strategy?.id ? `
+          <div class="card meta-admin-subcard meta-ai-result-card" style="margin-top: 12px;">
+            <strong>Paskutine AI generacija</strong>
+            <p class="prompt" style="margin:6px 0 0;">Institucija: ${escapeHtml(state.lastAiGeneration?.institution?.name || '-')} (${escapeHtml(state.lastAiGeneration?.institution?.slug || '-')})</p>
+            <p class="prompt" style="margin:2px 0 0;">Strategija: ${escapeHtml(state.lastAiGeneration?.strategy?.title || '-')} (${escapeHtml(state.lastAiGeneration?.strategy?.slug || '-')})</p>
+            <p class="prompt" style="margin:2px 0 0;">Sukurta: gairiu ${escapeHtml(state.lastAiGeneration?.summary?.guidelines || 0)}, iniciatyvu ${escapeHtml(state.lastAiGeneration?.summary?.initiatives || 0)}, failu ${escapeHtml(state.lastAiGeneration?.summary?.sourceFiles || 0)}</p>
+          </div>
+        ` : ''}
+      </section>
+
+      <section class="card meta-admin-card" data-meta-section="institutions">
+        <div class="header-row">
           <strong>Esamos institucijos</strong>
           ${renderTag(String(institutions.length), 'count')}
         </div>
@@ -1084,6 +1154,7 @@ function bindDashboardEvents() {
   const refreshBtn = document.getElementById('refreshOverviewBtn');
   const logoutBtn = document.getElementById('logoutMetaBtn');
   const createInstitutionForm = document.getElementById('createInstitutionForm');
+  const createAiStrategyForm = document.getElementById('createAiStrategyForm');
   const createInviteForm = document.getElementById('createInviteForm');
   const createGuidelineLinkForm = document.getElementById('createGuidelineLinkForm');
   const guidelineLinksFilterForm = document.getElementById('guidelineLinksFilterForm');
@@ -1140,6 +1211,30 @@ function bindDashboardEvents() {
         setNotice('Institucija sukurta.');
         await loadOverview();
         createInstitutionForm.reset();
+      });
+    });
+  }
+
+  if (createAiStrategyForm) {
+    createAiStrategyForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fd = new FormData(createAiStrategyForm);
+      const institutionId = String(fd.get('institutionId') || '').trim();
+      const institutionName = String(fd.get('institutionName') || '').trim();
+      const clarification = String(fd.get('clarification') || '').trim();
+      const files = fd.getAll('documents').filter((file) => file instanceof File && file.size > 0);
+      if (!institutionId && !institutionName) return;
+      if (!clarification || !files.length) return;
+
+      await runBusy(async () => {
+        const payload = await api('/api/v1/meta-admin/strategies/ai-generate', {
+          method: 'POST',
+          body: fd
+        });
+        state.lastAiGeneration = payload;
+        setNotice('AI sugeneravo ir issaugojo nauja strategija.');
+        await loadOverview();
+        createAiStrategyForm.reset();
       });
     });
   }

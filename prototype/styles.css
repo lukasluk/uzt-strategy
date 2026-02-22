@@ -4669,6 +4669,22 @@ body.meta-admin-page .stage {
   gap: 8px;
 }
 
+.meta-ai-create-form textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.meta-ai-create-form input[type="file"] {
+  padding: 10px;
+  border: 1px dashed #b4cceb;
+  border-radius: 12px;
+  background: #f7fbff;
+}
+
+.meta-ai-result-card {
+  border-style: dashed;
+}
+
 .meta-guideline-links-filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 1.4fr) auto auto;

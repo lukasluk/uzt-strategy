@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const multer = require('multer');
 const {
   createAuthToken,
   createRateLimiter,
@@ -22,6 +23,11 @@ const {
   createPasswordResetToken,
   ensurePasswordResetTable
 } = require('./passwordResetService');
+const { pool } = require('./db');
+const {
+  extractPdfTexts,
+  generateStrategyFromAi
+} = require('./aiStrategyService');
 
 function registerMetaAdminRoutes({
   app,
@@ -48,6 +54,28 @@ function registerMetaAdminRoutes({
   const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 60);
   const PASSWORD_RESET_BASE_URL = String(process.env.PASSWORD_RESET_BASE_URL || '').trim();
   const INVITE_BASE_URL = String(process.env.INVITE_BASE_URL || PASSWORD_RESET_BASE_URL || '').trim();
+  const AI_STRATEGY_API_KEY = String(
+    process.env.AI_STRATEGY_API_KEY
+    || process.env.OPENAI_API_KEY
+    || ''
+  ).trim();
+  const AI_STRATEGY_MODEL = String(
+    process.env.AI_STRATEGY_MODEL
+    || process.env.OPENAI_MODEL
+    || 'gpt-5-mini'
+  ).trim();
+  const AI_STRATEGY_API_BASE_URL = String(
+    process.env.AI_STRATEGY_API_BASE_URL
+    || process.env.OPENAI_API_BASE_URL
+    || 'https://api.openai.com/v1'
+  ).trim();
+  const AI_STRATEGY_TIMEOUT_MS = Math.max(15000, Number(process.env.AI_STRATEGY_TIMEOUT_MS || 120000));
+  const AI_STRATEGY_MAX_FILES = Math.min(8, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILES || 4)));
+  const AI_STRATEGY_MAX_FILE_MB = Math.min(20, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILE_MB || 8)));
+  const AI_STRATEGY_MAX_COMBINED_TEXT_CHARS = Math.max(
+    30000,
+    Number(process.env.AI_STRATEGY_MAX_COMBINED_TEXT_CHARS || 120000)
+  );
 
   const metaAdminAuthConfigured = Boolean(META_ADMIN_PASSWORD_HASH)
     || (ALLOW_LEGACY_META_ADMIN_PASSWORD && Boolean(META_ADMIN_PASSWORD));
@@ -189,6 +217,75 @@ function registerMetaAdminRoutes({
     const inviteUrl = buildInviteAcceptUrl(req, inviteToken);
     const expiresAt = new Date(Date.now() + inviteTtlHours * 60 * 60 * 1000).toISOString();
     return { inviteId, inviteToken, inviteUrl, expiresAt, email, role };
+  }
+
+  const aiStrategyUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      files: AI_STRATEGY_MAX_FILES,
+      fileSize: AI_STRATEGY_MAX_FILE_MB * 1024 * 1024
+    },
+    fileFilter: (_req, file, done) => {
+      const name = String(file?.originalname || '').toLowerCase();
+      const mime = String(file?.mimetype || '').toLowerCase();
+      const isPdf = name.endsWith('.pdf') || mime.includes('pdf');
+      if (!isPdf) {
+        return done(new Error('only pdf files allowed'));
+      }
+      return done(null, true);
+    }
+  });
+
+  function aiStrategyUploadMiddleware(req, res, next) {
+    aiStrategyUpload.array('documents', AI_STRATEGY_MAX_FILES)(req, res, (error) => {
+      if (!error) return next();
+      if (error?.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'pdf file too large' });
+      }
+      if (error?.code === 'LIMIT_FILE_COUNT') {
+        return res.status(400).json({ error: 'too many pdf files' });
+      }
+      return res.status(400).json({ error: error?.message || 'documents upload failed' });
+    });
+  }
+
+  async function ensureUniqueInstitutionSlug(client, baseSlug) {
+    let slug = String(baseSlug || '').trim();
+    if (!slug) slug = `institution-${Date.now()}`;
+    let attempt = slug;
+    let suffix = 2;
+    while (true) {
+      const exists = await client.query(
+        'select id from institutions where slug = $1 limit 1',
+        [attempt]
+      );
+      if (!exists.rowCount) return attempt;
+      attempt = `${slug}-${suffix}`;
+      suffix += 1;
+    }
+  }
+
+  async function ensureUniqueStrategySlug(client, institutionId, baseSlug) {
+    let slug = String(baseSlug || '').trim();
+    if (!slug) slug = `strategy-${Date.now()}`;
+    let attempt = slug;
+    let suffix = 2;
+    while (true) {
+      const exists = await client.query(
+        `select id
+         from institution_strategies
+         where institution_id = $1 and slug = $2
+         limit 1`,
+        [institutionId, attempt]
+      );
+      if (!exists.rowCount) return attempt;
+      attempt = `${slug}-${suffix}`;
+      suffix += 1;
+    }
+  }
+
+  function normalizeLocaleHint(value) {
+    return String(value || '').trim().toLowerCase() === 'en' ? 'en' : 'lt';
   }
 
   async function loadParentGuidelineCatalog() {
@@ -771,6 +868,306 @@ function registerMetaAdminRoutes({
       }
     });
   });
+
+  app.post(
+    '/api/v1/meta-admin/strategies/ai-generate',
+    requireMetaAdminSession,
+    aiStrategyUploadMiddleware,
+    async (req, res) => {
+      if (!AI_STRATEGY_API_KEY) {
+        return res.status(503).json({ error: 'ai api key not configured' });
+      }
+
+      const institutionIdInput = String(req.body?.institutionId || '').trim();
+      const institutionNameInput = String(req.body?.institutionName || '').trim();
+      const strategyTitleInput = String(req.body?.strategyTitle || '').trim();
+      const strategySlugInput = String(req.body?.strategySlug || '').trim();
+      const strategyDescriptionInput = String(req.body?.strategyDescription || '').trim();
+      const cycleTitleInput = String(req.body?.cycleTitle || '').trim();
+      const clarification = String(req.body?.clarification || '').trim();
+      const localeHint = normalizeLocaleHint(req.body?.localeHint || 'lt');
+      const files = Array.isArray(req.files) ? req.files : [];
+
+      if (!institutionIdInput && !institutionNameInput) {
+        return res.status(400).json({ error: 'institutionId or institutionName required' });
+      }
+      if (!clarification) {
+        return res.status(400).json({ error: 'clarification required' });
+      }
+      if (!files.length) {
+        return res.status(400).json({ error: 'at least one pdf file required' });
+      }
+
+      const docs = await extractPdfTexts(files, {
+        maxCombinedChars: AI_STRATEGY_MAX_COMBINED_TEXT_CHARS
+      });
+
+      const generatedResult = await generateStrategyFromAi({
+        apiKey: AI_STRATEGY_API_KEY,
+        model: AI_STRATEGY_MODEL,
+        baseUrl: AI_STRATEGY_API_BASE_URL,
+        instruction: clarification,
+        docs,
+        localeHint,
+        timeoutMs: AI_STRATEGY_TIMEOUT_MS
+      });
+
+      const generated = generatedResult.normalized;
+      const finalStrategyTitle = strategyTitleInput
+        || generated.strategyTitle
+        || `AI strategija ${new Date().toISOString().slice(0, 10)}`;
+      const finalCycleTitle = cycleTitleInput
+        || generated.cycleTitle
+        || `${finalStrategyTitle} ciklas`;
+      const strategyDescription = strategyDescriptionInput
+        || generated.strategyDescription
+        || clarification;
+
+      const transactionClient = await pool.connect();
+      let institutionId = '';
+      let institutionName = '';
+      let institutionSlug = '';
+      let strategyId = '';
+      let strategySlug = '';
+      let cycleId = '';
+      try {
+        await transactionClient.query('BEGIN');
+
+        if (institutionIdInput) {
+          const existingInstitution = await transactionClient.query(
+            `select id, name, slug
+             from institutions
+             where id = $1
+             limit 1`,
+            [institutionIdInput]
+          );
+          if (!existingInstitution.rowCount) {
+            await transactionClient.query('ROLLBACK');
+            return res.status(404).json({ error: 'institution not found' });
+          }
+          institutionId = existingInstitution.rows[0].id;
+          institutionName = existingInstitution.rows[0].name;
+          institutionSlug = existingInstitution.rows[0].slug;
+        } else {
+          const baseInstitutionSlug = slugify(institutionNameInput);
+          if (!baseInstitutionSlug) {
+            await transactionClient.query('ROLLBACK');
+            return res.status(400).json({ error: 'invalid institution slug' });
+          }
+          institutionId = uuid();
+          institutionName = institutionNameInput;
+          institutionSlug = await ensureUniqueInstitutionSlug(transactionClient, baseInstitutionSlug);
+          await transactionClient.query(
+            `insert into institutions (id, name, slug, status)
+             values ($1, $2, $3, 'active')`,
+            [institutionId, institutionName, institutionSlug]
+          );
+        }
+
+        const baseStrategySlug = slugify(strategySlugInput || finalStrategyTitle);
+        if (!baseStrategySlug) {
+          await transactionClient.query('ROLLBACK');
+          return res.status(400).json({ error: 'invalid strategy slug' });
+        }
+
+        strategySlug = await ensureUniqueStrategySlug(transactionClient, institutionId, baseStrategySlug);
+        const defaultStrategyCheck = await transactionClient.query(
+          `select id
+           from institution_strategies
+           where institution_id = $1 and is_default = true
+           limit 1`,
+          [institutionId]
+        );
+        const isDefault = defaultStrategyCheck.rowCount === 0;
+
+        strategyId = uuid();
+        await transactionClient.query(
+          `insert into institution_strategies (id, institution_id, title, slug, description, status, is_default)
+           values ($1, $2, $3, $4, $5, 'active', $6)`,
+          [strategyId, institutionId, finalStrategyTitle, strategySlug, strategyDescription || null, isDefault]
+        );
+
+        cycleId = uuid();
+        await transactionClient.query(
+          `insert into strategy_cycles (
+             id, institution_id, strategy_id, title, state, results_published, starts_at, mission_text, vision_text
+           )
+           values ($1, $2, $3, $4, 'open', false, now(), $5, $6)`,
+          [cycleId, institutionId, strategyId, finalCycleTitle, generated.missionText || null, generated.visionText || null]
+        );
+
+        const guidelineIdByTitle = new Map();
+        const childGuidelines = [];
+        for (const guideline of generated.guidelines) {
+          const guidelineId = uuid();
+          await transactionClient.query(
+            `insert into strategy_guidelines (
+               id, cycle_id, title, description, status, line_side, relation_type, parent_guideline_id, created_by
+             )
+             values ($1, $2, $3, $4, 'active', 'auto', $5, null, null)`,
+            [
+              guidelineId,
+              cycleId,
+              guideline.title,
+              guideline.description || null,
+              guideline.relationType
+            ]
+          );
+          guidelineIdByTitle.set(String(guideline.title || '').trim().toLowerCase(), guidelineId);
+          if (guideline.relationType === 'child' && guideline.parentTitle) {
+            childGuidelines.push({
+              id: guidelineId,
+              parentTitle: guideline.parentTitle
+            });
+          }
+        }
+
+        for (const child of childGuidelines) {
+          const parentId = guidelineIdByTitle.get(String(child.parentTitle || '').trim().toLowerCase());
+          if (!parentId || parentId === child.id) {
+            await transactionClient.query(
+              `update strategy_guidelines
+               set relation_type = 'orphan',
+                   parent_guideline_id = null,
+                   updated_at = now()
+               where id = $1`,
+              [child.id]
+            );
+            continue;
+          }
+          await transactionClient.query(
+            `update strategy_guidelines
+             set parent_guideline_id = $1,
+                 updated_at = now()
+             where id = $2`,
+            [parentId, child.id]
+          );
+        }
+
+        const fallbackGuidelineId = Array.from(guidelineIdByTitle.values())[0];
+        for (const initiative of generated.initiatives) {
+          const initiativeId = uuid();
+          await transactionClient.query(
+            `insert into strategy_initiatives (
+               id, cycle_id, title, description, status, line_side, created_by
+             )
+             values ($1, $2, $3, $4, 'active', 'auto', null)`,
+            [initiativeId, cycleId, initiative.title, initiative.description || null]
+          );
+
+          const uniqueGuidelineIds = new Set();
+          const initiativeGuidelineTitles = Array.isArray(initiative.guidelineTitles)
+            ? initiative.guidelineTitles
+            : [];
+          initiativeGuidelineTitles.forEach((title) => {
+            const guidelineId = guidelineIdByTitle.get(String(title || '').trim().toLowerCase());
+            if (guidelineId) uniqueGuidelineIds.add(guidelineId);
+          });
+          if (!uniqueGuidelineIds.size && fallbackGuidelineId) {
+            uniqueGuidelineIds.add(fallbackGuidelineId);
+          }
+
+          for (const guidelineId of uniqueGuidelineIds) {
+            await transactionClient.query(
+              `insert into strategy_initiative_guidelines (id, initiative_id, guideline_id)
+               values ($1, $2, $3)`,
+              [uuid(), initiativeId, guidelineId]
+            );
+          }
+        }
+
+        await transactionClient.query(
+          `insert into strategy_ai_generations (
+             id,
+             institution_id,
+             strategy_id,
+             cycle_id,
+             requested_by_scope,
+             requested_by_id,
+             request_note,
+             source_files_json,
+             model,
+             status
+           )
+           values ($1, $2, $3, $4, 'meta_admin', $5, $6, $7::jsonb, $8, 'completed')`,
+          [
+            uuid(),
+            institutionId,
+            strategyId,
+            cycleId,
+            req.metaAdmin?.scope || 'meta_admin',
+            clarification,
+            JSON.stringify(
+              docs.map((doc) => ({
+                filename: doc.filename,
+                bytes: doc.bytes,
+                chars: doc.chars
+              }))
+            ),
+            generatedResult.model || AI_STRATEGY_MODEL
+          ]
+        );
+
+        await transactionClient.query('COMMIT');
+      } catch (error) {
+        try {
+          await transactionClient.query('ROLLBACK');
+        } catch {
+          // ignore rollback errors
+        }
+        throw error;
+      } finally {
+        transactionClient.release();
+      }
+
+      await logAuditEvent({
+        query,
+        uuid,
+        institutionId,
+        action: 'meta_admin.strategy.ai_generated',
+        entityType: 'institution_strategy',
+        entityId: strategyId,
+        payload: metaAuditPayload(req, {
+          strategyId,
+          cycleId,
+          strategySlug,
+          guidelineCount: generated.guidelines.length,
+          initiativeCount: generated.initiatives.length,
+          sourceFileCount: docs.length,
+          model: generatedResult.model || AI_STRATEGY_MODEL
+        })
+      });
+
+      res.status(201).json({
+        ok: true,
+        institution: {
+          id: institutionId,
+          name: institutionName,
+          slug: institutionSlug
+        },
+        strategy: {
+          id: strategyId,
+          institutionId,
+          title: finalStrategyTitle,
+          slug: strategySlug,
+          description: strategyDescription || null,
+          status: 'active'
+        },
+        cycle: {
+          id: cycleId,
+          institutionId,
+          strategyId,
+          title: finalCycleTitle,
+          state: 'open'
+        },
+        summary: {
+          guidelines: generated.guidelines.length,
+          initiatives: generated.initiatives.length,
+          sourceFiles: docs.length
+        }
+      });
+    }
+  );
 
   app.put('/api/v1/meta-admin/access-requests/:requestId/status', requireMetaAdminSession, async (req, res) => {
     const requestId = String(req.params.requestId || '').trim();
