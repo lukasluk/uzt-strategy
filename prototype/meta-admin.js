@@ -13,6 +13,7 @@ const state = {
   lastInvite: null,
   lastPasswordReset: null,
   lastAiGeneration: null,
+  lastAiGenerationAt: null,
   guidelineLinksInstitutionFilter: '',
   guidelineLinksStrategyFilter: '',
   guidelineLinksSearch: '',
@@ -1011,7 +1012,8 @@ function renderDashboard() {
         </form>
         ${state.lastAiGeneration?.strategy?.id ? `
           <div class="card meta-admin-subcard meta-ai-result-card" style="margin-top: 12px;">
-            <strong>Paskutine AI generacija</strong>
+            <strong>AI generacija sekminga</strong>
+            ${state.lastAiGenerationAt ? `<p class="prompt" style="margin:4px 0 0;">Laikas: ${escapeHtml(formatDateTime(state.lastAiGenerationAt))}</p>` : ''}
             <p class="prompt" style="margin:6px 0 0;">Institucija: ${escapeHtml(state.lastAiGeneration?.institution?.name || '-')} (${escapeHtml(state.lastAiGeneration?.institution?.slug || '-')})</p>
             <p class="prompt" style="margin:2px 0 0;">Strategija: ${escapeHtml(state.lastAiGeneration?.strategy?.title || '-')} (${escapeHtml(state.lastAiGeneration?.strategy?.slug || '-')})</p>
             <p class="prompt" style="margin:2px 0 0;">Sukurta: gairiu ${escapeHtml(state.lastAiGeneration?.summary?.guidelines || 0)}, iniciatyvu ${escapeHtml(state.lastAiGeneration?.summary?.initiatives || 0)}, failu ${escapeHtml(state.lastAiGeneration?.summary?.sourceFiles || 0)}</p>
@@ -1232,9 +1234,9 @@ function bindDashboardEvents() {
           body: fd
         });
         state.lastAiGeneration = payload;
-        setNotice('AI sugeneravo ir issaugojo nauja strategija.');
+        state.lastAiGenerationAt = new Date().toISOString();
+        setNotice(`AI sugeneravo nauja strategija: ${String(payload?.strategy?.title || '-').trim() || '-'}.`);
         await loadOverview();
-        createAiStrategyForm.reset();
       });
     });
   }
