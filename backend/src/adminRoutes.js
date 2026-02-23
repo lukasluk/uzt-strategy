@@ -1420,7 +1420,7 @@ function registerAdminRoutes({
           id: row.id,
           body: row.body,
           status: row.status || 'visible',
-          authorName: row.author_display_name || row.author_email || 'NeÅ¾inomas autorius',
+          authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
           authorEmail: row.author_email || null,
           createdAt: row.created_at
         });
@@ -1731,7 +1731,7 @@ function registerAdminRoutes({
           id: row.id,
           body: row.body,
           status: row.status || 'visible',
-          authorName: row.author_display_name || row.author_email || 'NeÅ¾inomas autorius',
+          authorName: row.author_display_name || row.author_email || 'Nežinomas autorius',
           authorEmail: row.author_email || null,
           createdAt: row.created_at
         });

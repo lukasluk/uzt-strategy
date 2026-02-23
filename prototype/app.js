@@ -1,103 +1,103 @@
-﻿const steps = [
+const steps = [
   {
     id: 'guidelines',
-    title: 'GairÄ—s',
+    title: 'Gaires',
     hint: 'Aptarimas, balsavimas, komentarai',
-    prompt: 'Kur link judÄ—sime ir kokiÄ… naudÄ… kursime?'
+    prompt: 'Kur link judesime ir kokia nauda kursime?'
   },
   {
     id: 'initiatives',
     title: 'Iniciatyvos',
     hint: 'Veiksmai, balsavimas, komentarai',
-    prompt: 'Kokias konkreÄias iniciatyvas Ä¯gyvendinsime?'
+    prompt: 'Kokias konkrecias iniciatyvas igyvendinsime?'
   }
 ];
 
 const introSlides = [
   {
-    title: '1. Pasirinkite institucijÄ…',
-    body: 'digistrategy.eu sistema skirta patogiam jÅ«sÅ³ institucijos strategijos rengimo procesui.',
+    title: '1. Pasirinkite institucija',
+    body: 'digistrategy.eu sistema skirta patogiam jusu institucijos strategijos rengimo procesui.',
     points: [
-      'VirÅ¡uje deÅ¡inÄ—je pasirinkite institucijÄ…, kurios strategijÄ… norite perÅ¾iÅ«rÄ—ti ar administruoti.',
-      'InstitucijÄ… galima keisti bet kada, duomenys persikrauna automatiÅ¡kai.'
+      'Virsuje desineje pasirinkite institucija, kurios strategija norite perziureti ar administruoti.',
+      'Institucija galima keisti bet kada, duomenys persikrauna automatiskai.'
     ]
   },
   {
-    title: '2. Sukurkite gairiÅ³ struktÅ«rÄ…',
-    body: 'Patogiai susikurkite gairiÅ³ struktÅ«rÄ… ir aiÅ¡kiai apibrÄ—Å¾kite strategijos kryptis.',
+    title: '2. Sukurkite gairiu struktura',
+    body: 'Patogiai susikurkite gairiu struktura ir aiskiai apibrezkite strategijos kryptis.',
     points: [
-      'GairÄ—s grupuojamos pagal ryÅ¡ius: tÄ—vinÄ—s, vaikinÄ—s ir naÅ¡laitinÄ—s.',
-      'Tai pagrindinis korteliÅ³ valdymo modulio etapas.'
+      'Gaires grupuojamos pagal rysius: tevines, vaikines ir naslaitines.',
+      'Tai pagrindinis korteliu valdymo modulio etapas.'
     ]
   },
   {
     title: '3. Priskirkite iniciatyvas',
-    body: 'Skiltyje â€žIniciatyvosâ€œ priskirkite konkreÄias iniciatyvas gairiÅ³ Ä¯gyvendinimui.',
+    body: 'Skiltyje "Iniciatyvos" priskirkite konkrecias iniciatyvas gairiu igyvendinimui.',
     points: [
-      'Kiekviena iniciatyva turi bÅ«ti susieta bent su viena gaire.',
-      'Taip kuriamas aiÅ¡kus ryÅ¡ys tarp krypties ir veiksmÅ³.'
+      'Kiekviena iniciatyva turi buti susieta bent su viena gaire.',
+      'Taip kuriamas aiskus rysys tarp krypties ir veiksmu.'
     ]
   },
   {
-    title: '4. Komentuokite ir siÅ«lykite kryptis',
-    body: 'KorteliÅ³ valdymo modulyje jÅ«sÅ³ kolegos gali komentuoti ir siÅ«lyti Ä¯vairias strategijos kryptis.',
+    title: '4. Komentuokite ir siulykite kryptis',
+    body: 'Korteliu valdymo modulyje jusu kolegos gali komentuoti ir siulyti ivairias strategijos kryptis.',
     points: [
-      'Diskusijos vyksta prie konkreÄiÅ³ gairiÅ³ ir iniciatyvÅ³.',
-      'NeprisijungÄ™s lankytojas mato tik vieÅ¡Ä… informacijÄ….'
+      'Diskusijos vyksta prie konkreciu gairiu ir iniciatyvu.',
+      'Neprisijunges lankytojas mato tik viesa informacija.'
     ]
   },
   {
-    title: '5. Balsuokite uÅ¾ pasiÅ«lymus',
-    body: 'Nariai gali balsuoti uÅ¾ vieni kitÅ³ teiktus pasiÅ«lymus gairÄ—se ir iniciatyvose.',
+    title: '5. Balsuokite uz pasiulymus',
+    body: 'Nariai gali balsuoti uz vieni kitu teiktus pasiulymus gairiuose ir iniciatyvose.',
     points: [
-      'Balsai skiriami â€ž+â€œ ir â€žâˆ’â€œ mygtukais.',
+      'Balsai skiriami "+" ir "-" mygtukais.',
       'Kol ciklas atviras, balsus galima koreguoti.'
     ]
   },
   {
-    title: '6. Naudokite strategijÅ³ Å¾emÄ—lapÄ¯',
-    body: 'StrategijÅ³ Å¾emÄ—lapis yra patogus vizualinis Ä¯rankis perÅ¾iÅ«rÄ—ti strategijos struktÅ«rÄ… ir elementÅ³ ryÅ¡ius.',
+    title: '6. Naudokite strategiju zemelapi',
+    body: 'Strategiju zemelapis yra patogus vizualinis irankis perziureti strategijos struktura ir elementu rysius.',
     points: [
-      'Galite perjungti sluoksnius â€žGairÄ—sâ€œ ir â€žIniciatyvosâ€œ.',
-      'Galima centruoti vaizdÄ…, priartinti ir naudoti pilno ekrano reÅ¾imÄ….'
+      'Galite perjungti sluoksnius "Gaires" ir "Iniciatyvos".',
+      'Galima centruoti vaizda, priartinti ir naudoti pilno ekrano rezima.'
     ]
   },
   {
-    title: '7. UÅ¾baikite strategijos ciklÄ…',
-    body: 'Kai diskusijos baigtos, administratorius uÅ¾daro ciklÄ… ir strategija lieka perÅ¾iÅ«ros reÅ¾ime.',
+    title: '7. Uzbaikite strategijos cikla',
+    body: 'Kai diskusijos baigtos, administratorius uzdaro cikla ir strategija lieka perziuros rezime.',
     points: [
-      'UÅ¾darytame cikle balsavimas ir komentavimas iÅ¡jungiami.',
-      'SantraukÄ… galima eksportuoti Ä¯ tekstÄ… arba JSON.'
+      'Uzdarytame cikle balsavimas ir komentavimas isjungiami.',
+      'Santrauka galima eksportuoti i teksta arba JSON.'
     ]
   },
   {
-    title: '8. Ä®kelkite Å¾emÄ—lapÄ¯ su embed funkcija',
-    body: 'GalutinÄ¯ interaktyvÅ³ strategijos Å¾emÄ—lapÄ¯ Ä¯kelkite Ä¯ intranetÄ… ar vidinÄ¯ puslapÄ¯ naudodami embedding funkcionalumÄ….',
+    title: '8. Ikelkite zemelapi su embed funkcija',
+    body: 'Galutini interaktyvu strategijos zemelapi ikelkite i intraneta ar vidini puslapi naudodami embedding funkcionaluma.',
     points: [
-      'Admin skiltyje â€žEmbed: StrategijÅ³ Å¾emÄ—lapisâ€œ nukopijuokite paruoÅ¡tÄ… iframe kodÄ….',
-      'Sistema skirta valstybinÄ—ms institucijoms, siekianÄioms strategijos kÅ«rimo procesÄ… vykdyti efektyviai.'
+      'Admin skiltyje "Embed: Strategiju zemelapis" nukopijuokite paruosta iframe koda.',
+      'Sistema skirta valstybinems institucijoms, siekiancioms strategijos kurimo procesa vykdyti efektyviai.'
     ]
   }
 ];
 
-const DEFAULT_MISSION_TEXT = 'Organizacijos paskirtis ir vertÄ—s kÅ«rimo logika.';
-const DEFAULT_VISION_TEXT = 'IlgalaikÄ— kryptis ir siekiama pokyÄio bÅ«sena.';
+const DEFAULT_MISSION_TEXT = 'Organizacijos paskirtis ir vertes kurimo logika.';
+const DEFAULT_VISION_TEXT = 'Ilgalaike kryptis ir siekiama pokycio busena.';
 const DEFAULT_GUIDE_INTRO_TEXT = [
-  'digistrategy.eu sistema skirta patogiam jÅ«sÅ³ institucijos strategijos rengimo procesui. Patogiai susikurkite gairiÅ³ struktÅ«rÄ… ir priskirkite konkreÄias iniciatyvas tÅ³ gairiÅ³ Ä¯gyvendinimui.',
-  'Sistema susideda iÅ¡ 2 pagrindiniÅ³ daliÅ³:',
-  '1. KorteliÅ³ valdymo modulio (GairÄ—s ir Iniciatyvos) - Äia jÅ«sÅ³ kolegos gali komentuoti, siÅ«lyti Ä¯vairias strategijos kryptis, balsuoti uÅ¾ vieni kitÅ³ teiktus pasiÅ«lymus.',
-  '2. StrategijÅ³ Å¾emÄ—lapis - patogus vizualinis Ä¯rankis perÅ¾iÅ«rÄ—ti strategijos struktÅ«rÄ… ir ryÅ¡ius tarp skirtingÅ³ jÅ³ elementÅ³.',
-  'GalutinÄ¯ savo interaktyvÅ³ strategijos Å¾emÄ—lapÄ¯ Ä¯kelkite Ä¯ intranetÄ… ar vidinÄ¯ puslapÄ¯ su embeding funkcionalumu. Sistema skirta valstybinÄ—ms institucijoms kurios nori savo strategijos kÅ«rimo procesÄ… vykdyti efektyviai.'
-].join('\n');
+  'digistrategy.eu sistema skirta patogiam jusu institucijos strategijos rengimo procesui. Patogiai susikurkite gairiu struktura ir priskirkite konkrecias iniciatyvas tu gairiu igyvendinimui.',
+  'Sistema susideda is 2 pagrindiniu daliu:',
+  '1. Korteliu valdymo modulio (Gaires ir Iniciatyvos) - cia jusu kolegos gali komentuoti, siulyti ivairias strategijos kryptis, balsuoti uz vieni kitu teiktus pasiulymus.',
+  '2. Strategiju zemelapis - patogus vizualinis irankis perziureti strategijos struktura ir rysius tarp skirtingu jos elementu.',
+  'Galutini savo interaktyvu strategijos zemelapi ikelkite i intraneta ar vidini puslapi su embeding funkcionalumu. Sistema skirta valstybinems institucijoms, kurios nori savo strategijos kurimo procesa vykdyti efektyviai.'
+].join('\\n');
 const DEFAULT_ABOUT_TEXT = [
-  'Lietuvos vieÅ¡ajame sektoriuje skaitmenizacija vis daÅ¾niau suvokiama ne kaip pavieniÅ³ IT projektÅ³ rinkinys, o kaip sisteminis pokytis, apimantis paslaugÅ³ kokybÄ™, duomenÅ³ valdymÄ… ir naujÅ³ technologijÅ³ taikymÄ…. TodÄ—l vis didesnÄ™ reikÅ¡mÄ™ Ä¯gyja ne tik technologiniai sprendimai, bet ir aiÅ¡kios, Ä¯gyvendinamos skaitmenizacijos strategijos (arba IT plÄ—tros planai).',
-  'Praktika rodo, kad tradiciniai, didelÄ—s apimties strateginiai dokumentai daÅ¾nai tampa sunkiai pritaikomi greitai besikeiÄianÄioje aplinkoje. DÄ—l to vis daugiau dÄ—mesio skiriama lanksÄioms, Ä¯traukioms ir duomenimis grÄ¯stoms strategijÅ³ formavimo praktikoms, kurios leidÅ¾ia greiÄiau susitarti dÄ—l prioritetÅ³ ir krypties.',
-  'Vienas iÅ¡ bÅ«dÅ³ tai pasiekti - aiÅ¡kiai iÅ¡sigryninti pagrindines aÅ¡is, aplink kurias sukasi dauguma sprendimÅ³:',
-  '- KokybiÅ¡kÅ³ paslaugÅ³ teikimas (vidiniams ir iÅ¡oriniams naudotojams).\n- DuomenÅ³ kokybÄ— ir duomenÅ³ valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
-  'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi bÅ«ti suprantamas, Ä¯traukiantis ir skatinantis bendrÄ… atsakomybÄ™. Tam vis daÅ¾niau pasitelkiami paprasti skaitmeniniai Ä¯rankiai, leidÅ¾iantys dalyviams siÅ«lyti gaires, jas komentuoti, balsuoti ir vieÅ¡ai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumÄ…, tarpinstitucinÄ¯ mokymÄ…si ir gerosios praktikos dalijimÄ…si.',
-  'Å iame kontekste atsirado digistrategy.eu - eksperimentinis, atviras Ä¯rankis, skirtas skaitmenizacijos strategijÅ³ ar IT plÄ—tros planÅ³ gairÄ—ms formuoti ir prioritetizuoti. Jis leidÅ¾ia dalyviams struktÅ«ruotai Ä¯sitraukti Ä¯ strateginÄ¯ procesÄ… ir padeda greiÄiau pereiti nuo abstrakÄiÅ³ idÄ—jÅ³ prie aiÅ¡kiÅ³ sprendimÅ³ krypÄiÅ³.',
-  'Svarbu pabrÄ—Å¾ti, kad tai nÄ—ra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant Å¡iuolaikines technologijas ir dirbtinÄ¯ intelektÄ… galima greitai sukurti veikianÄius, naudotojams suprantamus Ä¯rankius.',
-  'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keiÄia vieÅ¡ojo sektoriaus veiklos modelius. Organizacijos, kurios drÄ…siai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realiÄ… galimybÄ™ judÄ—ti greiÄiau ir iÅ¡likti konkurencingos sparÄiai besikeiÄianÄioje aplinkoje.'
+  'Lietuvos viešajame sektoriuje skaitmenizacija vis dažniau suvokiama ne kaip pavienių IT projektų rinkinys, o kaip sisteminis pokytis, apimantis paslaugų kokybę, duomenų valdymą ir naujų technologijų taikymą. Todėl vis didesnę reikšmę įgyja ne tik technologiniai sprendimai, bet ir aiškios, įgyvendinamos skaitmenizacijos strategijos (arba IT plėtros planai).',
+  'Praktika rodo, kad tradiciniai, didelės apimties strateginiai dokumentai dažnai tampa sunkiai pritaikomi greitai besikeičiančioje aplinkoje. Dėl to vis daugiau dėmesio skiriama lanksčioms, įtraukioms ir duomenimis grįstoms strategijų formavimo praktikoms, kurios leidžia greičiau susitarti dėl prioritetų ir krypties.',
+  'Vienas iš būdų tai pasiekti - aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:',
+  '- Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).\n- Duomenų kokybė ir duomenų valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
+  'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi būti suprantamas, įtraukiantis ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.',
+  'Šiame kontekste atsirado digistrategy.eu - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
+  'Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti veikiančius, naudotojams suprantamus įrankius.',
+  'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos, kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.'
 ].join('\n\n');
 const DEFAULT_GUIDE_INTRO_TEXT_EN = [
   'digistrategy.eu is designed to make your institution strategy process practical and collaborative. Build a clear guideline structure and connect concrete initiatives to guideline delivery.',
@@ -232,7 +232,7 @@ function ensureAdminAppLoaded() {
           reject(new Error('Admin scenarijus neinicijuotas.'));
         }
       };
-      const onError = () => reject(new Error('Nepavyko Ä¯kelti admin.js'));
+      const onError = () => reject(new Error('Nepavyko įkelti admin.js'));
       existing.addEventListener('load', onLoad, { once: true });
       existing.addEventListener('error', onError, { once: true });
       return;
@@ -249,7 +249,7 @@ function ensureAdminAppLoaded() {
         reject(new Error('Admin scenarijus neinicijuotas.'));
       }
     };
-    script.onerror = () => reject(new Error('Nepavyko Ä¯kelti admin.js'));
+    script.onerror = () => reject(new Error('Nepavyko įkelti admin.js'));
     document.body.appendChild(script);
   }).catch((error) => {
     adminAppLoadPromise = null;
@@ -569,8 +569,15 @@ function normalizeGuideAboutContent(payload) {
 }
 
 function currentLanguage() {
-  const normalized = String(window.DigiI18n?.getLanguage?.() || '').trim().toLowerCase();
-  return normalized === 'en' ? 'en' : 'lt';
+  const fromQuery = String(new URLSearchParams(window.location.search).get('lang') || '').trim().toLowerCase();
+  if (fromQuery === 'en' || fromQuery === 'lt') return fromQuery;
+  const fromStorage = String(localStorage.getItem('uzt-strategy-v1-lang') || '').trim().toLowerCase();
+  if (fromStorage === 'en' || fromStorage === 'lt') return fromStorage;
+  const fromI18n = String(window.DigiI18n?.getLanguage?.() || '').trim().toLowerCase();
+  if (fromI18n === 'en' || fromI18n === 'lt') return fromI18n;
+  const fromHtml = String(document.documentElement?.lang || '').trim().toLowerCase();
+  if (fromHtml === 'en' || fromHtml === 'lt') return fromHtml;
+  return 'lt';
 }
 
 function langText(lt, en) {
@@ -581,12 +588,12 @@ function stepPrompt(stepId) {
   const id = String(stepId || '').trim().toLowerCase();
   if (id === 'initiatives') {
     return langText(
-      'Kokias konkreÄias iniciatyvas Ä¯gyvendinsime?',
+      'Kokias konkrecias iniciatyvas igyvendinsime?',
       'Which concrete initiatives will we implement?'
     );
   }
   return langText(
-    'Kur link judÄ—sime ir kokiÄ… naudÄ… kursime?',
+    'Kur link judesime ir kokia nauda kursime?',
     'Where are we heading and what value will we create?'
   );
 }
@@ -671,73 +678,73 @@ function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
     unauthorized: 'Reikia prisijungti.',
-    'invalid token': 'Sesija nebegalioja. Prisijunkite iÅ¡ naujo.',
+    'invalid token': 'Sesija nebegalioja. Prisijunkite iš naujo.',
     'institution not found': `Institucija "${state.institutionSlug}" nerasta.`,
     'strategy not found': 'Pasirinkta strategija nerasta.',
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
-    'cycle not writable': 'Ciklas nebeleidÅ¾ia redaguoti (tik skaitymas).',
-    'guideline voting disabled': 'Å i gairÄ— iÅ¡jungta: balsuoti negalima.',
-    'initiative voting disabled': 'Å i iniciatyva iÅ¡jungta: balsuoti negalima.',
-    'vote budget exceeded': 'VirÅ¡ytas balsÅ³ biudÅ¾etas.',
-    forbidden: 'Veiksmas neleidÅ¾iamas.',
-    'membership inactive': 'NarystÄ— neaktyvi.',
+    'cycle not writable': 'Ciklas nebeleidžia redaguoti (tik skaitymas).',
+    'guideline voting disabled': 'Ši gairė išjungta: balsuoti negalima.',
+    'initiative voting disabled': 'Ši iniciatyva išjungta: balsuoti negalima.',
+    'vote budget exceeded': 'Viršytas balsų biudžetas.',
+    forbidden: 'Veiksmas neleidžiamas.',
+    'membership inactive': 'Narystė neaktyvi.',
     'invalid credentials': 'Neteisingi prisijungimo duomenys.',
     'invite not found': 'Kvietimas nerastas.',
     'invite expired': 'Kvietimas nebegalioja.',
-    'invite revoked': 'Kvietimas atÅ¡auktas.',
+    'invite revoked': 'Kvietimas atšauktas.',
     'invite already used': 'Kvietimas jau panaudotas.',
-    'too many requests': 'Per daug uÅ¾klausÅ³. Pabandykite po keliÅ³ sekundÅ¾iÅ³.',
-    'guidelineId and score(0..5) required': 'Balsas turi bÅ«ti tarp 0 ir 5.',
-    'initiativeId and score(0..5) required': 'Balsas turi bÅ«ti tarp 0 ir 5.',
-    'initiativeId and body required': 'Komentaras negali bÅ«ti tuÅ¡Äias.',
-    'layout payload required': 'Nepateikti Å¾emÄ—lapio iÅ¡dÄ—stymo duomenys.',
-    'guideline not in cycle': 'GairÄ— nepriklauso Å¡iam ciklui.',
-    'initiative not in cycle': 'Iniciatyva nepriklauso Å¡iam ciklui.',
+    'too many requests': 'Per daug užklausų. Pabandykite po kelių sekundžių.',
+    'guidelineId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
+    'initiativeId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
+    'initiativeId and body required': 'Komentaras negali būti tuščias.',
+    'layout payload required': 'Nepateikti žemėlapio išdėstymo duomenys.',
+    'guideline not in cycle': 'Gairė nepriklauso šiam ciklui.',
+    'initiative not in cycle': 'Iniciatyva nepriklauso šiam ciklui.',
     'initiative not found': 'Iniciatyva nerasta.',
-    'at least one guideline required': 'Iniciatyva turi bÅ«ti priskirta bent vienai gairei.',
-    'name required': 'Nurodykite pavadinimÄ….',
-    'token and displayName required': 'Nurodykite kvietimo Å¾etonÄ… ir vardÄ….',
-    'institutionId required': 'Pasirinkite institucijÄ….',
-    'institutionName required': 'Ä®veskite institucijos pavadinimÄ….',
+    'at least one guideline required': 'Iniciatyva turi būti priskirta bent vienai gairei.',
+    'name required': 'Nurodykite pavadinimą.',
+    'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.',
+    'institutionId required': 'Pasirinkite instituciją.',
+    'institutionName required': 'Įveskite institucijos pavadinimą.',
     'institutionName too long': 'Institucijos pavadinimas per ilgas.',
-    'fullName required': 'Ä®veskite vardÄ… ir pavardÄ™.',
-    'workEmail required': 'Ä®veskite darbinÄ¯ el. paÅ¡tÄ….',
-    'phone required': 'Ä®veskite kontaktinÄ¯ telefono numerÄ¯.',
-    'fullName too long': 'Vardas ir pavardÄ— per ilgi.',
-    'workEmail too long': 'El. paÅ¡tas per ilgas.',
+    'fullName required': 'Įveskite vardą ir pavardę.',
+    'workEmail required': 'Įveskite darbinį el. paštą.',
+    'phone required': 'Įveskite kontaktinį telefono numerį.',
+    'fullName too long': 'Vardas ir pavardė per ilgi.',
+    'workEmail too long': 'El. paštas per ilgas.',
     'phone too long': 'Telefono numeris per ilgas.',
     'notes too long': 'Papildoma informacija per ilga.',
-    'ai api key not configured': 'AI API raktas nesukonfigÅ«ruotas serveryje.',
-    'clarification required': 'Nurodykite AI patikslinimÄ….',
-    'at least one pdf file required': 'Ä®kelkite bent vienÄ… PDF failÄ….',
-    'only pdf files allowed': 'LeidÅ¾iami tik PDF failai.',
+    'ai api key not configured': 'AI API raktas nesukonfigūruotas serveryje.',
+    'clarification required': 'Nurodykite AI patikslinimą.',
+    'at least one pdf file required': 'Įkelkite bent vieną PDF failą.',
+    'only pdf files allowed': 'Leidžiami tik PDF failai.',
     'pdf file too large': 'PDF failas per didelis.',
-    'too many pdf files': 'Ä®kelta per daug PDF failÅ³.',
+    'too many pdf files': 'Įkelta per daug PDF failų.',
     'pdf parsing failed': 'Nepavyko nuskaityti PDF turinio.',
-    'pdf content too large': 'PDF turinys per didelÄ—s apimties.',
+    'pdf content too large': 'PDF turinys per didelės apimties.',
     'ai response invalid': 'AI atsakymas netinkamo formato.',
-    'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar kartÄ….',
-    'generated guidelines missing': 'AI nesugeneravo pakankamai gairiÅ³.',
-    'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvÅ³.',
-    'generationId required': 'TrÅ«ksta generavimo uÅ¾klausos ID.',
+    'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar kartą.',
+    'generated guidelines missing': 'AI nesugeneravo pakankamai gairių.',
+    'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvų.',
+    'generationId required': 'Trūksta generavimo užklausos ID.',
     'generation not found': currentLanguage() === 'en'
       ? 'AI generation was not found. Please retry.'
-      : 'AI generavimo uÅ¾klausa nerasta. Pabandykite dar kartÄ….',
+      : 'AI generavimo užklausa nerasta. Pabandykite dar kartą.',
     'ai generation timeout': currentLanguage() === 'en'
       ? 'AI generation is still running. Please wait and try again shortly.'
-      : 'AI generavimas vis dar vyksta. Pabandykite dar po keliÅ³ sekundÅ¾iÅ³.',
+      : 'AI generavimas vis dar vyksta. Pabandykite dar po kelių sekundžių.',
     'ai generation failed': currentLanguage() === 'en'
       ? 'AI generation failed.'
       : 'AI generavimas nepavyko.',
-    'documents upload failed': 'Nepavyko Ä¯kelti dokumentÅ³.',
+    'documents upload failed': 'Nepavyko įkelti dokumentų.',
     'HTTP 504': currentLanguage() === 'en'
       ? 'AI processing took longer than gateway timeout. Checking server result...'
       : 'AI apdorojimas truko ilgiau nei gateway limitas. Tikrinamas serverio rezultatas...',
     'strategy limit reached': currentLanguage() === 'en'
       ? 'This institution already reached the maximum number of strategies (5).'
-      : 'Å i institucija jau pasiekÄ— maksimalÅ³ strategijÅ³ limitÄ… (5).'
+      : 'Ši institucija jau pasiekė maksimalų strategijų limitą (5).'
   };
-  return map[raw] || raw || 'Nepavyko Ä¯vykdyti uÅ¾klausos.';
+  return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
 }
 
 function notifySuccess(message) {
@@ -1177,9 +1184,11 @@ function institutionSelectMarkup() {
     return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(name)}</option>`;
   }).join('');
 
+  const institutionLabel = langText('Institucija', 'Institution');
+  const institutionTitle = langText('Pasirinkite institucija perziurai', 'Select institution for viewing');
   return `
-    <label class="institution-switcher" title="Pasirinkite institucijÄ… perÅ¾iÅ«rai">
-      <span>Institucija</span>
+    <label class="institution-switcher" title="${escapeHtml(institutionTitle)}">
+      <span>${escapeHtml(institutionLabel)}</span>
       <select id="institutionSwitchSelect" ${loading || !hasInstitutions ? 'disabled' : ''}>
         ${options}
       </select>
@@ -1199,9 +1208,11 @@ function strategySelectMarkup() {
     return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(title)}</option>`;
   }).join('');
 
+  const strategyLabel = langText('Strategija', 'Strategy');
+  const strategyTitle = langText('Pasirinkite strategija perziurai', 'Select strategy for viewing');
   return `
-    <label class="institution-switcher strategy-switcher" title="Pasirinkite strategijÄ… perÅ¾iÅ«rai">
-      <span>Strategija</span>
+    <label class="institution-switcher strategy-switcher" title="${escapeHtml(strategyTitle)}">
+      <span>${escapeHtml(strategyLabel)}</span>
       <select id="strategySwitchSelect" ${loading || !hasStrategies ? 'disabled' : ''}>
         ${options}
       </select>
@@ -1367,8 +1378,8 @@ function canExpandStepWithAddAction(stepId) {
 }
 
 function quickAddActionLabel(stepId) {
-  if (stepId === 'guidelines') return 'PridÄ—ti naujÄ… gairÄ™';
-  if (stepId === 'initiatives') return 'PridÄ—ti naujÄ… iniciatyvÄ…';
+  if (stepId === 'guidelines') return langText('Prideti nauja gaire', 'Add new guideline');
+  if (stepId === 'initiatives') return langText('Prideti nauja iniciatyva', 'Add new initiative');
   return '';
 }
 
@@ -1480,8 +1491,8 @@ function strategySwitcherCardMarkup(options = {}) {
   const loading = state.loading && !state.institutionsLoaded;
   const dialogOpen = Boolean(state.strategySwitcherDialogOpen);
   const showCreateStrategyAction = canManageSelectedInstitution();
-  const createButtonLabel = currentLanguage() === 'en' ? 'Create strategy' : 'Sukurti strategijÄ…';
-  const guideButtonLabel = currentLanguage() === 'en' ? 'User guide' : 'Naudojimosi gidas';
+  const createButtonLabel = langText('Sukurti strategija', 'Create strategy');
+  const guideButtonLabel = langText('Naudojimosi gidas', 'User guide');
 
   return `
     <div class="step-utility-card strategy-switcher-card ${topbar ? 'strategy-switcher-card-topbar' : ''} ${dialogOpen ? 'is-open' : ''}">
@@ -1497,7 +1508,7 @@ function strategySwitcherCardMarkup(options = {}) {
             <span class="strategy-switcher-label">Institution</span>
             <strong title="${escapeHtml(institutionName)}">${escapeHtml(institutionName)}</strong>
           </span>
-          <span class="strategy-switcher-separator" aria-hidden="true">â€¢</span>
+          <span class="strategy-switcher-separator" aria-hidden="true">&middot;</span>
           <span class="strategy-switcher-item">
             <span class="strategy-switcher-label">Strategy</span>
             <strong title="${escapeHtml(strategyTitle)}">${escapeHtml(strategyTitle)}</strong>
@@ -1646,10 +1657,10 @@ function renderSteps() {
 
   const canOpenAdmin = canOpenAdminView();
   const items = [
-    { id: 'guidelines', icon: 'â—', title: 'GairÄ—s', locked: false },
-    { id: 'initiatives', icon: 'âœ¦', title: 'Iniciatyvos', locked: false },
-    { id: 'admin', icon: 'âš™', title: 'Admin', locked: !canOpenAdmin },
-    { id: 'map', icon: 'âŒ—', title: 'StrategijÅ³ Å¾emÄ—lapis', locked: false }
+    { id: 'guidelines', icon: '&#9673;', title: langText('Gaires', 'Guidelines'), locked: false },
+    { id: 'initiatives', icon: '&#10022;', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
+    { id: 'admin', icon: '&#9881;', title: 'Admin', locked: !canOpenAdmin },
+    { id: 'map', icon: '&#8999;', title: langText('Strategiju zemelapis', 'Strategy map'), locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -1738,10 +1749,14 @@ function applyIntroGuideState() {
     guide.setAttribute('aria-expanded', state.introCollapsed ? 'false' : 'true');
   }
   if (toggleIntroBtn) {
-    toggleIntroBtn.innerHTML = `<span aria-hidden="true">${state.introCollapsed ? 'â–¾' : 'â–´'}</span>`;
+    toggleIntroBtn.innerHTML = `<span aria-hidden="true">${state.introCollapsed ? '&#9662;' : '&#9652;'}</span>`;
     toggleIntroBtn.setAttribute('aria-expanded', state.introCollapsed ? 'false' : 'true');
-    toggleIntroBtn.setAttribute('aria-label', state.introCollapsed ? 'IÅ¡skleisti naudojimosi gidÄ…' : 'Suskleisti naudojimosi gidÄ…');
-    toggleIntroBtn.title = state.introCollapsed ? 'IÅ¡skleisti naudojimosi gidÄ…' : 'Suskleisti naudojimosi gidÄ…';
+    toggleIntroBtn.setAttribute('aria-label', state.introCollapsed
+      ? langText('Isskleisti naudojimosi gida', 'Expand user guide')
+      : langText('Suskleisti naudojimosi gida', 'Collapse user guide'));
+    toggleIntroBtn.title = state.introCollapsed
+      ? langText('Isskleisti naudojimosi gida', 'Expand user guide')
+      : langText('Suskleisti naudojimosi gida', 'Collapse user guide');
     toggleIntroBtn.classList.toggle('pulse', state.introTogglePulse);
   }
 }
@@ -1782,7 +1797,7 @@ function cycleWorkshopTitleText() {
   if (strategyTitle) return strategyTitle;
   const cycleTitle = String(state.cycle?.title || '').trim();
   if (cycleTitle) return cycleTitle;
-  return 'Strategijos dirbtuvÄ—s';
+  return langText('Strategijos dirbtuves', 'Strategy workshop');
 }
 
 function renderIntroDeck() {
@@ -1804,51 +1819,51 @@ function renderIntroDeck() {
           <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button" aria-expanded="true"></button>
         </div>
         <div class="intro-guide-body">
-          <section class="guide-structure" aria-label="Strategijos struktÅ«ra">
+          <section class="guide-structure" aria-label="${escapeHtml(langText('Strategijos struktura', 'Strategy structure'))}">
             <div class="guide-structure-track" role="list">
               <article class="structure-step structure-step-strategic" role="listitem">
-                <span class="structure-label">Misija</span>
+                <span class="structure-label">${langText('Misija', 'Mission')}</span>
                 <p data-guide-mission>${escapeHtml(cycleMissionText())}</p>
               </article>
-              <span class="structure-arrow" aria-hidden="true">â†’</span>
+              <span class="structure-arrow" aria-hidden="true">&rarr;</span>
               <article class="structure-step structure-step-strategic" role="listitem">
-                <span class="structure-label">Vizija</span>
+                <span class="structure-label">${langText('Vizija', 'Vision')}</span>
                 <p data-guide-vision>${escapeHtml(cycleVisionText())}</p>
               </article>
-              <span class="structure-arrow" aria-hidden="true">â†’</span>
-              <section class="structure-layer-group" role="group" aria-label="Platformos dalis">
+              <span class="structure-arrow" aria-hidden="true">&rarr;</span>
+              <section class="structure-layer-group" role="group" aria-label="${escapeHtml(langText('Platformos dalis', 'Platform scope'))}">
                 <div class="structure-layer-group-head">
-                  <span class="structure-group-badge">Platformos apimtis: digistrategy.eu</span>
+                  <span class="structure-group-badge">${langText('Platformos apimtis', 'Platform scope')}: digistrategy.eu</span>
                 </div>
                 <div class="structure-layer-grid">
                   <article class="structure-step structure-step-layer" role="listitem">
-                    <span class="structure-label">GairÄ—s</span>
-                    <p>Kryptys arba tikslai, atvaizduojami dviem korteliÅ³ lygiais.</p>
+                    <span class="structure-label">${langText('Gaires', 'Guidelines')}</span>
+                    <p>${langText('Kryptys arba tikslai, atvaizduojami dviem korteliu lygiais.', 'Directions or goals shown in two card levels.')}</p>
                     <div class="structure-mini-cards" aria-hidden="true">
-                      <span>TÄ—vinÄ—s</span>
-                      <span>VaikinÄ—s</span>
+                      <span>${langText('Tevines', 'Parent')}</span>
+                      <span>${langText('Vaikines', 'Child')}</span>
                     </div>
-                    <span class="structure-badge">Etapas 1</span>
+                    <span class="structure-badge">${langText('Etapas 1', 'Stage 1')}</span>
                   </article>
-                  <span class="structure-arrow structure-arrow-inner" aria-hidden="true">â†’</span>
+                  <span class="structure-arrow structure-arrow-inner" aria-hidden="true">&rarr;</span>
                   <article class="structure-step structure-step-layer" role="listitem">
-                    <span class="structure-label">Iniciatyvos</span>
-                    <p>UÅ¾daviniai, kurie iÅ¡pildo gaires ir kuria apÄiuopiamÄ… rezultatÄ….</p>
+                    <span class="structure-label">${langText('Iniciatyvos', 'Initiatives')}</span>
+                    <p>${langText('Uzdaviniai, kurie ispildo gaires ir kuria apciuopiama rezultata.', 'Tasks that fulfill guidelines and create tangible outcomes.')}</p>
                     <div class="structure-mini-cards" aria-hidden="true">
-                      <span>VeiksmÅ³ idÄ—jos</span>
-                      <span>Prioritetai</span>
+                      <span>${langText('Veiksmu idejos', 'Action ideas')}</span>
+                      <span>${langText('Prioritetai', 'Priorities')}</span>
                     </div>
-                    <span class="structure-badge">Etapas 2</span>
+                    <span class="structure-badge">${langText('Etapas 2', 'Stage 2')}</span>
                   </article>
                 </div>
               </section>
-              <span class="structure-arrow" aria-hidden="true">â†’</span>
+              <span class="structure-arrow" aria-hidden="true">&rarr;</span>
               <article class="structure-step" role="listitem">
-                <span class="structure-label">Ä®gyvendinimo planas</span>
-                <p>PerkÄ—limas Ä¯ konkreÄias veiklas, terminus ir atsakomybes.</p>
+                <span class="structure-label">${langText('Igyvendinimo planas', 'Implementation plan')}</span>
+                <p>${langText('Perkelimas i konkrecias veiklas, terminus ir atsakomybes.', 'Translation into concrete actions, timelines, and ownership.')}</p>
               </article>
             </div>
-            <p class="structure-note">Platformos apimtis: â€žGairÄ—sâ€œ ir â€žIniciatyvosâ€œ etapai.</p>
+            <p class="structure-note">${langText('Platformos apimtis: "Gaires" ir "Iniciatyvos" etapai.', 'Platform scope: "Guidelines" and "Initiatives" stages.')}</p>
           </section>
         </div>
       </div>
@@ -1886,9 +1901,9 @@ function renderIntroDeck() {
 
 function relationLabel(relationType) {
   const relation = String(relationType || 'orphan').toLowerCase();
-  if (relation === 'parent') return langText('tÄ—vinÄ—', 'parent');
-  if (relation === 'child') return langText('vaikinÄ—', 'child');
-  return langText('naÅ¡laitinÄ—', 'orphan');
+  if (relation === 'parent') return langText('tevine', 'parent');
+  if (relation === 'child') return langText('vaikine', 'child');
+  return langText('naslaite', 'orphan');
 }
 
 function renderGuideView() {
@@ -1972,7 +1987,7 @@ function renderAdminView() {
       if (!mountPoint) return;
       mountPoint.innerHTML = `
         <section class="card">
-          <strong>Nepavyko Ä¯kelti administravimo lango</strong>
+          <strong>Nepavyko įkelti administravimo lango</strong>
           <p class="prompt" style="margin-top:8px;">${escapeHtml(toUserMessage(error))}</p>
         </section>
       `;
@@ -2040,12 +2055,12 @@ function renderCommentItem(comment) {
   const authorEmail = String(comment?.authorEmail || '').trim();
   const emailShort = authorEmail.includes('@') ? authorEmail.split('@')[0] : authorEmail;
   const rawAuthor = authorName || emailShort;
-  const author = canShowAuthorIdentity && rawAuthor ? rawAuthor : 'Dalyvis';
+  const author = canShowAuthorIdentity && rawAuthor ? rawAuthor : langText('Dalyvis', 'Participant');
   const timestamp = formatCommentDateTime(comment?.createdAt);
   return `
     <li class="comment-item">
       <div class="comment-body">${escapeHtml(comment?.body || '')}</div>
-      <div class="comment-meta">${escapeHtml(author)} Â· ${escapeHtml(timestamp)}</div>
+      <div class="comment-meta">${escapeHtml(author)} &middot; ${escapeHtml(timestamp)}</div>
     </li>
   `;
 }
@@ -2061,12 +2076,12 @@ function commentsReadOnlyHintText(options) {
   if (options.member && !options.writable) {
     return currentLanguage() === 'en'
       ? 'Cycle is locked: comments cannot be added.'
-      : 'Ciklas uÅ¾rakintas: komentuoti negalima.';
+      : 'Ciklas užrakintas: komentuoti negalima.';
   }
   if (options.authenticated && !options.member) {
     return currentLanguage() === 'en'
       ? 'You are signed in to another institution. Commenting is disabled here.'
-      : 'Prisijungta prie kitos institucijos. Komentuoti Äia negalite.';
+      : 'Prisijungta prie kitos institucijos. Komentuoti čia negalite.';
   }
   return currentLanguage() === 'en'
     ? 'Sign in to add comments.'
@@ -2114,7 +2129,7 @@ function renderGuidelineCard(guideline, options) {
   const safeComments = commentsVisible
     ? (comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : '<li class="comment-item comment-item-empty">Dar nÄ—ra komentarÅ³.</li>')
+      : `<li class="comment-item comment-item-empty">${langText('Dar nera komentaru.', 'No comments yet.')}</li>`)
     : `<li class="comment-item comment-item-empty">${escapeHtml(commentsHiddenHintText())}</li>`;
   const relation = relationLabel(guideline.relationType);
   const relationKey = normalizeGuidelineRelation(guideline.relationType);
@@ -2140,7 +2155,7 @@ function renderGuidelineCard(guideline, options) {
   const strategyLinksMarkup = relationKey === 'parent'
     ? `
       <div class="header-stack guideline-strategy-links">
-        <span class="tag tag-link-main">${escapeHtml(langText('Strateginiai ryÅ¡iai', 'Strategic links'))}: ${strategyLinks.length}</span>
+        <span class="tag tag-link-main">${escapeHtml(langText('Strateginiai rysiai', 'Strategic links'))}: ${strategyLinks.length}</span>
         ${uniqueStrategyLinks.slice(0, 3).map((link) => `
           <button
             type="button"
@@ -2149,7 +2164,7 @@ function renderGuidelineCard(guideline, options) {
             data-target-institution="${escapeHtml(link.otherInstitutionSlug)}"
             data-target-strategy="${escapeHtml(link.otherStrategySlug)}"
             data-target-guideline="${escapeHtml(link.otherGuidelineId)}"
-            title="Atidaryti susieta gaires konteksta"
+            title="${escapeHtml(langText('Atidaryti susietos gaires konteksta', 'Open linked guideline context'))}"
           >${escapeHtml(strategyLinkLabel(link))}</button>
         `).join('')}
         ${uniqueStrategyLinks.length > 3 ? `<span class="tag">+${uniqueStrategyLinks.length - 3}</span>` : ''}
@@ -2173,45 +2188,45 @@ function renderGuidelineCard(guideline, options) {
         <div class="title-row">
           <h4>${escapeHtml(guideline.title)}</h4>
           <span class="tag">${escapeHtml(relationTag)}</span>
-          ${votingDisabled ? '<span class="tag tag-disabled">IÅ¡jungta</span>' : ''}
+          ${votingDisabled ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
         </div>
-        <p>${escapeHtml(guideline.description || 'Be paaiÅ¡kinimo')}</p>
+        <p>${escapeHtml(guideline.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
         ${strategyLinksMarkup}
       </div>
       ${options.member ? `
         <div class="vote-panel">
           <div class="vote-panel-head">
-            <span class="vote-label">Tavo balas</span>
+            <span class="vote-label">${langText('Tavo balas', 'Your vote')}</span>
           </div>
           <div class="vote-panel-body">
             <div class="vote-controls">
-              <button class="vote-btn" data-action="vote-minus" data-id="${escapeHtml(guideline.id)}" aria-label="Atimti balsÄ…" ${canMinus ? '' : 'disabled'}>âˆ’</button>
+              <button class="vote-btn" data-action="vote-minus" data-id="${escapeHtml(guideline.id)}" aria-label="${escapeHtml(langText('Atimti bala', 'Decrease vote'))}" ${canMinus ? '' : 'disabled'}>&minus;</button>
               <span class="vote-score">${userScore}</span>
-              <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" aria-label="PridÄ—ti balsÄ…" ${canPlus ? '' : 'disabled'}>+</button>
+              <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" aria-label="${escapeHtml(langText('Prideti bala', 'Increase vote'))}" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
-            <div class="vote-total">Bendras balas: <strong>${Number(guideline.totalScore || 0)}</strong></div>
-            ${votingDisabled ? '<div class="vote-total">Balsavimas iÅ¡jungtas administratoriaus</div>' : ''}
+            <div class="vote-total">${langText('Bendras balas', 'Total score')}: <strong>${Number(guideline.totalScore || 0)}</strong></div>
+            ${votingDisabled ? `<div class="vote-total">${langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
           </div>
         </div>
       ` : `
         <div class="vote-panel">
           <div class="vote-panel-head">
-            <span class="vote-label">VieÅ¡as reÅ¾imas</span>
+            <span class="vote-label">${langText('Viesas rezimas', 'Public mode')}</span>
           </div>
           <div class="vote-panel-body">
-            <div class="vote-total"><strong>Bendras balas: ${Number(guideline.totalScore || 0)}</strong></div>
-            <div class="vote-total">Rodomi tik agreguoti duomenys</div>
+            <div class="vote-total"><strong>${langText('Bendras balas', 'Total score')}: ${Number(guideline.totalScore || 0)}</strong></div>
+            <div class="vote-total">${langText('Rodomi tik agreguoti duomenys', 'Only aggregated data is shown')}</div>
           </div>
         </div>
       `}
       ${showCommentsSection ? `
         <div class="card-section">
-          <strong>Komentarai</strong>
+          <strong>${langText('Komentarai', 'Comments')}</strong>
           <ul class="mini-list">${safeComments}</ul>
           ${options.member && options.writable ? `
             <form data-action="comment" data-id="${escapeHtml(guideline.id)}" class="inline-form">
-              <input type="text" name="comment" placeholder="Ä®raÅ¡ykite komentarÄ…" required ${state.busy ? 'disabled' : ''}/>
-              <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>PridÄ—ti</button>
+              <input type="text" name="comment" placeholder="${escapeHtml(langText('Irasykite komentara', 'Write a comment'))}" required ${state.busy ? 'disabled' : ''}/>
+              <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>${langText('Prideti', 'Add')}</button>
             </form>
           ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
         </div>
@@ -2248,7 +2263,7 @@ function renderGuidelineCheckboxList(guidelines, { selectedIds = [], name = 'gui
   const guidelineList = Array.isArray(guidelines) ? guidelines : [];
   const selectedSet = new Set((Array.isArray(selectedIds) ? selectedIds : []).map((id) => String(id || '').trim()));
   if (!guidelineList.length) {
-    return '<p class="prompt guideline-checkbox-empty">NÄ—ra aktyviÅ³ gairiÅ³ pasirinkimui.</p>';
+    return '<p class="prompt guideline-checkbox-empty">Nėra aktyvių gairių pasirinkimui.</p>';
   }
   return `
     <div class="guideline-checkbox-list">
@@ -2308,16 +2323,16 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
   return `
     <div class="initiative-matrix-card">
       <div class="initiative-matrix-header">
-        <strong>GairiÅ³ ir iniciatyvÅ³ susiejimas</strong>
-        <span class="tag">LentelÄ—</span>
+        <strong>${langText('Gairiu ir iniciatyvu susiejimas', 'Guideline-to-initiative mapping')}</strong>
+        <span class="tag">${langText('Lentele', 'Table')}</span>
       </div>
-      <p class="prompt">GairÄ—s, kurios neturi nei vienos iniciatyvos, paÅ¾ymÄ—tos atskirai.</p>
+      <p class="prompt">${langText('Gaires, kurios neturi nei vienos iniciatyvos, pazymetos atskirai.', 'Guidelines with no initiatives are highlighted separately.')}</p>
       <div class="initiative-matrix-scroll">
         <table class="initiative-matrix-table">
           <thead>
             <tr>
-              <th>GairÄ—</th>
-              <th>Priskirtos iniciatyvos</th>
+              <th>${langText('Gaire', 'Guideline')}</th>
+              <th>${langText('Priskirtos iniciatyvos', 'Assigned initiatives')}</th>
             </tr>
           </thead>
           <tbody>
@@ -2327,12 +2342,12 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
                   <td class="initiative-matrix-guideline">${escapeHtml(row.guidelineTitle)}</td>
                   <td>
                     ${row.unassigned
-                      ? '<span class="initiative-matrix-empty">Nepriskirta nÄ— viena iniciatyva</span>'
+                      ? '<span class="initiative-matrix-empty">Nepriskirta nė viena iniciatyva</span>'
                       : `<div class="initiative-matrix-initiative-list">${row.initiativeTitles.map((title) => `<span class="initiative-matrix-chip">${escapeHtml(title)}</span>`).join('')}</div>`}
                   </td>
                 </tr>
               `).join('')
-              : '<tr><td colspan="2" class="initiative-matrix-empty-row">GairiÅ³ dar nÄ—ra.</td></tr>'}
+              : `<tr><td colspan="2" class="initiative-matrix-empty-row">${langText('Gairiu dar nera.', 'No guidelines yet.')}</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -2349,7 +2364,7 @@ function renderInitiativeCard(initiative, options) {
   const safeComments = commentsVisible
     ? (comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : '<li class="comment-item comment-item-empty">Dar nÄ—ra komentarÅ³.</li>')
+      : `<li class="comment-item comment-item-empty">${langText('Dar nera komentaru.', 'No comments yet.')}</li>`)
     : `<li class="comment-item comment-item-empty">${escapeHtml(commentsHiddenHintText())}</li>`;
   const initiativeStatus = String(initiative.status || 'active').toLowerCase();
   const votingDisabled = initiativeStatus === 'disabled';
@@ -2370,49 +2385,49 @@ function renderInitiativeCard(initiative, options) {
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(initiative.title)}</h4>
-          ${votingDisabled ? '<span class="tag tag-disabled">IÅ¡jungta</span>' : ''}
+          ${votingDisabled ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
         </div>
-        <p>${escapeHtml(initiative.description || 'Be paaiÅ¡kinimo')}</p>
+        <p>${escapeHtml(initiative.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
         <div class="header-stack">
           ${(linkedNames.length
             ? linkedNames.map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join('')
-            : '<span class="tag">Nepriskirta gairiÅ³</span>')}
+            : `<span class="tag">${langText('Nepriskirta gairiu', 'No linked guidelines')}</span>`)}
         </div>
       </div>
       ${options.member ? `
         <div class="vote-panel">
           <div class="vote-panel-head">
-            <span class="vote-label">Tavo balas</span>
+            <span class="vote-label">${langText('Tavo balas', 'Your vote')}</span>
           </div>
           <div class="vote-panel-body">
             <div class="vote-controls">
-              <button class="vote-btn" data-action="initiative-vote-minus" data-id="${escapeHtml(initiative.id)}" aria-label="Atimti balsÄ…" ${canMinus ? '' : 'disabled'}>âˆ’</button>
+              <button class="vote-btn" data-action="initiative-vote-minus" data-id="${escapeHtml(initiative.id)}" aria-label="${escapeHtml(langText('Atimti bala', 'Decrease vote'))}" ${canMinus ? '' : 'disabled'}>&minus;</button>
               <span class="vote-score">${userScore}</span>
-              <button class="vote-btn" data-action="initiative-vote-plus" data-id="${escapeHtml(initiative.id)}" aria-label="PridÄ—ti balsÄ…" ${canPlus ? '' : 'disabled'}>+</button>
+              <button class="vote-btn" data-action="initiative-vote-plus" data-id="${escapeHtml(initiative.id)}" aria-label="${escapeHtml(langText('Prideti bala', 'Increase vote'))}" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
-            <div class="vote-total">Bendras balas: <strong>${Number(initiative.totalScore || 0)}</strong></div>
-            ${votingDisabled ? '<div class="vote-total">Balsavimas iÅ¡jungtas administratoriaus</div>' : ''}
+            <div class="vote-total">${langText('Bendras balas', 'Total score')}: <strong>${Number(initiative.totalScore || 0)}</strong></div>
+            ${votingDisabled ? `<div class="vote-total">${langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
           </div>
         </div>
       ` : `
         <div class="vote-panel">
           <div class="vote-panel-head">
-            <span class="vote-label">VieÅ¡as reÅ¾imas</span>
+            <span class="vote-label">${langText('Viesas rezimas', 'Public mode')}</span>
           </div>
           <div class="vote-panel-body">
-            <div class="vote-total"><strong>Bendras balas: ${Number(initiative.totalScore || 0)}</strong></div>
-            <div class="vote-total">Rodomi tik agreguoti duomenys</div>
+            <div class="vote-total"><strong>${langText('Bendras balas', 'Total score')}: ${Number(initiative.totalScore || 0)}</strong></div>
+            <div class="vote-total">${langText('Rodomi tik agreguoti duomenys', 'Only aggregated data is shown')}</div>
           </div>
         </div>
       `}
       ${showCommentsSection ? `
         <div class="card-section">
-          <strong>Komentarai</strong>
+          <strong>${langText('Komentarai', 'Comments')}</strong>
           <ul class="mini-list">${safeComments}</ul>
           ${options.member && options.writable ? `
             <form data-action="initiative-comment" data-id="${escapeHtml(initiative.id)}" class="inline-form">
-              <input type="text" name="comment" placeholder="Ä®raÅ¡ykite komentarÄ…" required ${state.busy ? 'disabled' : ''}/>
-              <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>PridÄ—ti</button>
+              <input type="text" name="comment" placeholder="${escapeHtml(langText('Irasykite komentara', 'Write a comment'))}" required ${state.busy ? 'disabled' : ''}/>
+              <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>${langText('Prideti', 'Add')}</button>
             </form>
           ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
         </div>
@@ -2425,23 +2440,23 @@ function renderInitiativesView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Pasirinkite institucijÄ…</strong>
+        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
       </div>
     `;
     return;
   }
 
   if (state.loading) {
-    elements.stepView.innerHTML = '<div class="card"><strong>Kraunami duomenys...</strong></div>';
+    elements.stepView.innerHTML = `<div class="card"><strong>${langText('Kraunami duomenys...', 'Loading data...')}</strong></div>`;
     return;
   }
 
   if (state.error) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Nepavyko Ä¯kelti duomenÅ³</strong>
+        <strong>${langText('Nepavyko ikelti duomenu', 'Failed to load data')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
-        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar kartÄ…</button>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">${langText('Bandyti dar karta', 'Try again')}</button>
       </div>
     `;
     const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
@@ -2463,27 +2478,27 @@ function renderInitiativesView() {
   const guidelineInitiativeMatrix = renderGuidelineInitiativeMatrix(eligibleGuidelines, initiatives);
 
   const stats = [
-    `BÅ«sena: ${String(state.cycle?.state || '-').toUpperCase()}`,
-    `Iniciatyvos: ${Number(state.summary?.initiatives_count || initiatives.length || 0)}`,
-    `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
+    `${langText('Busena', 'Status')}: ${String(state.cycle?.state || '-').toUpperCase()}`,
+    `${langText('Iniciatyvos', 'Initiatives')}: ${Number(state.summary?.initiatives_count || initiatives.length || 0)}`,
+    `${langText('Dalyviai', 'Participants')}: ${Number(state.summary?.participant_count || 0)}`
   ];
   if (state.commentsVisible) {
-    stats.splice(2, 0, `Komentarai: ${Number(state.summary?.initiative_comments_count || 0)}`);
+    stats.splice(2, 0, `${langText('Komentarai', 'Comments')}: ${Number(state.summary?.initiative_comments_count || 0)}`);
   }
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>Iniciatyvos</h2>
+      <h2>${langText('Iniciatyvos', 'Initiatives')}</h2>
       <div class="header-stack step-header-actions">
-        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Eksportuoti santraukÄ…</button>
-        <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
-        <span class="tag">Strategija: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
-        ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">VieÅ¡as reÅ¾imas</span>'}
+        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
+        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
+        <span class="tag">${langText('Ciklas', 'Cycle')}: ${escapeHtml(state.cycle?.title || '-')}</span>
+        ${member ? `<span class="tag">${langText('Tavo balsai', 'Your votes')}: ${remaining} / ${budget}</span>` : `<span class="tag">${langText('Viesas rezimas', 'Public mode')}</span>`}
       </div>
     </div>
 
-    <p class="prompt">${escapeHtml(steps[1].prompt)}</p>
+    <p class="prompt">${escapeHtml(stepPrompt('initiatives'))}</p>
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
 
     <div class="header-stack" style="margin-bottom: 14px;">
@@ -2501,8 +2516,8 @@ function renderInitiativesView() {
             })).join('')}
           </div>`
         : `<div class="card guideline-empty">
-            <strong>IniciatyvÅ³ dar nÄ—ra</strong>
-            <p class="prompt" style="margin: 6px 0 0;">Å ioje institucijoje kol kas nÄ—ra sukurtÅ³ iniciatyvÅ³.</p>
+            <strong>${langText('Iniciatyvu dar nera', 'No initiatives yet')}</strong>
+            <p class="prompt" style="margin: 6px 0 0;">${langText('Sioje institucijoje kol kas nera sukurtu iniciatyvu.', 'No initiatives have been created for this institution yet.')}</p>
           </div>`
       }
     </section>
@@ -2511,23 +2526,23 @@ function renderInitiativesView() {
     ${member ? (writable ? `
       <div class="card initiative-add-card" style="margin-top: 16px;">
         <div class="header-row">
-          <strong>Nauja iniciatyva</strong>
-          <span class="tag">PasiÅ«lymas</span>
+          <strong>${langText('Nauja iniciatyva', 'New initiative')}</strong>
+          <span class="tag">${langText('Pasiulymas', 'Suggestion')}</span>
         </div>
         <div class="initiative-add-layout">
           <div class="initiative-add-form-pane">
-            <p class="prompt" style="margin-bottom: 10px;">Iniciatyva turi bÅ«ti priskirta bent vienai gairei.</p>
+            <p class="prompt" style="margin-bottom: 10px;">${langText('Iniciatyva turi buti priskirta bent vienai gairei.', 'An initiative must be linked to at least one guideline.')}</p>
             <form id="initiativeAddForm">
               <div class="form-row">
-                <input type="text" name="title" placeholder="Iniciatyvos pavadinimas" required ${state.busy ? 'disabled' : ''}/>
+                <input type="text" name="title" placeholder="${escapeHtml(langText('Iniciatyvos pavadinimas', 'Initiative title'))}" required ${state.busy ? 'disabled' : ''}/>
               </div>
-              <textarea name="desc" placeholder="Trumpas paaiÅ¡kinimas" ${state.busy ? 'disabled' : ''}></textarea>
-              <label class="prompt" style="display:block;margin:10px 0 6px;">Priskirtos gairÄ—s</label>
+              <textarea name="desc" placeholder="${escapeHtml(langText('Trumpas paaiskinimas', 'Short description'))}" ${state.busy ? 'disabled' : ''}></textarea>
+              <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Priskirtos gaires', 'Linked guidelines')}</label>
               <div class="guideline-checkbox-panel">
                 ${renderGuidelineCheckboxList(eligibleGuidelines, { name: 'guidelineIds', disabled: state.busy })}
               </div>
-              <p class="prompt guideline-checkbox-hint" style="margin: 8px 0 0;">PaÅ¾ymÄ—kite vienÄ… ar kelias gaires.</p>
-              <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>PridÄ—ti iniciatyvÄ…</button>
+              <p class="prompt guideline-checkbox-hint" style="margin: 8px 0 0;">${langText('Pazymekite viena ar kelias gaires.', 'Select one or more guidelines.')}</p>
+              <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('Prideti iniciatyva', 'Add initiative')}</button>
             </form>
           </div>
           <aside class="initiative-add-matrix-pane">
@@ -2537,7 +2552,7 @@ function renderInitiativesView() {
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>Ciklas uÅ¾rakintas redagavimui</strong>
+        <strong>${langText('Ciklas uzrakintas redagavimui', 'Cycle is locked for editing')}</strong>
       </div>
     `) : (authenticated ? `
       <div class="card" style="margin-top: 16px;">
@@ -2545,8 +2560,8 @@ function renderInitiativesView() {
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>Prisijunkite, kad galÄ—tumÄ—te aktyviai dalyvauti</strong>
-        <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
+        <strong>${langText('Prisijunkite, kad galetumete aktyviai dalyvauti', 'Sign in to participate actively')}</strong>
+        <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">${langText('Prisijungti', 'Sign in')}</button>
       </div>
     `)}
     </section>
@@ -2661,9 +2676,9 @@ function renderStepView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Pasirinkite institucijÄ…</strong>
+        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">
-          Kairiajame meniu pasirinkite institucijÄ… iÅ¡ iÅ¡skleidÅ¾iamo sÄ…raÅ¡o, kad atvertumÄ—te jos vieÅ¡Ä… gairiÅ³ puslapÄ¯.
+          ${langText('Kairiajame meniu pasirinkite institucija is isskleidziamo saraso, kad atvertumete jos viesa gairiu puslapi.', 'Use the left menu institution selector to open its public guideline page.')}
         </p>
       </div>
     `;
@@ -2671,16 +2686,16 @@ function renderStepView() {
   }
 
   if (state.loading) {
-    elements.stepView.innerHTML = '<div class="card"><strong>Kraunami duomenys...</strong></div>';
+    elements.stepView.innerHTML = `<div class="card"><strong>${langText('Kraunami duomenys...', 'Loading data...')}</strong></div>`;
     return;
   }
 
   if (state.error) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>Nepavyko Ä¯kelti duomenÅ³</strong>
+        <strong>${langText('Nepavyko ikelti duomenu', 'Failed to load data')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
-        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar kartÄ…</button>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">${langText('Bandyti dar karta', 'Try again')}</button>
       </div>
     `;
     const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
@@ -2696,28 +2711,28 @@ function renderStepView() {
   const remaining = Math.max(0, budget - used);
 
   const stats = [
-    `BÅ«sena: ${String(state.cycle?.state || '-').toUpperCase()}`,
-    `GairÄ—s: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
-    `Dalyviai: ${Number(state.summary?.participant_count || 0)}`
+    `${langText('Busena', 'Status')}: ${String(state.cycle?.state || '-').toUpperCase()}`,
+    `${langText('Gaires', 'Guidelines')}: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
+    `${langText('Dalyviai', 'Participants')}: ${Number(state.summary?.participant_count || 0)}`
   ];
   if (state.commentsVisible) {
-    stats.splice(2, 0, `Komentarai: ${Number(state.summary?.comments_count || 0)}`);
+    stats.splice(2, 0, `${langText('Komentarai', 'Comments')}: ${Number(state.summary?.comments_count || 0)}`);
   }
   const relationGroups = buildGuidelineRelationshipGroups(state.guidelines);
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>GairÄ—s</h2>
+      <h2>${langText('Gaires', 'Guidelines')}</h2>
       <div class="header-stack step-header-actions">
-        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>Eksportuoti santraukÄ…</button>
-        <span class="tag">Institucija: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
-        <span class="tag">Strategija: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">Ciklas: ${escapeHtml(state.cycle?.title || '-')}</span>
-        ${member ? `<span class="tag">Tavo balsai: ${remaining} / ${budget}</span>` : '<span class="tag">VieÅ¡as reÅ¾imas</span>'}
+        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
+        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
+        <span class="tag">${langText('Ciklas', 'Cycle')}: ${escapeHtml(state.cycle?.title || '-')}</span>
+        ${member ? `<span class="tag">${langText('Tavo balsai', 'Your votes')}: ${remaining} / ${budget}</span>` : `<span class="tag">${langText('Viesas rezimas', 'Public mode')}</span>`}
       </div>
     </div>
 
-    <p class="prompt">${escapeHtml((steps.find((item) => item.id === 'guidelines') || steps[0]).prompt)}</p>
+    <p class="prompt">${escapeHtml(stepPrompt('guidelines'))}</p>
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
 
     <div class="header-stack" style="margin-bottom: 14px;">
@@ -2727,17 +2742,17 @@ function renderStepView() {
     <div id="guidelineGroups" class="guideline-groups">
       <section class="guideline-group">
         <div class="guideline-group-header">
-          <h3>Susietos gairÄ—s</h3>
+          <h3>${langText('Susietos gaires', 'Linked guidelines')}</h3>
           <span class="tag">${relationGroups.parentGroups.length}</span>
         </div>
-        <p class="prompt">TÄ—vinÄ—s gairÄ—s rodomos kartu su joms priskirtomis vaikinÄ—mis gairÄ—mis.</p>
+        <p class="prompt">${langText('Tevines gaires rodomos kartu su joms priskirtomis vaikinemis gairemis.', 'Parent guidelines are shown together with their linked child guidelines.')}</p>
         ${relationGroups.parentGroups.length
           ? relationGroups.parentGroups.map((group) => `
               <div class="relationship-cluster">
                 <div class="relationship-cluster-head">
-                  <span class="tag tag-main">TÄ—vinÄ—</span>
+                  <span class="tag tag-main">${langText('Tevine', 'Parent')}</span>
                   <strong>${escapeHtml(group.parent.title)}</strong>
-                  <span class="tag">VaikiniÅ³: ${group.children.length}</span>
+                  <span class="tag">${langText('Vaikiniu', 'Children')}: ${group.children.length}</span>
                 </div>
                 <div class="card-list relationship-cluster-cards">
                   ${renderGuidelineCard(group.parent, {
@@ -2765,10 +2780,10 @@ function renderStepView() {
       ${relationGroups.unassignedChildren.length ? `
         <section class="guideline-group">
           <div class="guideline-group-header">
-            <h3>VaikinÄ—s be tÄ—vinÄ—s</h3>
+            <h3>${langText('Vaikines be tevines', 'Children without parent')}</h3>
             <span class="tag">${relationGroups.unassignedChildren.length}</span>
           </div>
-          <p class="prompt">Å ios vaikinÄ—s gairÄ—s dar neturi teisingai priskirtos tÄ—vinÄ—s gairÄ—s.</p>
+          <p class="prompt">${langText('Sios vaikines gaires dar neturi teisingai priskirtos tevines gaires.', 'These child guidelines are missing a properly assigned parent guideline.')}</p>
           <div class="card-list">
             ${relationGroups.unassignedChildren.map((guideline) => renderGuidelineCard(guideline, {
               member,
@@ -2782,10 +2797,10 @@ function renderStepView() {
 
       <section class="guideline-group">
         <div class="guideline-group-header">
-          <h3>NaÅ¡laitinÄ—s gairÄ—s</h3>
+          <h3>${langText('Naslaitines gaires', 'Orphan guidelines')}</h3>
           <span class="tag">${relationGroups.orphanGuidelines.length}</span>
         </div>
-        <p class="prompt">SavarankiÅ¡kos gairÄ—s, kurios nÄ—ra priskirtos tÄ—vinei gairei.</p>
+        <p class="prompt">${langText('Savarankiskos gaires, kurios nera priskirtos tevinei gairei.', 'Standalone guidelines that are not assigned to a parent guideline.')}</p>
         ${relationGroups.orphanGuidelines.length
           ? `<div class="card-list">
               ${relationGroups.orphanGuidelines.map((guideline) => renderGuidelineCard(guideline, {
@@ -2806,22 +2821,22 @@ function renderStepView() {
     ${member ? (writable ? `
       <div class="card" style="margin-top: 16px;">
         <div class="header-row">
-          <strong>Nauja gairÄ—</strong>
-          <span class="tag">SiÅ«lymas</span>
+          <strong>${langText('Nauja gaire', 'New guideline')}</strong>
+          <span class="tag">${langText('Siulymas', 'Suggestion')}</span>
         </div>
-        <p class="prompt" style="margin-bottom: 10px;">SiÅ«lykite papildomas gaires, kurios turÄ—tÅ³ bÅ«ti Ä¯trauktos.</p>
+        <p class="prompt" style="margin-bottom: 10px;">${langText('Siulykite papildomas gaires, kurios turetu buti itrauktos.', 'Suggest additional guidelines that should be included.')}</p>
         <form id="guidelineAddForm" class="guideline-add-form">
           <div class="form-row">
-            <input type="text" name="title" placeholder="GairÄ—s pavadinimas" required ${state.busy ? 'disabled' : ''}/>
+            <input type="text" name="title" placeholder="${escapeHtml(langText('Gaires pavadinimas', 'Guideline title'))}" required ${state.busy ? 'disabled' : ''}/>
           </div>
-          <textarea name="desc" placeholder="Trumpas paaiÅ¡kinimas" ${state.busy ? 'disabled' : ''}></textarea>
-          <button class="btn btn-primary guideline-add-submit-btn" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>PridÄ—ti gairÄ™</button>
+          <textarea name="desc" placeholder="${escapeHtml(langText('Trumpas paaiskinimas', 'Short description'))}" ${state.busy ? 'disabled' : ''}></textarea>
+          <button class="btn btn-primary guideline-add-submit-btn" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('Prideti gaire', 'Add guideline')}</button>
         </form>
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>Ciklas uÅ¾rakintas redagavimui</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Balsuoti ir komentuoti galima tik kai ciklo bÅ«sena yra Open.</p>
+        <strong>${langText('Ciklas uzrakintas redagavimui', 'Cycle is locked for editing')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Balsuoti ir komentuoti galima tik kai ciklo busena yra Open.', 'Voting and commenting are available only when the cycle state is Open.')}</p>
       </div>
     `) : (authenticated ? `
       <div class="card" style="margin-top: 16px;">
@@ -2832,9 +2847,9 @@ function renderStepView() {
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>Prisijunkite, kad galÄ—tumÄ—te aktyviai dalyvauti</strong>
-        <p class="prompt" style="margin: 8px 0 0;">VieÅ¡ai matomi visi komentarai prie strategijos gairiÅ³. Prisijungus galima siÅ«lyti gaires, komentuoti ir balsuoti.</p>
-        <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">Prisijungti</button>
+        <strong>${langText('Prisijunkite, kad galetumete aktyviai dalyvauti', 'Sign in to participate actively')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Viesai matomi visi komentarai prie strategijos gairiu. Prisijungus galima siulyti gaires, komentuoti ir balsuoti.', 'Public users can view the strategy cards. Sign in to suggest guidelines, comment, and vote.')}</p>
+        <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">${langText('Prisijungti', 'Sign in')}</button>
       </div>
     `)}
     </section>
@@ -2994,7 +3009,7 @@ function renderUserBar() {
     container.innerHTML = `
       <div class="user-toolbar user-toolbar-main">
         ${strategySwitcherCardMarkup({ topbar: true })}
-        <button id="openAuthBtn" class="btn btn-primary">Prisijungti</button>
+        <button id="openAuthBtn" class="btn btn-primary">${langText('Prisijungti', 'Sign in')}</button>
       </div>
     `;
     bindStrategySwitcherDialog(container);
@@ -3005,8 +3020,10 @@ function renderUserBar() {
     return;
   }
 
-  const displayName = state.user?.displayName || state.user?.email || 'PrisijungÄ™s vartotojas';
-  const roleLabel = state.role === 'institution_admin' ? 'Administratorius' : 'Narys';
+  const displayName = state.user?.displayName || state.user?.email || langText('Prisijunges vartotojas', 'Signed-in user');
+  const roleLabel = state.role === 'institution_admin'
+    ? langText('Administratorius', 'Administrator')
+    : langText('Narys', 'Member');
 
   container.innerHTML = `
     <div class="user-toolbar user-toolbar-main">
@@ -3015,7 +3032,7 @@ function renderUserBar() {
         <span>${escapeHtml(displayName)}</span>
         <span class="tag">${escapeHtml(roleLabel)}</span>
       </div>
-      <button id="logoutBtn" class="btn btn-ghost">Atsijungti</button>
+      <button id="logoutBtn" class="btn btn-ghost">${langText('Atsijungti', 'Sign out')}</button>
     </div>
   `;
   bindStrategySwitcherDialog(container);
@@ -3059,13 +3076,13 @@ function renderVoteFloating() {
   floating.classList.toggle('collapsed', state.voteFloatingCollapsed);
   floating.innerHTML = `
     <div class="vote-floating-inner">
-      <button id="toggleVoteFloatingBtn" class="vote-floating-toggle" type="button" aria-label="${state.voteFloatingCollapsed ? 'Rodyti balsÅ³ biudÅ¾etÄ…' : 'SlÄ—pti balsÅ³ biudÅ¾etÄ…'}">
+      <button id="toggleVoteFloatingBtn" class="vote-floating-toggle" type="button" aria-label="${state.voteFloatingCollapsed ? 'Rodyti balsų biudžetą' : 'Slėpti balsų biudžetą'}">
         ${state.voteFloatingCollapsed ? '>' : '<'}
       </button>
       <div class="vote-floating-content">
-        <div class="vote-floating-title">BalsÅ³ biudÅ¾etas</div>
+        <div class="vote-floating-title">Balsų biudžetas</div>
         <div class="vote-floating-count">${remaining} / ${budget}</div>
-        <div class="vote-total">${locked ? 'Ciklas uÅ¾rakintas' : 'Balsavimas aktyvus'}</div>
+        <div class="vote-total">${locked ? 'Ciklas užrakintas' : 'Balsavimas aktyvus'}</div>
       </div>
     </div>
   `;
@@ -3085,32 +3102,32 @@ function buildSummary() {
   lines.push(`Institucija: ${state.institution?.name || state.institutionSlug}`);
   lines.push(`Strategija: ${state.strategy?.title || '-'}`);
   lines.push(`Ciklas: ${state.cycle?.title || '-'}`);
-  lines.push(`BÅ«sena: ${state.cycle?.state || '-'}`);
+  lines.push(`Būsena: ${state.cycle?.state || '-'}`);
   lines.push('');
-  lines.push('GairÄ—s:');
+  lines.push('Gairės:');
 
   if (!state.guidelines.length) {
-    lines.push('- NÄ—ra duomenÅ³');
+    lines.push('- Nėra duomenų');
     return lines.join('\n');
   }
 
   state.guidelines.forEach((guideline) => {
     lines.push(`- ${guideline.title} (bendras balas: ${Number(guideline.totalScore || 0)})`);
-    lines.push(`  apraÅ¡ymas: ${guideline.description || 'be paaiÅ¡kinimo'}`);
-    lines.push(`  komentarÅ³: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
+    lines.push(`  aprašymas: ${guideline.description || 'be paaiškinimo'}`);
+    lines.push(`  komentarų: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
   });
 
   lines.push('');
   lines.push('Iniciatyvos:');
   if (!state.initiatives.length) {
-    lines.push('- NÄ—ra duomenÅ³');
+    lines.push('- Nėra duomenų');
   } else {
     state.initiatives.forEach((initiative) => {
       const linkedNames = resolveInitiativeGuidelineNames(initiative);
       lines.push(`- ${initiative.title} (bendras balas: ${Number(initiative.totalScore || 0)})`);
-      lines.push(`  apraÅ¡ymas: ${initiative.description || 'be paaiÅ¡kinimo'}`);
-      lines.push(`  susietos gairÄ—s: ${linkedNames.length ? linkedNames.join(', ') : 'nÄ—ra'}`);
-      lines.push(`  komentarÅ³: ${Array.isArray(initiative.comments) ? initiative.comments.length : 0}`);
+      lines.push(`  aprašymas: ${initiative.description || 'be paaiškinimo'}`);
+      lines.push(`  susietos gairės: ${linkedNames.length ? linkedNames.join(', ') : 'nėra'}`);
+      lines.push(`  komentarų: ${Array.isArray(initiative.comments) ? initiative.comments.length : 0}`);
     });
   }
 
@@ -3155,9 +3172,7 @@ function bindGlobal() {
   document.getElementById('downloadJson').addEventListener('click', downloadJson);
   window.addEventListener('uzt-auth-changed', handleAuthChanged);
   window.addEventListener('uzt-language-changed', () => {
-    if (state.activeView === 'guide') {
-      render();
-    }
+    render();
   });
   document.addEventListener('fullscreenchange', () => {
     updateMapFullscreenButtonLabel();
@@ -3190,7 +3205,7 @@ function ensureInstitutionSelectionForAuth() {
 
 function showAuthModal(initialMode = 'login') {
   if (!ensureInstitutionSelectionForAuth()) {
-    notifyError('Pirma pasirinkite institucijÄ….');
+    notifyError('Pirma pasirinkite instituciją.');
     return;
   }
   void initialMode;
@@ -3221,7 +3236,7 @@ function showAuthModal(initialMode = 'login') {
     <div class="login-card">
       <div class="header-row" style="margin-bottom: 8px;">
         <h2>Prisijungimas</h2>
-        <button id="closeAuthModal" class="btn btn-ghost" type="button">UÅ¾daryti</button>
+        <button id="closeAuthModal" class="btn btn-ghost" type="button">Uždaryti</button>
       </div>
       <div id="authError" class="error" style="display:none;"></div>
       <p id="authHint" class="prompt auth-hint" style="display:none;"></p>
@@ -3229,18 +3244,18 @@ function showAuthModal(initialMode = 'login') {
       <form id="loginForm" class="login-form login-form-auth">
         <label class="auth-label" for="authInstitution">Institucija</label>
         ${authInstitutionSelect}
-        <label class="auth-label" for="authEmail">El. paÅ¡tas</label>
-        <input id="authEmail" type="email" name="email" placeholder="El. paÅ¡tas" autocomplete="email" required />
-        <label class="auth-label" for="authPassword">SlaptaÅ¾odis</label>
+        <label class="auth-label" for="authEmail">El. paštas</label>
+        <input id="authEmail" type="email" name="email" placeholder="El. paštas" autocomplete="email" required />
+        <label class="auth-label" for="authPassword">Slaptažodis</label>
         <div class="auth-password-field">
-          <input id="authPassword" type="password" name="password" placeholder="SlaptaÅ¾odis" autocomplete="current-password" required />
-          <button id="toggleAuthPassword" class="auth-password-toggle" type="button" aria-label="Rodyti slaptaÅ¾odÄ¯">Rodyti</button>
+          <input id="authPassword" type="password" name="password" placeholder="Slaptažodis" autocomplete="current-password" required />
+          <button id="toggleAuthPassword" class="auth-password-toggle" type="button" aria-label="Rodyti slaptažodį">Rodyti</button>
         </div>
         <button class="btn btn-primary" type="submit">Prisijungti</button>
       </form>
 
       <div class="auth-separator"></div>
-      <button id="forgotPasswordBtn" class="btn btn-ghost auth-forgot-btn" type="button">PamirÅ¡au slaptaÅ¾odÄ¯</button>
+      <button id="forgotPasswordBtn" class="btn btn-ghost auth-forgot-btn" type="button">Pamiršau slaptažodį</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -3289,11 +3304,11 @@ function showAuthModal(initialMode = 'login') {
   toggleAuthPassword.addEventListener('click', () => {
     const nextType = authPasswordInput.type === 'password' ? 'text' : 'password';
     authPasswordInput.type = nextType;
-    toggleAuthPassword.textContent = nextType === 'password' ? 'Rodyti' : 'SlÄ—pti';
-    toggleAuthPassword.setAttribute('aria-label', nextType === 'password' ? 'Rodyti slaptaÅ¾odÄ¯' : 'SlÄ—pti slaptaÅ¾odÄ¯');
+    toggleAuthPassword.textContent = nextType === 'password' ? 'Rodyti' : 'Slėpti';
+    toggleAuthPassword.setAttribute('aria-label', nextType === 'password' ? 'Rodyti slaptažodį' : 'Slėpti slaptažodį');
   });
   forgotPasswordBtn.addEventListener('click', () => {
-    showHint('Susisiekite su savo organizacijos administratoriumi dÄ—l vienkartinÄ—s slaptaÅ¾odÅ¾io keitimo nuorodos.');
+    showHint('Susisiekite su savo organizacijos administratoriumi dėl vienkartinės slaptažodžio keitimo nuorodos.');
   });
   authEmailInput?.focus();
 
@@ -3372,30 +3387,30 @@ function strategyCreateUiText() {
     };
   }
   return {
-    title: 'Sukurti strategijÄ…',
-    subtitle: 'Sukurkite naujÄ… strategijÄ… pasirinktai institucijai.',
-    close: 'UÅ¾daryti',
+    title: 'Sukurti strategiją',
+    subtitle: 'Sukurkite naują strategiją pasirinktai institucijai.',
+    close: 'Uždaryti',
     manualTab: 'Rankinis',
-    aiTab: 'AI iÅ¡ PDF',
+    aiTab: 'AI iš PDF',
     strategySetup: 'Strategijos nustatymai',
     aiSetup: 'AI generavimo nustatymai',
     strategyTitle: 'Strategijos pavadinimas',
-    strategySlug: 'Strategijos slug (nebÅ«tina)',
-    strategyDescription: 'Trumpas apraÅ¡ymas (nebÅ«tina)',
-    createManual: 'Sukurti strategijÄ…',
+    strategySlug: 'Strategijos slug (nebūtina)',
+    strategyDescription: 'Trumpas aprašymas (nebūtina)',
+    createManual: 'Sukurti strategiją',
     localeHint: 'Rezultato kalba',
     clarification: 'AI patikslinimas',
     clarificationPlaceholder: 'Koks lygis, tonas, prioritetai, ko vengti.',
     documents: 'PDF dokumentai',
-    createAi: 'Generuoti strategijÄ… su AI',
+    createAi: 'Generuoti strategiją su AI',
     progressTitle: 'AI generavimas vyksta',
-    progressUploading: 'Ä®keliami dokumentai',
+    progressUploading: 'Įkeliami dokumentai',
     progressAnalyses: 'Analizuojama su AI',
-    progressPreparing: 'RuoÅ¡iamas digistrategy.eu formatas',
-    progressDone: 'UÅ¾baigiama',
+    progressPreparing: 'Ruošiamas digistrategy.eu formatas',
+    progressDone: 'Užbaigiama',
     progressRecovering: 'Laukiamas serverio patvirtinimas',
     successManual: 'Strategija sukurta:',
-    successAi: 'AI sugeneravo strategijÄ…:'
+    successAi: 'AI sugeneravo strategiją:'
   };
 }
 
@@ -3729,7 +3744,7 @@ function showStrategyCreateModal() {
   if (!canManageSelectedInstitution()) {
     notifyError(currentLanguage() === 'en'
       ? 'Only institution admin can create strategies in selected institution.'
-      : 'Strategijas Å¡ioje institucijoje gali kurti tik institucijos administratorius.');
+      : 'Strategijas šioje institucijoje gali kurti tik institucijos administratorius.');
     return;
   }
 
@@ -4008,16 +4023,16 @@ function accessRequestUiText() {
     };
   }
   return {
-    title: 'Prieigos uÅ¾klausa',
-    description: 'Pateikite trumpÄ… informacijÄ… ir perÅ¾iÅ«rÄ—sime jÅ«sÅ³ uÅ¾klausÄ….',
+    title: 'Prieigos užklausa',
+    description: 'Pateikite trumpą informaciją ir peržiūrėsime jūsų užklausą.',
     institution: 'Institucija',
-    fullName: 'Vardas ir pavardÄ—',
-    workEmail: 'Darbinis el. paÅ¡tas',
+    fullName: 'Vardas ir pavardė',
+    workEmail: 'Darbinis el. paštas',
     phone: 'Kontaktinis telefono numeris',
-    notes: 'Papildoma informacija (nebÅ«tina)',
-    submit: 'Pateikti uÅ¾klausÄ…',
-    close: 'UÅ¾daryti',
-    success: 'UÅ¾klausa gauta. UÅ¾registruota: ',
+    notes: 'Papildoma informacija (nebūtina)',
+    submit: 'Pateikti užklausą',
+    close: 'Uždaryti',
+    success: 'Užklausa gauta. Užregistruota: ',
     linkedinLead: 'Taip pat galite susisiekti tiesiogiai per LinkedIn:'
   };
 }
@@ -4056,7 +4071,7 @@ function showAccessRequestModal() {
       </form>
       <p class="prompt auth-hint" style="margin-top:8px;">
         ${escapeHtml(ui.linkedinLead)}
-        <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas LukoseviÄius</a>.
+        <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas Lukosevičius</a>.
       </p>
     </div>
   `;

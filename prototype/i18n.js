@@ -226,6 +226,88 @@
     [/^Bandyti dar karta$/u, 'Try again']
   ];
 
+  const MOJIBAKE_MARKER_RE = /(?:Ã.|Ä.|Å.|â.|Â.)/u;
+  const MOJIBAKE_BAD_CHAR_RE = /[ÃÂÄÅâ�]/gu;
+  const CP1252_EXTRA_CODEPOINT_TO_BYTE = Object.freeze({
+    0x20AC: 0x80,
+    0x201A: 0x82,
+    0x0192: 0x83,
+    0x201E: 0x84,
+    0x2026: 0x85,
+    0x2020: 0x86,
+    0x2021: 0x87,
+    0x02C6: 0x88,
+    0x2030: 0x89,
+    0x0160: 0x8A,
+    0x2039: 0x8B,
+    0x0152: 0x8C,
+    0x017D: 0x8E,
+    0x2018: 0x91,
+    0x2019: 0x92,
+    0x201C: 0x93,
+    0x201D: 0x94,
+    0x2022: 0x95,
+    0x2013: 0x96,
+    0x2014: 0x97,
+    0x02DC: 0x98,
+    0x2122: 0x99,
+    0x0161: 0x9A,
+    0x203A: 0x9B,
+    0x0153: 0x9C,
+    0x017E: 0x9E,
+    0x0178: 0x9F
+  });
+
+  function mojibakeScore(value) {
+    return (String(value || '').match(MOJIBAKE_BAD_CHAR_RE) || []).length;
+  }
+
+  function decodeCp1252AsUtf8(value) {
+    const input = String(value || '');
+    if (!input) return input;
+    const bytes = [];
+    for (const char of input) {
+      const codepoint = char.codePointAt(0);
+      if (codepoint <= 0xFF) {
+        bytes.push(codepoint);
+        continue;
+      }
+      const mappedByte = CP1252_EXTRA_CODEPOINT_TO_BYTE[codepoint];
+      if (typeof mappedByte === 'number') {
+        bytes.push(mappedByte);
+        continue;
+      }
+      return input;
+    }
+    try {
+      return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+    } catch {
+      return input;
+    }
+  }
+
+  function repairMojibake(value) {
+    const input = String(value || '');
+    if (!input || !MOJIBAKE_MARKER_RE.test(input)) return input;
+
+    let best = input;
+    let bestScore = mojibakeScore(input);
+    let candidate = input;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      candidate = decodeCp1252AsUtf8(candidate);
+      if (candidate === best) break;
+
+      const score = mojibakeScore(candidate);
+      if (score < bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+    }
+
+    return best;
+  }
+
   function normalizeLang(value) {
     const lang = String(value || '').trim().toLowerCase();
     return SUPPORTED.has(lang) ? lang : '';
@@ -256,16 +338,18 @@
 
   function translateText(text) {
     const input = String(text || '');
-    if (!input || state.lang === 'lt') return input;
+    if (!input) return input;
+    const repairedInput = repairMojibake(input);
+    if (state.lang === 'lt') return repairedInput;
 
-    const exact = EXACT_TEXT_EN.get(input.trim());
+    const exact = EXACT_TEXT_EN.get(repairedInput.trim());
     if (exact) {
-      const leading = input.match(/^\s*/u)?.[0] || '';
-      const trailing = input.match(/\s*$/u)?.[0] || '';
+      const leading = repairedInput.match(/^\s*/u)?.[0] || '';
+      const trailing = repairedInput.match(/\s*$/u)?.[0] || '';
       return `${leading}${exact}${trailing}`;
     }
 
-    let output = input;
+    let output = repairedInput;
     RULES_EN.forEach(([pattern, replacement]) => {
       output = output.replace(pattern, replacement);
     });
@@ -304,7 +388,6 @@
   }
 
   function localizeDocument(root) {
-    if (state.lang === 'lt') return;
     const scope = root instanceof Element || root instanceof Document ? root : document;
     const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
     const textNodes = [];
@@ -383,8 +466,8 @@
         });
       });
       state.observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-      localizeDocument(document);
     }
+    localizeDocument(document);
     localizeKeyedElements(document);
 
     window.dispatchEvent(new CustomEvent('uzt-language-changed', { detail: { lang: state.lang } }));
