@@ -1886,9 +1886,9 @@ function renderIntroDeck() {
 
 function relationLabel(relationType) {
   const relation = String(relationType || 'orphan').toLowerCase();
-  if (relation === 'parent') return 'tėvinė';
-  if (relation === 'child') return 'vaikinė';
-  return 'našlaitė';
+  if (relation === 'parent') return langText('tėvinė', 'parent');
+  if (relation === 'child') return langText('vaikinė', 'child');
+  return langText('našlaitinė', 'orphan');
 }
 
 function renderGuideView() {
@@ -2140,7 +2140,7 @@ function renderGuidelineCard(guideline, options) {
   const strategyLinksMarkup = relationKey === 'parent'
     ? `
       <div class="header-stack guideline-strategy-links">
-        <span class="tag tag-link-main">Strateginiai rysiai: ${strategyLinks.length}</span>
+        <span class="tag tag-link-main">${escapeHtml(langText('Strateginiai ryšiai', 'Strategic links'))}: ${strategyLinks.length}</span>
         ${uniqueStrategyLinks.slice(0, 3).map((link) => `
           <button
             type="button"
