@@ -28,6 +28,20 @@
   };
 
   const EXACT_TEXT_EN = new Map([
+    ['Kur link judėsime ir kokią naudą kursime?', 'Where are we heading and what value will we create?'],
+    ['Kokias konkrečias iniciatyvas įgyvendinsime?', 'Which concrete initiatives will we implement?'],
+    ['Susietos gairės', 'Linked guidelines'],
+    ['Tėvinė', 'Parent'],
+    ['Vaikinė', 'Child'],
+    ['Našlaitinė', 'Orphan'],
+    ['Strateginiai ryšiai', 'Strategic links'],
+    ['Dar nėra komentarų.', 'No comments yet.'],
+    ['Tavo balas', 'Your vote'],
+    ['Rodomi tik agreguoti duomenys', 'Only aggregated data is shown'],
+    ['Išjungta', 'Disabled'],
+    ['Balsavimas išjungtas administratoriaus', 'Voting disabled by administrator'],
+    ['STRATEGIJA', 'STRATEGY'],
+    ['INSTITUCIJA', 'INSTITUTION'],
     ['Gairės', 'Guidelines'],
     ['Iniciatyvos', 'Initiatives'],
     ['Admin', 'Admin'],
@@ -117,6 +131,22 @@
   ]);
 
   const RULES_EN = [
+    [/^Kur link judėsime ir kokią naudą kursime\?$/u, 'Where are we heading and what value will we create?'],
+    [/^Kokias konkrečias iniciatyvas įgyvendinsime\?$/u, 'Which concrete initiatives will we implement?'],
+    [/^Susietos gairės$/u, 'Linked guidelines'],
+    [/^Tėvinės gairės rodomos kartu su joms priskirtomis vaikinėmis gairėmis\.$/u, 'Parent guidelines are shown together with their linked child guidelines.'],
+    [/^Tėvinė$/u, 'Parent'],
+    [/^Vaikinė$/u, 'Child'],
+    [/^Našlaitinė$/u, 'Orphan'],
+    [/^Vaikinių:\s*/u, 'Children: '],
+    [/^Strateginiai ryšiai:\s*/u, 'Strategic links: '],
+    [/^Dar nėra komentarų\.$/u, 'No comments yet.'],
+    [/^Tavo balas$/u, 'Your vote'],
+    [/^Rodomi tik agreguoti duomenys$/u, 'Only aggregated data is shown'],
+    [/^Išjungta$/u, 'Disabled'],
+    [/^Balsavimas išjungtas administratoriaus$/u, 'Voting disabled by administrator'],
+    [/^STRATEGIJA$/u, 'STRATEGY'],
+    [/^INSTITUCIJA$/u, 'INSTITUTION'],
     [/^Institucija:\s*/u, 'Institution: '],
     [/^Ciklas:\s*/u, 'Cycle: '],
     [/^Būsena:\s*/u, 'Status: '],

@@ -401,6 +401,359 @@ function registerAdminRoutes({
     }
   }
 
+  function mapGenerationRow(row) {
+    if (!row) return null;
+    return {
+      id: row.id,
+      status: String(row.status || '').trim() || 'failed',
+      errorMessage: row.error_message || null,
+      createdAt: row.created_at || null,
+      strategy: row.strategy_id ? {
+        id: row.strategy_id,
+        title: row.strategy_title,
+        slug: row.strategy_slug,
+        description: row.strategy_description || null,
+        status: row.strategy_status || 'active'
+      } : null,
+      cycle: row.cycle_id ? {
+        id: row.cycle_id,
+        title: row.cycle_title,
+        state: row.cycle_state
+      } : null
+    };
+  }
+
+  async function loadAdminAiGenerationById(generationId, auth) {
+    const result = await query(
+      `select g.id,
+              g.status,
+              g.error_message,
+              g.created_at,
+              s.id as strategy_id,
+              s.title as strategy_title,
+              s.slug as strategy_slug,
+              s.description as strategy_description,
+              s.status as strategy_status,
+              c.id as cycle_id,
+              c.title as cycle_title,
+              c.state as cycle_state
+       from strategy_ai_generations g
+       left join institution_strategies s on s.id = g.strategy_id
+       left join strategy_cycles c on c.id = g.cycle_id
+       where g.id = $1
+         and g.institution_id = $2
+         and g.requested_by_scope = 'institution_admin'
+         and coalesce(g.requested_by_id, '') = $3
+       limit 1`,
+      [generationId, auth.institutionId, String(auth.sub || '')]
+    );
+    return result.rowCount ? mapGenerationRow(result.rows[0]) : null;
+  }
+
+  async function runInstitutionAdminAiGeneration({
+    generationId,
+    institutionId,
+    strategyTitleInput,
+    strategySlugInput,
+    strategyDescriptionInput,
+    cycleTitleInput,
+    clarification,
+    localeHint,
+    files
+  }) {
+    const inputFiles = Array.isArray(files) ? files : [];
+    try {
+      await query(
+        `update strategy_ai_generations
+         set status = 'processing',
+             error_message = null
+         where id = $1`,
+        [generationId]
+      );
+
+      const docs = await extractPdfTexts(inputFiles, {
+        maxCombinedChars: AI_STRATEGY_MAX_COMBINED_TEXT_CHARS
+      });
+
+      const generatedResult = await generateStrategyFromAi({
+        apiKey: AI_STRATEGY_API_KEY,
+        model: AI_STRATEGY_MODEL,
+        baseUrl: AI_STRATEGY_API_BASE_URL,
+        instruction: clarification,
+        docs,
+        localeHint,
+        timeoutMs: AI_STRATEGY_TIMEOUT_MS
+      });
+
+      const generated = generatedResult.normalized;
+      const finalStrategyTitle = strategyTitleInput
+        || generated.strategyTitle
+        || `AI strategija ${new Date().toISOString().slice(0, 10)}`;
+      const finalCycleTitle = cycleTitleInput
+        || generated.cycleTitle
+        || `${finalStrategyTitle} ciklas`;
+      const strategyDescription = strategyDescriptionInput
+        || generated.strategyDescription
+        || clarification;
+
+      const institutionRes = await query(
+        `select id, name, slug
+         from institutions
+         where id = $1
+         limit 1`,
+        [institutionId]
+      );
+      if (!institutionRes.rowCount) {
+        throw new Error('institution not found');
+      }
+
+      await query(
+        `update strategy_ai_generations
+         set status = 'applying'
+         where id = $1`,
+        [generationId]
+      );
+
+      const transactionClient = await pool.connect();
+      let strategyId = '';
+      let strategySlug = '';
+      let cycleId = '';
+      try {
+        await transactionClient.query('BEGIN');
+
+        const baseStrategySlug = slugify(strategySlugInput || finalStrategyTitle);
+        if (!baseStrategySlug) {
+          throw new Error('invalid strategy slug');
+        }
+
+        const institutionLockRes = await transactionClient.query(
+          `select id
+           from institutions
+           where id = $1
+           for update`,
+          [institutionId]
+        );
+        if (!institutionLockRes.rowCount) {
+          throw new Error('institution not found');
+        }
+
+        await ensureStrategyCapacity(transactionClient, institutionId);
+        strategySlug = await ensureUniqueStrategySlug(transactionClient, institutionId, baseStrategySlug);
+
+        const defaultStrategyCheck = await transactionClient.query(
+          `select id
+           from institution_strategies
+           where institution_id = $1 and is_default = true
+           limit 1`,
+          [institutionId]
+        );
+        const isDefault = defaultStrategyCheck.rowCount === 0;
+
+        strategyId = uuid();
+        await transactionClient.query(
+          `insert into institution_strategies (id, institution_id, title, slug, description, status, is_default)
+           values ($1, $2, $3, $4, $5, 'active', $6)`,
+          [strategyId, institutionId, finalStrategyTitle, strategySlug, strategyDescription || null, isDefault]
+        );
+
+        cycleId = uuid();
+        await transactionClient.query(
+          `insert into strategy_cycles (
+             id, institution_id, strategy_id, title, state, results_published, starts_at, mission_text, vision_text
+           )
+           values ($1, $2, $3, $4, 'open', false, now(), $5, $6)`,
+          [cycleId, institutionId, strategyId, finalCycleTitle, generated.missionText || null, generated.visionText || null]
+        );
+
+        const guidelineIdByTitle = new Map();
+        const guidelineRecords = [];
+        const guidelineRecordById = new Map();
+        const childGuidelines = [];
+        for (const guideline of generated.guidelines) {
+          const guidelineId = uuid();
+          await transactionClient.query(
+            `insert into strategy_guidelines (
+               id, cycle_id, title, description, status, line_side, relation_type, parent_guideline_id, created_by
+             )
+             values ($1, $2, $3, $4, 'active', 'auto', $5, null, null)`,
+            [guidelineId, cycleId, guideline.title, guideline.description || null, guideline.relationType]
+          );
+          const guidelineTitleKey = normalizeLayoutLabel(guideline.title);
+          guidelineIdByTitle.set(guidelineTitleKey, guidelineId);
+          const guidelineRecord = {
+            id: guidelineId,
+            title: guideline.title,
+            relationType: guideline.relationType,
+            parentTitle: guideline.parentTitle || null,
+            parentGuidelineId: null
+          };
+          guidelineRecords.push(guidelineRecord);
+          guidelineRecordById.set(guidelineId, guidelineRecord);
+          if (guideline.relationType === 'child' && guideline.parentTitle) {
+            childGuidelines.push({ id: guidelineId, parentTitle: guideline.parentTitle });
+          }
+        }
+
+        for (const child of childGuidelines) {
+          const parentId = guidelineIdByTitle.get(normalizeLayoutLabel(child.parentTitle));
+          if (!parentId || parentId === child.id) {
+            await transactionClient.query(
+              `update strategy_guidelines
+               set relation_type = 'orphan',
+                   parent_guideline_id = null,
+                   updated_at = now()
+               where id = $1`,
+              [child.id]
+            );
+            const childRecord = guidelineRecordById.get(child.id);
+            if (childRecord) {
+              childRecord.relationType = 'orphan';
+              childRecord.parentGuidelineId = null;
+            }
+            continue;
+          }
+          await transactionClient.query(
+            `update strategy_guidelines
+             set parent_guideline_id = $1,
+                 updated_at = now()
+             where id = $2`,
+            [parentId, child.id]
+          );
+          const childRecord = guidelineRecordById.get(child.id);
+          if (childRecord) {
+            childRecord.parentGuidelineId = parentId;
+          }
+        }
+
+        const fallbackGuidelineId = Array.from(guidelineIdByTitle.values())[0];
+        const initiativeRecords = [];
+        for (const initiative of generated.initiatives) {
+          const initiativeId = uuid();
+          await transactionClient.query(
+            `insert into strategy_initiatives (
+               id, cycle_id, title, description, status, line_side, created_by
+             )
+             values ($1, $2, $3, $4, 'active', 'auto', null)`,
+            [initiativeId, cycleId, initiative.title, initiative.description || null]
+          );
+
+          const uniqueGuidelineIds = new Set();
+          const initiativeGuidelineTitles = Array.isArray(initiative.guidelineTitles)
+            ? initiative.guidelineTitles
+            : [];
+          initiativeGuidelineTitles.forEach((title) => {
+            const guidelineId = guidelineIdByTitle.get(normalizeLayoutLabel(title));
+            if (guidelineId) uniqueGuidelineIds.add(guidelineId);
+          });
+          if (!uniqueGuidelineIds.size && fallbackGuidelineId) {
+            uniqueGuidelineIds.add(fallbackGuidelineId);
+          }
+          const linkedGuidelineIds = Array.from(uniqueGuidelineIds);
+          initiativeRecords.push({
+            id: initiativeId,
+            title: initiative.title,
+            guidelineIds: linkedGuidelineIds
+          });
+
+          for (const guidelineId of linkedGuidelineIds) {
+            await transactionClient.query(
+              `insert into strategy_initiative_guidelines (id, initiative_id, guideline_id)
+               values ($1, $2, $3)`,
+              [uuid(), initiativeId, guidelineId]
+            );
+          }
+        }
+
+        const layout = buildAiMapLayout({
+          guidelineRecords,
+          initiativeRecords
+        });
+
+        await transactionClient.query(
+          `update strategy_cycles
+           set map_x = $1, map_y = $2
+           where id = $3`,
+          [layout.institutionX, layout.institutionY, cycleId]
+        );
+
+        for (const guidelineLayout of layout.guidelines) {
+          await transactionClient.query(
+            `update strategy_guidelines
+             set map_x = $1,
+                 map_y = $2,
+                 line_side = $3,
+                 updated_at = now()
+             where id = $4 and cycle_id = $5`,
+            [guidelineLayout.x, guidelineLayout.y, guidelineLayout.lineSide, guidelineLayout.id, cycleId]
+          );
+        }
+
+        for (const initiativeLayout of layout.initiatives) {
+          await transactionClient.query(
+            `update strategy_initiatives
+             set map_x = $1,
+                 map_y = $2,
+                 line_side = $3,
+                 updated_at = now()
+             where id = $4 and cycle_id = $5`,
+            [initiativeLayout.x, initiativeLayout.y, initiativeLayout.lineSide, initiativeLayout.id, cycleId]
+          );
+        }
+
+        await transactionClient.query('COMMIT');
+
+        await query(
+          `update strategy_ai_generations
+           set strategy_id = $2,
+               cycle_id = $3,
+               source_files_json = $4::jsonb,
+               model = $5,
+               status = 'completed',
+               error_message = null
+           where id = $1`,
+          [
+            generationId,
+            strategyId,
+            cycleId,
+            JSON.stringify(
+              docs.map((doc) => ({
+                filename: doc.filename,
+                bytes: doc.bytes,
+                chars: doc.chars
+              }))
+            ),
+            generatedResult.model || AI_STRATEGY_MODEL
+          ]
+        );
+      } catch (error) {
+        try {
+          await transactionClient.query('ROLLBACK');
+        } catch {
+          // ignore rollback errors
+        }
+        throw error;
+      } finally {
+        transactionClient.release();
+      }
+
+      broadcast({
+        type: 'v1.strategy.created',
+        institutionId,
+        strategyId,
+        cycleId
+      });
+    } catch (error) {
+      const mapped = mapAiGenerationError(error);
+      await query(
+        `update strategy_ai_generations
+         set status = 'failed',
+             error_message = $2
+         where id = $1`,
+        [generationId, mapped.error]
+      ).catch(() => {});
+    }
+  }
+
   async function loadInstitutionParentGuidelineCatalog(institutionId) {
     const result = await query(
       `select g.id,
@@ -697,28 +1050,26 @@ function registerAdminRoutes({
       return res.json({ ok: true, generation: null });
     }
 
-    const row = result.rows[0];
     return res.json({
       ok: true,
-      generation: {
-        id: row.id,
-        status: String(row.status || '').trim() || 'failed',
-        errorMessage: row.error_message || null,
-        createdAt: row.created_at || null,
-        strategy: row.strategy_id ? {
-          id: row.strategy_id,
-          title: row.strategy_title,
-          slug: row.strategy_slug,
-          description: row.strategy_description || null,
-          status: row.strategy_status || 'active'
-        } : null,
-        cycle: row.cycle_id ? {
-          id: row.cycle_id,
-          title: row.cycle_title,
-          state: row.cycle_state
-        } : null
-      }
+      generation: mapGenerationRow(result.rows[0])
     });
+  });
+
+  app.get('/api/v1/admin/strategies/ai-generations/:generationId', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+
+    const generationId = String(req.params.generationId || '').trim();
+    if (!generationId) {
+      return res.status(400).json({ error: 'generationId required' });
+    }
+
+    const generation = await loadAdminAiGenerationById(generationId, req.auth);
+    if (!generation) {
+      return res.status(404).json({ error: 'generation not found' });
+    }
+
+    return res.json({ ok: true, generation });
   });
 
   app.post(
@@ -758,317 +1109,57 @@ function registerAdminRoutes({
         return res.status(409).json({ error: 'strategy limit reached' });
       }
 
-      let docs = [];
-      let generatedResult = null;
-      try {
-        docs = await extractPdfTexts(files, {
-          maxCombinedChars: AI_STRATEGY_MAX_COMBINED_TEXT_CHARS
-        });
-
-        generatedResult = await generateStrategyFromAi({
-          apiKey: AI_STRATEGY_API_KEY,
-          model: AI_STRATEGY_MODEL,
-          baseUrl: AI_STRATEGY_API_BASE_URL,
-          instruction: clarification,
-          docs,
-          localeHint,
-          timeoutMs: AI_STRATEGY_TIMEOUT_MS
-        });
-      } catch (error) {
-        const mapped = mapAiGenerationError(error);
-        return res.status(mapped.status).json({ error: mapped.error });
-      }
-
-      const generated = generatedResult.normalized;
-      const finalStrategyTitle = strategyTitleInput
-        || generated.strategyTitle
-        || `AI strategija ${new Date().toISOString().slice(0, 10)}`;
-      const finalCycleTitle = cycleTitleInput
-        || generated.cycleTitle
-        || `${finalStrategyTitle} ciklas`;
-      const strategyDescription = strategyDescriptionInput
-        || generated.strategyDescription
-        || clarification;
-
-      const institutionRes = await query(
-        `select id, name, slug
-         from institutions
-         where id = $1
-         limit 1`,
-        [req.auth.institutionId]
+      const generationId = uuid();
+      const startedAt = new Date().toISOString();
+      await query(
+        `insert into strategy_ai_generations (
+           id,
+           institution_id,
+           requested_by_scope,
+           requested_by_id,
+           request_note,
+           source_files_json,
+           model,
+           status,
+           error_message
+         )
+         values ($1, $2, 'institution_admin', $3, $4, $5::jsonb, $6, 'pending', null)`,
+        [
+          generationId,
+          req.auth.institutionId,
+          req.auth.sub,
+          clarification,
+          JSON.stringify(
+            files.map((file) => ({
+              filename: String(file?.originalname || file?.name || 'document.pdf'),
+              bytes: Number(file?.size || 0)
+            }))
+          ),
+          AI_STRATEGY_MODEL
+        ]
       );
-      if (!institutionRes.rowCount) return res.status(404).json({ error: 'institution not found' });
 
-      const institution = institutionRes.rows[0];
-      const transactionClient = await pool.connect();
-      let strategyId = '';
-      let strategySlug = '';
-      let cycleId = '';
-      try {
-        await transactionClient.query('BEGIN');
-
-        const baseStrategySlug = slugify(strategySlugInput || finalStrategyTitle);
-        if (!baseStrategySlug) {
-          await transactionClient.query('ROLLBACK');
-          return res.status(400).json({ error: 'invalid strategy slug' });
+      res.status(202).json({
+        ok: true,
+        generation: {
+          id: generationId,
+          status: 'pending',
+          createdAt: startedAt
         }
-
-        const institutionLockRes = await transactionClient.query(
-          `select id
-           from institutions
-           where id = $1
-           for update`,
-          [req.auth.institutionId]
-        );
-        if (!institutionLockRes.rowCount) {
-          await transactionClient.query('ROLLBACK');
-          return res.status(404).json({ error: 'institution not found' });
-        }
-
-        await ensureStrategyCapacity(transactionClient, req.auth.institutionId);
-        strategySlug = await ensureUniqueStrategySlug(transactionClient, req.auth.institutionId, baseStrategySlug);
-
-        const defaultStrategyCheck = await transactionClient.query(
-          `select id
-           from institution_strategies
-           where institution_id = $1 and is_default = true
-           limit 1`,
-          [req.auth.institutionId]
-        );
-        const isDefault = defaultStrategyCheck.rowCount === 0;
-
-        strategyId = uuid();
-        await transactionClient.query(
-          `insert into institution_strategies (id, institution_id, title, slug, description, status, is_default)
-           values ($1, $2, $3, $4, $5, 'active', $6)`,
-          [strategyId, req.auth.institutionId, finalStrategyTitle, strategySlug, strategyDescription || null, isDefault]
-        );
-
-        cycleId = uuid();
-        await transactionClient.query(
-          `insert into strategy_cycles (
-             id, institution_id, strategy_id, title, state, results_published, starts_at, mission_text, vision_text
-           )
-           values ($1, $2, $3, $4, 'open', false, now(), $5, $6)`,
-          [cycleId, req.auth.institutionId, strategyId, finalCycleTitle, generated.missionText || null, generated.visionText || null]
-        );
-
-        const guidelineIdByTitle = new Map();
-        const guidelineRecords = [];
-        const guidelineRecordById = new Map();
-        const childGuidelines = [];
-        for (const guideline of generated.guidelines) {
-          const guidelineId = uuid();
-          await transactionClient.query(
-            `insert into strategy_guidelines (
-               id, cycle_id, title, description, status, line_side, relation_type, parent_guideline_id, created_by
-             )
-             values ($1, $2, $3, $4, 'active', 'auto', $5, null, null)`,
-            [guidelineId, cycleId, guideline.title, guideline.description || null, guideline.relationType]
-          );
-          const guidelineTitleKey = normalizeLayoutLabel(guideline.title);
-          guidelineIdByTitle.set(guidelineTitleKey, guidelineId);
-          const guidelineRecord = {
-            id: guidelineId,
-            title: guideline.title,
-            relationType: guideline.relationType,
-            parentTitle: guideline.parentTitle || null,
-            parentGuidelineId: null
-          };
-          guidelineRecords.push(guidelineRecord);
-          guidelineRecordById.set(guidelineId, guidelineRecord);
-          if (guideline.relationType === 'child' && guideline.parentTitle) {
-            childGuidelines.push({ id: guidelineId, parentTitle: guideline.parentTitle });
-          }
-        }
-
-        for (const child of childGuidelines) {
-          const parentId = guidelineIdByTitle.get(normalizeLayoutLabel(child.parentTitle));
-          if (!parentId || parentId === child.id) {
-            await transactionClient.query(
-              `update strategy_guidelines
-               set relation_type = 'orphan',
-                   parent_guideline_id = null,
-                   updated_at = now()
-               where id = $1`,
-              [child.id]
-            );
-            const childRecord = guidelineRecordById.get(child.id);
-            if (childRecord) {
-              childRecord.relationType = 'orphan';
-              childRecord.parentGuidelineId = null;
-            }
-            continue;
-          }
-          await transactionClient.query(
-            `update strategy_guidelines
-             set parent_guideline_id = $1,
-                 updated_at = now()
-             where id = $2`,
-            [parentId, child.id]
-          );
-          const childRecord = guidelineRecordById.get(child.id);
-          if (childRecord) {
-            childRecord.parentGuidelineId = parentId;
-          }
-        }
-
-        const fallbackGuidelineId = Array.from(guidelineIdByTitle.values())[0];
-        const initiativeRecords = [];
-        for (const initiative of generated.initiatives) {
-          const initiativeId = uuid();
-          await transactionClient.query(
-            `insert into strategy_initiatives (
-               id, cycle_id, title, description, status, line_side, created_by
-             )
-             values ($1, $2, $3, $4, 'active', 'auto', null)`,
-            [initiativeId, cycleId, initiative.title, initiative.description || null]
-          );
-
-          const uniqueGuidelineIds = new Set();
-          const initiativeGuidelineTitles = Array.isArray(initiative.guidelineTitles)
-            ? initiative.guidelineTitles
-            : [];
-          initiativeGuidelineTitles.forEach((title) => {
-            const guidelineId = guidelineIdByTitle.get(normalizeLayoutLabel(title));
-            if (guidelineId) uniqueGuidelineIds.add(guidelineId);
-          });
-          if (!uniqueGuidelineIds.size && fallbackGuidelineId) {
-            uniqueGuidelineIds.add(fallbackGuidelineId);
-          }
-          const linkedGuidelineIds = Array.from(uniqueGuidelineIds);
-          initiativeRecords.push({
-            id: initiativeId,
-            title: initiative.title,
-            guidelineIds: linkedGuidelineIds
-          });
-
-          for (const guidelineId of linkedGuidelineIds) {
-            await transactionClient.query(
-              `insert into strategy_initiative_guidelines (id, initiative_id, guideline_id)
-               values ($1, $2, $3)`,
-              [uuid(), initiativeId, guidelineId]
-            );
-          }
-        }
-
-        const layout = buildAiMapLayout({
-          guidelineRecords,
-          initiativeRecords
-        });
-
-        await transactionClient.query(
-          `update strategy_cycles
-           set map_x = $1, map_y = $2
-           where id = $3`,
-          [layout.institutionX, layout.institutionY, cycleId]
-        );
-
-        for (const guidelineLayout of layout.guidelines) {
-          await transactionClient.query(
-            `update strategy_guidelines
-             set map_x = $1,
-                 map_y = $2,
-                 line_side = $3,
-                 updated_at = now()
-             where id = $4 and cycle_id = $5`,
-            [guidelineLayout.x, guidelineLayout.y, guidelineLayout.lineSide, guidelineLayout.id, cycleId]
-          );
-        }
-
-        for (const initiativeLayout of layout.initiatives) {
-          await transactionClient.query(
-            `update strategy_initiatives
-             set map_x = $1,
-                 map_y = $2,
-                 line_side = $3,
-                 updated_at = now()
-             where id = $4 and cycle_id = $5`,
-            [initiativeLayout.x, initiativeLayout.y, initiativeLayout.lineSide, initiativeLayout.id, cycleId]
-          );
-        }
-
-        await transactionClient.query(
-          `insert into strategy_ai_generations (
-             id,
-             institution_id,
-             strategy_id,
-             cycle_id,
-             requested_by_scope,
-             requested_by_id,
-             request_note,
-             source_files_json,
-             model,
-             status
-           )
-           values ($1, $2, $3, $4, 'institution_admin', $5, $6, $7::jsonb, $8, 'completed')`,
-          [
-            uuid(),
-            req.auth.institutionId,
-            strategyId,
-            cycleId,
-            req.auth.sub,
-            clarification,
-            JSON.stringify(
-              docs.map((doc) => ({
-                filename: doc.filename,
-                bytes: doc.bytes,
-                chars: doc.chars
-              }))
-            ),
-            generatedResult.model || AI_STRATEGY_MODEL
-          ]
-        );
-
-        await transactionClient.query('COMMIT');
-      } catch (error) {
-        try {
-          await transactionClient.query('ROLLBACK');
-        } catch {
-          // ignore rollback errors
-        }
-        if (error?.message === 'strategy limit reached' || error?.code === 'STRATEGY_LIMIT_REACHED') {
-          return res.status(409).json({ error: 'strategy limit reached' });
-        }
-        throw error;
-      } finally {
-        transactionClient.release();
-      }
-
-      broadcast({
-        type: 'v1.strategy.created',
-        institutionId: req.auth.institutionId,
-        strategyId,
-        cycleId
       });
 
-      res.status(201).json({
-        ok: true,
-        institution: {
-          id: institution.id,
-          name: institution.name,
-          slug: institution.slug
-        },
-        strategy: {
-          id: strategyId,
+      setImmediate(() => {
+        runInstitutionAdminAiGeneration({
+          generationId,
           institutionId: req.auth.institutionId,
-          title: finalStrategyTitle,
-          slug: strategySlug,
-          description: strategyDescription || null,
-          status: 'active'
-        },
-        cycle: {
-          id: cycleId,
-          institutionId: req.auth.institutionId,
-          strategyId,
-          title: finalCycleTitle,
-          state: 'open'
-        },
-        summary: {
-          guidelines: generated.guidelines.length,
-          initiatives: generated.initiatives.length,
-          sourceFiles: docs.length
-        }
+          strategyTitleInput,
+          strategySlugInput,
+          strategyDescriptionInput,
+          cycleTitleInput,
+          clarification,
+          localeHint,
+          files
+        }).catch(() => {});
       });
     }
   );

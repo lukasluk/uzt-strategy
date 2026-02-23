@@ -390,7 +390,7 @@ alter table if exists institutions
 
 create table if not exists strategy_ai_generations (
   id uuid primary key,
-  institution_id uuid not null references institutions(id) on delete cascade,
+  institution_id uuid references institutions(id) on delete cascade,
   strategy_id uuid references institution_strategies(id) on delete set null,
   cycle_id uuid references strategy_cycles(id) on delete set null,
   requested_by_scope text not null default 'meta_admin',
@@ -398,7 +398,7 @@ create table if not exists strategy_ai_generations (
   request_note text,
   source_files_json jsonb not null default '[]'::jsonb,
   model text,
-  status text not null default 'completed' check (status in ('completed', 'failed')),
+  status text not null default 'pending' check (status in ('pending', 'processing', 'applying', 'completed', 'failed')),
   error_message text,
   created_at timestamptz not null default now()
 );
@@ -407,3 +407,16 @@ create index if not exists idx_strategy_ai_generations_created_at
   on strategy_ai_generations(created_at);
 create index if not exists idx_strategy_ai_generations_institution
   on strategy_ai_generations(institution_id);
+
+alter table if exists strategy_ai_generations
+  alter column institution_id drop not null;
+
+alter table if exists strategy_ai_generations
+  alter column status set default 'pending';
+
+alter table if exists strategy_ai_generations
+  drop constraint if exists strategy_ai_generations_status_check;
+
+alter table if exists strategy_ai_generations
+  add constraint strategy_ai_generations_status_check
+  check (status in ('pending', 'processing', 'applying', 'completed', 'failed'));

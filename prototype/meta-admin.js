@@ -23,13 +23,14 @@ const state = {
 };
 
 const AI_GENERATION_STEPS = [
-  'uploading information',
-  'AI analyses',
+  'uploading files',
+  'analyzing content',
   'preparing digistrategy.eu format',
   'done'
 ];
 const AI_GENERATION_MIN_DURATION_MS = 5000;
-const AI_GENERATION_STEP_TIMINGS_MS = [0, 1400, 3200];
+const AI_GENERATION_POLL_TIMEOUT_MS = 10 * 60 * 1000;
+const AI_GENERATION_POLL_INTERVAL_MS = 1500;
 
 bootstrap();
 
@@ -174,7 +175,11 @@ function toUserMessage(error) {
     'ai provider error: HTTP 403': 'AI tiekejas atmete prieiga (403).',
     'ai provider error: HTTP 429': 'AI tiekejas laikinai riboja uzklausas (429).',
     'ai provider error: HTTP 500': 'AI tiekejas laikinai nepasiekiamas (500).',
-    'strategy limit reached': 'Siai institucijai jau pasiektas maksimalus strategiju limitas (5).'
+    'strategy limit reached': 'Siai institucijai jau pasiektas maksimalus strategiju limitas (5).',
+    'generationId required': 'Truksta generavimo uzklausos ID.',
+    'generation not found': 'AI generavimo uzklausa nerasta.',
+    'ai generation timeout': 'AI generavimas uztruko ilgiau nei tiketasi. Patikrinkite po keliu sekundziu.',
+    'ai generation failed': 'AI generavimas nepavyko.'
   };
   return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
 }
@@ -672,6 +677,14 @@ function clearAiGenerationProgress(progress) {
   timers.forEach((timerId) => window.clearTimeout(timerId));
 }
 
+function setAiGenerationProgressStep(progress, stepIndex) {
+  if (!progress || state.aiGenerationProgress !== progress || !progress.active) return;
+  const nextStep = Math.max(0, Math.min(AI_GENERATION_STEPS.length - 1, Number(stepIndex) || 0));
+  if (nextStep <= progress.stepIndex) return;
+  progress.stepIndex = nextStep;
+  render();
+}
+
 function startAiGenerationProgress() {
   clearAiGenerationProgress();
   const progress = {
@@ -681,16 +694,6 @@ function startAiGenerationProgress() {
     timers: []
   };
   state.aiGenerationProgress = progress;
-
-  AI_GENERATION_STEP_TIMINGS_MS.forEach((offsetMs, index) => {
-    if (index === 0) return;
-    const timerId = window.setTimeout(() => {
-      if (state.aiGenerationProgress !== progress || !progress.active) return;
-      progress.stepIndex = index;
-      render();
-    }, offsetMs);
-    progress.timers.push(timerId);
-  });
 
   render();
   return progress;
@@ -730,11 +733,51 @@ function renderAiGenerationProgress() {
           const statusClass = index < stepIndex
             ? 'is-done'
             : (index === stepIndex ? 'is-active' : 'is-pending');
-          return `<li class="${statusClass}">${escapeHtml(step)}</li>`;
+          const donePrefix = index < stepIndex ? '&#10003; ' : '';
+          return `<li class="${statusClass}">${donePrefix}${escapeHtml(step)}</li>`;
         }).join('')}
       </ol>
     </div>
   `;
+}
+
+async function waitForMetaAdminAiGenerationById({
+  generationId,
+  timeoutMs = AI_GENERATION_POLL_TIMEOUT_MS,
+  pollMs = AI_GENERATION_POLL_INTERVAL_MS,
+  progress = null
+} = {}) {
+  const id = String(generationId || '').trim();
+  if (!id) throw new Error('generationId required');
+
+  const deadline = Date.now() + Math.max(10000, Number(timeoutMs) || 0);
+
+  while (Date.now() < deadline) {
+    const payload = await api(`/api/v1/meta-admin/strategies/ai-generations/${encodeURIComponent(id)}`);
+    const generation = payload?.generation || null;
+    if (!generation) {
+      await sleep(pollMs);
+      continue;
+    }
+
+    const status = String(generation.status || '').trim().toLowerCase();
+    if (status === 'processing') {
+      setAiGenerationProgressStep(progress, 1);
+    } else if (status === 'applying') {
+      setAiGenerationProgressStep(progress, 2);
+    }
+
+    if (status === 'completed') {
+      return generation;
+    }
+    if (status === 'failed') {
+      throw new Error(String(generation.errorMessage || 'ai generation failed'));
+    }
+
+    await sleep(pollMs);
+  }
+
+  throw new Error('ai generation timeout');
 }
 
 function normalizeSearchText(value) {
@@ -1161,7 +1204,7 @@ function renderDashboard() {
             ${state.lastAiGenerationAt ? `<p class="prompt" style="margin:4px 0 0;">Laikas: ${escapeHtml(formatDateTime(state.lastAiGenerationAt))}</p>` : ''}
             <p class="prompt" style="margin:6px 0 0;">Institucija: ${escapeHtml(state.lastAiGeneration?.institution?.name || '-')} (${escapeHtml(state.lastAiGeneration?.institution?.slug || '-')})</p>
             <p class="prompt" style="margin:2px 0 0;">Strategija: ${escapeHtml(state.lastAiGeneration?.strategy?.title || '-')} (${escapeHtml(state.lastAiGeneration?.strategy?.slug || '-')})</p>
-            <p class="prompt" style="margin:2px 0 0;">Sukurta: gairiu ${escapeHtml(state.lastAiGeneration?.summary?.guidelines || 0)}, iniciatyvu ${escapeHtml(state.lastAiGeneration?.summary?.initiatives || 0)}, failu ${escapeHtml(state.lastAiGeneration?.summary?.sourceFiles || 0)}</p>
+            <p class="prompt" style="margin:2px 0 0;">Busena: ${escapeHtml(String(state.lastAiGeneration?.status || 'completed'))}</p>
           </div>
         ` : ''}
       </section>
@@ -1416,15 +1459,26 @@ function bindDashboardEvents() {
       const progress = startAiGenerationProgress();
       render();
       try {
-        const payload = await api('/api/v1/meta-admin/strategies/ai-generate', {
+        const response = await api('/api/v1/meta-admin/strategies/ai-generate', {
           method: 'POST',
           body: fd
         });
+        const generationId = String(response?.generation?.id || '').trim();
+        if (!generationId) {
+          throw new Error('generationId required');
+        }
+
+        const payload = await waitForMetaAdminAiGenerationById({
+          generationId,
+          progress
+        });
+
         await loadOverview();
         await completeAiGenerationProgress(progress);
         state.lastAiGeneration = payload;
         state.lastAiGenerationAt = new Date().toISOString();
         setNotice(`AI sugeneravo nauja strategija: ${String(payload?.strategy?.title || '-').trim() || '-'}.`);
+        createAiStrategyForm.reset();
       } catch (error) {
         setNotice(toUserMessage(error), 'error');
       } finally {

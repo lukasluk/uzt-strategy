@@ -573,6 +573,24 @@ function currentLanguage() {
   return normalized === 'en' ? 'en' : 'lt';
 }
 
+function langText(lt, en) {
+  return currentLanguage() === 'en' ? en : lt;
+}
+
+function stepPrompt(stepId) {
+  const id = String(stepId || '').trim().toLowerCase();
+  if (id === 'initiatives') {
+    return langText(
+      'Kokias konkrečias iniciatyvas įgyvendinsime?',
+      'Which concrete initiatives will we implement?'
+    );
+  }
+  return langText(
+    'Kur link judėsime ir kokią naudą kursime?',
+    'Where are we heading and what value will we create?'
+  );
+}
+
 function guideIntroText() {
   const lang = currentLanguage();
   if (lang === 'en') {
@@ -701,6 +719,16 @@ function toUserMessage(error) {
     'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar kartą.',
     'generated guidelines missing': 'AI nesugeneravo pakankamai gairių.',
     'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvų.',
+    'generationId required': 'Trūksta generavimo užklausos ID.',
+    'generation not found': currentLanguage() === 'en'
+      ? 'AI generation was not found. Please retry.'
+      : 'AI generavimo užklausa nerasta. Pabandykite dar kartą.',
+    'ai generation timeout': currentLanguage() === 'en'
+      ? 'AI generation is still running. Please wait and try again shortly.'
+      : 'AI generavimas vis dar vyksta. Pabandykite dar po kelių sekundžių.',
+    'ai generation failed': currentLanguage() === 'en'
+      ? 'AI generation failed.'
+      : 'AI generavimas nepavyko.',
     'documents upload failed': 'Nepavyko įkelti dokumentų.',
     'HTTP 504': currentLanguage() === 'en'
       ? 'AI processing took longer than gateway timeout. Checking server result...'
@@ -3468,6 +3496,70 @@ async function recoverAiGenerationAfterGatewayTimeout({
   return null;
 }
 
+async function waitForAdminAiGenerationById({
+  generationId,
+  timeoutMs = 10 * 60 * 1000,
+  pollMs = 1500,
+  progress = null,
+  ui = null
+} = {}) {
+  const id = String(generationId || '').trim();
+  if (!id) throw new Error('generationId required');
+
+  const deadline = Date.now() + Math.max(10000, Number(timeoutMs) || 0);
+  let analysisShown = false;
+  let preparingShown = false;
+
+  while (Date.now() < deadline) {
+    const payload = await api(`/api/v1/admin/strategies/ai-generations/${encodeURIComponent(id)}`, { auth: true });
+    const generation = payload?.generation || null;
+    if (!generation) {
+      await waitMs(pollMs);
+      continue;
+    }
+
+    const status = String(generation.status || '').trim().toLowerCase();
+    if (progress) {
+      if (status === 'pending') {
+        progress.setStatus(ui?.progressUploading || '');
+        progress.bumpTarget(24);
+      } else if (status === 'processing') {
+        if (!analysisShown) {
+          analysisShown = true;
+          await progress.markAnalysing();
+        }
+      } else if (status === 'applying') {
+        if (!analysisShown) {
+          analysisShown = true;
+          await progress.markAnalysing();
+        }
+        if (!preparingShown) {
+          preparingShown = true;
+          await progress.markPreparing();
+        }
+      }
+    }
+
+    if (status === 'completed') {
+      if (generation?.strategy?.slug) {
+        return {
+          strategy: generation.strategy,
+          cycle: generation.cycle || null
+        };
+      }
+      throw new Error('ai response invalid');
+    }
+
+    if (status === 'failed') {
+      throw new Error(String(generation.errorMessage || 'ai generation failed'));
+    }
+
+    await waitMs(pollMs);
+  }
+
+  throw new Error('ai generation timeout');
+}
+
 function strategyCreateProgressMarkup(ui) {
   return `
     <div class="strategy-ai-progress">
@@ -3838,10 +3930,23 @@ function showStrategyCreateModal() {
 
       let payload = null;
       try {
-        payload = await api('/api/v1/admin/strategies/ai-generate', {
+        const response = await api('/api/v1/admin/strategies/ai-generate', {
           method: 'POST',
           body: fd
         });
+        if (response?.generation?.id) {
+          if (progress) {
+            progress.setStatus(ui.progressRecovering || ui.progressPreparing);
+            progress.bumpTarget(97);
+          }
+          payload = await waitForAdminAiGenerationById({
+            generationId: response.generation.id,
+            progress,
+            ui
+          });
+        } else {
+          payload = response;
+        }
       } catch (error) {
         if (!isGatewayTimeoutError(error)) throw error;
         if (progress) {
