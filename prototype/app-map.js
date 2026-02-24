@@ -18,12 +18,12 @@ const MAP_WORLD_PAD = 320;
 const MAP_NODE_MIN_RENDER_X = -3000;
 const MAP_NODE_MIN_RENDER_Y = -3000;
 const STRATEGIC_LAYER_PALETTE = Object.freeze([
-  { pastel: '#fff0f0', border: '#d25f5f', ink: '#5e2323', edge: '#e04747' },
-  { pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#3e7ec7' },
-  { pastel: '#eefbf4', border: '#63ab87', ink: '#1f4a35', edge: '#439968' },
-  { pastel: '#fff7eb', border: '#c18a4f', ink: '#5a3d1f', edge: '#b7742e' },
-  { pastel: '#f4f0ff', border: '#8668c2', ink: '#3b2f59', edge: '#6f54ad' },
-  { pastel: '#edf9fb', border: '#4d9cab', ink: '#1f4650', edge: '#3b8a99' }
+  { pastel: '#fff0f0', border: '#d25f5f', ink: '#5e2323', edge: '#d48a7f' },
+  { pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#d48a7f' },
+  { pastel: '#eefbf4', border: '#63ab87', ink: '#1f4a35', edge: '#d48a7f' },
+  { pastel: '#fff7eb', border: '#c18a4f', ink: '#5a3d1f', edge: '#d48a7f' },
+  { pastel: '#f4f0ff', border: '#8668c2', ink: '#3b2f59', edge: '#d48a7f' },
+  { pastel: '#edf9fb', border: '#4d9cab', ink: '#1f4650', edge: '#d48a7f' }
 ]);
 
 function notifyMapError(message) {
@@ -461,8 +461,8 @@ function layoutStrategicLinksMap(strategicData) {
       cycleId: institution.cycle?.id || null,
       x: institutionX,
       y: institutionY,
-      w: 390,
-      h: 220,
+      w: 560,
+      h: 300,
       institution,
       strategyKey,
       clusterRole,
@@ -546,10 +546,10 @@ function layoutStrategicLinksMap(strategicData) {
       .reduce((acc, node) => Math.min(acc, node.y), institutionY);
     const maxX = nodes
       .filter((item) => item.strategyKey === strategyKey)
-      .reduce((acc, node) => Math.max(acc, node.x + node.w), institutionX + 390);
+      .reduce((acc, node) => Math.max(acc, node.x + node.w), institutionX + 560);
     const maxY = nodes
       .filter((item) => item.strategyKey === strategyKey)
-      .reduce((acc, node) => Math.max(acc, node.y + node.h), institutionY + 220);
+      .reduce((acc, node) => Math.max(acc, node.y + node.h), institutionY + 300);
 
     const slice = {
       strategyKey,
