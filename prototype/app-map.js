@@ -71,7 +71,7 @@ function mapLang(lt, en) {
 function strategicToneForIndex(index) {
   const palette = Array.isArray(STRATEGIC_LAYER_PALETTE) && STRATEGIC_LAYER_PALETTE.length
     ? STRATEGIC_LAYER_PALETTE
-    : [{ pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#3e7ec7' }];
+    : [{ pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#d48a7f' }];
   const safeIndex = Math.max(0, Number(index || 0));
   return palette[safeIndex % palette.length];
 }
@@ -461,8 +461,8 @@ function layoutStrategicLinksMap(strategicData) {
       cycleId: institution.cycle?.id || null,
       x: institutionX,
       y: institutionY,
-      w: 560,
-      h: 300,
+      w: 760,
+      h: 430,
       institution,
       strategyKey,
       clusterRole,
@@ -546,10 +546,10 @@ function layoutStrategicLinksMap(strategicData) {
       .reduce((acc, node) => Math.min(acc, node.y), institutionY);
     const maxX = nodes
       .filter((item) => item.strategyKey === strategyKey)
-      .reduce((acc, node) => Math.max(acc, node.x + node.w), institutionX + 560);
+      .reduce((acc, node) => Math.max(acc, node.x + node.w), institutionX + 760);
     const maxY = nodes
       .filter((item) => item.strategyKey === strategyKey)
-      .reduce((acc, node) => Math.max(acc, node.y + node.h), institutionY + 300);
+      .reduce((acc, node) => Math.max(acc, node.y + node.h), institutionY + 430);
 
     const slice = {
       strategyKey,
