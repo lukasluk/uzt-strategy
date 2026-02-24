@@ -41,7 +41,8 @@ function mapNormalizeStrategyLinks(value) {
         otherInstitutionSlug: String(item.otherInstitutionSlug || '').trim().toLowerCase(),
         otherStrategySlug: String(item.otherStrategySlug || '').trim().toLowerCase(),
         otherInstitutionName: String(item.otherInstitutionName || '').trim(),
-        otherStrategyTitle: String(item.otherStrategyTitle || '').trim()
+        otherStrategyTitle: String(item.otherStrategyTitle || '').trim(),
+        isCrossStrategy: Boolean(item.isCrossStrategy)
       };
     })
     .filter(Boolean);
@@ -52,6 +53,11 @@ function mapStrategyLinkLabel(link) {
   const institution = String(link?.otherInstitutionSlug || link?.otherInstitutionName || '-').trim();
   const strategy = String(link?.otherStrategyTitle || link?.otherStrategySlug || 'default').trim();
   return `${institution} / ${strategy}`;
+}
+
+function mapLang(lt, en) {
+  if (typeof langText === 'function') return langText(lt, en);
+  return String(en || lt || '');
 }
 
 function resolveAutoSide(fromNode, toNode) {
@@ -372,9 +378,263 @@ function layoutStrategyMap() {
     guidelineEdges,
     strategyGuidelineEdges,
     initiativeEdges,
+    strategicEdges: [],
+    hasStrategicLinks: false,
     width,
     height,
     institution
+  };
+}
+
+function layoutStrategicLinksMap(strategicData) {
+  const emptyGraph = {
+    nodes: [],
+    guidelineEdges: [],
+    strategyGuidelineEdges: [],
+    initiativeEdges: [],
+    strategicEdges: [],
+    hasStrategicLinks: false,
+    width: 1200,
+    height: 820,
+    institution: null
+  };
+  const activeInstitution = strategicData?.activeInstitution && typeof strategicData.activeInstitution === 'object'
+    ? strategicData.activeInstitution
+    : null;
+  if (!activeInstitution) return emptyGraph;
+
+  const toNumberOrNull = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const nodes = [];
+  const guidelineEdges = [];
+  const strategyGuidelineEdges = [];
+  const initiativeEdges = [];
+  const strategicEdges = [];
+  const sliceByKey = new Map();
+  const linksByStrategyKey = strategicData?.linksByStrategyKey && typeof strategicData.linksByStrategyKey === 'object'
+    ? strategicData.linksByStrategyKey
+    : {};
+
+  const buildInstitutionSlice = ({
+    institution,
+    strategyKey,
+    linkedGuidelineIds = [],
+    includeAllGuidelines = false,
+    clusterRole = 'related',
+    offsetX = 0,
+    offsetY = 0
+  }) => {
+    if (!institution || typeof institution !== 'object') return null;
+    const prefixBase = String(strategyKey || institution.slug || institution.id || 'strategy')
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'strategy';
+    const nodePrefix = `${prefixBase}-`;
+    const institutionNodeId = `${nodePrefix}inst-${institution.id}`;
+    const linkedGuidelineSet = new Set((Array.isArray(linkedGuidelineIds) ? linkedGuidelineIds : []).map((item) => String(item || '').trim()));
+    const institutionX = (toNumberOrNull(institution.cycle?.mapX) ?? 140) + Number(offsetX || 0);
+    const institutionY = (toNumberOrNull(institution.cycle?.mapY) ?? 48) + Number(offsetY || 0);
+
+    nodes.push({
+      id: institutionNodeId,
+      kind: 'institution',
+      entityId: institution.id,
+      cycleId: institution.cycle?.id || null,
+      x: institutionX,
+      y: institutionY,
+      w: 390,
+      h: 220,
+      institution,
+      strategyKey,
+      clusterRole,
+      canSwitchPerspective: clusterRole === 'related'
+    });
+
+    const guidelines = Array.isArray(institution.guidelines) ? institution.guidelines : [];
+    const visibleGuidelines = includeAllGuidelines
+      ? guidelines
+      : guidelines.filter((item) => linkedGuidelineSet.has(String(item?.id || '').trim()));
+    const visibleGuidelineById = Object.fromEntries(visibleGuidelines.map((item) => [item.id, item]));
+    const guidelineNodeIdByEntity = {};
+    const childrenByParent = {};
+    visibleGuidelines.forEach((guideline) => {
+      const parentId = guideline.parentGuidelineId;
+      if (!parentId || !visibleGuidelineById[parentId]) return;
+      if (!childrenByParent[parentId]) childrenByParent[parentId] = [];
+      childrenByParent[parentId].push(guideline);
+    });
+
+    const roots = visibleGuidelines.filter((guideline) => {
+      const parentId = guideline.parentGuidelineId;
+      return String(guideline.relationType || '').toLowerCase() !== 'child' || !parentId || !visibleGuidelineById[parentId];
+    });
+    const visited = new Set();
+    let nextY = institutionY + 170;
+    const placeNodeTree = (guideline, depth, parentNodeId) => {
+      if (!guideline || visited.has(guideline.id)) return;
+      visited.add(guideline.id);
+
+      const nodeId = `${nodePrefix}guide-${guideline.id}`;
+      const defaultX = institutionX + 46 + depth * 250;
+      const defaultY = nextY;
+      nextY += 100;
+      const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
+      const nodeY = toNumberOrNull(guideline.mapY) ?? defaultY;
+      const isParentGuideline = String(guideline.relationType || '').toLowerCase() === 'parent';
+      const sizeScale = isParentGuideline ? PARENT_GUIDELINE_SCALE : 1;
+      nodes.push({
+        id: nodeId,
+        kind: 'guideline',
+        entityId: guideline.id,
+        cycleId: institution.cycle?.id || null,
+        x: nodeX,
+        y: nodeY,
+        w: Math.round(220 * sizeScale),
+        h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
+        institution,
+        guideline,
+        strategyKey,
+        clusterRole,
+        isStrategicLinked: linkedGuidelineSet.has(String(guideline.id || '').trim())
+      });
+      guidelineNodeIdByEntity[guideline.id] = nodeId;
+
+      if (parentNodeId) {
+        guidelineEdges.push({ from: parentNodeId, to: nodeId, type: 'child', layer: 'guidelines' });
+      } else {
+        guidelineEdges.push({
+          from: institutionNodeId,
+          to: nodeId,
+          type: guideline.relationType === 'orphan' ? 'orphan' : 'root',
+          layer: 'guidelines'
+        });
+      }
+
+      const children = childrenByParent[guideline.id] || [];
+      children.forEach((child) => placeNodeTree(child, depth + 1, nodeId));
+    };
+
+    roots.forEach((root) => placeNodeTree(root, 0, null));
+    visibleGuidelines.forEach((guideline) => {
+      if (!visited.has(guideline.id)) placeNodeTree(guideline, 0, null);
+    });
+
+    const minX = nodes
+      .filter((item) => item.strategyKey === strategyKey)
+      .reduce((acc, node) => Math.min(acc, node.x), institutionX);
+    const minY = nodes
+      .filter((item) => item.strategyKey === strategyKey)
+      .reduce((acc, node) => Math.min(acc, node.y), institutionY);
+    const maxX = nodes
+      .filter((item) => item.strategyKey === strategyKey)
+      .reduce((acc, node) => Math.max(acc, node.x + node.w), institutionX + 390);
+    const maxY = nodes
+      .filter((item) => item.strategyKey === strategyKey)
+      .reduce((acc, node) => Math.max(acc, node.y + node.h), institutionY + 220);
+
+    const slice = {
+      strategyKey,
+      institution,
+      institutionNodeId,
+      guidelineNodeIdByEntity,
+      linkedGuidelineSet,
+      clusterRole,
+      minX,
+      minY,
+      maxX,
+      maxY
+    };
+    sliceByKey.set(strategyKey, slice);
+    return slice;
+  };
+
+  const activeStrategyKey = `${normalizeSlug(activeInstitution.slug)}|${normalizeSlug(activeInstitution.strategy?.slug || state.strategySlug)}`;
+  const activeLinkedGuidelines = Array.isArray(linksByStrategyKey[activeStrategyKey]) ? linksByStrategyKey[activeStrategyKey] : [];
+  const activeSlice = buildInstitutionSlice({
+    institution: activeInstitution,
+    strategyKey: activeStrategyKey,
+    linkedGuidelineIds: activeLinkedGuidelines,
+    includeAllGuidelines: true,
+    clusterRole: 'active',
+    offsetX: 0,
+    offsetY: 0
+  });
+  if (!activeSlice) return emptyGraph;
+
+  const relatedStrategies = Array.isArray(strategicData?.relatedStrategies) ? strategicData.relatedStrategies : [];
+  let relatedOffsetX = 880;
+  relatedStrategies.forEach((item) => {
+    const strategyKey = String(item?.key || '').trim();
+    const institution = item?.institution;
+    if (!strategyKey || !institution) return;
+    const targetGuidelineIds = Array.isArray(item.targetGuidelineIds) ? item.targetGuidelineIds : [];
+    buildInstitutionSlice({
+      institution,
+      strategyKey,
+      linkedGuidelineIds: targetGuidelineIds,
+      includeAllGuidelines: false,
+      clusterRole: 'related',
+      offsetX: relatedOffsetX,
+      offsetY: 0
+    });
+    relatedOffsetX += 880;
+  });
+
+  relatedStrategies.forEach((item) => {
+    const strategyKey = String(item?.key || '').trim();
+    const relatedSlice = sliceByKey.get(strategyKey);
+    if (!relatedSlice) return;
+    const links = Array.isArray(item.links) ? item.links : [];
+    links.forEach((link) => {
+      const sourceId = String(link?.sourceGuidelineId || '').trim();
+      const targetId = String(link?.targetGuidelineId || '').trim();
+      if (!sourceId || !targetId) return;
+      const fromNodeId = activeSlice.guidelineNodeIdByEntity[sourceId];
+      const toNodeId = relatedSlice.guidelineNodeIdByEntity[targetId];
+      if (!fromNodeId || !toNodeId) return;
+      strategicEdges.push({
+        from: fromNodeId,
+        to: toNodeId,
+        type: 'strategic-cross',
+        layer: 'strategic-links',
+        lineSide: 'auto'
+      });
+    });
+  });
+
+  const minLeft = nodes.reduce((acc, node) => Math.min(acc, node.x), Infinity);
+  const minTop = nodes.reduce((acc, node) => Math.min(acc, node.y), Infinity);
+  const maxRight = nodes.reduce((acc, node) => Math.max(acc, node.x + node.w), -Infinity);
+  const maxBottom = nodes.reduce((acc, node) => Math.max(acc, node.y + node.h), -Infinity);
+  const shiftX = Number.isFinite(minLeft) && minLeft < MAP_WORLD_PAD ? MAP_WORLD_PAD - minLeft : 0;
+  const shiftY = Number.isFinite(minTop) && minTop < MAP_WORLD_PAD ? MAP_WORLD_PAD - minTop : 0;
+  nodes.forEach((node) => {
+    node.x += shiftX;
+    node.y += shiftY;
+  });
+
+  const rawWidth = Number.isFinite(maxRight) && Number.isFinite(minLeft)
+    ? (maxRight - minLeft) + MAP_WORLD_PAD * 2
+    : 1800;
+  const rawHeight = Number.isFinite(maxBottom) && Number.isFinite(minTop)
+    ? (maxBottom - minTop) + MAP_WORLD_PAD * 2
+    : 920;
+  const width = Math.max(1800, rawWidth);
+  const height = Math.max(920, rawHeight);
+  state.mapRenderShift = { x: shiftX, y: shiftY };
+  return {
+    nodes,
+    guidelineEdges,
+    strategyGuidelineEdges,
+    initiativeEdges,
+    strategicEdges,
+    hasStrategicLinks: strategicEdges.length > 0,
+    width,
+    height,
+    institution: activeInstitution
   };
 }
 
@@ -872,6 +1132,7 @@ function bindMapInteractions(viewport, world, { editable }) {
   let dragMode = '';
   const isNodeDraggableInCurrentLayer = (nodeElement) => {
     if (!editable || !(nodeElement instanceof HTMLElement)) return false;
+    if (state.mapLayer === 'strategic-links') return false;
     const kind = String(nodeElement.dataset.kind || '').trim().toLowerCase();
     if (kind === 'institution') return true;
     const initiativesLayer = state.mapLayer === 'initiatives';
@@ -1030,8 +1291,8 @@ function renderMapView() {
     return;
   }
 
-  const graph = layoutStrategyMap();
-  if (!graph.institution) {
+  const primaryGraph = layoutStrategyMap();
+  if (!primaryGraph.institution) {
     elements.stepView.innerHTML = `
       <div class="card">
         <strong>Pasirinkite instituciją</strong>
@@ -1041,8 +1302,8 @@ function renderMapView() {
     return;
   }
 
-  const hasInitiativeNodes = graph.nodes.some((node) => node.kind === 'initiative');
-  if (state.mapLayer !== 'guidelines' && state.mapLayer !== 'initiatives') {
+  const hasInitiativeNodes = primaryGraph.nodes.some((node) => node.kind === 'initiative');
+  if (state.mapLayer !== 'guidelines' && state.mapLayer !== 'initiatives' && state.mapLayer !== 'strategic-links') {
     state.mapLayer = 'guidelines';
   }
   if (state.mapLayer === 'initiatives' && !hasInitiativeNodes) {
@@ -1053,7 +1314,57 @@ function renderMapView() {
     resetMapInitiativeFocusState();
   }
 
-  const editable = canEditMapLayout()
+  let graph = primaryGraph;
+  if (activeLayer === 'strategic-links') {
+    const perspectiveKey = typeof mapPerspectiveKey === 'function'
+      ? mapPerspectiveKey()
+      : `${normalizeSlug(state.institutionSlug)}|${normalizeSlug(state.strategySlug)}`;
+    const hasFreshStrategicData = state.mapStrategicLinksData?.contextKey === perspectiveKey;
+
+    if (!hasFreshStrategicData) {
+      if (!state.mapStrategicLinksLoading && typeof ensureStrategicLinksData === 'function') {
+        ensureStrategicLinksData()
+          .then(() => {
+            if (state.activeView === 'map' && state.mapLayer === 'strategic-links') renderStepView();
+          })
+          .catch(() => {
+            if (state.activeView === 'map' && state.mapLayer === 'strategic-links') renderStepView();
+          });
+      }
+      if (state.mapStrategicLinksError) {
+        elements.stepView.innerHTML = `
+          <div class="card">
+            <strong>${escapeHtml(mapLang('Nepavyko ikelti strateginiu rysiu', 'Failed to load strategic links'))}</strong>
+            <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapStrategicLinksError)}</p>
+            <button id="retryStrategicLinksBtn" class="btn btn-primary" style="margin-top: 12px;">${escapeHtml(mapLang('Bandyti dar karta', 'Try again'))}</button>
+          </div>
+        `;
+        const retryStrategicBtn = elements.stepView.querySelector('#retryStrategicLinksBtn');
+        if (retryStrategicBtn) {
+          retryStrategicBtn.addEventListener('click', async () => {
+            if (typeof ensureStrategicLinksData !== 'function') return;
+            state.mapStrategicLinksError = '';
+            state.mapStrategicLinksLoading = true;
+            renderStepView();
+            try {
+              await ensureStrategicLinksData({ force: true });
+            } catch {
+              // Error already handled in state.
+            }
+            renderStepView();
+          });
+        }
+      } else {
+        elements.stepView.innerHTML = `<div class="card"><strong>${escapeHtml(mapLang('Kraunami strateginiai rysiai...', 'Loading strategic links...'))}</strong></div>`;
+      }
+      return;
+    }
+
+    graph = layoutStrategicLinksMap(state.mapStrategicLinksData);
+  }
+
+  const editable = activeLayer !== 'strategic-links'
+    && canEditMapLayout()
     && normalizeSlug(graph.institution.slug) === normalizeSlug(state.institutionSlug)
     && Boolean(graph.institution.cycle?.id);
   const embedBranding = state.embedMapMode
@@ -1069,27 +1380,34 @@ function renderMapView() {
     ? ''
     : `
       <div class="step-header">
-        <h2>Strategijų žemėlapis</h2>
+        <h2>${escapeHtml(mapLang('Strategiju zemelapis', 'Strategy map'))}</h2>
         <div class="header-stack step-header-actions">
-          <span class="tag">Institucija: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
-          <span class="tag">Strategija: ${escapeHtml(graph.institution.strategy?.title || '-')}</span>
-          ${editable ? `<span class="tag tag-main">Admin: galite tempti ${activeLayer === 'initiatives' ? 'iniciatyvų' : 'gairių'} korteles</span>` : ''}
+          <span class="tag">${escapeHtml(mapLang('Institucija', 'Institution'))}: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
+          <span class="tag">${escapeHtml(mapLang('Strategija', 'Strategy'))}: ${escapeHtml(graph.institution.strategy?.title || '-')}</span>
+          ${activeLayer === 'strategic-links' ? `<span class="tag tag-main">${escapeHtml(mapLang('Rodoma', 'Viewing'))}: ${escapeHtml(graph.institution.name || graph.institution.slug)} / ${escapeHtml(graph.institution.strategy?.title || '-')} - Strategic links</span>` : ''}
+          ${editable ? `<span class="tag tag-main">${escapeHtml(mapLang('Admin: galite tempti', 'Admin: you can drag'))} ${escapeHtml(activeLayer === 'initiatives' ? mapLang('iniciatyvu korteles', 'initiative cards') : mapLang('gairiu korteles', 'guideline cards'))}</span>` : ''}
         </div>
       </div>
-      <p class="prompt">Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.</p>
+      <p class="prompt">${activeLayer === 'strategic-links'
+        ? escapeHtml(mapLang('Perziurekite tiesioginius tarpstrateginius rysius. Rodoma aktyvios strategijos struktura ir susietos kitu strategiju gaires.', 'Review direct cross-strategy links. You see the active strategy structure and linked guidelines from related strategies.'))
+        : escapeHtml(mapLang('Perziurekite pasirinktos institucijos strategijos sluoksnius. Iniciatyvu sluoksnyje gairiu korteles lieka matomos, bet uzrakintos.', 'Review selected institution strategy layers. In the initiatives layer, guideline cards remain visible, but locked.'))}</p>
     `;
   const mapToolbar = `
       <div class="map-overlay-toolbar">
         <div class="map-layer-toggle map-overlay-layer-toggle">
-          <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">Gairės</button>
-          <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>Iniciatyvos</button>
+          <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">${escapeHtml(mapLang('Gaires', 'Guidelines'))}</button>
+          <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>${escapeHtml(mapLang('Iniciatyvos', 'Initiatives'))}</button>
+          <button type="button" data-map-layer-btn="strategic-links" class="btn ${activeLayer === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}">Strategic links</button>
         </div>
         <div class="map-overlay-actions">
-          <button type="button" data-map-reset-btn class="btn btn-ghost">Centruoti vaizdą</button>
-          <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="Įjungti pilno ekrano režimą" title="Įjungti pilno ekrano režimą"></button>
+          <button type="button" data-map-reset-btn class="btn btn-ghost">${escapeHtml(mapLang('Centruoti vaizda', 'Center view'))}</button>
+          <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="${escapeHtml(mapLang('Ijungti pilno ekrano rezima', 'Enable fullscreen mode'))}" title="${escapeHtml(mapLang('Ijungti pilno ekrano rezima', 'Enable fullscreen mode'))}"></button>
         </div>
       </div>
     `;
+  const strategicNoLinksMarkup = activeLayer === 'strategic-links' && !graph.hasStrategicLinks
+    ? '<div class="map-strategic-empty-note">No strategic links</div>'
+    : '';
   const mapWatermarkClass = state.embedMapMode ? 'map-fullscreen-watermark embed-visible' : 'map-fullscreen-watermark';
   const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
   const guidelineEdgeMarkup = graph.guidelineEdges.map((edge) => {
@@ -1111,6 +1429,12 @@ function renderMapView() {
     if (!fromNode || !toNode) return '';
     return `<path class="strategy-map-edge edge-strategy-link edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="auto" d="${edgePath(fromNode, toNode, 'auto')}"></path>`;
   }).join('');
+  const strategicEdgeMarkup = (Array.isArray(graph.strategicEdges) ? graph.strategicEdges : []).map((edge) => {
+    const fromNode = nodeById[edge.from];
+    const toNode = nodeById[edge.to];
+    if (!fromNode || !toNode) return '';
+    return `<path class="strategy-map-edge edge-strategic-cross edge-strategic-layer" data-layer="strategic-links" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="auto" d="${edgePath(fromNode, toNode, 'auto')}"></path>`;
+  }).join('');
   const initiativeEdgeMarkup = graph.initiativeEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
@@ -1125,15 +1449,26 @@ function renderMapView() {
     if (node.kind === 'institution') {
       const cycleState = node.institution.cycle?.state || '-';
       const strategyTitle = String(
-        node.institution.strategy?.title || state.strategy?.title || 'Strategija'
+        node.institution.strategy?.title || state.strategy?.title || mapLang('Strategija', 'Strategy')
       ).trim();
       const pulseActive = Date.now() < Number(state.mapInstitutionPulseUntil || 0);
+      const relatedInstitutionInStrategicLayer = activeLayer === 'strategic-links' && node.clusterRole === 'related';
+      const switchPerspectiveLabel = mapLang('Atidaryti strategijos perspektyva', 'Open strategy perspective');
       const institutionClass = [
         'strategy-map-node',
         'institution-node',
         node.institution.slug === state.institutionSlug ? 'active' : '',
-        pulseActive ? 'pulse-active' : ''
+        pulseActive ? 'pulse-active' : '',
+        relatedInstitutionInStrategicLayer ? 'map-strategy-related' : '',
+        activeLayer === 'strategic-links' && node.clusterRole === 'active' ? 'map-strategy-active' : '',
+        activeLayer === 'strategic-links' && node.canSwitchPerspective ? 'map-strategy-switchable' : ''
       ].filter(Boolean).join(' ');
+      const perspectiveAttrs = activeLayer === 'strategic-links' && node.canSwitchPerspective
+        ? `data-action="open-strategy-perspective" data-map-interactive="true" data-target-institution="${escapeHtml(node.institution.slug || '')}" data-target-strategy="${escapeHtml(node.institution.strategy?.slug || '')}" role="button" tabindex="0" aria-label="${escapeHtml(switchPerspectiveLabel)}" title="${escapeHtml(switchPerspectiveLabel)}"`
+        : '';
+      const strategicNodeTag = activeLayer === 'strategic-links'
+        ? `<span class="tag">${escapeHtml(node.clusterRole === 'related' ? mapLang('Susieta strategija', 'Linked strategy') : mapLang('Aktyvi strategija', 'Active strategy'))}</span>`
+        : `<span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>`;
       return `
         <article class="${institutionClass}"
                  data-node-id="${escapeHtml(node.id)}"
@@ -1145,11 +1480,12 @@ function renderMapView() {
                  data-w="${node.w}"
                  data-h="${node.h}"
                  data-draggable="${editable ? 'true' : 'false'}"
+                 ${perspectiveAttrs}
                  style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
           <strong>${escapeHtml(node.institution.name)}</strong>
           <small class="institution-subtitle">${escapeHtml(strategyTitle)}</small>
-          <span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>
-          <small class="institution-cycle-label">Strategijos ciklo būsena</small>
+          ${strategicNodeTag}
+          <small class="institution-cycle-label">${escapeHtml(mapLang('Strategijos ciklo busena', 'Strategy cycle status'))}</small>
         </article>
       `;
     }
@@ -1170,8 +1506,8 @@ function renderMapView() {
           ? node.guideline.strategyLinks.length
           : Number(node.guideline.strategyLinkCount || 0)
       );
-      const strategyLinks = relation === 'parent'
-        ? mapNormalizeStrategyLinks(node.guideline.strategyLinks)
+      const strategyLinks = relation === 'parent' && activeLayer !== 'strategic-links'
+        ? mapNormalizeStrategyLinks(node.guideline.strategyLinks).filter((item) => !item || item.isCrossStrategy !== false)
         : [];
       const uniqueLinks = [];
       const seenLinkKeys = new Set();
@@ -1190,10 +1526,13 @@ function renderMapView() {
       const voteSquares = scoreForSquares
         ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
         : '<span class="map-vote-empty">Dar nebalsuota</span>';
-      const strategyLinkChip = relation === 'parent'
-        ? `<span class="map-strategy-link-chip" title="Strateginiai rysiai tarp teviniu gairiu">Rysiai: ${strategyLinkCount}</span>`
+      const strategyLinkChip = relation === 'parent' && activeLayer !== 'strategic-links'
+        ? `<span class="map-strategy-link-chip" title="${escapeHtml(mapLang('Strateginiai rysiai tarp teviniu gairiu', 'Strategic links between parent guidelines'))}">${escapeHtml(mapLang('Rysiai', 'Links'))}: ${strategyLinkCount}</span>`
         : '';
-      const strategyLinkListMarkup = relation === 'parent' && uniqueLinks.length
+      const strategicFocusChip = activeLayer === 'strategic-links' && node.isStrategicLinked
+        ? `<span class="map-strategy-link-chip" title="${escapeHtml(mapLang('Gaire turi tarpstrategini rysi', 'Guideline has a cross-strategy link'))}">${escapeHtml(mapLang('Susieta', 'Linked'))}</span>`
+        : '';
+      const strategyLinkListMarkup = relation === 'parent' && uniqueLinks.length && activeLayer !== 'strategic-links'
         ? `
           <div class="map-strategy-link-list">
             ${uniqueLinks.slice(0, 2).map((link) => `
@@ -1212,9 +1551,15 @@ function renderMapView() {
           </div>
         `
         : '';
+      const strategicGuidelineClass = activeLayer === 'strategic-links'
+        ? `${node.clusterRole === 'related' ? ' map-strategy-related' : ' map-strategy-active'} ${node.isStrategicLinked ? 'map-strategic-linked' : 'map-strategic-unlinked'}`
+        : '';
+      const guidelineOwnerLabel = activeLayer === 'strategic-links'
+        ? `${String(node.institution.name || node.institution.slug || '').trim()} / ${String(node.institution.strategy?.title || '-').trim()}`
+        : `${String(node.institution.slug || '').trim()} - ${relationText}`;
 
       return `
-        <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}"
+        <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}${strategicGuidelineClass}"
                  data-layer="guidelines"
                  data-node-id="${escapeHtml(node.id)}"
                  data-kind="guideline"
@@ -1241,12 +1586,13 @@ function renderMapView() {
               <span class="map-comment-count">${mapCommentCount}</span>
             </button>
           </div>
-          <small>${escapeHtml(node.institution.slug)} - ${escapeHtml(relationText)}</small>
+          <small>${escapeHtml(guidelineOwnerLabel)}</small>
           <div class="map-vote-row">
             <span class="map-vote-chip" title="Bendras balas">
               <strong>${score}</strong>
             </span>
             ${strategyLinkChip}
+            ${strategicFocusChip}
           </div>
           ${strategyLinkListMarkup}
           <div class="map-vote-squares">${voteSquares}</div>
@@ -1311,10 +1657,12 @@ function renderMapView() {
       ${mapHeader}
       <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer} ${editable ? 'map-editable' : ''}">
         ${mapToolbar}
+        ${strategicNoLinksMarkup}
         <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">
           <svg class="strategy-map-lines guideline-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
             ${guidelineEdgeMarkup}
             ${strategyGuidelineEdgeMarkup}
+            ${strategicEdgeMarkup}
           </svg>
           <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
             <defs>
@@ -1466,9 +1814,33 @@ function renderMapView() {
       });
     });
   });
+  elements.stepView.querySelectorAll('[data-action="open-strategy-perspective"]').forEach((node) => {
+    const openPerspective = async (event) => {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (!(node instanceof HTMLElement)) return;
+      if (node.dataset.justDragged === '1') return;
+      if (viewport instanceof HTMLElement && viewport.dataset.justPanned === '1') return;
+      if (typeof navigateToStrategyPerspective !== 'function') return;
+      await navigateToStrategyPerspective({
+        targetInstitutionSlug: node.dataset.targetInstitution,
+        targetStrategySlug: node.dataset.targetStrategy,
+        preserveStrategicLayer: true
+      });
+    };
+
+    node.addEventListener('click', openPerspective);
+    node.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      openPerspective(event);
+    });
+  });
 
   const layerGuidelinesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="guidelines"]'));
   const layerInitiativesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="initiatives"]'));
+  const layerStrategicButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="strategic-links"]'));
   layerGuidelinesButtons.forEach((button) => {
     button.addEventListener('click', () => {
       if (state.mapLayer === 'guidelines') return;
@@ -1481,6 +1853,14 @@ function renderMapView() {
     button.addEventListener('click', () => {
       if (state.mapLayer === 'initiatives') return;
       state.mapLayer = 'initiatives';
+      resetMapInitiativeFocusState();
+      renderStepView();
+    });
+  });
+  layerStrategicButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      if (state.mapLayer === 'strategic-links') return;
+      state.mapLayer = 'strategic-links';
       resetMapInitiativeFocusState();
       renderStepView();
     });

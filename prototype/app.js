@@ -192,6 +192,10 @@ const state = {
   },
   commentsVisible: false,
   mapLayer: 'guidelines',
+  mapStrategicLinksData: null,
+  mapStrategicLinksLoading: false,
+  mapStrategicLinksError: '',
+  mapStrategicLinksPromise: null,
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapInitiativeFocusId: '',
   mapInitiativeHoverId: '',
@@ -971,6 +975,194 @@ async function loadStrategyMap() {
   params.set('source', state.embedMapMode ? 'embed' : 'app');
   const payload = await api(`/api/v1/public/strategy-map?${params.toString()}`, { auth: 'optional' });
   state.mapData = payload || { institutions: [] };
+  state.mapStrategicLinksData = null;
+  state.mapStrategicLinksError = '';
+  state.mapStrategicLinksLoading = false;
+  state.mapStrategicLinksPromise = null;
+}
+
+function mapPerspectiveKey() {
+  return `${normalizeSlug(state.institutionSlug)}|${normalizeSlug(state.strategySlug)}`;
+}
+
+function mapSelectedInstitutionRecord() {
+  const selectedSlug = normalizeSlug(state.institutionSlug);
+  const institutions = Array.isArray(state.mapData?.institutions) ? state.mapData.institutions : [];
+  return institutions.find((item) => normalizeSlug(item?.slug) === selectedSlug) || null;
+}
+
+function collectDirectStrategicLinkTargets(activeInstitution) {
+  const institution = activeInstitution && typeof activeInstitution === 'object' ? activeInstitution : null;
+  if (!institution) {
+    return {
+      targets: [],
+      sourceGuidelineIdsByTarget: {},
+      targetGuidelineIdsByTarget: {},
+      linksByTarget: {}
+    };
+  }
+
+  const targetsByKey = new Map();
+  const sourceGuidelineIdsByTarget = {};
+  const targetGuidelineIdsByTarget = {};
+  const linksByTarget = {};
+  const guidelines = Array.isArray(institution.guidelines) ? institution.guidelines : [];
+
+  guidelines.forEach((guideline) => {
+    const sourceGuidelineId = String(guideline?.id || '').trim();
+    if (!sourceGuidelineId) return;
+    const links = normalizeGuidelineStrategyLinks(guideline?.strategyLinks);
+    links.forEach((link) => {
+      if (!link?.isCrossStrategy) return;
+      const institutionSlug = normalizeSlug(link.otherInstitutionSlug);
+      if (!institutionSlug) return;
+
+      const preferredStrategySlug = normalizeSlug(link.otherStrategySlug);
+      const resolvedStrategySlug = resolveStrategySlugForInstitution(institutionSlug, preferredStrategySlug);
+      const strategySlug = normalizeSlug(resolvedStrategySlug || preferredStrategySlug);
+      if (!strategySlug) return;
+
+      const targetGuidelineId = String(link.otherGuidelineId || '').trim();
+      if (!targetGuidelineId) return;
+
+      const key = `${institutionSlug}|${strategySlug}`;
+      if (!targetsByKey.has(key)) {
+        targetsByKey.set(key, {
+          key,
+          institutionSlug,
+          strategySlug,
+          institutionName: String(link.otherInstitutionName || institutionSlug).trim() || institutionSlug,
+          strategyTitle: String(link.otherStrategyTitle || strategySlug).trim() || strategySlug
+        });
+      }
+
+      if (!sourceGuidelineIdsByTarget[key]) sourceGuidelineIdsByTarget[key] = new Set();
+      if (!targetGuidelineIdsByTarget[key]) targetGuidelineIdsByTarget[key] = new Set();
+      if (!linksByTarget[key]) linksByTarget[key] = [];
+      sourceGuidelineIdsByTarget[key].add(sourceGuidelineId);
+      targetGuidelineIdsByTarget[key].add(targetGuidelineId);
+      linksByTarget[key].push({
+        sourceGuidelineId,
+        targetGuidelineId
+      });
+    });
+  });
+
+  return {
+    targets: Array.from(targetsByKey.values()),
+    sourceGuidelineIdsByTarget,
+    targetGuidelineIdsByTarget,
+    linksByTarget
+  };
+}
+
+async function loadStrategyMapForPerspective(institutionSlug, strategySlug) {
+  const params = new URLSearchParams();
+  params.set('institution', normalizeSlug(institutionSlug));
+  const normalizedStrategySlug = normalizeSlug(strategySlug);
+  if (normalizedStrategySlug) params.set('strategy', normalizedStrategySlug);
+  params.set('source', state.embedMapMode ? 'embed' : 'app');
+  const payload = await api(`/api/v1/public/strategy-map?${params.toString()}`, { auth: 'optional' });
+  const institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
+  return institutions[0] || null;
+}
+
+async function ensureStrategicLinksData({ force = false } = {}) {
+  const currentKey = mapPerspectiveKey();
+  if (!force && state.mapStrategicLinksData?.contextKey === currentKey) {
+    return state.mapStrategicLinksData;
+  }
+  if (!force && state.mapStrategicLinksPromise) {
+    return state.mapStrategicLinksPromise;
+  }
+
+  const loader = (async () => {
+    state.mapStrategicLinksLoading = true;
+    state.mapStrategicLinksError = '';
+
+    const activeInstitution = mapSelectedInstitutionRecord();
+    if (!activeInstitution) {
+      const empty = {
+        contextKey: currentKey,
+        activeInstitution: null,
+        relatedStrategies: [],
+        linksByStrategyKey: {},
+        hasLinks: false
+      };
+      state.mapStrategicLinksData = empty;
+      return empty;
+    }
+
+    const targetCollection = collectDirectStrategicLinkTargets(activeInstitution);
+    const targets = Array.isArray(targetCollection.targets) ? targetCollection.targets : [];
+    if (!targets.length) {
+      const activeKey = `${normalizeSlug(activeInstitution.slug)}|${normalizeSlug(activeInstitution.strategy?.slug || state.strategySlug)}`;
+      const empty = {
+        contextKey: currentKey,
+        activeInstitution,
+        relatedStrategies: [],
+        linksByStrategyKey: {
+          [activeKey]: []
+        },
+        hasLinks: false
+      };
+      state.mapStrategicLinksData = empty;
+      return empty;
+    }
+
+    const loaded = await Promise.all(targets.map(async (target) => {
+      try {
+        const institution = await loadStrategyMapForPerspective(target.institutionSlug, target.strategySlug);
+        if (!institution?.cycle?.id) return null;
+        const key = `${normalizeSlug(institution.slug)}|${normalizeSlug(institution.strategy?.slug || target.strategySlug)}`;
+        return {
+          ...target,
+          key,
+          institution,
+          sourceGuidelineIds: Array.from(targetCollection.sourceGuidelineIdsByTarget[target.key] || []),
+          targetGuidelineIds: Array.from(targetCollection.targetGuidelineIdsByTarget[target.key] || []),
+          links: Array.isArray(targetCollection.linksByTarget[target.key]) ? targetCollection.linksByTarget[target.key] : []
+        };
+      } catch {
+        return null;
+      }
+    }));
+
+    const relatedStrategies = loaded.filter(Boolean);
+    const activeStrategyKey = `${normalizeSlug(activeInstitution.slug)}|${normalizeSlug(activeInstitution.strategy?.slug || state.strategySlug)}`;
+    const linksByStrategyKey = {
+      [activeStrategyKey]: Array.from(new Set(relatedStrategies.flatMap((item) => item.sourceGuidelineIds || [])))
+    };
+    relatedStrategies.forEach((item) => {
+      linksByStrategyKey[item.key] = Array.from(new Set(item.targetGuidelineIds || []));
+    });
+
+    const hasLinks = relatedStrategies.some((item) => Array.isArray(item.links) && item.links.length > 0);
+    const result = {
+      contextKey: currentKey,
+      activeInstitution,
+      relatedStrategies,
+      linksByStrategyKey,
+      hasLinks
+    };
+    state.mapStrategicLinksData = result;
+    if (!hasLinks) {
+      state.mapStrategicLinksError = '';
+    }
+    return result;
+  })()
+    .catch((error) => {
+      state.mapStrategicLinksData = null;
+      state.mapStrategicLinksError = toUserMessage(error);
+      throw error;
+    })
+    .finally(() => {
+      state.mapStrategicLinksLoading = false;
+      state.mapStrategicLinksPromise = null;
+    });
+
+  state.mapStrategicLinksPromise = loader;
+  return loader;
 }
 
 async function loadMemberContext() {
@@ -1631,6 +1823,58 @@ async function navigateToStrategyLink(payload = {}) {
     }
 
     await bootstrap();
+  });
+}
+
+async function navigateToStrategyPerspective(payload = {}) {
+  const targetInstitutionSlug = normalizeSlug(payload.institutionSlug || payload.targetInstitutionSlug);
+  if (!targetInstitutionSlug) return;
+
+  const requestedStrategySlug = normalizeSlug(payload.strategySlug || payload.targetStrategySlug);
+  const targetStrategySlug = resolveStrategySlugForInstitution(targetInstitutionSlug, requestedStrategySlug);
+  const preserveStrategicLayer = Boolean(payload.preserveStrategicLayer);
+  const nextMapLayer = preserveStrategicLayer ? 'strategic-links' : 'guidelines';
+  const samePerspective = (
+    targetInstitutionSlug === normalizeSlug(state.institutionSlug)
+    && targetStrategySlug === normalizeSlug(state.strategySlug)
+  );
+
+  if (samePerspective) {
+    state.activeView = 'map';
+    state.mapLayer = nextMapLayer;
+    syncRouteState();
+    render();
+    return;
+  }
+
+  await runBusy(async () => {
+    state.institutionSlug = targetInstitutionSlug;
+    state.strategySlug = targetStrategySlug;
+    state.strategy = null;
+    state.activeView = 'map';
+    state.mapLayer = nextMapLayer;
+    state.expandedStepId = '';
+    state.mapStrategicLinksData = null;
+    state.mapStrategicLinksError = '';
+    state.mapStrategicLinksLoading = false;
+    state.mapStrategicLinksPromise = null;
+    syncRouteState();
+
+    if (isAuthenticated() && !state.embedMapMode) {
+      try {
+        await switchInstitutionSession(targetInstitutionSlug, targetStrategySlug);
+      } catch (error) {
+        const raw = String(error?.message || '').toLowerCase();
+        if (raw === 'invalid token' || raw === 'unauthorized') {
+          clearSession();
+        }
+      }
+    }
+
+    await bootstrap();
+    state.activeView = 'map';
+    state.mapLayer = nextMapLayer;
+    syncRouteState();
   });
 }
 

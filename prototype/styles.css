@@ -2109,6 +2109,12 @@ body.embed-map-page .map-fullscreen-watermark img {
   stroke: url(#mapInitiativeGradient);
   stroke-width: 3.2;
 }
+.strategy-map-edge.edge-strategic-cross {
+  stroke: #1f65b8;
+  stroke-width: 3;
+  stroke-dasharray: 10 7;
+  opacity: 0.9;
+}
 .strategy-map-node {
   position: absolute;
   border-radius: 14px;
@@ -2129,6 +2135,13 @@ body.embed-map-page .map-fullscreen-watermark img {
   gap: 10px;
   align-content: start;
   box-shadow: 0 16px 30px rgba(20, 120, 104, 0.24);
+}
+.institution-node.map-strategy-switchable {
+  cursor: pointer;
+}
+.institution-node.map-strategy-switchable:focus-visible {
+  outline: 3px solid rgba(28, 102, 180, 0.35);
+  outline-offset: 2px;
 }
 .institution-subtitle {
   font-size: 20px;
@@ -2455,6 +2468,65 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategy-map-viewport.map-layer-initiatives .institution-node.map-institution-dimmed-strong {
   opacity: 0.12;
   filter: saturate(0.3);
+}
+.strategy-map-viewport.map-layer-strategic-links .initiative-lines,
+.strategy-map-viewport.map-layer-strategic-links .initiative-node {
+  opacity: 0;
+  pointer-events: none;
+}
+.strategy-map-viewport.map-layer-strategic-links .strategy-map-edge.edge-initiative-layer,
+.strategy-map-viewport.map-layer-strategic-links .strategy-map-edge.edge-strategy-link {
+  opacity: 0;
+}
+.strategy-map-viewport.map-layer-strategic-links .strategy-map-edge.edge-guideline-layer {
+  opacity: 0.3;
+}
+.strategy-map-viewport.map-layer-strategic-links .strategy-map-edge.edge-strategic-layer {
+  opacity: 1;
+  stroke-width: 3.1;
+}
+.strategy-map-viewport.map-layer-strategic-links .institution-node.map-strategy-related {
+  opacity: 0.58;
+  filter: saturate(0.5);
+  z-index: 6;
+}
+.strategy-map-viewport.map-layer-strategic-links .guideline-node.map-strategy-related {
+  opacity: 0.32;
+  filter: saturate(0.34);
+  z-index: 6;
+}
+.strategy-map-viewport.map-layer-strategic-links .guideline-node.map-strategy-related.map-strategic-linked {
+  opacity: 0.86;
+  filter: saturate(0.8);
+  border-color: #6f97c8;
+}
+.strategy-map-viewport.map-layer-strategic-links .institution-node.map-strategy-active {
+  z-index: 12;
+}
+.strategy-map-viewport.map-layer-strategic-links .guideline-node.map-strategy-active.map-strategic-unlinked {
+  opacity: 0.26;
+  filter: saturate(0.4);
+}
+.strategy-map-viewport.map-layer-strategic-links .guideline-node.map-strategy-active.map-strategic-linked {
+  opacity: 1;
+  filter: none;
+  border-color: #2f6eb8;
+  box-shadow: 0 0 0 3px rgba(47, 110, 184, 0.28), 0 15px 30px rgba(33, 77, 132, 0.24);
+  z-index: 13;
+}
+.map-strategic-empty-note {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 8px 14px;
+  border: 1px solid #bdcee6;
+  border-radius: 999px;
+  background: rgba(241, 246, 254, 0.96);
+  color: #21426d;
+  font-size: 13px;
+  font-weight: 600;
 }
 .map-vote-row {
   display: flex;
