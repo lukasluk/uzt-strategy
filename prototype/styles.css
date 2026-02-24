@@ -2114,7 +2114,7 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .strategy-map-edge.edge-strategic-cross {
   stroke: var(--strategy-edge, #c97769);
-  stroke-width: 4.2;
+  stroke-width: 8.4;
   stroke-dasharray: 11 6;
   opacity: 0.98;
   animation: strategic-dash-drift 5.8s linear infinite;
@@ -2497,11 +2497,11 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .strategy-map-viewport.map-layer-strategic-links .strategy-map-edge.edge-guideline-layer {
   opacity: 0.5;
-  stroke: #c97769;
+  stroke: var(--strategy-guideline-edge, #c97769);
 }
 .strategy-map-viewport.map-layer-strategic-links .strategy-map-edge.edge-strategic-layer {
   opacity: 1;
-  stroke-width: 4.2;
+  stroke-width: 8.4;
   filter: drop-shadow(0 0 3px color-mix(in srgb, var(--strategy-edge, #c97769) 78%, white));
 }
 .strategy-map-viewport.map-layer-strategic-links .strategy-map-node {

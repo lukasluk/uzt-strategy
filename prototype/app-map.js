@@ -1489,7 +1489,13 @@ function renderMapView() {
       && toNode.kind === 'guideline'
       && String(toNode.guideline?.relationType || '').toLowerCase() === 'parent';
     const parentRootClass = isParentRoot ? ' edge-root-parent' : '';
-    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}${parentRootClass} edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
+    const edgeTone = activeLayer === 'strategic-links'
+      ? (toNode.strategyTone || fromNode.strategyTone || null)
+      : null;
+    const edgeToneStyle = edgeTone
+      ? ` style="--strategy-guideline-edge:${escapeHtml(edgeTone.border)}"`
+      : '';
+    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}${parentRootClass} edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}"${edgeToneStyle} d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
   }).join('');
   const strategyGuidelineEdgeMarkup = graph.strategyGuidelineEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
