@@ -2081,6 +2081,9 @@ body.embed-map-page .map-fullscreen-watermark img {
   transition: opacity 0.18s ease;
   z-index: 1;
 }
+.strategy-map-lines.strategic-overlay-lines {
+  z-index: 8;
+}
 .strategy-map-lines * {
   pointer-events: none !important;
 }

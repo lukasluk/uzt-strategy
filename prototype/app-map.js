@@ -451,6 +451,7 @@ function layoutStrategicLinksMap(strategicData) {
     const nodePrefix = `${prefixBase}-`;
     const institutionNodeId = `${nodePrefix}inst-${institution.id}`;
     const linkedGuidelineSet = new Set((Array.isArray(linkedGuidelineIds) ? linkedGuidelineIds : []).map((item) => String(item || '').trim()));
+    const strategicGuidelineBaseWidth = 440;
     const institutionX = (toNumberOrNull(institution.cycle?.mapX) ?? 140) + Number(offsetX || 0);
     const institutionY = (toNumberOrNull(institution.cycle?.mapY) ?? 48) + Number(offsetY || 0);
 
@@ -494,7 +495,7 @@ function layoutStrategicLinksMap(strategicData) {
       visited.add(guideline.id);
 
       const nodeId = `${nodePrefix}guide-${guideline.id}`;
-      const defaultX = institutionX + 46 + depth * 250;
+      const defaultX = institutionX + 46 + depth * 460;
       const defaultY = nextY;
       nextY += 100;
       const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
@@ -508,7 +509,7 @@ function layoutStrategicLinksMap(strategicData) {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: Math.round(220 * sizeScale),
+        w: Math.round(strategicGuidelineBaseWidth * sizeScale),
         h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
         guideline,
@@ -1745,7 +1746,6 @@ function renderMapView() {
           <svg class="strategy-map-lines guideline-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
             ${guidelineEdgeMarkup}
             ${strategyGuidelineEdgeMarkup}
-            ${strategicEdgeMarkup}
           </svg>
           <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
             <defs>
@@ -1757,6 +1757,9 @@ function renderMapView() {
             ${initiativeEdgeMarkup}
           </svg>
           ${nodeMarkup}
+          <svg class="strategy-map-lines strategic-overlay-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
+            ${strategicEdgeMarkup}
+          </svg>
         </div>
         <div class="${mapWatermarkClass}" aria-hidden="true">
           <img src="assets/digistrategija-logo.svg?v=20260212c" alt="" />
