@@ -17,6 +17,14 @@ const PARENT_GUIDELINE_SCALE = 1.2;
 const MAP_WORLD_PAD = 320;
 const MAP_NODE_MIN_RENDER_X = -3000;
 const MAP_NODE_MIN_RENDER_Y = -3000;
+const STRATEGIC_LAYER_PALETTE = Object.freeze([
+  { pastel: '#fef2f2', border: '#cc6d6d', ink: '#5c2b2b', edge: '#c85f5f' },
+  { pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#3e7ec7' },
+  { pastel: '#eefbf4', border: '#63ab87', ink: '#1f4a35', edge: '#439968' },
+  { pastel: '#fff7eb', border: '#c18a4f', ink: '#5a3d1f', edge: '#b7742e' },
+  { pastel: '#f4f0ff', border: '#8668c2', ink: '#3b2f59', edge: '#6f54ad' },
+  { pastel: '#edf9fb', border: '#4d9cab', ink: '#1f4650', edge: '#3b8a99' }
+]);
 
 function notifyMapError(message) {
   const text = String(message || '').trim();
@@ -58,6 +66,14 @@ function mapStrategyLinkLabel(link) {
 function mapLang(lt, en) {
   if (typeof langText === 'function') return langText(lt, en);
   return String(en || lt || '');
+}
+
+function strategicToneForIndex(index) {
+  const palette = Array.isArray(STRATEGIC_LAYER_PALETTE) && STRATEGIC_LAYER_PALETTE.length
+    ? STRATEGIC_LAYER_PALETTE
+    : [{ pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#3e7ec7' }];
+  const safeIndex = Math.max(0, Number(index || 0));
+  return palette[safeIndex % palette.length];
 }
 
 function resolveAutoSide(fromNode, toNode) {
@@ -605,6 +621,10 @@ function layoutStrategicLinksMap(strategicData) {
     activeStrategyKey,
     ...relatedStrategies.map((item) => String(item?.key || '').trim()).filter((key) => key && key !== activeStrategyKey)
   ].filter((key, index, arr) => arr.indexOf(key) === index && sliceByKey.has(key));
+  const strategyToneByKey = Object.create(null);
+  orderedStrategyKeys.forEach((strategyKey, index) => {
+    strategyToneByKey[strategyKey] = strategicToneForIndex(index);
+  });
 
   const horizontalGap = 260;
   const baseLeft = 140;
@@ -619,6 +639,13 @@ function layoutStrategicLinksMap(strategicData) {
     const shiftedBounds = computeSliceBounds(strategyKey);
     if (!shiftedBounds) return;
     cursorX = shiftedBounds.maxX + horizontalGap;
+  });
+
+  nodes.forEach((node) => {
+    if (!node?.strategyKey) return;
+    const tone = strategyToneByKey[node.strategyKey];
+    if (!tone) return;
+    node.strategyTone = tone;
   });
 
   relatedStrategies.forEach((item) => {
@@ -638,7 +665,9 @@ function layoutStrategicLinksMap(strategicData) {
         to: toNodeId,
         type: 'strategic-cross',
         layer: 'strategic-links',
-        lineSide: 'auto'
+        lineSide: 'auto',
+        strategyKey,
+        strategyTone: strategyToneByKey[strategyKey] || null
       });
     });
   });
@@ -1471,7 +1500,11 @@ function renderMapView() {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
     if (!fromNode || !toNode) return '';
-    return `<path class="strategy-map-edge edge-strategic-cross edge-strategic-layer" data-layer="strategic-links" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="auto" d="${edgePath(fromNode, toNode, 'auto')}"></path>`;
+    const tone = edge?.strategyTone && typeof edge.strategyTone === 'object' ? edge.strategyTone : null;
+    const toneStyle = tone
+      ? ` style="--strategy-edge:${escapeHtml(tone.edge)};--strategy-edge-soft:${escapeHtml(tone.border)}"`
+      : '';
+    return `<path class="strategy-map-edge edge-strategic-cross edge-strategic-layer" data-layer="strategic-links" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="auto"${toneStyle} d="${edgePath(fromNode, toNode, 'auto')}"></path>`;
   }).join('');
   const initiativeEdgeMarkup = graph.initiativeEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
@@ -1497,6 +1530,7 @@ function renderMapView() {
         'institution-node',
         node.institution.slug === state.institutionSlug ? 'active' : '',
         pulseActive ? 'pulse-active' : '',
+        activeLayer === 'strategic-links' && node.strategyTone ? 'map-strategy-colored' : '',
         relatedInstitutionInStrategicLayer ? 'map-strategy-related' : '',
         activeLayer === 'strategic-links' && node.clusterRole === 'active' ? 'map-strategy-active' : '',
         activeLayer === 'strategic-links' && node.canSwitchPerspective ? 'map-strategy-switchable' : ''
@@ -1507,6 +1541,9 @@ function renderMapView() {
       const strategicNodeTag = activeLayer === 'strategic-links'
         ? `<span class="tag">${escapeHtml(node.clusterRole === 'related' ? mapLang('Susieta strategija', 'Linked strategy') : mapLang('Aktyvi strategija', 'Active strategy'))}</span>`
         : `<span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>`;
+      const strategyToneStyle = activeLayer === 'strategic-links' && node.strategyTone
+        ? `--strategy-pastel:${escapeHtml(node.strategyTone.pastel)};--strategy-border:${escapeHtml(node.strategyTone.border)};--strategy-ink:${escapeHtml(node.strategyTone.ink)};`
+        : '';
       return `
         <article class="${institutionClass}"
                  data-node-id="${escapeHtml(node.id)}"
@@ -1519,7 +1556,7 @@ function renderMapView() {
                  data-h="${node.h}"
                  data-draggable="${editable ? 'true' : 'false'}"
                  ${perspectiveAttrs}
-                 style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
+                 style="${strategyToneStyle}left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;">
           <strong>${escapeHtml(node.institution.name)}</strong>
           <small class="institution-subtitle">${escapeHtml(strategyTitle)}</small>
           ${strategicNodeTag}
@@ -1590,11 +1627,14 @@ function renderMapView() {
         `
         : '';
       const strategicGuidelineClass = activeLayer === 'strategic-links'
-        ? `${node.clusterRole === 'related' ? ' map-strategy-related' : ' map-strategy-active'} ${node.isStrategicLinked ? 'map-strategic-linked' : 'map-strategic-unlinked'}`
+        ? ` map-strategy-colored ${node.clusterRole === 'related' ? 'map-strategy-related' : 'map-strategy-active'} ${node.isStrategicLinked ? 'map-strategic-linked' : 'map-strategic-unlinked'}`
         : '';
       const guidelineOwnerLabel = activeLayer === 'strategic-links'
         ? `${String(node.institution.name || node.institution.slug || '').trim()} / ${String(node.institution.strategy?.title || '-').trim()}`
         : `${String(node.institution.slug || '').trim()} - ${relationText}`;
+      const guidelineToneStyle = activeLayer === 'strategic-links' && node.strategyTone
+        ? `--strategy-pastel:${escapeHtml(node.strategyTone.pastel)};--strategy-border:${escapeHtml(node.strategyTone.border)};--strategy-ink:${escapeHtml(node.strategyTone.ink)};`
+        : '';
 
       return `
         <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}${strategicGuidelineClass}"
@@ -1608,7 +1648,7 @@ function renderMapView() {
                  data-w="${node.w}"
                  data-h="${node.h}"
                  data-draggable="${editable ? 'true' : 'false'}"
-                 style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
+                 style="${guidelineToneStyle}left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
           <div class="map-node-head">
             <h4>${escapeHtml(node.guideline.title)}</h4>
             <button
