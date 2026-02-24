@@ -18,7 +18,7 @@ const MAP_WORLD_PAD = 320;
 const MAP_NODE_MIN_RENDER_X = -3000;
 const MAP_NODE_MIN_RENDER_Y = -3000;
 const STRATEGIC_LAYER_PALETTE = Object.freeze([
-  { pastel: '#fef2f2', border: '#cc6d6d', ink: '#5c2b2b', edge: '#c85f5f' },
+  { pastel: '#fff0f0', border: '#d25f5f', ink: '#5e2323', edge: '#e04747' },
   { pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#3e7ec7' },
   { pastel: '#eefbf4', border: '#63ab87', ink: '#1f4a35', edge: '#439968' },
   { pastel: '#fff7eb', border: '#c18a4f', ink: '#5a3d1f', edge: '#b7742e' },
@@ -1539,8 +1539,13 @@ function renderMapView() {
         ? `data-action="open-strategy-perspective" data-map-interactive="true" data-target-institution="${escapeHtml(node.institution.slug || '')}" data-target-strategy="${escapeHtml(node.institution.strategy?.slug || '')}" role="button" tabindex="0" aria-label="${escapeHtml(switchPerspectiveLabel)}" title="${escapeHtml(switchPerspectiveLabel)}"`
         : '';
       const strategicNodeTag = activeLayer === 'strategic-links'
-        ? `<span class="tag">${escapeHtml(node.clusterRole === 'related' ? mapLang('Susieta strategija', 'Linked strategy') : mapLang('Aktyvi strategija', 'Active strategy'))}</span>`
+        ? (node.clusterRole === 'related'
+          ? `<span class="tag">${escapeHtml(mapLang('Susieta strategija', 'Linked strategy'))}</span>`
+          : '')
         : `<span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>`;
+      const cycleStatusLine = activeLayer === 'strategic-links'
+        ? ''
+        : `<small class="institution-cycle-label">${escapeHtml(mapLang('Strategijos ciklo busena', 'Strategy cycle status'))}</small>`;
       const strategyToneStyle = activeLayer === 'strategic-links' && node.strategyTone
         ? `--strategy-pastel:${escapeHtml(node.strategyTone.pastel)};--strategy-border:${escapeHtml(node.strategyTone.border)};--strategy-ink:${escapeHtml(node.strategyTone.ink)};`
         : '';
@@ -1560,7 +1565,7 @@ function renderMapView() {
           <strong>${escapeHtml(node.institution.name)}</strong>
           <small class="institution-subtitle">${escapeHtml(strategyTitle)}</small>
           ${strategicNodeTag}
-          <small class="institution-cycle-label">${escapeHtml(mapLang('Strategijos ciklo busena', 'Strategy cycle status'))}</small>
+          ${cycleStatusLine}
         </article>
       `;
     }
