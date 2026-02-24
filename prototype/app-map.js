@@ -551,6 +551,26 @@ function layoutStrategicLinksMap(strategicData) {
     return slice;
   };
 
+  const computeSliceBounds = (strategyKey) => {
+    const sliceNodes = nodes.filter((node) => node.strategyKey === strategyKey);
+    if (!sliceNodes.length) return null;
+    return {
+      minX: sliceNodes.reduce((acc, node) => Math.min(acc, node.x), Infinity),
+      minY: sliceNodes.reduce((acc, node) => Math.min(acc, node.y), Infinity),
+      maxX: sliceNodes.reduce((acc, node) => Math.max(acc, node.x + node.w), -Infinity),
+      maxY: sliceNodes.reduce((acc, node) => Math.max(acc, node.y + node.h), -Infinity)
+    };
+  };
+
+  const moveSlice = (strategyKey, dx, dy) => {
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+    nodes.forEach((node) => {
+      if (node.strategyKey !== strategyKey) return;
+      node.x += dx;
+      node.y += dy;
+    });
+  };
+
   const activeStrategyKey = `${normalizeSlug(activeInstitution.slug)}|${normalizeSlug(activeInstitution.strategy?.slug || state.strategySlug)}`;
   const activeLinkedGuidelines = Array.isArray(linksByStrategyKey[activeStrategyKey]) ? linksByStrategyKey[activeStrategyKey] : [];
   const activeSlice = buildInstitutionSlice({
@@ -565,7 +585,6 @@ function layoutStrategicLinksMap(strategicData) {
   if (!activeSlice) return emptyGraph;
 
   const relatedStrategies = Array.isArray(strategicData?.relatedStrategies) ? strategicData.relatedStrategies : [];
-  let relatedOffsetX = 880;
   relatedStrategies.forEach((item) => {
     const strategyKey = String(item?.key || '').trim();
     const institution = item?.institution;
@@ -577,10 +596,29 @@ function layoutStrategicLinksMap(strategicData) {
       linkedGuidelineIds: targetGuidelineIds,
       includeAllGuidelines: false,
       clusterRole: 'related',
-      offsetX: relatedOffsetX,
+      offsetX: 0,
       offsetY: 0
     });
-    relatedOffsetX += 880;
+  });
+
+  const orderedStrategyKeys = [
+    activeStrategyKey,
+    ...relatedStrategies.map((item) => String(item?.key || '').trim()).filter((key) => key && key !== activeStrategyKey)
+  ].filter((key, index, arr) => arr.indexOf(key) === index && sliceByKey.has(key));
+
+  const horizontalGap = 260;
+  const baseLeft = 140;
+  const baseTop = 48;
+  let cursorX = baseLeft;
+  orderedStrategyKeys.forEach((strategyKey) => {
+    const bounds = computeSliceBounds(strategyKey);
+    if (!bounds) return;
+    const dx = cursorX - bounds.minX;
+    const dy = baseTop - bounds.minY;
+    moveSlice(strategyKey, dx, dy);
+    const shiftedBounds = computeSliceBounds(strategyKey);
+    if (!shiftedBounds) return;
+    cursorX = shiftedBounds.maxX + horizontalGap;
   });
 
   relatedStrategies.forEach((item) => {
