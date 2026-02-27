@@ -2486,6 +2486,76 @@ body.embed-map-page .map-fullscreen-watermark img {
   opacity: 0.12;
   filter: saturate(0.3);
 }
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .institution-node strong {
+  font-size: clamp(18px, 1.55vw, 22px);
+  line-height: 1.08;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .institution-subtitle {
+  font-size: clamp(50px, 3.8vw, 64px);
+  line-height: 1.04;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .institution-node .tag {
+  font-size: 14px;
+  padding: 5px 14px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .guideline-node h4,
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .initiative-node h4 {
+  font-size: 28px;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .guideline-node small,
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .initiative-node small {
+  font-size: 22px;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-node-head {
+  gap: 14px;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-comment-btn {
+  font-size: 22px;
+  padding: 8px 14px 8px 8px;
+  gap: 8px;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-comment-icon {
+  width: 40px;
+  height: 40px;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-comment-count {
+  min-width: 34px;
+  height: 34px;
+  font-size: 20px;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-vote-chip,
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-strategy-link-chip {
+  font-size: 22px;
+  padding: 6px 14px;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-vote-chip strong {
+  font-size: 24px;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-vote-square {
+  width: 16px;
+  height: 16px;
+}
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-vote-empty {
+  font-size: 22px;
+}
 .strategy-map-viewport.map-layer-strategic-links .initiative-lines,
 .strategy-map-viewport.map-layer-strategic-links .initiative-node {
   opacity: 0;
