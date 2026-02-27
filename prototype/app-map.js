@@ -17,6 +17,10 @@ const PARENT_GUIDELINE_SCALE = 1.2;
 const MAP_WORLD_PAD = 320;
 const MAP_NODE_MIN_RENDER_X = -3000;
 const MAP_NODE_MIN_RENDER_Y = -3000;
+const MAP_GUIDELINE_BASE_WIDTH = 320;
+const MAP_INITIATIVE_BASE_WIDTH = 320;
+const MAP_INSTITUTION_BASE_WIDTH = 390;
+const MAP_INSTITUTION_BASE_MIN_HEIGHT = 220;
 const STRATEGIC_LAYER_PALETTE = Object.freeze([
   { pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#c97769' },
   { pastel: '#fff0f0', border: '#d25f5f', ink: '#5e2323', edge: '#c97769' },
@@ -238,8 +242,8 @@ function layoutStrategyMap() {
     cycleId: institution.cycle?.id || null,
     x: institutionX,
     y: institutionY,
-    w: 390,
-    h: 220,
+    w: MAP_INSTITUTION_BASE_WIDTH,
+    h: MAP_INSTITUTION_BASE_MIN_HEIGHT,
     institution
   });
 
@@ -269,7 +273,7 @@ function layoutStrategyMap() {
       visited.add(guideline.id);
 
       const nodeId = `guide-${guideline.id}`;
-      const defaultX = institutionX + 46 + depth * 250;
+      const defaultX = institutionX + 46 + depth * 360;
       const defaultY = nextY;
       nextY += 100;
 
@@ -284,7 +288,7 @@ function layoutStrategyMap() {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: Math.round(220 * sizeScale),
+        w: Math.round(MAP_GUIDELINE_BASE_WIDTH * sizeScale),
         h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
         guideline
@@ -351,7 +355,7 @@ function layoutStrategyMap() {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: 250,
+        w: MAP_INITIATIVE_BASE_WIDTH,
         h: estimateInitiativeNodeHeight(initiative.totalScore),
         institution,
         initiative
@@ -460,7 +464,6 @@ function layoutStrategicLinksMap(strategicData) {
     const nodePrefix = `${prefixBase}-`;
     const institutionNodeId = `${nodePrefix}inst-${institution.id}`;
     const linkedGuidelineSet = new Set((Array.isArray(linkedGuidelineIds) ? linkedGuidelineIds : []).map((item) => String(item || '').trim()));
-    const strategicGuidelineBaseWidth = 440;
     const institutionX = (toNumberOrNull(institution.cycle?.mapX) ?? 140) + Number(offsetX || 0);
     const institutionY = (toNumberOrNull(institution.cycle?.mapY) ?? 48) + Number(offsetY || 0);
 
@@ -471,8 +474,8 @@ function layoutStrategicLinksMap(strategicData) {
       cycleId: institution.cycle?.id || null,
       x: institutionX,
       y: institutionY,
-      w: 380,
-      h: 250,
+      w: MAP_INSTITUTION_BASE_WIDTH,
+      h: MAP_INSTITUTION_BASE_MIN_HEIGHT,
       institution,
       strategyKey,
       clusterRole,
@@ -504,7 +507,7 @@ function layoutStrategicLinksMap(strategicData) {
       visited.add(guideline.id);
 
       const nodeId = `${nodePrefix}guide-${guideline.id}`;
-      const defaultX = institutionX + 46 + depth * 460;
+      const defaultX = institutionX + 46 + depth * 360;
       const defaultY = nextY;
       nextY += 100;
       const nodeX = toNumberOrNull(guideline.mapX) ?? defaultX;
@@ -518,7 +521,7 @@ function layoutStrategicLinksMap(strategicData) {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: Math.round(strategicGuidelineBaseWidth * sizeScale),
+        w: Math.round(MAP_GUIDELINE_BASE_WIDTH * sizeScale),
         h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
         guideline,
@@ -556,10 +559,10 @@ function layoutStrategicLinksMap(strategicData) {
       .reduce((acc, node) => Math.min(acc, node.y), institutionY);
     const maxX = nodes
       .filter((item) => item.strategyKey === strategyKey)
-      .reduce((acc, node) => Math.max(acc, node.x + node.w), institutionX + 380);
+      .reduce((acc, node) => Math.max(acc, node.x + node.w), institutionX + MAP_INSTITUTION_BASE_WIDTH);
     const maxY = nodes
       .filter((item) => item.strategyKey === strategyKey)
-      .reduce((acc, node) => Math.max(acc, node.y + node.h), institutionY + 250);
+      .reduce((acc, node) => Math.max(acc, node.y + node.h), institutionY + MAP_INSTITUTION_BASE_MIN_HEIGHT);
 
     const slice = {
       strategyKey,
