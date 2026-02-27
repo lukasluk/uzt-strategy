@@ -145,7 +145,16 @@ function updateMapFullscreenButtonLabel() {
 }
 
 function fitMapToCurrentNodes(viewport, world) {
-  const nodes = Array.from(world.querySelectorAll('.strategy-map-node[data-node-id]')).map((node) => ({
+  const activeLayer = String(state.mapLayer || 'guidelines').trim().toLowerCase();
+  const nodeElements = Array.from(world.querySelectorAll('.strategy-map-node[data-node-id]')).filter((node) => {
+    const kind = String(node.dataset.kind || '').trim().toLowerCase();
+    if (!kind || kind === 'institution') return true;
+    if (activeLayer === 'guidelines') return kind === 'guideline';
+    if (activeLayer === 'initiatives') return kind === 'guideline' || kind === 'initiative';
+    if (activeLayer === 'strategic-links') return kind === 'guideline';
+    return true;
+  });
+  const nodes = nodeElements.map((node) => ({
     x: Number(node.dataset.x || 0),
     y: Number(node.dataset.y || 0),
     w: Number(node.dataset.w || node.offsetWidth || 0),

@@ -2508,6 +2508,10 @@ body.embed-map-page .map-fullscreen-watermark img {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .guideline-node,
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .initiative-node {
+  min-width: clamp(320px, 20vw, 380px);
+}
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .guideline-node h4,
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .initiative-node h4 {
   font-size: 28px;
