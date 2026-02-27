@@ -18,8 +18,8 @@ const MAP_WORLD_PAD = 320;
 const MAP_NODE_MIN_RENDER_X = -3000;
 const MAP_NODE_MIN_RENDER_Y = -3000;
 const STRATEGIC_LAYER_PALETTE = Object.freeze([
-  { pastel: '#fff0f0', border: '#d25f5f', ink: '#5e2323', edge: '#c97769' },
   { pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#c97769' },
+  { pastel: '#fff0f0', border: '#d25f5f', ink: '#5e2323', edge: '#c97769' },
   { pastel: '#eefbf4', border: '#63ab87', ink: '#1f4a35', edge: '#c97769' },
   { pastel: '#fff7eb', border: '#c18a4f', ink: '#5a3d1f', edge: '#c97769' },
   { pastel: '#f4f0ff', border: '#8668c2', ink: '#3b2f59', edge: '#c97769' },
