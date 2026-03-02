@@ -11,14 +11,17 @@ Production domain:
 - https://digistrategija.lt
 
 Most recent verified production deployment:
-- Date/time: 2026-02-12 20:05 UTC
+- Date/time: 2026-02-23 22:02 UTC
 - Result: Deployment completed safely
 - DB backup:
-  /srv/uzt-backups/database/uzt_strategy_20260212T200453Z.dump
+  /srv/uzt-backups/database/uzt_strategy_20260223T220229Z.dump
 - Release backup:
-  /srv/uzt-backups/releases/20260212T200453Z
+  /srv/uzt-backups/releases/20260223T220229Z
 - Health endpoint:
   /api/v1/health => {"ok":true,"version":"v1"}
+
+Latest deployed commit:
+- 8cb9dea - Fix mojibake symbols and UTF-8 text across app and landing
 
 Latest applied source update in this handoff cycle (to be deployed if not yet):
 - Institution admin users flow switched from direct password set to one-time URL flow.
@@ -185,8 +188,15 @@ Rule for filename:
   PROJECT_HANDOFF_YYYY-MM-DD_HH-mm.txt
 
 ==================================================
-8) STANDARD DEPLOY RUNBOOK (MANUAL)
+8) STANDARD PUBLISH + DEPLOY RUNBOOK (MANUAL)
 ==================================================
+# Local machine (publish to GitHub)
+cd <local-repo>/uzt-strategy
+git status --short
+git push origin master
+git rev-parse --short HEAD
+
+# Server (deploy published commit)
 cd /srv/uzt-strategy-src
 sudo git fetch origin
 sudo git reset --hard origin/master
@@ -194,7 +204,10 @@ git log --oneline -n 3
 sudo bash /srv/uzt-strategy-src/deploy/deploy.sh
 sudo systemctl status uzt-strategy-api --no-pager
 curl -fsS http://127.0.0.1:3000/api/v1/health
-curl -fsS https://www.digistrategija.lt/index.html | head -n 120
+curl -fsS https://digistrategy.eu/api/v1/health
+
+# UTF-8/mojibake regression check (should print no matches)
+curl -fsS https://digistrategy.eu/app.js | rg "GairÄ|StrategijÅ|â€ž|âš™|âœ¦|âŒ"
 
 ==================================================
 9) NEXT RECOMMENDED STEP
