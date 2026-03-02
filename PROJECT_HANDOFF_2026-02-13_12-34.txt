@@ -242,6 +242,18 @@ New feature safety requirement:
 - Upload parser upgraded to multer@2.x for safer dependency baseline.
 - Default AI model for PDF strategy generation set to gpt-5-mini (override via AI_STRATEGY_MODEL).
 
+==================================================
+11) MAP REFACTOR BASELINE (2026-03-02)
+==================================================
+- Added `prototype/map-shared.js` for shared map constants + helper functions.
+- Updated script load order in:
+  - `prototype/index.html`
+  - `prototype/embed/strategy-map/index.html`
+  so `map-shared.js` loads before `app-map.js`.
+- Removed duplicated constant/helper declarations from `prototype/app-map.js`.
+- Added architecture notes: `docs/map-architecture.md`.
+- Behavior target of this step: no functional change, only structure/maintainability.
+
 END OF HANDOFF
 
 
