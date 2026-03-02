@@ -7,11 +7,12 @@ This document describes current map frontend boundaries after the first refactor
 1. `i18n.js`
 2. `map-shared.js`
 3. `map-geometry.js`
-4. `map-interactions.js`
-5. `app-map.js`
-6. `app.js`
+4. `map-layout.js`
+5. `map-interactions.js`
+6. `app-map.js`
+7. `app.js`
 
-`map-shared.js`, `map-geometry.js`, and `map-interactions.js` must load before `app-map.js`.
+`map-shared.js`, `map-geometry.js`, `map-layout.js`, and `map-interactions.js` must load before `app-map.js`.
 
 ## File responsibilities
 
@@ -24,9 +25,16 @@ This document describes current map frontend boundaries after the first refactor
     - `strategicToneForIndex`
 
 - `prototype/app-map.js`
-  - Map layout calculation (`layoutStrategyMap`, `layoutStrategicLinksMap`)
-  - Map rendering (`renderMapView`)
+  - Map rendering entrypoint (`renderMapView`)
   - View composition and layer-specific markup
+  - Runtime dependency guard for map module load failures (`ensureMapRuntimeDependencies`)
+
+- `prototype/map-layout.js`
+  - Map graph construction and sizing:
+    - `estimateGuidelineNodeHeight`
+    - `estimateInitiativeNodeHeight`
+    - `layoutStrategyMap`
+    - `layoutStrategicLinksMap`
 
 - `prototype/app.js`
   - Application state container (`state`)
@@ -46,6 +54,6 @@ This document describes current map frontend boundaries after the first refactor
 ## Refactor next steps
 
 1. Add minimal integration smoke checks for map-layer switch and node drag persistence.
-2. Extract layout functions (`layoutStrategyMap`, `layoutStrategicLinksMap`) into `map-layout.js`.
-3. Keep `app-map.js` as a coordinator/composition layer only.
+2. Keep reducing `app-map.js` by extracting render sub-sections (header/toolbar/node template builders).
+3. Add a small map bootstrap validator that asserts required global helpers are present at runtime.
 4. Consolidate repeated map typography rules in `styles.css` via CSS custom properties.

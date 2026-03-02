@@ -297,6 +297,28 @@ New feature safety requirement:
     - `/srv/uzt-backups/database/uzt_strategy_20260302T185221Z.dump`
     - `/srv/uzt-backups/releases/20260302T185221Z`
 
+==================================================
+14) MAP REFACTOR PHASE 3 (2026-03-02)
+==================================================
+- Added `prototype/map-layout.js`:
+  - moved graph-building/layout functions out of `app-map.js`
+  - includes:
+    - `estimateGuidelineNodeHeight`
+    - `estimateInitiativeNodeHeight`
+    - `layoutStrategyMap`
+    - `layoutStrategicLinksMap`
+- Updated script load order in:
+  - `prototype/index.html`
+  - `prototype/embed/strategy-map/index.html`
+  so `map-layout.js` loads before `app-map.js`.
+- Reduced `prototype/app-map.js` responsibility to rendering/composition:
+  - keeps `notifyMapError`
+  - keeps `renderMapView`
+  - adds `ensureMapRuntimeDependencies` guard for clearer module-load failures
+- Updated architecture notes:
+  - `docs/map-architecture.md`
+- Behavior target: no functional change, structure/maintainability only.
+
 END OF HANDOFF
 
 
