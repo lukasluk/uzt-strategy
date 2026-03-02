@@ -45,50 +45,41 @@ function notifyMapError(message) {
   }
 }
 
+function renderMapLoadingState() {
+  elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategijų žemėlapis...</strong></div>';
+}
 
-function renderMapView() {
-  document.body.classList.remove('map-comment-modal-open');
-  if (!ensureMapRuntimeDependencies()) return;
+function renderMapErrorState() {
+  elements.stepView.innerHTML = `
+    <div class="card">
+      <strong>Nepavyko ikelti strategiju zemelapio</strong>
+      <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapError)}</p>
+      <button id="retryMapLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar karta</button>
+    </div>
+  `;
+  const retryBtn = elements.stepView.querySelector('#retryMapLoadBtn');
+  if (retryBtn) retryBtn.addEventListener('click', bootstrap);
+}
 
-  if (state.loading && !state.mapData) {
-    elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategijų žemėlapis...</strong></div>';
-    return;
-  }
+function renderMapEmptyState() {
+  elements.stepView.innerHTML = `
+    <div class="card">
+      <strong>Strategijų žemėlapis dar tuščias</strong>
+      <p class="prompt" style="margin: 8px 0 0;">Kai institucijos turės strategijas, jos atsiras šiame žemėlapyje.</p>
+    </div>
+  `;
+}
 
-  if (state.mapError) {
-    elements.stepView.innerHTML = `
-      <div class="card">
-        <strong>Nepavyko ikelti strategiju zemelapio</strong>
-        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapError)}</p>
-        <button id="retryMapLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar karta</button>
-      </div>
-    `;
-    const retryBtn = elements.stepView.querySelector('#retryMapLoadBtn');
-    if (retryBtn) retryBtn.addEventListener('click', bootstrap);
-    return;
-  }
+function renderMapInstitutionPromptState() {
+  elements.stepView.innerHTML = `
+    <div class="card">
+      <strong>Pasirinkite instituciją</strong>
+      <p class="prompt" style="margin: 8px 0 0;">Žemėlapyje rodoma tik viršuje pasirinktos institucijos strategija.</p>
+    </div>
+  `;
+}
 
-  if (!Array.isArray(state.mapData?.institutions) || !state.mapData.institutions.length) {
-    elements.stepView.innerHTML = `
-      <div class="card">
-        <strong>Strategijų žemėlapis dar tuščias</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Kai institucijos turės strategijas, jos atsiras šiame žemėlapyje.</p>
-      </div>
-    `;
-    return;
-  }
-
-  const primaryGraph = layoutStrategyMap();
-  if (!primaryGraph.institution) {
-    elements.stepView.innerHTML = `
-      <div class="card">
-        <strong>Pasirinkite instituciją</strong>
-        <p class="prompt" style="margin: 8px 0 0;">Žemėlapyje rodoma tik viršuje pasirinktos institucijos strategija.</p>
-      </div>
-    `;
-    return;
-  }
-
+function resolveActiveMapLayer(primaryGraph) {
   const hasInitiativeNodes = primaryGraph.nodes.some((node) => node.kind === 'initiative');
   if (state.mapLayer !== 'guidelines' && state.mapLayer !== 'initiatives' && state.mapLayer !== 'strategic-links') {
     state.mapLayer = 'guidelines';
@@ -100,55 +91,133 @@ function renderMapView() {
   if (activeLayer !== 'initiatives') {
     resetMapInitiativeFocusState();
   }
+  return { activeLayer, hasInitiativeNodes };
+}
 
-  let graph = primaryGraph;
-  if (activeLayer === 'strategic-links') {
-    const perspectiveKey = typeof mapPerspectiveKey === 'function'
-      ? mapPerspectiveKey()
-      : `${normalizeSlug(state.institutionSlug)}|${normalizeSlug(state.strategySlug)}`;
-    const hasFreshStrategicData = state.mapStrategicLinksData?.contextKey === perspectiveKey;
-
-    if (!hasFreshStrategicData) {
-      if (!state.mapStrategicLinksLoading && typeof ensureStrategicLinksData === 'function') {
-        ensureStrategicLinksData()
-          .then(() => {
-            if (state.activeView === 'map' && state.mapLayer === 'strategic-links') renderStepView();
-          })
-          .catch(() => {
-            if (state.activeView === 'map' && state.mapLayer === 'strategic-links') renderStepView();
-          });
-      }
-      if (state.mapStrategicLinksError) {
-        elements.stepView.innerHTML = `
-          <div class="card">
-            <strong>${escapeHtml(mapLang('Nepavyko ikelti strateginiu rysiu', 'Failed to load strategic links'))}</strong>
-            <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapStrategicLinksError)}</p>
-            <button id="retryStrategicLinksBtn" class="btn btn-primary" style="margin-top: 12px;">${escapeHtml(mapLang('Bandyti dar karta', 'Try again'))}</button>
-          </div>
-        `;
-        const retryStrategicBtn = elements.stepView.querySelector('#retryStrategicLinksBtn');
-        if (retryStrategicBtn) {
-          retryStrategicBtn.addEventListener('click', async () => {
-            if (typeof ensureStrategicLinksData !== 'function') return;
-            state.mapStrategicLinksError = '';
-            state.mapStrategicLinksLoading = true;
-            renderStepView();
-            try {
-              await ensureStrategicLinksData({ force: true });
-            } catch {
-              // Error already handled in state.
-            }
-            renderStepView();
-          });
+function renderStrategicLinksPendingState() {
+  if (state.mapStrategicLinksError) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${escapeHtml(mapLang('Nepavyko ikelti strateginiu rysiu', 'Failed to load strategic links'))}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapStrategicLinksError)}</p>
+        <button id="retryStrategicLinksBtn" class="btn btn-primary" style="margin-top: 12px;">${escapeHtml(mapLang('Bandyti dar karta', 'Try again'))}</button>
+      </div>
+    `;
+    const retryStrategicBtn = elements.stepView.querySelector('#retryStrategicLinksBtn');
+    if (retryStrategicBtn) {
+      retryStrategicBtn.addEventListener('click', async () => {
+        if (typeof ensureStrategicLinksData !== 'function') return;
+        state.mapStrategicLinksError = '';
+        state.mapStrategicLinksLoading = true;
+        renderStepView();
+        try {
+          await ensureStrategicLinksData({ force: true });
+        } catch {
+          // Error already handled in state.
         }
-      } else {
-        elements.stepView.innerHTML = `<div class="card"><strong>${escapeHtml(mapLang('Kraunami strateginiai rysiai...', 'Loading strategic links...'))}</strong></div>`;
-      }
-      return;
+        renderStepView();
+      });
     }
-
-    graph = layoutStrategicLinksMap(state.mapStrategicLinksData);
+    return;
   }
+
+  elements.stepView.innerHTML = `<div class="card"><strong>${escapeHtml(mapLang('Kraunami strateginiai rysiai...', 'Loading strategic links...'))}</strong></div>`;
+}
+
+function resolveMapGraphForLayer(primaryGraph, activeLayer) {
+  if (activeLayer !== 'strategic-links') return primaryGraph;
+
+  const perspectiveKey = typeof mapPerspectiveKey === 'function'
+    ? mapPerspectiveKey()
+    : `${normalizeSlug(state.institutionSlug)}|${normalizeSlug(state.strategySlug)}`;
+  const hasFreshStrategicData = state.mapStrategicLinksData?.contextKey === perspectiveKey;
+
+  if (!hasFreshStrategicData) {
+    if (!state.mapStrategicLinksLoading && typeof ensureStrategicLinksData === 'function') {
+      ensureStrategicLinksData()
+        .then(() => {
+          if (state.activeView === 'map' && state.mapLayer === 'strategic-links') renderStepView();
+        })
+        .catch(() => {
+          if (state.activeView === 'map' && state.mapLayer === 'strategic-links') renderStepView();
+        });
+    }
+    renderStrategicLinksPendingState();
+    return null;
+  }
+
+  return layoutStrategicLinksMap(state.mapStrategicLinksData);
+}
+
+function buildMapCommentItems(graph) {
+  const items = new Map();
+  graph.nodes.forEach((node) => {
+    if (node.kind === 'guideline' && node.guideline?.id) {
+      items.set(`guideline:${node.guideline.id}`, {
+        kind: 'guideline',
+        id: node.guideline.id,
+        title: node.guideline.title || 'Gairė',
+        description: node.guideline.description || 'Aprašymas nepateiktas.',
+        comments: Array.isArray(node.guideline.comments) ? node.guideline.comments : []
+      });
+    }
+    if (node.kind === 'initiative' && node.initiative?.id) {
+      items.set(`initiative:${node.initiative.id}`, {
+        kind: 'initiative',
+        id: node.initiative.id,
+        title: node.initiative.title || 'Iniciatyva',
+        description: node.initiative.description || 'Aprašymas nepateiktas.',
+        comments: Array.isArray(node.initiative.comments) ? node.initiative.comments : []
+      });
+    }
+  });
+  return items;
+}
+
+function setMapLayerAndRender(nextLayer) {
+  if (state.mapLayer === nextLayer) return;
+  state.mapLayer = nextLayer;
+  resetMapInitiativeFocusState();
+  renderStepView();
+}
+
+function bindMapLayerButtons(layerGuidelinesButtons, layerInitiativesButtons, layerStrategicButtons) {
+  layerGuidelinesButtons.forEach((button) => {
+    button.addEventListener('click', () => setMapLayerAndRender('guidelines'));
+  });
+  layerInitiativesButtons.forEach((button) => {
+    button.addEventListener('click', () => setMapLayerAndRender('initiatives'));
+  });
+  layerStrategicButtons.forEach((button) => {
+    button.addEventListener('click', () => setMapLayerAndRender('strategic-links'));
+  });
+}
+
+
+function renderMapView() {
+  document.body.classList.remove('map-comment-modal-open');
+  if (!ensureMapRuntimeDependencies()) return;
+
+  if (state.loading && !state.mapData) {
+    renderMapLoadingState();
+    return;
+  }
+  if (state.mapError) {
+    renderMapErrorState();
+    return;
+  }
+  if (!Array.isArray(state.mapData?.institutions) || !state.mapData.institutions.length) {
+    renderMapEmptyState();
+    return;
+  }
+  const primaryGraph = layoutStrategyMap();
+  if (!primaryGraph.institution) {
+    renderMapInstitutionPromptState();
+    return;
+  }
+  const { activeLayer, hasInitiativeNodes } = resolveActiveMapLayer(primaryGraph);
+  const graph = resolveMapGraphForLayer(primaryGraph, activeLayer);
+  if (!graph) return;
 
   const editable = activeLayer !== 'strategic-links'
     && canEditMapLayout()
@@ -518,27 +587,7 @@ function renderMapView() {
   const commentDescription = elements.stepView.querySelector('#mapCommentDescription');
   const commentOpenCardBtn = elements.stepView.querySelector('#mapCommentOpenCardBtn');
   const commentList = elements.stepView.querySelector('#mapCommentList');
-  const mapCommentItems = new Map();
-  graph.nodes.forEach((node) => {
-    if (node.kind === 'guideline' && node.guideline?.id) {
-      mapCommentItems.set(`guideline:${node.guideline.id}`, {
-        kind: 'guideline',
-        id: node.guideline.id,
-        title: node.guideline.title || 'Gairė',
-        description: node.guideline.description || 'Aprašymas nepateiktas.',
-        comments: Array.isArray(node.guideline.comments) ? node.guideline.comments : []
-      });
-    }
-    if (node.kind === 'initiative' && node.initiative?.id) {
-      mapCommentItems.set(`initiative:${node.initiative.id}`, {
-        kind: 'initiative',
-        id: node.initiative.id,
-        title: node.initiative.title || 'Iniciatyva',
-        description: node.initiative.description || 'Aprašymas nepateiktas.',
-        comments: Array.isArray(node.initiative.comments) ? node.initiative.comments : []
-      });
-    }
-  });
+  const mapCommentItems = buildMapCommentItems(graph);
 
   const closeMapCommentModal = () => {
     if (!commentModal) return;
@@ -652,30 +701,7 @@ function renderMapView() {
   const layerGuidelinesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="guidelines"]'));
   const layerInitiativesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="initiatives"]'));
   const layerStrategicButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="strategic-links"]'));
-  layerGuidelinesButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      if (state.mapLayer === 'guidelines') return;
-      state.mapLayer = 'guidelines';
-      resetMapInitiativeFocusState();
-      renderStepView();
-    });
-  });
-  layerInitiativesButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      if (state.mapLayer === 'initiatives') return;
-      state.mapLayer = 'initiatives';
-      resetMapInitiativeFocusState();
-      renderStepView();
-    });
-  });
-  layerStrategicButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      if (state.mapLayer === 'strategic-links') return;
-      state.mapLayer = 'strategic-links';
-      resetMapInitiativeFocusState();
-      renderStepView();
-    });
-  });
+  bindMapLayerButtons(layerGuidelinesButtons, layerInitiativesButtons, layerStrategicButtons);
 
   if (viewport && world) {
     syncMapNodeBounds(world);

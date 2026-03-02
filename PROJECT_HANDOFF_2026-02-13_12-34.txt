@@ -319,6 +319,28 @@ New feature safety requirement:
   - `docs/map-architecture.md`
 - Behavior target: no functional change, structure/maintainability only.
 
+==================================================
+15) MAP REFACTOR PHASE 4 (2026-03-02)
+==================================================
+- Refactored `prototype/app-map.js` render orchestration into focused helpers:
+  - `renderMapLoadingState`
+  - `renderMapErrorState`
+  - `renderMapEmptyState`
+  - `renderMapInstitutionPromptState`
+  - `resolveActiveMapLayer`
+  - `renderStrategicLinksPendingState`
+  - `resolveMapGraphForLayer`
+  - `buildMapCommentItems`
+  - `setMapLayerAndRender`
+  - `bindMapLayerButtons`
+- `renderMapView` now acts as coordinator for:
+  - pre-render state checks
+  - layer/graph resolution
+  - markup rendering
+  - post-render bindings
+- Updated architecture notes (`docs/map-architecture.md`) to reflect new helper boundaries.
+- Behavior target: no functional change, only readability/maintainability improvements.
+
 END OF HANDOFF
 
 

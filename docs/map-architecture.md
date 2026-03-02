@@ -28,6 +28,11 @@ This document describes current map frontend boundaries after the first refactor
   - Map rendering entrypoint (`renderMapView`)
   - View composition and layer-specific markup
   - Runtime dependency guard for map module load failures (`ensureMapRuntimeDependencies`)
+  - Render orchestration helpers for:
+    - map state cards (loading/error/empty/institution prompt)
+    - active-layer normalization
+    - strategic-links data readiness flow
+    - layer-button binding and map comment item mapping
 
 - `prototype/map-layout.js`
   - Map graph construction and sizing:
@@ -54,6 +59,6 @@ This document describes current map frontend boundaries after the first refactor
 ## Refactor next steps
 
 1. Add minimal integration smoke checks for map-layer switch and node drag persistence.
-2. Keep reducing `app-map.js` by extracting render sub-sections (header/toolbar/node template builders).
+2. Keep reducing `app-map.js` by extracting render sub-sections (header/toolbar/node template builders) into `map-render.js`.
 3. Add a small map bootstrap validator that asserts required global helpers are present at runtime.
 4. Consolidate repeated map typography rules in `styles.css` via CSS custom properties.
