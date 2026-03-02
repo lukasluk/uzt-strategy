@@ -254,6 +254,25 @@ New feature safety requirement:
 - Added architecture notes: `docs/map-architecture.md`.
 - Behavior target of this step: no functional change, only structure/maintainability.
 
+==================================================
+12) MAP REFACTOR PHASE 2 (2026-03-02)
+==================================================
+- Added `prototype/map-geometry.js`:
+  - edge geometry/path helpers
+  - viewport fit/transform helpers
+  - map edge refresh helpers
+- Added `prototype/map-interactions.js`:
+  - focus/hover interaction state for initiatives layer
+  - drag/pan/zoom bindings
+  - node position persistence
+- Updated script order in:
+  - `prototype/index.html`
+  - `prototype/embed/strategy-map/index.html`
+  so new files load before `app-map.js`.
+- Removed moved function blocks from `prototype/app-map.js`.
+- Updated architecture document to reflect new module boundaries.
+- Behavior target: no functional change, structure only.
+
 END OF HANDOFF
 
 
