@@ -47,6 +47,7 @@ This document describes current map frontend boundaries after the first refactor
     - map header + toolbar markup
     - edge SVG path markup by layer
     - map shell + modal markup wrapper
+    - node card markup builders (institution/guideline/initiative)
 
 - `prototype/app.js`
   - Application state container (`state`)
@@ -67,7 +68,7 @@ This document describes current map frontend boundaries after the first refactor
 
 1. Add minimal integration smoke checks for map-layer switch and node drag persistence.
 2. Continue extraction from `app-map.js` into `map-render.js`:
-   - node card markup builders (institution/guideline/initiative)
    - modal interaction wiring helpers
+   - map comment modal state + open/close handlers
 3. Add a small map bootstrap validator that asserts required global helpers are present at runtime.
 4. Consolidate repeated map typography rules in `styles.css` via CSS custom properties.

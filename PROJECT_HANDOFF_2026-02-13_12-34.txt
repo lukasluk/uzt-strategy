@@ -364,6 +364,21 @@ New feature safety requirement:
 - Updated architecture notes (`docs/map-architecture.md`) with new module boundaries.
 - Behavior target: no functional change, structure/maintainability only.
 
+==================================================
+17) MAP REFACTOR PHASE 6 (2026-03-03)
+==================================================
+- Continued extraction into `prototype/map-render.js`:
+  - added node-card builders:
+    - `buildInstitutionNodeMarkup`
+    - `buildGuidelineNodeMarkup`
+    - `buildInitiativeNodeMarkup`
+    - `buildNodeMarkup`
+- Updated `prototype/app-map.js`:
+  - replaced inline `nodeMarkup` block with `buildNodeMarkup({ graph, activeLayer, editable })`
+  - extended runtime dependency guard with `buildNodeMarkup`
+- Updated architecture notes (`docs/map-architecture.md`) to reflect node builder extraction.
+- Behavior target: no functional change, structure/maintainability only.
+
 END OF HANDOFF
 
 
