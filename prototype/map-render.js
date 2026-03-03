@@ -179,7 +179,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
   const scoreForSquares = Math.max(0, Math.round(score));
   const voteSquares = scoreForSquares
     ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
-    : '<span class="map-vote-empty">Dar nebalsuota</span>';
+    : '';
   const strategyLinkChip = relation === 'parent' && activeLayer !== 'strategic-links'
     ? `<span class="map-strategy-link-chip" title="${escapeHtml(mapLang('Strateginiai rysiai tarp teviniu gairiu', 'Strategic links between parent guidelines'))}">${escapeHtml(mapLang('Rysiai', 'Links'))}: ${strategyLinkCount}</span>`
     : '';
@@ -214,6 +214,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
   const guidelineToneStyle = activeLayer === 'strategic-links' && node.strategyTone
     ? `--strategy-pastel:${escapeHtml(node.strategyTone.pastel)};--strategy-border:${escapeHtml(node.strategyTone.border)};--strategy-ink:${escapeHtml(node.strategyTone.ink)};`
     : '';
+  const mapCommentButtonLabel = mapLang('Rodyti aprasyma ir komentarus', 'Show description and comments');
 
   return `
         <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}${strategicGuidelineClass}"
@@ -230,18 +231,6 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
                  style="${guidelineToneStyle}left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
           <div class="map-node-head">
             <h4>${escapeHtml(node.guideline.title)}</h4>
-            <button
-              type="button"
-              class="map-comment-btn"
-              data-map-comment-kind="guideline"
-              data-map-comment-id="${escapeHtml(node.guideline.id)}"
-              data-map-interactive="true"
-              aria-label="Rodyti aprašymą ir komentarus"
-              title="Rodyti aprašymą ir komentarus"
-            >
-              <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
-              <span class="map-comment-count">${mapCommentCount}</span>
-            </button>
           </div>
           <small>${escapeHtml(guidelineOwnerLabel)}</small>
           <div class="map-vote-row">
@@ -252,7 +241,19 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
             ${strategicFocusChip}
           </div>
           ${strategyLinkListMarkup}
-          <div class="map-vote-squares">${voteSquares}</div>
+          ${voteSquares ? `<div class="map-vote-squares">${voteSquares}</div>` : ''}
+          <button
+            type="button"
+            class="map-comment-btn"
+            data-map-comment-kind="guideline"
+            data-map-comment-id="${escapeHtml(node.guideline.id)}"
+            data-map-interactive="true"
+            aria-label="${escapeHtml(mapCommentButtonLabel)}"
+            title="${escapeHtml(mapCommentButtonLabel)}"
+          >
+            <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
+            <span class="map-comment-count">${mapCommentCount}</span>
+          </button>
         </article>
       `;
 }
@@ -265,11 +266,11 @@ function buildInitiativeNodeMarkup({ node, editable }) {
       ? node.initiative.comments.length
       : Number(node.initiative.commentCount || 0)
   );
-  const linkedCount = Array.isArray(node.initiative.guidelineIds) ? node.initiative.guidelineIds.length : 0;
   const scoreForSquares = Math.max(0, Math.round(score));
   const voteSquares = scoreForSquares
     ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square initiative-square" aria-hidden="true"></span>').join('')
-    : '<span class="map-vote-empty">Dar nebalsuota</span>';
+    : '';
+  const mapCommentButtonLabel = mapLang('Rodyti aprasyma ir komentarus', 'Show description and comments');
 
   return `
       <article class="strategy-map-node initiative-node status-${escapeHtml(String(node.initiative.status || 'active').toLowerCase())}"
@@ -286,26 +287,25 @@ function buildInitiativeNodeMarkup({ node, editable }) {
                style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
         <div class="map-node-head">
           <h4>${escapeHtml(node.initiative.title)}</h4>
-          <button
-            type="button"
-            class="map-comment-btn"
-            data-map-comment-kind="initiative"
-            data-map-comment-id="${escapeHtml(node.initiative.id)}"
-            data-map-interactive="true"
-              aria-label="Rodyti aprašymą ir komentarus"
-              title="Rodyti aprašymą ir komentarus"
-          >
-            <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
-            <span class="map-comment-count">${mapCommentCount}</span>
-          </button>
         </div>
-        <small>Iniciatyva · Susieta su gairėmis: ${linkedCount}</small>
         <div class="map-vote-row">
           <span class="map-vote-chip" title="Bendras balas">
             <strong>${score}</strong>
           </span>
         </div>
-        <div class="map-vote-squares">${voteSquares}</div>
+        ${voteSquares ? `<div class="map-vote-squares">${voteSquares}</div>` : ''}
+        <button
+          type="button"
+          class="map-comment-btn"
+          data-map-comment-kind="initiative"
+          data-map-comment-id="${escapeHtml(node.initiative.id)}"
+          data-map-interactive="true"
+          aria-label="${escapeHtml(mapCommentButtonLabel)}"
+          title="${escapeHtml(mapCommentButtonLabel)}"
+        >
+          <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
+          <span class="map-comment-count">${mapCommentCount}</span>
+        </button>
       </article>
     `;
 }
@@ -329,8 +329,8 @@ function buildMapCommentItems(graph) {
       items.set(`guideline:${node.guideline.id}`, {
         kind: 'guideline',
         id: node.guideline.id,
-        title: node.guideline.title || 'Gairė',
-        description: node.guideline.description || 'Aprašymas nepateiktas.',
+        title: node.guideline.title || 'Gaire',
+        description: node.guideline.description || 'Aprasymas nepateiktas.',
         comments: Array.isArray(node.guideline.comments) ? node.guideline.comments : []
       });
     }
@@ -339,7 +339,7 @@ function buildMapCommentItems(graph) {
         kind: 'initiative',
         id: node.initiative.id,
         title: node.initiative.title || 'Iniciatyva',
-        description: node.initiative.description || 'Aprašymas nepateiktas.',
+        description: node.initiative.description || 'Aprasymas nepateiktas.',
         comments: Array.isArray(node.initiative.comments) ? node.initiative.comments : []
       });
     }
@@ -374,7 +374,7 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
     }
     commentList.innerHTML = comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : '<li class="comment-item comment-item-empty">Komentarų dar nėra.</li>';
+      : '<li class="comment-item comment-item-empty">Komentaru dar nera.</li>';
     commentModal.hidden = false;
     document.body.classList.add('map-comment-modal-open');
   };
@@ -554,15 +554,15 @@ function buildMapViewShellMarkup({
       </section>
     </section>
     <section id="mapCommentModal" class="map-comment-modal" hidden>
-      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uždaryti"></button>
+      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uzdaryti"></button>
       <article class="map-comment-card" role="dialog" aria-modal="true" aria-labelledby="mapCommentTitle">
         <div class="header-row">
           <h3 id="mapCommentTitle">Elementas</h3>
-          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uždaryti</button>
+          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uzdaryti</button>
         </div>
         <p id="mapCommentDescription" class="prompt map-comment-description"></p>
         <div class="map-comment-actions">
-          <button id="mapCommentOpenCardBtn" class="btn btn-primary" type="button">Atidaryti kortelę</button>
+          <button id="mapCommentOpenCardBtn" class="btn btn-primary" type="button">Atidaryti kortele</button>
         </div>
         <strong>Komentarai</strong>
         <ul id="mapCommentList" class="mini-list"></ul>

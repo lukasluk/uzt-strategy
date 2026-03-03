@@ -510,6 +510,29 @@ New feature safety requirement:
   - no mid-word splitting remains
   - cards are still adaptive but no longer over-expanded.
 
+==================================================
+25) MAP CARD UX CLEANUP (2026-03-03)
+==================================================
+- Requested UX updates implemented:
+  - Move map card comment button to bottom-right corner.
+  - Hide empty-vote text (`No votes yet`) on map cards.
+  - Remove initiative card line `Initiative · Linked guidelines: N` from floor map.
+- Updated `prototype/map-render.js`:
+  - guideline/initiative card markup changed so comment button is rendered after content
+    (for absolute bottom-right positioning in CSS).
+  - vote squares are rendered only when score > 0.
+  - removed initiative linked-guidelines subtitle row from initiative card.
+  - normalized map comment button label text using `mapLang(...)`.
+- Updated `prototype/styles.css`:
+  - `.guideline-node` and `.initiative-node` now reserve bottom space for absolute comment button.
+  - comment button anchored bottom-right inside guideline/initiative cards.
+  - `map-node-head` aligned for title-only row.
+  - parent guideline variant padding adjusted to preserve reserved button space.
+- Expected result:
+  - title row has full width for text
+  - comment action remains visible, but no longer squeezes title width
+  - cleaner initiative cards and no empty-vote noise.
+
 END OF HANDOFF
 
 

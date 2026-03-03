@@ -2230,7 +2230,9 @@ body.embed-map-page .map-fullscreen-watermark img {
 .guideline-node {
   border: 1px solid #d8c7b1;
   background: #fff;
-  padding: 10px 12px;
+  --map-card-comment-space: 56px;
+  position: relative;
+  padding: 10px 12px calc(10px + var(--map-card-comment-space)) 12px;
   display: grid;
   gap: 7px;
   align-content: start;
@@ -2243,7 +2245,7 @@ body.embed-map-page .map-fullscreen-watermark img {
 .map-node-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
 }
 .map-node-head h4 {
@@ -2345,12 +2347,22 @@ body.embed-map-page .map-fullscreen-watermark img {
 .initiative-node {
   border: 1px solid #e2c89f;
   background: linear-gradient(180deg, #fffdf8 0%, #f9efdf 100%);
-  padding: 10px 12px;
+  --map-card-comment-space: 56px;
+  position: relative;
+  padding: 10px 12px calc(10px + var(--map-card-comment-space)) 12px;
   display: grid;
   gap: 7px;
   align-content: start;
   border-left: 5px solid #c88527;
   box-shadow: 0 12px 26px rgba(160, 104, 29, 0.18);
+}
+.guideline-node .map-comment-btn,
+.initiative-node .map-comment-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  margin: 0;
+  z-index: 2;
 }
 .initiative-node h4 {
   font-size: 14px;
@@ -2520,6 +2532,10 @@ body.embed-map-page .map-fullscreen-watermark img {
   word-break: normal;
   hyphens: none;
 }
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .guideline-node,
+.strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .initiative-node {
+  --map-card-comment-space: 76px;
+}
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .guideline-node small,
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .initiative-node small {
   font-size: 22px;
@@ -2640,6 +2656,9 @@ body.embed-map-page .map-fullscreen-watermark img {
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
+}
+.strategy-map-viewport.map-layer-strategic-links .guideline-node {
+  --map-card-comment-space: 76px;
 }
 .strategy-map-viewport.map-layer-strategic-links .guideline-node small {
   font-size: 22px;
@@ -4076,7 +4095,7 @@ select:focus {
 .guideline-node.relation-parent {
   background: linear-gradient(180deg, #ffffff 0%, #e7f2ff 100%);
   border: var(--map-parent-accent-thickness) solid #0e86ff;
-  padding: 10px 12px;
+  padding: 10px 12px calc(10px + var(--map-card-comment-space)) 12px;
   box-shadow:
     0 0 0 3px rgba(45, 134, 230, 0.22),
     0 16px 28px rgba(18, 72, 138, 0.22);
