@@ -11,10 +11,11 @@ This document describes current map frontend boundaries after the first refactor
 5. `map-interactions.js`
 6. `map-render.js`
 7. `map-view-state.js`
-8. `app-map.js`
-9. `app.js`
+8. `map-view-resolve.js`
+9. `app-map.js`
+10. `app.js`
 
-`map-shared.js`, `map-geometry.js`, `map-layout.js`, `map-interactions.js`, `map-render.js`, and `map-view-state.js` must load before `app-map.js`.
+`map-shared.js`, `map-geometry.js`, `map-layout.js`, `map-interactions.js`, `map-render.js`, `map-view-state.js`, and `map-view-resolve.js` must load before `app-map.js`.
 
 ## File responsibilities
 
@@ -30,9 +31,7 @@ This document describes current map frontend boundaries after the first refactor
   - Map rendering entrypoint (`renderMapView`)
   - View composition and layer-specific markup
   - Runtime dependency guard for map module load failures (`ensureMapRuntimeDependencies`)
-  - Render orchestration helpers for:
-    - active-layer normalization
-    - strategic-links data readiness flow
+  - Render orchestration only (state checks, shell render, post-render bindings)
 
 - `prototype/map-view-state.js`
   - Map state-card rendering helpers:
@@ -41,6 +40,12 @@ This document describes current map frontend boundaries after the first refactor
   - Layer toggle helpers:
     - `setMapLayerAndRender`
     - `bindMapLayerButtons`
+
+- `prototype/map-view-resolve.js`
+  - Layer and graph resolution helpers:
+    - `resolveActiveMapLayer`
+    - `resolveMapGraphForLayer`
+  - Strategic-links readiness orchestration before graph build
 
 - `prototype/map-layout.js`
   - Map graph construction and sizing:
@@ -78,7 +83,7 @@ This document describes current map frontend boundaries after the first refactor
 
 1. Add minimal integration smoke checks for map-layer switch and node drag persistence.
 2. Continue extraction from `app-map.js` into dedicated modules:
-   - move active-layer normalization + graph resolution helpers out of `app-map.js`
-   - reduce `renderMapView` to a slimmer orchestrator
+   - extract render body assembly (markup argument preparation) into a dedicated helper
+   - keep `renderMapView` as a thin coordinator
 3. Add a small map bootstrap validator that asserts required global helpers are present at runtime.
 4. Consolidate repeated map typography rules in `styles.css` via CSS custom properties.

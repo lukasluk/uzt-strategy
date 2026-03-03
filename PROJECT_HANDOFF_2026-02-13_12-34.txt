@@ -431,6 +431,23 @@ New feature safety requirement:
 - Updated architecture notes (`docs/map-architecture.md`) with new module boundaries and next steps.
 - Behavior target: no functional change, structure/maintainability only.
 
+==================================================
+21) MAP REFACTOR PHASE 10 (2026-03-03)
+==================================================
+- Added new module: `prototype/map-view-resolve.js`:
+  - moved:
+    - `resolveActiveMapLayer`
+    - `resolveMapGraphForLayer`
+- Updated script load order in:
+  - `prototype/index.html`
+  - `prototype/embed/strategy-map/index.html`
+  so `map-view-resolve.js` loads before `app-map.js`.
+- Updated `prototype/app-map.js`:
+  - removed moved resolver implementations
+  - extended runtime dependency checks for resolver helpers.
+- Updated architecture notes (`docs/map-architecture.md`) to include `map-view-resolve.js` responsibilities.
+- Behavior target: no functional change, structure/maintainability only.
+
 END OF HANDOFF
 
 
