@@ -26,6 +26,13 @@ function ensureMapRuntimeDependencies() {
     'bindMapCommentModalInteractions',
     'bindMapStrategyNavigationInteractions',
     'bindMapViewportControlInteractions',
+    'renderMapLoadingState',
+    'renderMapErrorState',
+    'renderMapEmptyState',
+    'renderMapInstitutionPromptState',
+    'renderStrategicLinksPendingState',
+    'setMapLayerAndRender',
+    'bindMapLayerButtons',
     'buildMapViewShellMarkup'
   ];
   const missing = requiredFunctions.filter((name) => typeof globalThis[name] !== 'function');
@@ -56,39 +63,6 @@ function notifyMapError(message) {
   }
 }
 
-function renderMapLoadingState() {
-  elements.stepView.innerHTML = '<div class="card"><strong>Kraunamas strategijų žemėlapis...</strong></div>';
-}
-
-function renderMapErrorState() {
-  elements.stepView.innerHTML = `
-    <div class="card">
-      <strong>Nepavyko ikelti strategiju zemelapio</strong>
-      <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapError)}</p>
-      <button id="retryMapLoadBtn" class="btn btn-primary" style="margin-top: 12px;">Bandyti dar karta</button>
-    </div>
-  `;
-  const retryBtn = elements.stepView.querySelector('#retryMapLoadBtn');
-  if (retryBtn) retryBtn.addEventListener('click', bootstrap);
-}
-
-function renderMapEmptyState() {
-  elements.stepView.innerHTML = `
-    <div class="card">
-      <strong>Strategijų žemėlapis dar tuščias</strong>
-      <p class="prompt" style="margin: 8px 0 0;">Kai institucijos turės strategijas, jos atsiras šiame žemėlapyje.</p>
-    </div>
-  `;
-}
-
-function renderMapInstitutionPromptState() {
-  elements.stepView.innerHTML = `
-    <div class="card">
-      <strong>Pasirinkite instituciją</strong>
-      <p class="prompt" style="margin: 8px 0 0;">Žemėlapyje rodoma tik viršuje pasirinktos institucijos strategija.</p>
-    </div>
-  `;
-}
 
 function resolveActiveMapLayer(primaryGraph) {
   const hasInitiativeNodes = primaryGraph.nodes.some((node) => node.kind === 'initiative');
@@ -105,35 +79,6 @@ function resolveActiveMapLayer(primaryGraph) {
   return { activeLayer, hasInitiativeNodes };
 }
 
-function renderStrategicLinksPendingState() {
-  if (state.mapStrategicLinksError) {
-    elements.stepView.innerHTML = `
-      <div class="card">
-        <strong>${escapeHtml(mapLang('Nepavyko ikelti strateginiu rysiu', 'Failed to load strategic links'))}</strong>
-        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.mapStrategicLinksError)}</p>
-        <button id="retryStrategicLinksBtn" class="btn btn-primary" style="margin-top: 12px;">${escapeHtml(mapLang('Bandyti dar karta', 'Try again'))}</button>
-      </div>
-    `;
-    const retryStrategicBtn = elements.stepView.querySelector('#retryStrategicLinksBtn');
-    if (retryStrategicBtn) {
-      retryStrategicBtn.addEventListener('click', async () => {
-        if (typeof ensureStrategicLinksData !== 'function') return;
-        state.mapStrategicLinksError = '';
-        state.mapStrategicLinksLoading = true;
-        renderStepView();
-        try {
-          await ensureStrategicLinksData({ force: true });
-        } catch {
-          // Error already handled in state.
-        }
-        renderStepView();
-      });
-    }
-    return;
-  }
-
-  elements.stepView.innerHTML = `<div class="card"><strong>${escapeHtml(mapLang('Kraunami strateginiai rysiai...', 'Loading strategic links...'))}</strong></div>`;
-}
 
 function resolveMapGraphForLayer(primaryGraph, activeLayer) {
   if (activeLayer !== 'strategic-links') return primaryGraph;
@@ -160,24 +105,6 @@ function resolveMapGraphForLayer(primaryGraph, activeLayer) {
   return layoutStrategicLinksMap(state.mapStrategicLinksData);
 }
 
-function setMapLayerAndRender(nextLayer) {
-  if (state.mapLayer === nextLayer) return;
-  state.mapLayer = nextLayer;
-  resetMapInitiativeFocusState();
-  renderStepView();
-}
-
-function bindMapLayerButtons(layerGuidelinesButtons, layerInitiativesButtons, layerStrategicButtons) {
-  layerGuidelinesButtons.forEach((button) => {
-    button.addEventListener('click', () => setMapLayerAndRender('guidelines'));
-  });
-  layerInitiativesButtons.forEach((button) => {
-    button.addEventListener('click', () => setMapLayerAndRender('initiatives'));
-  });
-  layerStrategicButtons.forEach((button) => {
-    button.addEventListener('click', () => setMapLayerAndRender('strategic-links'));
-  });
-}
 
 
 function renderMapView() {
@@ -213,7 +140,7 @@ function renderMapView() {
     ? `
       <p class="embed-map-branding-note">
         <a href="${escapeHtml(EMBED_BRAND_LINK)}" target="_blank" rel="noopener noreferrer">
-          Strategijų žemėlapis by digistrategy.eu
+          Strategiju zemelapis by digistrategy.eu
         </a>
       </p>
     `

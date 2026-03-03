@@ -408,6 +408,29 @@ New feature safety requirement:
 - Updated architecture notes (`docs/map-architecture.md`) to reflect extracted handlers.
 - Behavior target: no functional change, structure/maintainability only.
 
+==================================================
+20) MAP REFACTOR PHASE 9 (2026-03-03)
+==================================================
+- Added new module: `prototype/map-view-state.js`:
+  - moved map state-card helpers:
+    - `renderMapLoadingState`
+    - `renderMapErrorState`
+    - `renderMapEmptyState`
+    - `renderMapInstitutionPromptState`
+    - `renderStrategicLinksPendingState`
+  - moved layer-toggle helpers:
+    - `setMapLayerAndRender`
+    - `bindMapLayerButtons`
+- Updated script load order in:
+  - `prototype/index.html`
+  - `prototype/embed/strategy-map/index.html`
+  so `map-view-state.js` loads before `app-map.js`.
+- Updated `prototype/app-map.js`:
+  - removed moved helper implementations
+  - extended runtime dependency checks for moved helpers.
+- Updated architecture notes (`docs/map-architecture.md`) with new module boundaries and next steps.
+- Behavior target: no functional change, structure/maintainability only.
+
 END OF HANDOFF
 
 

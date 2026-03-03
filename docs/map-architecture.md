@@ -10,10 +10,11 @@ This document describes current map frontend boundaries after the first refactor
 4. `map-layout.js`
 5. `map-interactions.js`
 6. `map-render.js`
-7. `app-map.js`
-8. `app.js`
+7. `map-view-state.js`
+8. `app-map.js`
+9. `app.js`
 
-`map-shared.js`, `map-geometry.js`, `map-layout.js`, `map-interactions.js`, and `map-render.js` must load before `app-map.js`.
+`map-shared.js`, `map-geometry.js`, `map-layout.js`, `map-interactions.js`, `map-render.js`, and `map-view-state.js` must load before `app-map.js`.
 
 ## File responsibilities
 
@@ -30,10 +31,16 @@ This document describes current map frontend boundaries after the first refactor
   - View composition and layer-specific markup
   - Runtime dependency guard for map module load failures (`ensureMapRuntimeDependencies`)
   - Render orchestration helpers for:
-    - map state cards (loading/error/empty/institution prompt)
     - active-layer normalization
     - strategic-links data readiness flow
-    - layer-button binding
+
+- `prototype/map-view-state.js`
+  - Map state-card rendering helpers:
+    - loading / error / empty / institution prompt cards
+    - strategic-links pending/error card
+  - Layer toggle helpers:
+    - `setMapLayerAndRender`
+    - `bindMapLayerButtons`
 
 - `prototype/map-layout.js`
   - Map graph construction and sizing:
@@ -71,7 +78,7 @@ This document describes current map frontend boundaries after the first refactor
 
 1. Add minimal integration smoke checks for map-layer switch and node drag persistence.
 2. Continue extraction from `app-map.js` into dedicated modules:
-   - move layer-button binding helpers out of `app-map.js`
-   - isolate map state-card rendering into a separate view helper module
+   - move active-layer normalization + graph resolution helpers out of `app-map.js`
+   - reduce `renderMapView` to a slimmer orchestrator
 3. Add a small map bootstrap validator that asserts required global helpers are present at runtime.
 4. Consolidate repeated map typography rules in `styles.css` via CSS custom properties.
