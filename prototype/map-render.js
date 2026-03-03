@@ -146,19 +146,12 @@ function buildInstitutionNodeMarkup({ node, activeLayer, editable }) {
 
 function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
   const relation = String(node.guideline.relationType || 'orphan');
-  const relationText = relationLabel(relation);
   const score = Number(node.guideline.totalScore || 0);
   const mapCommentCount = Math.max(
     0,
     Array.isArray(node.guideline.comments)
       ? node.guideline.comments.length
       : Number(node.guideline.commentCount || 0)
-  );
-  const strategyLinkCount = Math.max(
-    0,
-    Array.isArray(node.guideline.strategyLinks)
-      ? node.guideline.strategyLinks.length
-      : Number(node.guideline.strategyLinkCount || 0)
   );
   const strategyLinks = relation === 'parent' && activeLayer !== 'strategic-links'
     ? mapNormalizeStrategyLinks(node.guideline.strategyLinks).filter((item) => !item || item.isCrossStrategy !== false)
@@ -179,9 +172,6 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
   const scoreForSquares = Math.max(0, Math.round(score));
   const voteSquares = scoreForSquares
     ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
-    : '';
-  const strategyLinkChip = relation === 'parent' && activeLayer !== 'strategic-links'
-    ? `<span class="map-strategy-link-chip" title="${escapeHtml(mapLang('Strateginiai rysiai tarp teviniu gairiu', 'Strategic links between parent guidelines'))}">${escapeHtml(mapLang('Rysiai', 'Links'))}: ${strategyLinkCount}</span>`
     : '';
   const strategicFocusChip = activeLayer === 'strategic-links' && node.isStrategicLinked
     ? `<span class="map-strategy-link-chip" title="${escapeHtml(mapLang('Gaire turi tarpstrategini rysi', 'Guideline has a cross-strategy link'))}">${escapeHtml(mapLang('Susieta', 'Linked'))}</span>`
@@ -210,7 +200,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
     : '';
   const guidelineOwnerLabel = activeLayer === 'strategic-links'
     ? `${String(node.institution.name || node.institution.slug || '').trim()} / ${String(node.institution.strategy?.title || '-').trim()}`
-    : `${String(node.institution.slug || '').trim()} - ${relationText}`;
+    : `${String(node.institution.slug || '').trim()}`;
   const guidelineToneStyle = activeLayer === 'strategic-links' && node.strategyTone
     ? `--strategy-pastel:${escapeHtml(node.strategyTone.pastel)};--strategy-border:${escapeHtml(node.strategyTone.border)};--strategy-ink:${escapeHtml(node.strategyTone.ink)};`
     : '';
@@ -237,7 +227,6 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
             <span class="map-vote-chip" title="Bendras balas">
               <strong>${score}</strong>
             </span>
-            ${strategyLinkChip}
             ${strategicFocusChip}
           </div>
           ${strategyLinkListMarkup}

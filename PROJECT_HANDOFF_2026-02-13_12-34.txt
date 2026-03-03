@@ -581,3 +581,19 @@ END OF HANDOFF
 
 
 
+
+==================================================
+28) GUIDELINE CARD METADATA CLEANUP (2026-03-03)
+==================================================
+- Updated guideline card content to reduce visual noise and match requested UI:
+  - removed child/parent relation label from guideline subtitle in standard layers
+  - removed `Links: N` chip on guideline cards
+  - kept strategic-links focus chip behavior unchanged in strategic-links layer
+- Updated parent guideline styling so comment button size now matches child cards:
+  - removed parent-only comment button/icon/count size overrides
+- Files changed:
+  - `prototype/map-render.js`
+  - `prototype/styles.css`
+- Expected result:
+  - cleaner guideline cards with consistent metadata presentation
+  - consistent comment button sizing between parent and child cards.

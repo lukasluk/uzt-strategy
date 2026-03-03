@@ -4104,19 +4104,6 @@ select:focus {
 .guideline-node.relation-parent small {
   font-size: 13px;
 }
-.guideline-node.relation-parent .map-comment-btn {
-  font-size: 13px;
-  padding: 5px 10px 5px 6px;
-}
-.guideline-node.relation-parent .map-comment-icon {
-  width: 24px;
-  height: 24px;
-}
-.guideline-node.relation-parent .map-comment-count {
-  min-width: 21px;
-  height: 21px;
-  font-size: 13px;
-}
 .guideline-node.relation-parent .map-vote-chip {
   font-size: 13px;
   padding: 3px 10px;
