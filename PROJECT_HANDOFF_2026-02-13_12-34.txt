@@ -448,6 +448,24 @@ New feature safety requirement:
 - Updated architecture notes (`docs/map-architecture.md`) to include `map-view-resolve.js` responsibilities.
 - Behavior target: no functional change, structure/maintainability only.
 
+==================================================
+22) MAP REFACTOR PHASE 11 (2026-03-03)
+==================================================
+- Added new module: `prototype/map-view-compose.js`:
+  - added `buildMapViewRenderPayload({ graph, activeLayer, hasInitiativeNodes, editable })`
+  - moved render-body assembly (map shell argument preparation) out of `app-map.js`.
+- Updated script load order in:
+  - `prototype/index.html`
+  - `prototype/embed/strategy-map/index.html`
+  so `map-view-compose.js` loads before `app-map.js`.
+- Updated `prototype/app-map.js`:
+  - replaced inline render payload preparation with:
+    - `const mapRenderPayload = buildMapViewRenderPayload(...)`
+    - `buildMapViewShellMarkup(mapRenderPayload)`
+  - extended runtime dependency checks with `buildMapViewRenderPayload`.
+- Updated architecture notes (`docs/map-architecture.md`) with `map-view-compose.js` responsibilities.
+- Behavior target: no functional change, structure/maintainability only.
+
 END OF HANDOFF
 
 

@@ -35,6 +35,7 @@ function ensureMapRuntimeDependencies() {
     'bindMapLayerButtons',
     'resolveActiveMapLayer',
     'resolveMapGraphForLayer',
+    'buildMapViewRenderPayload',
     'buildMapViewShellMarkup'
   ];
   const missing = requiredFunctions.filter((name) => typeof globalThis[name] !== 'function');
@@ -95,44 +96,8 @@ function renderMapView() {
     && canEditMapLayout()
     && normalizeSlug(graph.institution.slug) === normalizeSlug(state.institutionSlug)
     && Boolean(graph.institution.cycle?.id);
-  const embedBranding = state.embedMapMode
-    ? `
-      <p class="embed-map-branding-note">
-        <a href="${escapeHtml(EMBED_BRAND_LINK)}" target="_blank" rel="noopener noreferrer">
-          Strategiju zemelapis by digistrategy.eu
-        </a>
-      </p>
-    `
-    : '';
-  const mapHeader = buildMapHeaderMarkup({ graph, activeLayer, editable });
-  const mapToolbar = buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes });
-  const strategicNoLinksMarkup = activeLayer === 'strategic-links' && !graph.hasStrategicLinks
-    ? '<div class="map-strategic-empty-note">No strategic links</div>'
-    : '';
-  const mapWatermarkClass = state.embedMapMode ? 'map-fullscreen-watermark embed-visible' : 'map-fullscreen-watermark';
-  const nodeById = Object.fromEntries(graph.nodes.map((node) => [node.id, node]));
-  const guidelineEdgeMarkup = buildGuidelineEdgeMarkup({ graph, nodeById, activeLayer });
-  const strategyGuidelineEdgeMarkup = buildStrategyGuidelineEdgeMarkup({ graph, nodeById });
-  const strategicEdgeMarkup = buildStrategicEdgeMarkup({ graph, nodeById });
-  const initiativeEdgeMarkup = buildInitiativeEdgeMarkup({ graph, nodeById });
-
-  const nodeMarkup = buildNodeMarkup({ graph, activeLayer, editable });
-
-  elements.stepView.innerHTML = buildMapViewShellMarkup({
-    mapHeader,
-    activeLayer,
-    editable,
-    mapToolbar,
-    strategicNoLinksMarkup,
-    graph,
-    guidelineEdgeMarkup,
-    strategyGuidelineEdgeMarkup,
-    initiativeEdgeMarkup,
-    nodeMarkup,
-    strategicEdgeMarkup,
-    mapWatermarkClass,
-    embedBranding
-  });
+  const mapRenderPayload = buildMapViewRenderPayload({ graph, activeLayer, hasInitiativeNodes, editable });
+  elements.stepView.innerHTML = buildMapViewShellMarkup(mapRenderPayload);
 
   const viewport = elements.stepView.querySelector('#strategyMapViewport');
   const world = elements.stepView.querySelector('#strategyMapWorld');

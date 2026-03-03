@@ -12,10 +12,11 @@ This document describes current map frontend boundaries after the first refactor
 6. `map-render.js`
 7. `map-view-state.js`
 8. `map-view-resolve.js`
-9. `app-map.js`
-10. `app.js`
+9. `map-view-compose.js`
+10. `app-map.js`
+11. `app.js`
 
-`map-shared.js`, `map-geometry.js`, `map-layout.js`, `map-interactions.js`, `map-render.js`, `map-view-state.js`, and `map-view-resolve.js` must load before `app-map.js`.
+`map-shared.js`, `map-geometry.js`, `map-layout.js`, `map-interactions.js`, `map-render.js`, `map-view-state.js`, `map-view-resolve.js`, and `map-view-compose.js` must load before `app-map.js`.
 
 ## File responsibilities
 
@@ -46,6 +47,11 @@ This document describes current map frontend boundaries after the first refactor
     - `resolveActiveMapLayer`
     - `resolveMapGraphForLayer`
   - Strategic-links readiness orchestration before graph build
+
+- `prototype/map-view-compose.js`
+  - Map shell payload assembly helper:
+    - `buildMapViewRenderPayload`
+  - Prepares render arguments for `buildMapViewShellMarkup`
 
 - `prototype/map-layout.js`
   - Map graph construction and sizing:
@@ -83,7 +89,7 @@ This document describes current map frontend boundaries after the first refactor
 
 1. Add minimal integration smoke checks for map-layer switch and node drag persistence.
 2. Continue extraction from `app-map.js` into dedicated modules:
-   - extract render body assembly (markup argument preparation) into a dedicated helper
+   - extract post-render binding block into dedicated helper(s)
    - keep `renderMapView` as a thin coordinator
 3. Add a small map bootstrap validator that asserts required global helpers are present at runtime.
 4. Consolidate repeated map typography rules in `styles.css` via CSS custom properties.
