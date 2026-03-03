@@ -2231,7 +2231,6 @@ body.embed-map-page .map-fullscreen-watermark img {
   border: 1px solid #d8c7b1;
   background: #fff;
   --map-card-comment-space: 56px;
-  position: relative;
   padding: 10px 12px calc(10px + var(--map-card-comment-space)) 12px;
   display: grid;
   gap: 7px;
@@ -2348,7 +2347,6 @@ body.embed-map-page .map-fullscreen-watermark img {
   border: 1px solid #e2c89f;
   background: linear-gradient(180deg, #fffdf8 0%, #f9efdf 100%);
   --map-card-comment-space: 56px;
-  position: relative;
   padding: 10px 12px calc(10px + var(--map-card-comment-space)) 12px;
   display: grid;
   gap: 7px;

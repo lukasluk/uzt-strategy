@@ -552,6 +552,26 @@ New feature safety requirement:
   - map auto-fit no longer zooms out excessively
   - card sizing better matches visible content and layout remains stable.
 
+==================================================
+27) MAP POSITIONING REGRESSION HOTFIX (2026-03-03)
+==================================================
+- Issue observed in production screenshot:
+  - guideline cards visually disconnected from edges
+  - map composition appeared broken despite edge updates.
+- Root cause:
+  - `.guideline-node` and `.initiative-node` were set to `position: relative` in CSS,
+    overriding inherited `position: absolute` from `.strategy-map-node`.
+  - this changed card positioning model and broke coordinate alignment with SVG edges.
+- Fix:
+  - removed `position: relative` overrides from:
+    - `.guideline-node`
+    - `.initiative-node`
+  - kept bottom-right comment button behavior via absolute button positioning inside
+    absolutely positioned card container.
+- Expected result:
+  - cards return to coordinate-based absolute placement
+  - edges reconnect correctly to card anchors.
+
 END OF HANDOFF
 
 
