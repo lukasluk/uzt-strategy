@@ -9,10 +9,11 @@ This document describes current map frontend boundaries after the first refactor
 3. `map-geometry.js`
 4. `map-layout.js`
 5. `map-interactions.js`
-6. `app-map.js`
-7. `app.js`
+6. `map-render.js`
+7. `app-map.js`
+8. `app.js`
 
-`map-shared.js`, `map-geometry.js`, `map-layout.js`, and `map-interactions.js` must load before `app-map.js`.
+`map-shared.js`, `map-geometry.js`, `map-layout.js`, `map-interactions.js`, and `map-render.js` must load before `app-map.js`.
 
 ## File responsibilities
 
@@ -41,6 +42,12 @@ This document describes current map frontend boundaries after the first refactor
     - `layoutStrategyMap`
     - `layoutStrategicLinksMap`
 
+- `prototype/map-render.js`
+  - Map render markup builders:
+    - map header + toolbar markup
+    - edge SVG path markup by layer
+    - map shell + modal markup wrapper
+
 - `prototype/app.js`
   - Application state container (`state`)
   - Data loading and API orchestration
@@ -59,6 +66,8 @@ This document describes current map frontend boundaries after the first refactor
 ## Refactor next steps
 
 1. Add minimal integration smoke checks for map-layer switch and node drag persistence.
-2. Keep reducing `app-map.js` by extracting render sub-sections (header/toolbar/node template builders) into `map-render.js`.
+2. Continue extraction from `app-map.js` into `map-render.js`:
+   - node card markup builders (institution/guideline/initiative)
+   - modal interaction wiring helpers
 3. Add a small map bootstrap validator that asserts required global helpers are present at runtime.
 4. Consolidate repeated map typography rules in `styles.css` via CSS custom properties.

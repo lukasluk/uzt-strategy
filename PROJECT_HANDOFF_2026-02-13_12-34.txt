@@ -341,6 +341,29 @@ New feature safety requirement:
 - Updated architecture notes (`docs/map-architecture.md`) to reflect new helper boundaries.
 - Behavior target: no functional change, only readability/maintainability improvements.
 
+==================================================
+16) MAP REFACTOR PHASE 5 (2026-03-02)
+==================================================
+- Added `prototype/map-render.js` for render-markup builders:
+  - `buildMapHeaderMarkup`
+  - `buildMapToolbarMarkup`
+  - `buildGuidelineEdgeMarkup`
+  - `buildStrategyGuidelineEdgeMarkup`
+  - `buildStrategicEdgeMarkup`
+  - `buildInitiativeEdgeMarkup`
+  - `buildMapViewShellMarkup`
+- Updated script order in:
+  - `prototype/index.html`
+  - `prototype/embed/strategy-map/index.html`
+  so `map-render.js` loads before `app-map.js`.
+- Updated `prototype/app-map.js` to use new builders for:
+  - header/toolbar markup
+  - edge SVG markup
+  - map shell + modal markup assembly
+- Extended map runtime dependency guard with `map-render.js` helper checks.
+- Updated architecture notes (`docs/map-architecture.md`) with new module boundaries.
+- Behavior target: no functional change, structure/maintainability only.
+
 END OF HANDOFF
 
 
