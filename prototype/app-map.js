@@ -24,6 +24,8 @@ function ensureMapRuntimeDependencies() {
     'buildInitiativeEdgeMarkup',
     'buildNodeMarkup',
     'bindMapCommentModalInteractions',
+    'bindMapStrategyNavigationInteractions',
+    'bindMapViewportControlInteractions',
     'buildMapViewShellMarkup'
   ];
   const missing = requiredFunctions.filter((name) => typeof globalThis[name] !== 'function');
@@ -248,43 +250,12 @@ function renderMapView() {
 
   const viewport = elements.stepView.querySelector('#strategyMapViewport');
   const world = elements.stepView.querySelector('#strategyMapWorld');
-  const resetButtons = Array.from(elements.stepView.querySelectorAll('[data-map-reset-btn]'));
-  const fullscreenButtons = Array.from(elements.stepView.querySelectorAll('[data-map-fullscreen-btn]'));
   bindMapCommentModalInteractions({ stepView: elements.stepView, graph });
-  elements.stepView.querySelectorAll('[data-action="open-strategy-link"]').forEach((button) => {
-    button.addEventListener('click', async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (typeof navigateToStrategyLink !== 'function') return;
-      await navigateToStrategyLink({
-        targetInstitutionSlug: button.dataset.targetInstitution,
-        targetStrategySlug: button.dataset.targetStrategy,
-        targetGuidelineId: button.dataset.targetGuideline
-      });
-    });
-  });
-  elements.stepView.querySelectorAll('[data-action="open-strategy-perspective"]').forEach((node) => {
-    const openPerspective = async (event) => {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      if (!(node instanceof HTMLElement)) return;
-      if (node.dataset.justDragged === '1') return;
-      if (viewport instanceof HTMLElement && viewport.dataset.justPanned === '1') return;
-      if (typeof navigateToStrategyPerspective !== 'function') return;
-      await navigateToStrategyPerspective({
-        targetInstitutionSlug: node.dataset.targetInstitution,
-        targetStrategySlug: node.dataset.targetStrategy,
-        preserveStrategicLayer: true
-      });
-    };
-
-    node.addEventListener('click', openPerspective);
-    node.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      openPerspective(event);
-    });
+  bindMapStrategyNavigationInteractions({
+    stepView: elements.stepView,
+    viewport,
+    navigateToStrategyLink,
+    navigateToStrategyPerspective
   });
 
   const layerGuidelinesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="guidelines"]'));
@@ -316,34 +287,16 @@ function renderMapView() {
       }, remainingInstitutionPulseMs + 30);
     }
   }
-  if (resetButtons.length && viewport && world) {
-    resetButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        fitMapToCurrentNodes(viewport, world);
-      });
-    });
-  }
-  if (fullscreenButtons.length) {
-    updateMapFullscreenButtonLabel();
-    fullscreenButtons.forEach((button) => {
-      button.addEventListener('click', async () => {
-        try {
-          if (document.fullscreenElement === elements.stepView) {
-            await document.exitFullscreen();
-          } else if (elements.stepView && typeof elements.stepView.requestFullscreen === 'function') {
-            await elements.stepView.requestFullscreen();
-          }
-        } catch (error) {
-          state.notice = toUserMessage(error);
-          notifyMapError(state.notice);
-          render();
-          return;
-        }
-        updateMapFullscreenButtonLabel();
-        if (viewport && world) fitMapToCurrentNodes(viewport, world);
-      });
-    });
-  }
+  bindMapViewportControlInteractions({
+    stepView: elements.stepView,
+    viewport,
+    world,
+    onFullscreenError: (error) => {
+      state.notice = toUserMessage(error);
+      notifyMapError(state.notice);
+      render();
+    }
+  });
 }
 
 

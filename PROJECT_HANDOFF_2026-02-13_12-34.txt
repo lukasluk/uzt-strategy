@@ -393,6 +393,21 @@ New feature safety requirement:
 - Updated architecture notes (`docs/map-architecture.md`) to reflect modal wiring extraction.
 - Behavior target: no functional change, structure/maintainability only.
 
+==================================================
+19) MAP REFACTOR PHASE 8 (2026-03-03)
+==================================================
+- Continued extraction of map interaction wiring into `prototype/map-render.js`:
+  - added:
+    - `bindMapStrategyNavigationInteractions`
+    - `bindMapViewportControlInteractions`
+- Updated `prototype/app-map.js`:
+  - replaced inline handlers with:
+    - `bindMapStrategyNavigationInteractions({ ... })`
+    - `bindMapViewportControlInteractions({ ... })`
+  - added runtime dependency checks for both new helpers.
+- Updated architecture notes (`docs/map-architecture.md`) to reflect extracted handlers.
+- Behavior target: no functional change, structure/maintainability only.
+
 END OF HANDOFF
 
 

@@ -430,6 +430,83 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
   });
 }
 
+function bindMapStrategyNavigationInteractions({
+  stepView,
+  viewport,
+  navigateToStrategyLink,
+  navigateToStrategyPerspective
+}) {
+  stepView.querySelectorAll('[data-action="open-strategy-link"]').forEach((button) => {
+    button.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof navigateToStrategyLink !== 'function') return;
+      await navigateToStrategyLink({
+        targetInstitutionSlug: button.dataset.targetInstitution,
+        targetStrategySlug: button.dataset.targetStrategy,
+        targetGuidelineId: button.dataset.targetGuideline
+      });
+    });
+  });
+
+  stepView.querySelectorAll('[data-action="open-strategy-perspective"]').forEach((node) => {
+    const openPerspective = async (event) => {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (!(node instanceof HTMLElement)) return;
+      if (node.dataset.justDragged === '1') return;
+      if (viewport instanceof HTMLElement && viewport.dataset.justPanned === '1') return;
+      if (typeof navigateToStrategyPerspective !== 'function') return;
+      await navigateToStrategyPerspective({
+        targetInstitutionSlug: node.dataset.targetInstitution,
+        targetStrategySlug: node.dataset.targetStrategy,
+        preserveStrategicLayer: true
+      });
+    };
+
+    node.addEventListener('click', openPerspective);
+    node.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      openPerspective(event);
+    });
+  });
+}
+
+function bindMapViewportControlInteractions({ stepView, viewport, world, onFullscreenError }) {
+  const resetButtons = Array.from(stepView.querySelectorAll('[data-map-reset-btn]'));
+  if (resetButtons.length && viewport && world) {
+    resetButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        fitMapToCurrentNodes(viewport, world);
+      });
+    });
+  }
+
+  const fullscreenButtons = Array.from(stepView.querySelectorAll('[data-map-fullscreen-btn]'));
+  if (!fullscreenButtons.length) return;
+
+  updateMapFullscreenButtonLabel();
+  fullscreenButtons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement === stepView) {
+          await document.exitFullscreen();
+        } else if (stepView && typeof stepView.requestFullscreen === 'function') {
+          await stepView.requestFullscreen();
+        }
+      } catch (error) {
+        if (typeof onFullscreenError === 'function') onFullscreenError(error);
+        return;
+      }
+
+      updateMapFullscreenButtonLabel();
+      if (viewport && world) fitMapToCurrentNodes(viewport, world);
+    });
+  });
+}
+
 function buildMapViewShellMarkup({
   mapHeader,
   activeLayer,

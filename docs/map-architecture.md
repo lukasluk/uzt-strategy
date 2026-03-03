@@ -33,7 +33,7 @@ This document describes current map frontend boundaries after the first refactor
     - map state cards (loading/error/empty/institution prompt)
     - active-layer normalization
     - strategic-links data readiness flow
-    - layer-button binding and map comment item mapping
+    - layer-button binding
 
 - `prototype/map-layout.js`
   - Map graph construction and sizing:
@@ -49,6 +49,8 @@ This document describes current map frontend boundaries after the first refactor
     - map shell + modal markup wrapper
     - node card markup builders (institution/guideline/initiative)
     - map comment modal item mapping + event wiring
+    - strategy-link/perspective click wiring
+    - map reset/fullscreen button wiring
 
 - `prototype/app.js`
   - Application state container (`state`)
@@ -68,8 +70,8 @@ This document describes current map frontend boundaries after the first refactor
 ## Refactor next steps
 
 1. Add minimal integration smoke checks for map-layer switch and node drag persistence.
-2. Continue extraction from `app-map.js` into `map-render.js`:
-   - strategy-link/perspective click handlers
-   - fullscreen/reset button binding helpers
+2. Continue extraction from `app-map.js` into dedicated modules:
+   - move layer-button binding helpers out of `app-map.js`
+   - isolate map state-card rendering into a separate view helper module
 3. Add a small map bootstrap validator that asserts required global helpers are present at runtime.
 4. Consolidate repeated map typography rules in `styles.css` via CSS custom properties.
