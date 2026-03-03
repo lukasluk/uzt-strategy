@@ -23,6 +23,7 @@ function ensureMapRuntimeDependencies() {
     'buildStrategicEdgeMarkup',
     'buildInitiativeEdgeMarkup',
     'buildNodeMarkup',
+    'bindMapCommentModalInteractions',
     'buildMapViewShellMarkup'
   ];
   const missing = requiredFunctions.filter((name) => typeof globalThis[name] !== 'function');
@@ -157,31 +158,6 @@ function resolveMapGraphForLayer(primaryGraph, activeLayer) {
   return layoutStrategicLinksMap(state.mapStrategicLinksData);
 }
 
-function buildMapCommentItems(graph) {
-  const items = new Map();
-  graph.nodes.forEach((node) => {
-    if (node.kind === 'guideline' && node.guideline?.id) {
-      items.set(`guideline:${node.guideline.id}`, {
-        kind: 'guideline',
-        id: node.guideline.id,
-        title: node.guideline.title || 'Gairė',
-        description: node.guideline.description || 'Aprašymas nepateiktas.',
-        comments: Array.isArray(node.guideline.comments) ? node.guideline.comments : []
-      });
-    }
-    if (node.kind === 'initiative' && node.initiative?.id) {
-      items.set(`initiative:${node.initiative.id}`, {
-        kind: 'initiative',
-        id: node.initiative.id,
-        title: node.initiative.title || 'Iniciatyva',
-        description: node.initiative.description || 'Aprašymas nepateiktas.',
-        comments: Array.isArray(node.initiative.comments) ? node.initiative.comments : []
-      });
-    }
-  });
-  return items;
-}
-
 function setMapLayerAndRender(nextLayer) {
   if (state.mapLayer === nextLayer) return;
   state.mapLayer = nextLayer;
@@ -274,86 +250,7 @@ function renderMapView() {
   const world = elements.stepView.querySelector('#strategyMapWorld');
   const resetButtons = Array.from(elements.stepView.querySelectorAll('[data-map-reset-btn]'));
   const fullscreenButtons = Array.from(elements.stepView.querySelectorAll('[data-map-fullscreen-btn]'));
-  const commentModal = elements.stepView.querySelector('#mapCommentModal');
-  const commentTitle = elements.stepView.querySelector('#mapCommentTitle');
-  const commentDescription = elements.stepView.querySelector('#mapCommentDescription');
-  const commentOpenCardBtn = elements.stepView.querySelector('#mapCommentOpenCardBtn');
-  const commentList = elements.stepView.querySelector('#mapCommentList');
-  const mapCommentItems = buildMapCommentItems(graph);
-
-  const closeMapCommentModal = () => {
-    if (!commentModal) return;
-    commentModal.hidden = true;
-    document.body.classList.remove('map-comment-modal-open');
-  };
-
-  const openMapCommentModal = (kind, itemId) => {
-    if (!commentModal || !commentTitle || !commentDescription || !commentList) return;
-    const payload = mapCommentItems.get(`${String(kind || '').trim()}:${String(itemId || '').trim()}`);
-    if (!payload) return;
-    const comments = Array.isArray(payload.comments) ? payload.comments : [];
-    commentTitle.textContent = payload.title;
-    commentDescription.textContent = payload.description;
-    if (commentOpenCardBtn) {
-      commentOpenCardBtn.dataset.mapCommentKind = payload.kind || '';
-      commentOpenCardBtn.dataset.mapCommentId = payload.id || '';
-    }
-    commentList.innerHTML = comments.length
-      ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : '<li class="comment-item comment-item-empty">Komentarų dar nėra.</li>';
-    commentModal.hidden = false;
-    document.body.classList.add('map-comment-modal-open');
-  };
-
-  const openCardFromMapComment = () => {
-    if (!commentOpenCardBtn) return;
-    const kind = String(commentOpenCardBtn.dataset.mapCommentKind || '').trim();
-    const id = String(commentOpenCardBtn.dataset.mapCommentId || '').trim();
-    if (!kind || !id) return;
-
-    closeMapCommentModal();
-
-    if (kind === 'initiative') {
-      if (typeof scheduleInitiativeFocus === 'function') {
-        scheduleInitiativeFocus(id);
-      }
-      if (typeof setActiveView === 'function') {
-        setActiveView('initiatives');
-      } else {
-        state.activeView = 'initiatives';
-        if (typeof syncRouteState === 'function') syncRouteState();
-        if (typeof render === 'function') render();
-      }
-      return;
-    }
-
-    if (typeof scheduleGuidelineFocus === 'function') {
-      scheduleGuidelineFocus(id);
-    }
-    if (typeof setActiveView === 'function') {
-      setActiveView('guidelines');
-    } else {
-      state.activeView = 'guidelines';
-      if (typeof syncRouteState === 'function') syncRouteState();
-      if (typeof render === 'function') render();
-    }
-  };
-
-  if (commentModal) {
-    commentModal.querySelectorAll('[data-map-comment-close="1"]').forEach((button) => {
-      button.addEventListener('click', closeMapCommentModal);
-    });
-  }
-  if (commentOpenCardBtn) {
-    commentOpenCardBtn.addEventListener('click', openCardFromMapComment);
-  }
-  elements.stepView.querySelectorAll('[data-map-comment-id]').forEach((button) => {
-    button.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openMapCommentModal(button.dataset.mapCommentKind, button.dataset.mapCommentId);
-    });
-  });
+  bindMapCommentModalInteractions({ stepView: elements.stepView, graph });
   elements.stepView.querySelectorAll('[data-action="open-strategy-link"]').forEach((button) => {
     button.addEventListener('click', async (event) => {
       event.preventDefault();
