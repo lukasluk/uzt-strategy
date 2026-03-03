@@ -466,6 +466,32 @@ New feature safety requirement:
 - Updated architecture notes (`docs/map-architecture.md`) with `map-view-compose.js` responsibilities.
 - Behavior target: no functional change, structure/maintainability only.
 
+==================================================
+23) MAP CARD WIDTH + WORD-WRAP FIX (2026-03-03)
+==================================================
+- Goal:
+  - Prevent broken words inside floor-map cards (example: `nacionalinius` split as `nacionaliniu` + `s`).
+  - Make card width adapt to the longest word content.
+- Updated `prototype/map-layout.js`:
+  - added dynamic width helpers:
+    - `longestWordLength`
+    - `estimateCardWidthFromLongestWord`
+    - `estimateInstitutionNodeWidth`
+    - `estimateGuidelineNodeWidth`
+    - `estimateInitiativeNodeWidth`
+  - applied dynamic width in both layouts:
+    - standard strategy map
+    - strategic-links map slices
+  - card width now grows from base width when longest word requires more space.
+- Updated `prototype/styles.css`:
+  - disabled forced word splitting in map-card typography for guidelines/initiatives/strategic links:
+    - removed `overflow-wrap:anywhere` / `word-break:break-word` behavior in map-card contexts
+    - set `word-break: normal`, `overflow-wrap: normal`, `hyphens: none`
+  - added `.map-node-head h4 { min-width: 0; }` to avoid flex-layout clipping edge cases.
+- Expected result:
+  - words are wrapped only at natural break points (spaces), not split mid-word
+  - cards become wider when a long word appears.
+
 END OF HANDOFF
 
 

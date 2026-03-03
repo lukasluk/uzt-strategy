@@ -13,6 +13,69 @@ function estimateInitiativeNodeHeight(totalScore) {
   return 110 + voteRows * 14;
 }
 
+function longestWordLength(values) {
+  let maxLength = 0;
+  (Array.isArray(values) ? values : [values]).forEach((value) => {
+    const words = String(value || '').trim().split(/\s+/).filter(Boolean);
+    words.forEach((word) => {
+      if (word.length > maxLength) maxLength = word.length;
+    });
+  });
+  return maxLength;
+}
+
+function estimateCardWidthFromLongestWord({
+  textValues,
+  minWidth,
+  fontPx,
+  reservePx
+}) {
+  const longest = longestWordLength(textValues);
+  if (!longest) return minWidth;
+  const longestWordWidth = Math.ceil(longest * Number(fontPx || 28) * 0.62);
+  return Math.max(Number(minWidth || 0), longestWordWidth + Number(reservePx || 0));
+}
+
+function estimateInstitutionNodeWidth(institution) {
+  return estimateCardWidthFromLongestWord({
+    textValues: [
+      institution?.name,
+      institution?.strategy?.title
+    ],
+    minWidth: MAP_INSTITUTION_BASE_WIDTH,
+    fontPx: 50,
+    reservePx: 96
+  });
+}
+
+function estimateGuidelineNodeWidth(guideline, institution, sizeScale) {
+  const baseWidth = Math.round(MAP_GUIDELINE_BASE_WIDTH * Number(sizeScale || 1));
+  return estimateCardWidthFromLongestWord({
+    textValues: [
+      guideline?.title,
+      institution?.name,
+      institution?.strategy?.title,
+      institution?.slug
+    ],
+    minWidth: baseWidth,
+    fontPx: 28,
+    reservePx: 196
+  });
+}
+
+function estimateInitiativeNodeWidth(initiative, institution) {
+  return estimateCardWidthFromLongestWord({
+    textValues: [
+      initiative?.title,
+      institution?.name,
+      institution?.strategy?.title
+    ],
+    minWidth: MAP_INITIATIVE_BASE_WIDTH,
+    fontPx: 28,
+    reservePx: 196
+  });
+}
+
 
 function layoutStrategyMap() {
   const institutions = Array.isArray(state.mapData?.institutions) ? state.mapData.institutions : [];
@@ -62,7 +125,7 @@ function layoutStrategyMap() {
     cycleId: institution.cycle?.id || null,
     x: institutionX,
     y: institutionY,
-    w: MAP_INSTITUTION_BASE_WIDTH,
+    w: estimateInstitutionNodeWidth(institution),
     h: MAP_INSTITUTION_BASE_MIN_HEIGHT,
     institution
   });
@@ -108,7 +171,7 @@ function layoutStrategyMap() {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: Math.round(MAP_GUIDELINE_BASE_WIDTH * sizeScale),
+        w: estimateGuidelineNodeWidth(guideline, institution, sizeScale),
         h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
         guideline
@@ -175,7 +238,7 @@ function layoutStrategyMap() {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: MAP_INITIATIVE_BASE_WIDTH,
+        w: estimateInitiativeNodeWidth(initiative, institution),
         h: estimateInitiativeNodeHeight(initiative.totalScore),
         institution,
         initiative
@@ -294,7 +357,7 @@ function layoutStrategicLinksMap(strategicData) {
       cycleId: institution.cycle?.id || null,
       x: institutionX,
       y: institutionY,
-      w: MAP_INSTITUTION_BASE_WIDTH,
+      w: estimateInstitutionNodeWidth(institution),
       h: MAP_INSTITUTION_BASE_MIN_HEIGHT,
       institution,
       strategyKey,
@@ -341,7 +404,7 @@ function layoutStrategicLinksMap(strategicData) {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: Math.round(MAP_GUIDELINE_BASE_WIDTH * sizeScale),
+        w: estimateGuidelineNodeWidth(guideline, institution, sizeScale),
         h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
         guideline,

@@ -2246,6 +2246,9 @@ body.embed-map-page .map-fullscreen-watermark img {
   justify-content: space-between;
   gap: 8px;
 }
+.map-node-head h4 {
+  min-width: 0;
+}
 .map-comment-btn {
   border: 1px solid #d4b99d;
   background: linear-gradient(180deg, #fff9f2 0%, #f8ead9 100%);
@@ -2490,39 +2493,41 @@ body.embed-map-page .map-fullscreen-watermark img {
   font-size: clamp(18px, 1.55vw, 22px);
   line-height: 1.08;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .institution-subtitle {
   font-size: clamp(50px, 3.8vw, 64px);
   line-height: 1.04;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  hyphens: auto;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .institution-node .tag {
   font-size: 14px;
   padding: 5px 14px;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .guideline-node h4,
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .initiative-node h4 {
   font-size: 28px;
   line-height: 1.2;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .guideline-node small,
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .initiative-node small {
   font-size: 22px;
   line-height: 1.2;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives) .map-node-head {
   gap: 14px;
@@ -2610,37 +2615,39 @@ body.embed-map-page .map-fullscreen-watermark img {
   font-size: clamp(18px, 1.55vw, 22px);
   line-height: 1.08;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .strategy-map-viewport.map-layer-strategic-links .institution-subtitle {
   font-size: clamp(50px, 3.8vw, 64px);
   line-height: 1.04;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  hyphens: auto;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 .strategy-map-viewport.map-layer-strategic-links .institution-node .tag {
   font-size: 14px;
   padding: 5px 14px;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .strategy-map-viewport.map-layer-strategic-links .guideline-node h4 {
   font-size: 28px;
   line-height: 1.2;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 .strategy-map-viewport.map-layer-strategic-links .guideline-node small {
   font-size: 22px;
   line-height: 1.2;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 .strategy-map-viewport.map-layer-strategic-links .map-node-head {
   gap: 14px;
