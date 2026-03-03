@@ -492,6 +492,24 @@ New feature safety requirement:
   - words are wrapped only at natural break points (spaces), not split mid-word
   - cards become wider when a long word appears.
 
+==================================================
+24) MAP CARD WIDTH TUNING (2026-03-03)
+==================================================
+- Follow-up adjustment after visual review:
+  - some cards became wider than necessary.
+- Updated `prototype/map-layout.js` width estimation:
+  - reduced letter-width factor used for longest-word estimation.
+  - reduced reserve/padding component in width formula.
+  - added explicit width caps:
+    - institution cards max width
+    - guideline cards max width
+    - initiative cards max width
+  - in standard map layer guideline width no longer includes strategy title in width calculation
+    (kept in strategic-links context where label footprint is larger).
+- Expected result:
+  - no mid-word splitting remains
+  - cards are still adaptive but no longer over-expanded.
+
 END OF HANDOFF
 
 

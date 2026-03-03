@@ -28,12 +28,15 @@ function estimateCardWidthFromLongestWord({
   textValues,
   minWidth,
   fontPx,
-  reservePx
+  reservePx,
+  maxWidth
 }) {
   const longest = longestWordLength(textValues);
   if (!longest) return minWidth;
-  const longestWordWidth = Math.ceil(longest * Number(fontPx || 28) * 0.62);
-  return Math.max(Number(minWidth || 0), longestWordWidth + Number(reservePx || 0));
+  const longestWordWidth = Math.ceil(longest * Number(fontPx || 28) * 0.56);
+  const estimated = Math.max(Number(minWidth || 0), longestWordWidth + Number(reservePx || 0));
+  if (!Number.isFinite(Number(maxWidth)) || Number(maxWidth) <= 0) return Math.round(estimated);
+  return Math.round(Math.min(estimated, Number(maxWidth)));
 }
 
 function estimateInstitutionNodeWidth(institution) {
@@ -44,22 +47,24 @@ function estimateInstitutionNodeWidth(institution) {
     ],
     minWidth: MAP_INSTITUTION_BASE_WIDTH,
     fontPx: 50,
-    reservePx: 96
+    reservePx: 72,
+    maxWidth: 560
   });
 }
 
-function estimateGuidelineNodeWidth(guideline, institution, sizeScale) {
+function estimateGuidelineNodeWidth(guideline, institution, sizeScale, includeStrategyTitle) {
   const baseWidth = Math.round(MAP_GUIDELINE_BASE_WIDTH * Number(sizeScale || 1));
   return estimateCardWidthFromLongestWord({
     textValues: [
       guideline?.title,
       institution?.name,
-      institution?.strategy?.title,
+      includeStrategyTitle ? institution?.strategy?.title : '',
       institution?.slug
     ],
     minWidth: baseWidth,
     fontPx: 28,
-    reservePx: 196
+    reservePx: 128,
+    maxWidth: 640
   });
 }
 
@@ -72,7 +77,8 @@ function estimateInitiativeNodeWidth(initiative, institution) {
     ],
     minWidth: MAP_INITIATIVE_BASE_WIDTH,
     fontPx: 28,
-    reservePx: 196
+    reservePx: 128,
+    maxWidth: 620
   });
 }
 
@@ -171,7 +177,7 @@ function layoutStrategyMap() {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: estimateGuidelineNodeWidth(guideline, institution, sizeScale),
+        w: estimateGuidelineNodeWidth(guideline, institution, sizeScale, false),
         h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
         guideline
@@ -404,7 +410,7 @@ function layoutStrategicLinksMap(strategicData) {
         cycleId: institution.cycle?.id || null,
         x: nodeX,
         y: nodeY,
-        w: estimateGuidelineNodeWidth(guideline, institution, sizeScale),
+        w: estimateGuidelineNodeWidth(guideline, institution, sizeScale, true),
         h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
         guideline,
