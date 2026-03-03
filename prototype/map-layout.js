@@ -54,12 +54,13 @@ function estimateInstitutionNodeWidth(institution) {
 
 function estimateGuidelineNodeWidth(guideline, institution, sizeScale, includeStrategyTitle) {
   const baseWidth = Math.round(MAP_GUIDELINE_BASE_WIDTH * Number(sizeScale || 1));
+  const ownerLabel = includeStrategyTitle
+    ? `${String(institution?.name || '').trim()} / ${String(institution?.strategy?.title || '').trim()}`
+    : `${String(institution?.slug || '').trim()} - ${String(guideline?.relationType || '').trim()}`;
   return estimateCardWidthFromLongestWord({
     textValues: [
       guideline?.title,
-      institution?.name,
-      includeStrategyTitle ? institution?.strategy?.title : '',
-      institution?.slug
+      ownerLabel
     ],
     minWidth: baseWidth,
     fontPx: 28,
@@ -71,14 +72,12 @@ function estimateGuidelineNodeWidth(guideline, institution, sizeScale, includeSt
 function estimateInitiativeNodeWidth(initiative, institution) {
   return estimateCardWidthFromLongestWord({
     textValues: [
-      initiative?.title,
-      institution?.name,
-      institution?.strategy?.title
+      initiative?.title
     ],
     minWidth: MAP_INITIATIVE_BASE_WIDTH,
     fontPx: 28,
-    reservePx: 128,
-    maxWidth: 620
+    reservePx: 96,
+    maxWidth: 520
   });
 }
 

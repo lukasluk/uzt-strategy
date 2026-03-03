@@ -533,6 +533,25 @@ New feature safety requirement:
   - comment action remains visible, but no longer squeezes title width
   - cleaner initiative cards and no empty-vote noise.
 
+==================================================
+26) MAP WIDTH HOTFIX AFTER DEPLOY REGRESSION (2026-03-03)
+==================================================
+- Issue observed after latest deploy:
+  - floor map looked visually broken/scaled down with disconnected-looking layout.
+- Root cause:
+  - dynamic width estimation still used non-visible text fields for map cards
+    (especially long institution names in standard guideline cards),
+    which inflated node widths and expanded fit bounds.
+- Updated `prototype/map-layout.js`:
+  - guideline width now uses owner label matching actual UI context:
+    - standard map layer: `institution.slug + relationType`
+    - strategic-links layer: `institution.name / strategy.title`
+  - initiative width now uses only initiative title (linked-guidelines line was removed from card UI).
+  - reduced initiative width reserve/max to keep map bounds tighter.
+- Expected result:
+  - map auto-fit no longer zooms out excessively
+  - card sizing better matches visible content and layout remains stable.
+
 END OF HANDOFF
 
 
