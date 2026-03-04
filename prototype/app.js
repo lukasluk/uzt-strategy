@@ -643,6 +643,44 @@ async function copyTextToClipboard(value) {
   }
 }
 
+function strategyUrlInlineBlockMarkup() {
+  const canShareStrategy = Boolean(normalizeSlug(state.institutionSlug) && normalizeSlug(state.strategySlug));
+  const strategyUrl = canShareStrategy ? strategyShareUrl() : '';
+  const strategyUrlLabel = langText('Strategijos nuoroda', 'Strategy URL');
+  const copyStrategyUrlLabel = langText('Kopijuoti nuoroda', 'Copy URL');
+  if (!canShareStrategy) return '';
+  return `
+    <section class="strategy-url-inline-card" data-intro-stop-toggle>
+      <span class="strategy-url-inline-label">${escapeHtml(strategyUrlLabel)}</span>
+      <div class="strategy-url-inline-row">
+        <a class="strategy-url-inline-link" href="${escapeHtml(strategyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(strategyUrl)}</a>
+        <button type="button" class="btn btn-ghost strategy-url-inline-copy" data-action="copy-strategy-main-url" data-url="${escapeHtml(strategyUrl)}">${escapeHtml(copyStrategyUrlLabel)}</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderStrategyUrlInlineBlock() {
+  if (!elements.introDeck) return;
+  const slot = elements.introDeck.querySelector('[data-strategy-url-inline-slot]');
+  if (!(slot instanceof HTMLElement)) return;
+  slot.innerHTML = strategyUrlInlineBlockMarkup();
+  const copyButton = slot.querySelector('[data-action="copy-strategy-main-url"]');
+  if (copyButton instanceof HTMLButtonElement) {
+    copyButton.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const value = String(copyButton.dataset.url || '').trim();
+      const copied = await copyTextToClipboard(value);
+      if (copied) {
+        notifySuccess(langText('Strategijos nuoroda nukopijuota.', 'Strategy URL copied.'));
+      } else {
+        notifyError(langText('Nepavyko nukopijuoti nuorodos.', 'Failed to copy URL.'));
+      }
+    });
+  }
+}
+
 function refreshBrandMapLink() {
   const link = document.getElementById('brandMapLink');
   if (!(link instanceof HTMLAnchorElement)) return;
@@ -1998,11 +2036,6 @@ function strategySwitcherCardMarkup(options = {}) {
   const showCreateStrategyAction = canManageSelectedInstitution();
   const createButtonLabel = langText('Sukurti strategija', 'Create strategy');
   const guideButtonLabel = langText('Naudojimosi gidas', 'User guide');
-  const canShareStrategy = Boolean(normalizeSlug(state.institutionSlug) && normalizeSlug(state.strategySlug));
-  const strategyUrl = canShareStrategy ? strategyShareUrl() : '';
-  const strategyUrlLabel = langText('Strategijos nuoroda', 'Strategy URL');
-  const copyStrategyUrlLabel = langText('Kopijuoti nuoroda', 'Copy URL');
-  const openStrategyUrlLabel = langText('Atidaryti', 'Open');
 
   return `
     <div class="step-utility-card strategy-switcher-card ${topbar ? 'strategy-switcher-card-topbar' : ''} ${dialogOpen ? 'is-open' : ''}">
@@ -2028,18 +2061,6 @@ function strategySwitcherCardMarkup(options = {}) {
       <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>
         ${institutionSelectMarkup()}
         ${strategySelectMarkup()}
-        <div class="strategy-share-card">
-          <span class="strategy-share-label">${escapeHtml(strategyUrlLabel)}</span>
-          ${canShareStrategy
-    ? `
-              <a class="strategy-share-url" href="${escapeHtml(strategyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(strategyUrl)}</a>
-              <div class="strategy-share-actions">
-                <button type="button" class="btn btn-ghost" data-action="copy-strategy-url" data-url="${escapeHtml(strategyUrl)}">${escapeHtml(copyStrategyUrlLabel)}</button>
-                <a class="btn btn-ghost" href="${escapeHtml(strategyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(openStrategyUrlLabel)}</a>
-              </div>
-            `
-    : `<span class="prompt">${escapeHtml(langText('Pasirinkite institucija ir strategija.', 'Select institution and strategy.'))}</span>`}
-        </div>
         ${showCreateStrategyAction
     ? `<button id="openStrategyCreateModalBtn" type="button" class="btn btn-primary strategy-switcher-create-btn">${escapeHtml(createButtonLabel)}</button>`
     : ''}
@@ -2070,18 +2091,6 @@ function bindStrategySwitcherDialog(container) {
   if (createStrategyButton) {
     createStrategyButton.addEventListener('click', () => {
       showStrategyCreateModal();
-    });
-  }
-  const copyStrategyUrlButton = container.querySelector('[data-action="copy-strategy-url"]');
-  if (copyStrategyUrlButton instanceof HTMLButtonElement) {
-    copyStrategyUrlButton.addEventListener('click', async () => {
-      const value = String(copyStrategyUrlButton.dataset.url || '').trim();
-      const copied = await copyTextToClipboard(value);
-      if (copied) {
-        notifySuccess(langText('Strategijos nuoroda nukopijuota.', 'Strategy URL copied.'));
-      } else {
-        notifyError(langText('Nepavyko nukopijuoti nuorodos.', 'Failed to copy URL.'));
-      }
     });
   }
 }
@@ -2465,7 +2474,10 @@ function renderIntroDeck() {
                 <p>${langText('Perkelimas i konkrecias veiklas, terminus ir atsakomybes.', 'Translation into concrete actions, timelines, and ownership.')}</p>
               </article>
             </div>
-            <p class="structure-note">${langText('Platformos apimtis: "Gaires" ir "Iniciatyvos" etapai.', 'Platform scope: "Guidelines" and "Initiatives" stages.')}</p>
+            <div class="structure-note-row">
+              <p class="structure-note">${langText('Platformos apimtis: "Gaires" ir "Iniciatyvos" etapai.', 'Platform scope: "Guidelines" and "Initiatives" stages.')}</p>
+              <div data-strategy-url-inline-slot></div>
+            </div>
           </section>
         </div>
       </div>
@@ -2479,10 +2491,18 @@ function renderIntroDeck() {
       applyIntroGuideState();
     };
     if (introGuide) {
-      introGuide.addEventListener('click', () => {
+      introGuide.addEventListener('click', (event) => {
+        const target = event.target;
+        if (
+          target instanceof HTMLElement
+          && target.closest('a, button, input, textarea, select, label, [data-intro-stop-toggle]')
+        ) {
+          return;
+        }
         toggleGuide();
       });
       introGuide.addEventListener('keydown', (event) => {
+        if (event.target !== introGuide) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         toggleGuide();
@@ -2498,6 +2518,7 @@ function renderIntroDeck() {
   }
 
   refreshIntroNarrativeTexts();
+  renderStrategyUrlInlineBlock();
   applyIntroGuideState();
 }
 
