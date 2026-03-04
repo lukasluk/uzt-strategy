@@ -345,7 +345,7 @@ body.embed-map-page .stage {
 }
 
 .step-pill-shell.expanded {
-  gap: 0;
+  gap: 2px;
 }
 
 .step-utility-shell {
@@ -688,7 +688,7 @@ body.embed-map-page .stage {
   text-decoration: none;
   color: var(--ink);
   display: grid;
-  gap: 4px;
+  gap: 0;
   width: 100%;
 }
 
@@ -697,13 +697,6 @@ body.embed-map-page .stage {
   align-items: center;
   gap: 10px;
   margin-bottom: 0;
-}
-
-.step-pill-subhint {
-  margin-left: 32px;
-  font-size: 11px;
-  line-height: 1.2;
-  color: #5f799a;
 }
 
 .step-icon {
@@ -749,28 +742,27 @@ body.embed-map-page .stage {
 .step-pill-action {
   width: calc(100% - 34px);
   margin-left: 34px;
-  margin-top: -1px;
-  border: 1px solid #c1d7f5;
-  border-top: 0;
-  background: linear-gradient(180deg, #f6faff 0%, #ebf3ff 100%);
+  margin-top: -2px;
+  border: 0;
+  background: transparent;
   color: #1f4f84;
-  border-radius: 0 0 10px 10px;
-  min-height: 34px;
-  padding: 7px 10px 7px 22px;
+  border-radius: 0;
+  min-height: 0;
+  padding: 3px 0 6px 18px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
   text-align: left;
-  transition: transform 0.16s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition: color 0.16s ease, opacity 0.16s ease, transform 0.16s ease;
   position: relative;
+  opacity: 0.9;
 }
 
 .step-pill-action:hover {
-  border-color: #98bbe8;
-  background: linear-gradient(180deg, #ffffff 0%, #e5f0ff 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(31, 79, 132, 0.14);
+  color: #184273;
+  opacity: 1;
+  transform: translateX(1px);
 }
 
 .step-pill-action:focus-visible {
@@ -781,21 +773,23 @@ body.embed-map-page .stage {
 .step-pill-action::before {
   content: '';
   position: absolute;
-  left: 10px;
-  top: 0;
+  left: 2px;
+  top: -6px;
   width: 1px;
   height: 14px;
   background: #adc4e4;
 }
 
 .step-pill-action::after {
-  content: '';
+  content: '↳';
   position: absolute;
-  left: 10px;
-  top: 14px;
-  width: 8px;
-  height: 1px;
-  background: #adc4e4;
+  left: 0;
+  top: 6px;
+  width: auto;
+  height: auto;
+  color: #7f9ec5;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .step-add-anchor {
@@ -4487,15 +4481,11 @@ select:focus {
     font-size: 13px;
   }
 
-  .step-pill-subhint {
-    display: none;
-  }
-
   .step-pill-action {
     width: calc(100% - 22px);
     margin-left: 22px;
-    min-height: 32px;
-    padding: 6px 8px 6px 18px;
+    min-height: 0;
+    padding: 3px 0 5px 16px;
     font-size: 11px;
   }
 
@@ -4870,8 +4860,8 @@ select:focus {
   .step-pill-action {
     width: calc(100% - 18px);
     margin-left: 18px;
-    min-height: 30px;
-    padding: 5px 7px 5px 16px;
+    min-height: 0;
+    padding: 2px 0 4px 14px;
     font-size: 10px;
   }
 

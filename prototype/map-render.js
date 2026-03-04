@@ -5,17 +5,17 @@ function buildMapHeaderMarkup({ graph, activeLayer, editable }) {
   if (state.embedMapMode) return '';
   return `
       <div class="step-header">
-        <h2>${escapeHtml(mapLang('Strategiju zemelapis', 'Strategy map'))}</h2>
+        <h2>${escapeHtml(mapLang('Strategijų žemėlapis', 'Strategy map'))}</h2>
         <div class="header-stack step-header-actions">
           <span class="tag">${escapeHtml(mapLang('Institucija', 'Institution'))}: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
           <span class="tag">${escapeHtml(mapLang('Strategija', 'Strategy'))}: ${escapeHtml(graph.institution.strategy?.title || '-')}</span>
           ${activeLayer === 'strategic-links' ? `<span class="tag tag-main">${escapeHtml(mapLang('Rodoma', 'Viewing'))}: ${escapeHtml(graph.institution.name || graph.institution.slug)} / ${escapeHtml(graph.institution.strategy?.title || '-')} - Strategic links</span>` : ''}
-          ${editable ? `<span class="tag tag-main">${escapeHtml(mapLang('Admin: galite tempti', 'Admin: you can drag'))} ${escapeHtml(activeLayer === 'initiatives' ? mapLang('iniciatyvu korteles', 'initiative cards') : mapLang('gairiu korteles', 'guideline cards'))}</span>` : ''}
+          ${editable ? `<span class="tag tag-main">${escapeHtml(mapLang('Admin: galite tempti', 'Admin: you can drag'))} ${escapeHtml(activeLayer === 'initiatives' ? mapLang('iniciatyvų korteles', 'initiative cards') : mapLang('gairių korteles', 'guideline cards'))}</span>` : ''}
         </div>
       </div>
       <p class="prompt">${activeLayer === 'strategic-links'
-        ? escapeHtml(mapLang('Perziurekite tiesioginius tarpstrateginius rysius. Rodoma aktyvios strategijos struktura ir susietos kitu strategiju gaires.', 'Review direct cross-strategy links. You see the active strategy structure and linked guidelines from related strategies.'))
-        : escapeHtml(mapLang('Perziurekite pasirinktos institucijos strategijos sluoksnius. Iniciatyvu sluoksnyje gairiu korteles lieka matomos, bet uzrakintos.', 'Review selected institution strategy layers. In the initiatives layer, guideline cards remain visible, but locked.'))}</p>
+        ? escapeHtml(mapLang('Peržiūrėkite tiesioginius tarpstrateginius ryšius. Rodoma aktyvios strategijos struktūra ir susietos kitų strategijų gairės.', 'Review direct cross-strategy links. You see the active strategy structure and linked guidelines from related strategies.'))
+        : escapeHtml(mapLang('Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.', 'Review selected institution strategy layers. In the initiatives layer, guideline cards remain visible, but locked.'))}</p>
     `;
 }
 
@@ -23,13 +23,13 @@ function buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes }) {
   return `
       <div class="map-overlay-toolbar">
         <div class="map-layer-toggle map-overlay-layer-toggle">
-          <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">${escapeHtml(mapLang('Gaires', 'Guidelines'))}</button>
+          <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">${escapeHtml(mapLang('Gairės', 'Guidelines'))}</button>
           <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>${escapeHtml(mapLang('Iniciatyvos', 'Initiatives'))}</button>
           <button type="button" data-map-layer-btn="strategic-links" class="btn ${activeLayer === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}">Strategic links</button>
         </div>
         <div class="map-overlay-actions">
-          <button type="button" data-map-reset-btn class="btn btn-ghost">${escapeHtml(mapLang('Centruoti vaizda', 'Center view'))}</button>
-          <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="${escapeHtml(mapLang('Ijungti pilno ekrano rezima', 'Enable fullscreen mode'))}" title="${escapeHtml(mapLang('Ijungti pilno ekrano rezima', 'Enable fullscreen mode'))}"></button>
+          <button type="button" data-map-reset-btn class="btn btn-ghost">${escapeHtml(mapLang('Centruoti vaizdą', 'Center view'))}</button>
+          <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="${escapeHtml(mapLang('Įjungti pilno ekrano režimą', 'Enable fullscreen mode'))}" title="${escapeHtml(mapLang('Įjungti pilno ekrano režimą', 'Enable fullscreen mode'))}"></button>
         </div>
       </div>
     `;
@@ -98,7 +98,7 @@ function buildInstitutionNodeMarkup({ node, activeLayer, editable }) {
   ).trim();
   const pulseActive = Date.now() < Number(state.mapInstitutionPulseUntil || 0);
   const relatedInstitutionInStrategicLayer = activeLayer === 'strategic-links' && node.clusterRole === 'related';
-  const switchPerspectiveLabel = mapLang('Atidaryti strategijos perspektyva', 'Open strategy perspective');
+  const switchPerspectiveLabel = mapLang('Atidaryti strategijos perspektyvą', 'Open strategy perspective');
   const institutionClass = [
     'strategy-map-node',
     'institution-node',
@@ -119,7 +119,7 @@ function buildInstitutionNodeMarkup({ node, activeLayer, editable }) {
     : `<span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>`;
   const cycleStatusLine = activeLayer === 'strategic-links'
     ? ''
-    : `<small class="institution-cycle-label">${escapeHtml(mapLang('Strategijos ciklo busena', 'Strategy cycle status'))}</small>`;
+    : `<small class="institution-cycle-label">${escapeHtml(mapLang('Strategijos ciklo būsena', 'Strategy cycle status'))}</small>`;
   const strategyToneStyle = activeLayer === 'strategic-links' && node.strategyTone
     ? `--strategy-pastel:${escapeHtml(node.strategyTone.pastel)};--strategy-border:${escapeHtml(node.strategyTone.border)};--strategy-ink:${escapeHtml(node.strategyTone.ink)};`
     : '';
@@ -174,7 +174,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
     ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
     : '';
   const strategicFocusChip = activeLayer === 'strategic-links' && node.isStrategicLinked
-    ? `<span class="map-strategy-link-chip" title="${escapeHtml(mapLang('Gaire turi tarpstrategini rysi', 'Guideline has a cross-strategy link'))}">${escapeHtml(mapLang('Susieta', 'Linked'))}</span>`
+    ? `<span class="map-strategy-link-chip" title="${escapeHtml(mapLang('Gairė turi tarpstrateginį ryšį', 'Guideline has a cross-strategy link'))}">${escapeHtml(mapLang('Susieta', 'Linked'))}</span>`
     : '';
   const strategyLinkListMarkup = relation === 'parent' && uniqueLinks.length && activeLayer !== 'strategic-links'
     ? `
@@ -188,7 +188,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
                 data-target-institution="${escapeHtml(link.otherInstitutionSlug)}"
                 data-target-strategy="${escapeHtml(link.otherStrategySlug)}"
                 data-target-guideline="${escapeHtml(link.otherGuidelineId)}"
-                title="Atidaryti susieta gaires konteksta"
+                title="${escapeHtml(mapLang('Atidaryti susietos gairės kontekstą', 'Open linked guideline context'))}"
               >${escapeHtml(mapStrategyLinkLabel(link))}</button>
             `).join('')}
             ${uniqueLinks.length > 2 ? `<span class="map-strategy-link-more">+${uniqueLinks.length - 2}</span>` : ''}
@@ -204,7 +204,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
   const guidelineToneStyle = activeLayer === 'strategic-links' && node.strategyTone
     ? `--strategy-pastel:${escapeHtml(node.strategyTone.pastel)};--strategy-border:${escapeHtml(node.strategyTone.border)};--strategy-ink:${escapeHtml(node.strategyTone.ink)};`
     : '';
-  const mapCommentButtonLabel = mapLang('Rodyti aprasyma ir komentarus', 'Show description and comments');
+  const mapCommentButtonLabel = mapLang('Rodyti aprašymą ir komentarus', 'Show description and comments');
 
   return `
         <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}${strategicGuidelineClass}"
@@ -224,7 +224,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
           </div>
           <small>${escapeHtml(guidelineOwnerLabel)}</small>
           <div class="map-vote-row">
-            <span class="map-vote-chip" title="Bendras balas">
+            <span class="map-vote-chip" title="${escapeHtml(mapLang('Bendras balas', 'Total score'))}">
               <strong>${score}</strong>
             </span>
             ${strategicFocusChip}
@@ -259,7 +259,7 @@ function buildInitiativeNodeMarkup({ node, editable }) {
   const voteSquares = scoreForSquares
     ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square initiative-square" aria-hidden="true"></span>').join('')
     : '';
-  const mapCommentButtonLabel = mapLang('Rodyti aprasyma ir komentarus', 'Show description and comments');
+  const mapCommentButtonLabel = mapLang('Rodyti aprašymą ir komentarus', 'Show description and comments');
 
   return `
       <article class="strategy-map-node initiative-node status-${escapeHtml(String(node.initiative.status || 'active').toLowerCase())}"
@@ -278,7 +278,7 @@ function buildInitiativeNodeMarkup({ node, editable }) {
           <h4>${escapeHtml(node.initiative.title)}</h4>
         </div>
         <div class="map-vote-row">
-          <span class="map-vote-chip" title="Bendras balas">
+          <span class="map-vote-chip" title="${escapeHtml(mapLang('Bendras balas', 'Total score'))}">
             <strong>${score}</strong>
           </span>
         </div>
@@ -318,8 +318,8 @@ function buildMapCommentItems(graph) {
       items.set(`guideline:${node.guideline.id}`, {
         kind: 'guideline',
         id: node.guideline.id,
-        title: node.guideline.title || 'Gaire',
-        description: node.guideline.description || 'Aprasymas nepateiktas.',
+        title: node.guideline.title || mapLang('Gairė', 'Guideline'),
+        description: node.guideline.description || mapLang('Aprašymas nepateiktas.', 'Description not provided.'),
         comments: Array.isArray(node.guideline.comments) ? node.guideline.comments : []
       });
     }
@@ -327,8 +327,8 @@ function buildMapCommentItems(graph) {
       items.set(`initiative:${node.initiative.id}`, {
         kind: 'initiative',
         id: node.initiative.id,
-        title: node.initiative.title || 'Iniciatyva',
-        description: node.initiative.description || 'Aprasymas nepateiktas.',
+        title: node.initiative.title || mapLang('Iniciatyva', 'Initiative'),
+        description: node.initiative.description || mapLang('Aprašymas nepateiktas.', 'Description not provided.'),
         comments: Array.isArray(node.initiative.comments) ? node.initiative.comments : []
       });
     }
@@ -363,7 +363,7 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
     }
     commentList.innerHTML = comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : '<li class="comment-item comment-item-empty">Komentaru dar nera.</li>';
+      : `<li class="comment-item comment-item-empty">${escapeHtml(mapLang('Komentarų dar nėra.', 'No comments yet.'))}</li>`;
     commentModal.hidden = false;
     document.body.classList.add('map-comment-modal-open');
   };
@@ -551,17 +551,17 @@ function buildMapViewShellMarkup({
       </section>
     </section>
     <section id="mapCommentModal" class="map-comment-modal" hidden>
-      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="Uzdaryti"></button>
+      <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="${escapeHtml(mapLang('Uždaryti', 'Close'))}"></button>
       <article class="map-comment-card" role="dialog" aria-modal="true" aria-labelledby="mapCommentTitle">
         <div class="header-row">
-          <h3 id="mapCommentTitle">Elementas</h3>
-          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">Uzdaryti</button>
+          <h3 id="mapCommentTitle">${escapeHtml(mapLang('Elementas', 'Item'))}</h3>
+          <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">${escapeHtml(mapLang('Uždaryti', 'Close'))}</button>
         </div>
         <p id="mapCommentDescription" class="prompt map-comment-description"></p>
         <div class="map-comment-actions">
-          <button id="mapCommentOpenCardBtn" class="btn btn-primary" type="button">Atidaryti kortele</button>
+          <button id="mapCommentOpenCardBtn" class="btn btn-primary" type="button">${escapeHtml(mapLang('Atidaryti kortelę', 'Open card'))}</button>
         </div>
-        <strong>Komentarai</strong>
+        <strong>${escapeHtml(mapLang('Komentarai', 'Comments'))}</strong>
         <ul id="mapCommentList" class="mini-list"></ul>
       </article>
     </section>
