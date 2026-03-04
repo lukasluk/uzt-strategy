@@ -3082,6 +3082,103 @@ function findInitiativeByRouteEntity() {
   return (state.initiatives || []).find((initiative) => String(initiative?.id || '').trim() === targetId) || null;
 }
 
+function findGuidelineById(guidelineId) {
+  const targetId = String(guidelineId || '').trim();
+  if (!targetId) return null;
+  return (state.guidelines || []).find((guideline) => String(guideline?.id || '').trim() === targetId) || null;
+}
+
+function resolveGuidelineParent(guideline) {
+  const item = guideline && typeof guideline === 'object' ? guideline : null;
+  if (!item) return null;
+  const relation = String(item.relationType || '').trim().toLowerCase();
+  if (relation !== 'child') return null;
+  return findGuidelineById(item.parentGuidelineId);
+}
+
+function resolveInitiativeLinkedGuidelines(initiative) {
+  const item = initiative && typeof initiative === 'object' ? initiative : null;
+  if (!item) return [];
+
+  const links = Array.isArray(item.guidelineLinks) ? item.guidelineLinks : [];
+  const fromLinks = links
+    .map((link) => {
+      const guidelineId = String(link?.guidelineId || '').trim();
+      if (!guidelineId) return null;
+      const fromState = findGuidelineById(guidelineId);
+      if (fromState) return fromState;
+      const title = String(link?.guidelineTitle || '').trim();
+      if (!title) return null;
+      return {
+        id: guidelineId,
+        title
+      };
+    })
+    .filter(Boolean);
+  if (fromLinks.length) return fromLinks;
+
+  const ids = Array.isArray(item.guidelineIds) ? item.guidelineIds : [];
+  return ids
+    .map((guidelineId) => findGuidelineById(guidelineId))
+    .filter(Boolean);
+}
+
+function buildGuidelineDetailBreadcrumbs(guideline) {
+  const item = guideline && typeof guideline === 'object' ? guideline : null;
+  if (!item) return '';
+  const strategyTitle = String(state.strategy?.title || state.strategySlug || '-').trim() || '-';
+  const parent = resolveGuidelineParent(item);
+  const label = langText('Kelias', 'Breadcrumb');
+  const listLabel = langText('Gaires', 'Guidelines');
+  const parentLabel = langText('Tevine gaire', 'Parent guideline');
+  const currentTitle = String(item.title || item.id || '-').trim() || '-';
+
+  return `
+    <nav class="detail-breadcrumbs" aria-label="${escapeHtml(label)}">
+      <span class="detail-breadcrumb-label">${escapeHtml(label)}:</span>
+      <button type="button" class="detail-breadcrumb-link" data-action="open-guidelines-list">${escapeHtml(listLabel)}</button>
+      <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+      <span class="detail-breadcrumb-node">${escapeHtml(strategyTitle)}</span>
+      ${parent ? `
+        <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+        <button type="button" class="detail-breadcrumb-link" data-action="open-parent-guideline-detail" data-guideline-id="${escapeHtml(parent.id)}" title="${escapeHtml(parentLabel)}">${escapeHtml(parent.title || parent.id)}</button>
+      ` : ''}
+      <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+      <span class="detail-breadcrumb-node current">${escapeHtml(currentTitle)}</span>
+    </nav>
+  `;
+}
+
+function buildInitiativeDetailBreadcrumbs(initiative) {
+  const item = initiative && typeof initiative === 'object' ? initiative : null;
+  if (!item) return '';
+  const strategyTitle = String(state.strategy?.title || state.strategySlug || '-').trim() || '-';
+  const linkedGuidelines = resolveInitiativeLinkedGuidelines(item);
+  const primaryGuideline = linkedGuidelines[0] || null;
+  const linkedMoreCount = Math.max(0, linkedGuidelines.length - 1);
+  const label = langText('Kelias', 'Breadcrumb');
+  const listLabel = langText('Iniciatyvos', 'Initiatives');
+  const currentTitle = String(item.title || item.id || '-').trim() || '-';
+  const linkedLabel = langText('Susieta gaire', 'Linked guideline');
+  const linkedMoreLabel = langText('papildomos', 'more');
+
+  return `
+    <nav class="detail-breadcrumbs" aria-label="${escapeHtml(label)}">
+      <span class="detail-breadcrumb-label">${escapeHtml(label)}:</span>
+      <button type="button" class="detail-breadcrumb-link" data-action="open-initiatives-list">${escapeHtml(listLabel)}</button>
+      <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+      <span class="detail-breadcrumb-node">${escapeHtml(strategyTitle)}</span>
+      ${primaryGuideline ? `
+        <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+        <button type="button" class="detail-breadcrumb-link" data-action="open-guideline-detail-from-initiative" data-guideline-id="${escapeHtml(primaryGuideline.id)}" title="${escapeHtml(linkedLabel)}">${escapeHtml(primaryGuideline.title || primaryGuideline.id)}</button>
+        ${linkedMoreCount ? `<span class="detail-breadcrumb-extra">+${linkedMoreCount} ${escapeHtml(linkedMoreLabel)}</span>` : ''}
+      ` : ''}
+      <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+      <span class="detail-breadcrumb-node current">${escapeHtml(currentTitle)}</span>
+    </nav>
+  `;
+}
+
 function renderGuidelineDetailView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
@@ -3132,16 +3229,16 @@ function renderGuidelineDetailView() {
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
   const cardUrl = guidelineShareUrl(guideline.id);
+  const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>${langText('Gaires kortele', 'Guideline card')}</h2>
       <div class="header-stack step-header-actions">
         <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('Grizti i gaires', 'Back to guidelines')}</button>
         <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti zemelapyje', 'Show on map')}</button>
-        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
-        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
       </div>
     </div>
+    ${breadcrumbMarkup}
     <p class="prompt">${escapeHtml(langText('Atskiras gaires vidinis polapis su nuolatine nuoroda.', 'Dedicated internal sub-page for this guideline with a permanent URL.'))}</p>
     <div class="header-stack" style="margin-bottom: 14px;">
       <span class="tag">${escapeHtml(langText('Nuoroda', 'URL'))}: <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cardUrl)}</a></span>
@@ -3167,6 +3264,18 @@ function renderGuidelineDetailView() {
       setActiveView('guidelines');
     });
   }
+  elements.stepView.querySelectorAll('[data-action="open-guidelines-list"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      setActiveView('guidelines');
+    });
+  });
+  elements.stepView.querySelectorAll('[data-action="open-parent-guideline-detail"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const parentId = String(button.dataset.guidelineId || '').trim();
+      if (!parentId) return;
+      openGuidelineDetail(parentId);
+    });
+  });
   const openMapButton = elements.stepView.querySelector('#openGuidelineMapBtn');
   if (openMapButton) {
     openMapButton.addEventListener('click', () => {
@@ -3289,16 +3398,16 @@ function renderInitiativeDetailView() {
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
   const cardUrl = initiativeShareUrl(initiative.id);
+  const breadcrumbMarkup = buildInitiativeDetailBreadcrumbs(initiative);
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>${langText('Iniciatyvos kortele', 'Initiative card')}</h2>
       <div class="header-stack step-header-actions">
         <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('Grizti i iniciatyvas', 'Back to initiatives')}</button>
         <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti zemelapyje', 'Show on map')}</button>
-        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
-        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
       </div>
     </div>
+    ${breadcrumbMarkup}
     <p class="prompt">${escapeHtml(langText('Atskiras iniciatyvos vidinis polapis su nuolatine nuoroda.', 'Dedicated internal sub-page for this initiative with a permanent URL.'))}</p>
     <div class="header-stack" style="margin-bottom: 14px;">
       <span class="tag">${escapeHtml(langText('Nuoroda', 'URL'))}: <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cardUrl)}</a></span>
@@ -3323,6 +3432,18 @@ function renderInitiativeDetailView() {
       setActiveView('initiatives');
     });
   }
+  elements.stepView.querySelectorAll('[data-action="open-initiatives-list"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      setActiveView('initiatives');
+    });
+  });
+  elements.stepView.querySelectorAll('[data-action="open-guideline-detail-from-initiative"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const guidelineId = String(button.dataset.guidelineId || '').trim();
+      if (!guidelineId) return;
+      openGuidelineDetail(guidelineId);
+    });
+  });
   const openMapButton = elements.stepView.querySelector('#openInitiativeMapBtn');
   if (openMapButton) {
     openMapButton.addEventListener('click', () => {

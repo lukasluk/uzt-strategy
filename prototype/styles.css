@@ -1286,6 +1286,59 @@ textarea {
   padding: 6px 10px;
 }
 
+.detail-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+  font-size: 13px;
+}
+
+.detail-breadcrumb-label {
+  font-size: 12px;
+  color: #5f799a;
+}
+
+.detail-breadcrumb-sep {
+  color: #7a8eab;
+}
+
+.detail-breadcrumb-node {
+  color: #294a75;
+}
+
+.detail-breadcrumb-node.current {
+  font-weight: 700;
+  color: #18345b;
+}
+
+.detail-breadcrumb-link {
+  border: 1px solid #d3e1f6;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #f5f9ff;
+  color: #23466f;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+}
+
+.detail-breadcrumb-link:hover {
+  border-color: #b6ccec;
+  background: #ffffff;
+}
+
+.detail-breadcrumb-link:focus-visible {
+  outline: 2px solid rgba(63, 143, 230, 0.35);
+  outline-offset: 1px;
+}
+
+.detail-breadcrumb-extra {
+  color: #5f799a;
+  font-size: 12px;
+}
+
 .mini-list {
   margin: 8px 0 0;
   padding-left: 0;
