@@ -118,7 +118,15 @@ const INTRO_VISITED_KEY = 'uzt-strategy-v1-intro-visited';
 const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
 const DEFAULT_INSTITUTION_SLUG = '';
 const WRITABLE_CYCLE_STATES = new Set(['open']);
-const ALLOWED_VIEWS = new Set(['guidelines', 'initiatives', 'admin', 'map', 'guide']);
+const ALLOWED_VIEWS = new Set([
+  'guidelines',
+  'guideline-detail',
+  'initiatives',
+  'initiative-detail',
+  'admin',
+  'map',
+  'guide'
+]);
 const ADMIN_CACHE_BUST_PARAM = 't';
 const EMBED_QUERY_KEY = 'embed';
 const EMBED_MAP_VALUE = 'map';
@@ -448,8 +456,11 @@ function resolveEmbedMapMode() {
 function resolveInitialView() {
   if (EMBED_MAP_MODE) return 'map';
   const fromPath = parseAppPathRoute();
-  if (fromPath.focusKind === 'guideline') return 'guidelines';
-  if (fromPath.focusKind === 'initiative') return 'initiatives';
+  if (fromPath.focusKind === 'guideline') return 'guideline-detail';
+  if (fromPath.focusKind === 'initiative') return 'initiative-detail';
+  const routeEntity = resolveRouteEntityFromLocation();
+  if (routeEntity.kind === 'guideline') return 'guideline-detail';
+  if (routeEntity.kind === 'initiative') return 'initiative-detail';
   const params = new URLSearchParams(window.location.search);
   const view = String(params.get('view') || '').trim().toLowerCase();
   return ALLOWED_VIEWS.has(view) ? view : 'guidelines';
@@ -512,8 +523,8 @@ function buildCurrentPageHref({
 
   const shouldOmitViewParam = !state.embedMapMode
     && (
-      (nextView === 'guidelines' && String(routeEntityKind || '').trim().toLowerCase() === 'guideline' && String(routeEntityId || '').trim())
-      || (nextView === 'initiatives' && String(routeEntityKind || '').trim().toLowerCase() === 'initiative' && String(routeEntityId || '').trim())
+      (nextView === 'guideline-detail' && String(routeEntityKind || '').trim().toLowerCase() === 'guideline' && String(routeEntityId || '').trim())
+      || (nextView === 'initiative-detail' && String(routeEntityKind || '').trim().toLowerCase() === 'initiative' && String(routeEntityId || '').trim())
     );
   if (nextView !== 'guidelines' && !shouldOmitViewParam) params.set('view', nextView);
   else params.delete('view');
@@ -545,12 +556,17 @@ function setRouteEntity(kind, entityId) {
 function clearRouteEntity() {
   state.routeEntityKind = '';
   state.routeEntityId = '';
+  if (state.activeView === 'guideline-detail') {
+    state.activeView = 'guidelines';
+  } else if (state.activeView === 'initiative-detail') {
+    state.activeView = 'initiatives';
+  }
 }
 
 function clearRouteEntityForView(nextView) {
   const normalizedView = String(nextView || '').trim().toLowerCase();
-  if (normalizedView === 'guidelines' && state.routeEntityKind === 'guideline') return;
-  if (normalizedView === 'initiatives' && state.routeEntityKind === 'initiative') return;
+  if (normalizedView === 'guideline-detail' && state.routeEntityKind === 'guideline') return;
+  if (normalizedView === 'initiative-detail' && state.routeEntityKind === 'initiative') return;
   clearRouteEntity();
 }
 
@@ -572,7 +588,7 @@ function buildGuidelineHref(guidelineId, options = {}) {
   return buildCurrentPageHref({
     slug: options.institutionSlug || state.institutionSlug,
     strategySlug: options.strategySlug || state.strategySlug,
-    view: 'guidelines',
+    view: 'guideline-detail',
     routeEntityKind: 'guideline',
     routeEntityId: guidelineId
   });
@@ -582,7 +598,7 @@ function buildInitiativeHref(initiativeId, options = {}) {
   return buildCurrentPageHref({
     slug: options.institutionSlug || state.institutionSlug,
     strategySlug: options.strategySlug || state.strategySlug,
-    view: 'initiatives',
+    view: 'initiative-detail',
     routeEntityKind: 'initiative',
     routeEntityId: initiativeId
   });
@@ -1882,13 +1898,11 @@ function flushPendingAddSectionScroll() {
 
 function scheduleGuidelineFocus(guidelineId) {
   const nextId = String(guidelineId || '').trim();
-  if (nextId) setRouteEntity('guideline', nextId);
   state.pendingGuidelineFocusId = nextId || '';
 }
 
 function scheduleInitiativeFocus(initiativeId) {
   const nextId = String(initiativeId || '').trim();
-  if (nextId) setRouteEntity('initiative', nextId);
   state.pendingInitiativeFocusId = nextId || '';
 }
 
@@ -1898,6 +1912,24 @@ function scheduleMapNodeFocus(kind, entityId) {
   if (!nextId) return;
   state.pendingMapFocusKind = normalizedKind;
   state.pendingMapFocusId = nextId;
+}
+
+function openGuidelineDetail(guidelineId) {
+  const nextId = String(guidelineId || '').trim();
+  if (!nextId) return;
+  setRouteEntity('guideline', nextId);
+  state.activeView = 'guideline-detail';
+  syncRouteState();
+  render();
+}
+
+function openInitiativeDetail(initiativeId) {
+  const nextId = String(initiativeId || '').trim();
+  if (!nextId) return;
+  setRouteEntity('initiative', nextId);
+  state.activeView = 'initiative-detail';
+  syncRouteState();
+  render();
 }
 
 function openMapForCard(kind, entityId) {
@@ -2234,7 +2266,9 @@ function renderSteps() {
   }
 
   visibleItems.forEach((item) => {
-    const isActive = state.activeView === item.id;
+    const isActive = state.activeView === item.id
+      || (item.id === 'guidelines' && state.activeView === 'guideline-detail')
+      || (item.id === 'initiatives' && state.activeView === 'initiative-detail');
     const canExpand = canExpandStepWithAddAction(item.id);
     const isExpanded = isActive && canExpand && state.expandedStepId === item.id;
 
@@ -2272,6 +2306,14 @@ function renderSteps() {
           }
           state.expandedStepId = canExpand ? item.id : '';
           setActiveView(item.id);
+          return;
+        }
+        if (item.id === 'guidelines' && state.activeView === 'guideline-detail') {
+          setActiveView('guidelines');
+          return;
+        }
+        if (item.id === 'initiatives' && state.activeView === 'initiative-detail') {
+          setActiveView('initiatives');
           return;
         }
         if (!canExpand) return;
@@ -2695,6 +2737,7 @@ function buildGuidelineRelationshipGroups(guidelines) {
 }
 
 function renderGuidelineCard(guideline, options) {
+  const isLinkable = options?.linkable !== false;
   const commentsVisible = Boolean(options.commentsVisible);
   const showCommentsSection = Boolean(options.authenticated || commentsVisible);
   const commentsHint = commentsReadOnlyHintText(options);
@@ -2763,7 +2806,7 @@ function renderGuidelineCard(guideline, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card guideline-card is-linkable guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
+    <article class="card guideline-card ${isLinkable ? 'is-linkable' : ''} guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(guideline.title)}</h4>
@@ -2937,6 +2980,7 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
 }
 
 function renderInitiativeCard(initiative, options) {
+  const isLinkable = options?.linkable !== false;
   const commentsVisible = Boolean(options.commentsVisible);
   const showCommentsSection = Boolean(options.authenticated || commentsVisible);
   const commentsHint = commentsReadOnlyHintText(options);
@@ -2968,7 +3012,7 @@ function renderInitiativeCard(initiative, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card initiative-card is-linkable ${votingDisabled ? 'guideline-disabled' : ''}" data-initiative-id="${escapeHtml(initiative.id)}">
+    <article class="card initiative-card ${isLinkable ? 'is-linkable' : ''} ${votingDisabled ? 'guideline-disabled' : ''}" data-initiative-id="${escapeHtml(initiative.id)}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(initiative.title)}</h4>
@@ -3022,6 +3066,271 @@ function renderInitiativeCard(initiative, options) {
       ` : ''}
     </article>
   `;
+}
+
+function findGuidelineByRouteEntity() {
+  if (state.routeEntityKind !== 'guideline') return null;
+  const targetId = String(state.routeEntityId || '').trim();
+  if (!targetId) return null;
+  return (state.guidelines || []).find((guideline) => String(guideline?.id || '').trim() === targetId) || null;
+}
+
+function findInitiativeByRouteEntity() {
+  if (state.routeEntityKind !== 'initiative') return null;
+  const targetId = String(state.routeEntityId || '').trim();
+  if (!targetId) return null;
+  return (state.initiatives || []).find((initiative) => String(initiative?.id || '').trim() === targetId) || null;
+}
+
+function renderGuidelineDetailView() {
+  if (!state.institutionSlug) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.loading) {
+    elements.stepView.innerHTML = `<div class="card"><strong>${langText('Kraunami duomenys...', 'Loading data...')}</strong></div>`;
+    return;
+  }
+
+  if (state.error) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Nepavyko ikelti duomenu', 'Failed to load data')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">${langText('Bandyti dar karta', 'Try again')}</button>
+      </div>
+    `;
+    const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
+    if (retryBtn) retryBtn.addEventListener('click', bootstrap);
+    return;
+  }
+
+  const guideline = findGuidelineByRouteEntity();
+  if (!guideline) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Gaire nerasta', 'Guideline not found')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuoroda arba grizkite i gairiu sarasa.', 'Check the URL or return to guideline list.')}</p>
+        <button id="backToGuidelinesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('Grizti i gaires', 'Back to guidelines')}</button>
+      </div>
+    `;
+    const backButton = elements.stepView.querySelector('#backToGuidelinesBtn');
+    if (backButton) {
+      backButton.addEventListener('click', () => {
+        setActiveView('guidelines');
+      });
+    }
+    return;
+  }
+
+  const member = isLoggedIn();
+  const authenticated = isAuthenticated();
+  const writable = member && cycleIsWritable();
+  const cardUrl = guidelineShareUrl(guideline.id);
+  elements.stepView.innerHTML = `
+    <div class="step-header">
+      <h2>${langText('Gaires kortele', 'Guideline card')}</h2>
+      <div class="header-stack step-header-actions">
+        <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('Grizti i gaires', 'Back to guidelines')}</button>
+        <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti zemelapyje', 'Show on map')}</button>
+        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
+      </div>
+    </div>
+    <p class="prompt">${escapeHtml(langText('Atskiras gaires vidinis polapis su nuolatine nuoroda.', 'Dedicated internal sub-page for this guideline with a permanent URL.'))}</p>
+    <div class="header-stack" style="margin-bottom: 14px;">
+      <span class="tag">${escapeHtml(langText('Nuoroda', 'URL'))}: <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cardUrl)}</a></span>
+    </div>
+    ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
+    <section id="guidelineGroups" class="guideline-groups" data-detail-view="1">
+      <div class="card-list">
+        ${renderGuidelineCard(guideline, {
+    member,
+    writable,
+    authenticated,
+    commentsVisible: state.commentsVisible,
+    linkable: false
+  })}
+      </div>
+    </section>
+  `;
+
+  bindStepEvents();
+  const backButton = elements.stepView.querySelector('#backToGuidelinesBtn');
+  if (backButton) {
+    backButton.addEventListener('click', () => {
+      setActiveView('guidelines');
+    });
+  }
+  const openMapButton = elements.stepView.querySelector('#openGuidelineMapBtn');
+  if (openMapButton) {
+    openMapButton.addEventListener('click', () => {
+      openMapForCard('guideline', guideline.id);
+    });
+  }
+}
+
+function bindInitiativeCardInteractions(list) {
+  if (!(list instanceof HTMLElement)) return;
+
+  list.addEventListener('click', async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const detailView = list.dataset.detailView === '1';
+    const clickedInteractive = target.closest('button, input, textarea, select, a, label, form');
+    if (!clickedInteractive && !detailView) {
+      const card = target.closest('.initiative-card[data-initiative-id]');
+      const initiativeIdFromCard = String(card?.dataset?.initiativeId || '').trim();
+      if (initiativeIdFromCard) {
+        openInitiativeDetail(initiativeIdFromCard);
+        return;
+      }
+    }
+    const actionElement = target.closest('[data-action]');
+    if (!(actionElement instanceof HTMLElement)) return;
+    const action = actionElement.dataset.action;
+    const initiativeId = String(actionElement.dataset.id || '').trim();
+    if (!action || !initiativeId) return;
+
+    if (action === 'copy-initiative-link') {
+      const url = String(actionElement.dataset.url || initiativeShareUrl(initiativeId)).trim();
+      const copied = await copyTextToClipboard(url);
+      state.notice = copied
+        ? langText('Iniciatyvos nuoroda nukopijuota.', 'Initiative URL copied.')
+        : langText('Nepavyko nukopijuoti nuorodos.', 'Failed to copy URL.');
+      if (copied) notifySuccess(state.notice);
+      else notifyError(state.notice);
+      render();
+      return;
+    }
+
+    if (action === 'initiative-vote-plus' || action === 'initiative-vote-minus') {
+      const delta = action === 'initiative-vote-plus' ? 1 : -1;
+      const origin = getElementCenter(actionElement);
+      await runBusy(async () => {
+        const changed = await changeInitiativeVote(initiativeId, delta);
+        if (changed) triggerVoteBurstAt(origin, delta);
+      });
+    }
+  });
+
+  list.addEventListener('submit', async (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.dataset.action !== 'initiative-comment') return;
+    event.preventDefault();
+
+    const initiativeId = form.dataset.id;
+    const value = String(new FormData(form).get('comment') || '').trim();
+    if (!initiativeId || !value) return;
+
+    await runBusy(async () => {
+      await api(`/api/v1/initiatives/${encodeURIComponent(initiativeId)}/comments`, {
+        method: 'POST',
+        body: { body: value }
+      });
+      await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap()]);
+    });
+  });
+}
+
+function renderInitiativeDetailView() {
+  if (!state.institutionSlug) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.loading) {
+    elements.stepView.innerHTML = `<div class="card"><strong>${langText('Kraunami duomenys...', 'Loading data...')}</strong></div>`;
+    return;
+  }
+
+  if (state.error) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Nepavyko ikelti duomenu', 'Failed to load data')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">${langText('Bandyti dar karta', 'Try again')}</button>
+      </div>
+    `;
+    const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
+    if (retryBtn) retryBtn.addEventListener('click', bootstrap);
+    return;
+  }
+
+  const initiative = findInitiativeByRouteEntity();
+  if (!initiative) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Iniciatyva nerasta', 'Initiative not found')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuoroda arba grizkite i iniciatyvu sarasa.', 'Check the URL or return to initiative list.')}</p>
+        <button id="backToInitiativesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('Grizti i iniciatyvas', 'Back to initiatives')}</button>
+      </div>
+    `;
+    const backButton = elements.stepView.querySelector('#backToInitiativesBtn');
+    if (backButton) {
+      backButton.addEventListener('click', () => {
+        setActiveView('initiatives');
+      });
+    }
+    return;
+  }
+
+  const member = isLoggedIn();
+  const authenticated = isAuthenticated();
+  const writable = member && cycleIsWritable();
+  const cardUrl = initiativeShareUrl(initiative.id);
+  elements.stepView.innerHTML = `
+    <div class="step-header">
+      <h2>${langText('Iniciatyvos kortele', 'Initiative card')}</h2>
+      <div class="header-stack step-header-actions">
+        <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('Grizti i iniciatyvas', 'Back to initiatives')}</button>
+        <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti zemelapyje', 'Show on map')}</button>
+        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
+      </div>
+    </div>
+    <p class="prompt">${escapeHtml(langText('Atskiras iniciatyvos vidinis polapis su nuolatine nuoroda.', 'Dedicated internal sub-page for this initiative with a permanent URL.'))}</p>
+    <div class="header-stack" style="margin-bottom: 14px;">
+      <span class="tag">${escapeHtml(langText('Nuoroda', 'URL'))}: <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cardUrl)}</a></span>
+    </div>
+    ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
+    <section id="initiativeSection" class="guideline-group" data-detail-view="1">
+      <div class="card-list initiative-list">
+        ${renderInitiativeCard(initiative, {
+    member,
+    writable,
+    authenticated,
+    commentsVisible: state.commentsVisible,
+    linkable: false
+  })}
+      </div>
+    </section>
+  `;
+
+  const backButton = elements.stepView.querySelector('#backToInitiativesBtn');
+  if (backButton) {
+    backButton.addEventListener('click', () => {
+      setActiveView('initiatives');
+    });
+  }
+  const openMapButton = elements.stepView.querySelector('#openInitiativeMapBtn');
+  if (openMapButton) {
+    openMapButton.addEventListener('click', () => {
+      openMapForCard('initiative', initiative.id);
+    });
+  }
+  const list = elements.stepView.querySelector('#initiativeSection');
+  bindInitiativeCardInteractions(list);
 }
 
 function renderInitiativesView() {
@@ -3186,66 +3495,7 @@ function renderInitiativesView() {
       });
     });
   }
-  if (list) {
-    list.addEventListener('click', async (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      const clickedInteractive = target.closest('button, input, textarea, select, a, label, form');
-      if (!clickedInteractive) {
-        const card = target.closest('.initiative-card[data-initiative-id]');
-        const initiativeIdFromCard = String(card?.dataset?.initiativeId || '').trim();
-        if (initiativeIdFromCard) {
-          openMapForCard('initiative', initiativeIdFromCard);
-          return;
-        }
-      }
-      const actionElement = target.closest('[data-action]');
-      if (!(actionElement instanceof HTMLElement)) return;
-      const action = actionElement.dataset.action;
-      const initiativeId = String(actionElement.dataset.id || '').trim();
-      if (!action || !initiativeId) return;
-
-      if (action === 'copy-initiative-link') {
-        const url = String(actionElement.dataset.url || initiativeShareUrl(initiativeId)).trim();
-        const copied = await copyTextToClipboard(url);
-        state.notice = copied
-          ? langText('Iniciatyvos nuoroda nukopijuota.', 'Initiative URL copied.')
-          : langText('Nepavyko nukopijuoti nuorodos.', 'Failed to copy URL.');
-        if (copied) notifySuccess(state.notice);
-        else notifyError(state.notice);
-        render();
-        return;
-      }
-
-      if (action === 'initiative-vote-plus' || action === 'initiative-vote-minus') {
-        const delta = action === 'initiative-vote-plus' ? 1 : -1;
-        const origin = getElementCenter(actionElement);
-        await runBusy(async () => {
-          const changed = await changeInitiativeVote(initiativeId, delta);
-          if (changed) triggerVoteBurstAt(origin, delta);
-        });
-      }
-    });
-
-    list.addEventListener('submit', async (event) => {
-      const form = event.target;
-      if (!(form instanceof HTMLFormElement)) return;
-      if (form.dataset.action !== 'initiative-comment') return;
-      event.preventDefault();
-
-      const initiativeId = form.dataset.id;
-      const value = String(new FormData(form).get('comment') || '').trim();
-      if (!initiativeId || !value) return;
-
-      await runBusy(async () => {
-        await api(`/api/v1/initiatives/${encodeURIComponent(initiativeId)}/comments`, {
-          method: 'POST',
-          body: { body: value }
-        });
-        await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap()]);
-      });
-    });
-  }
+  bindInitiativeCardInteractions(list);
 }
 
 function renderStepView() {
@@ -3259,6 +3509,16 @@ function renderStepView() {
 
   if (state.activeView === 'guide') {
     renderGuideView();
+    return;
+  }
+
+  if (state.activeView === 'guideline-detail') {
+    renderGuidelineDetailView();
+    return;
+  }
+
+  if (state.activeView === 'initiative-detail') {
+    renderInitiativeDetailView();
     return;
   }
 
@@ -3498,12 +3758,13 @@ function bindStepEvents() {
     list.addEventListener('click', async (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
+      const detailView = list.dataset.detailView === '1';
       const clickedInteractive = target.closest('button, input, textarea, select, a, label, form');
-      if (!clickedInteractive) {
+      if (!clickedInteractive && !detailView) {
         const card = target.closest('.guideline-card[data-guideline-id]');
         const guidelineIdFromCard = String(card?.dataset?.guidelineId || '').trim();
         if (guidelineIdFromCard) {
-          openMapForCard('guideline', guidelineIdFromCard);
+          openGuidelineDetail(guidelineIdFromCard);
           return;
         }
       }

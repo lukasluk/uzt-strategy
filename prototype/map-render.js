@@ -377,6 +377,10 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
     closeMapCommentModal();
 
     if (kind === 'initiative') {
+      if (typeof openInitiativeDetail === 'function') {
+        openInitiativeDetail(id);
+        return;
+      }
       if (typeof scheduleInitiativeFocus === 'function') {
         scheduleInitiativeFocus(id);
       }
@@ -390,6 +394,10 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
       return;
     }
 
+    if (typeof openGuidelineDetail === 'function') {
+      openGuidelineDetail(id);
+      return;
+    }
     if (typeof scheduleGuidelineFocus === 'function') {
       scheduleGuidelineFocus(id);
     }
