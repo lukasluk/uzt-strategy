@@ -684,3 +684,58 @@ END OF HANDOFF
   - Validate public deep links in production while logged out (strategy/guideline/initiative).
   - Verify old query links still open and then rewrite to canonical path.
   - Continue with planned smoke checks implementation for map layer switch + node drag persistence.
+
+
+==================================================
+30) DEPLOYMENT INSTRUCTIONS - GITHUB SYNC + LIVE VERIFY (2026-03-04)
+==================================================
+Purpose:
+- Ensure source commit is actually on GitHub.
+- Ensure server source matches GitHub.
+- Ensure deployed frontend/backend match expected behavior.
+
+A) Confirm commit on GitHub from local machine:
+- cd <local-repo>/uzt-strategy
+- git fetch origin
+- git rev-parse --short HEAD
+- git ls-remote --heads origin master
+- Expected for this change:
+  - commit: fb04064
+
+B) Sync server source to GitHub head:
+- cd /srv/uzt-strategy-src
+- git fetch origin
+- git checkout master
+- git pull --ff-only origin master
+- git rev-parse --short HEAD
+- must print the expected commit before deploy (for this update: fb04064)
+
+C) Verify source contains expected update markers:
+- rg -n "guidelineRelationType|history-feed-item|createGuidelineDeletionHistoryEntry" \
+  prototype/app.js backend/src
+
+D) Deploy safely:
+- sudo bash /srv/uzt-strategy-src/deploy/deploy.sh
+
+E) Post-deploy health checks:
+- curl -fsS http://127.0.0.1:3000/api/v1/health
+- curl -fsS https://digistrategy.eu/api/v1/health
+- sudo systemctl status uzt-strategy-api --no-pager
+- sudo journalctl -u uzt-strategy-api -n 120 --no-pager
+
+F) Verify deployed static frontend is updated (critical):
+- rg -n "guidelineRelationType|history-feed-item" /var/www/uzt-strategy/app.js
+- curl -s https://digistrategy.eu/app.js | rg -n "guidelineRelationType|history-feed-item"
+
+G) If UI still looks old after successful deploy:
+- Run hard refresh in browser: Ctrl+Shift+R
+- Confirm nginx root path points to /var/www/uzt-strategy:
+  - sudo nginx -T | rg -n "server_name digistrategy.eu|root "
+- Re-check file timestamp and content:
+  - ls -l /var/www/uzt-strategy/app.js
+  - rg -n "guidelineRelationType|history-feed-item" /var/www/uzt-strategy/app.js
+
+Behavior expected from commit fb04064:
+- Guideline suggestion form includes relation selector (parent/child/orphan) and parent picker for child.
+- History page rendered as activity feed.
+- Admin guideline deletion writes history entry (cancelled/deleted flow).
