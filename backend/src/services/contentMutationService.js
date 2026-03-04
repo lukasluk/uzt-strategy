@@ -13,7 +13,6 @@ function createContentMutationService({ query }) {
     cycleId,
     title,
     description,
-    lineSide,
     guidelineIds,
     createdBy,
     uuid
@@ -22,7 +21,7 @@ function createContentMutationService({ query }) {
     await query(
       `insert into strategy_initiatives (id, cycle_id, title, description, status, line_side, created_by)
        values ($1, $2, $3, $4, 'active', $5, $6)`,
-      [initiativeId, cycleId, title, description || null, lineSide, createdBy]
+      [initiativeId, cycleId, title, description || null, 'auto', createdBy]
     );
     for (const guidelineId of guidelineIds) {
       await query(

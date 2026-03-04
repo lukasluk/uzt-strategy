@@ -259,7 +259,7 @@ function layoutStrategyMap() {
           to: targetNodeId,
           type: 'initiative-link',
           layer: 'initiatives',
-          lineSide: normalizeLineSide(initiative.lineSide)
+          lineSide: 'auto'
         });
       });
     });

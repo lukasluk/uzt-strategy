@@ -249,7 +249,7 @@ function registerAdminRoutes({
         id: node.id,
         x: point.x,
         y: point.y,
-        lineSide: side
+        lineSide: 'auto'
       });
 
       const children = (childrenByParent.get(node.id) || [])
@@ -326,7 +326,7 @@ function registerAdminRoutes({
           id: initiative.id,
           x: point.x,
           y: point.y,
-          lineSide: side
+          lineSide: 'auto'
         });
       });
     });

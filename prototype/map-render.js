@@ -40,9 +40,7 @@ function buildGuidelineEdgeMarkup({ graph, nodeById, activeLayer }) {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
     if (!fromNode || !toNode) return '';
-    const lineSide = fromNode.kind === 'guideline'
-      ? normalizeLineSide(fromNode.guideline?.lineSide)
-      : 'auto';
+    const lineSide = 'auto';
     const isParentRoot = edge.type === 'root'
       && toNode.kind === 'guideline'
       && String(toNode.guideline?.relationType || '').toLowerCase() === 'parent';
@@ -84,9 +82,7 @@ function buildInitiativeEdgeMarkup({ graph, nodeById }) {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
     if (!fromNode || !toNode) return '';
-    const lineSide = fromNode.kind === 'initiative'
-      ? normalizeLineSide(fromNode.initiative?.lineSide)
-      : 'auto';
+    const lineSide = 'auto';
     return `<path class="strategy-map-edge edge-initiative edge-initiative-layer" data-layer="initiatives" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
   }).join('');
 }

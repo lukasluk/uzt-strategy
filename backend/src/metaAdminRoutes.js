@@ -425,7 +425,7 @@ function registerMetaAdminRoutes({
         id: node.id,
         x: point.x,
         y: point.y,
-        lineSide: side
+        lineSide: 'auto'
       });
 
       const children = (childrenByParent.get(node.id) || [])
@@ -502,7 +502,7 @@ function registerMetaAdminRoutes({
           id: initiative.id,
           x: point.x,
           y: point.y,
-          lineSide: side
+          lineSide: 'auto'
         });
       });
     });

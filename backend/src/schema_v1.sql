@@ -390,6 +390,10 @@ alter table if exists strategy_guidelines
 alter table if exists strategy_guidelines
   add column if not exists line_side text not null default 'auto';
 
+update strategy_guidelines
+set line_side = 'auto'
+where line_side is distinct from 'auto';
+
 alter table if exists strategy_guidelines
   drop constraint if exists strategy_guidelines_status_check;
 
@@ -399,6 +403,19 @@ alter table if exists strategy_guidelines
 
 alter table if exists strategy_initiatives
   add column if not exists line_side text not null default 'auto';
+
+update strategy_initiatives
+set line_side = 'auto'
+where line_side is distinct from 'auto';
+
+update strategy_card_proposals
+set line_side = 'auto'
+where line_side is distinct from 'auto';
+
+update strategy_card_proposals
+set final_line_side = 'auto'
+where final_line_side is not null
+  and final_line_side is distinct from 'auto';
 
 alter table if exists strategy_initiatives
   add column if not exists map_x integer;

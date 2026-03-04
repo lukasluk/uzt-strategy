@@ -154,8 +154,7 @@ function createAdminMutationService({ query }) {
     description,
     status,
     relationType,
-    parentGuidelineId,
-    lineSide
+    parentGuidelineId
   }) {
     await query(
       `update strategy_guidelines
@@ -164,23 +163,23 @@ function createAdminMutationService({ query }) {
            status = $3,
            relation_type = $4,
            parent_guideline_id = $5,
-           line_side = $6,
+           line_side = 'auto',
            updated_at = now()
-       where id = $7`,
-      [title, description || null, status, relationType, parentGuidelineId, lineSide, guidelineId]
+       where id = $6`,
+      [title, description || null, status, relationType, parentGuidelineId, guidelineId]
     );
   }
 
-  async function updateInitiativeRecord({ initiativeId, title, description, status, lineSide }) {
+  async function updateInitiativeRecord({ initiativeId, title, description, status }) {
     await query(
       `update strategy_initiatives
        set title = $1,
            description = $2,
            status = $3,
-           line_side = $4,
+           line_side = 'auto',
            updated_at = now()
-       where id = $5`,
-      [title, description || null, status, lineSide, initiativeId]
+       where id = $4`,
+      [title, description || null, status, initiativeId]
     );
   }
 

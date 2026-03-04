@@ -83,9 +83,7 @@ function createContextLookupService({ query }) {
   }
 
   function normalizeLineSide(value) {
-    const side = String(value || 'auto').trim().toLowerCase();
-    if (['auto', 'left', 'right', 'top', 'bottom'].includes(side)) return side;
-    return null;
+    return 'auto';
   }
 
   async function validateGuidelineRelationship({ guidelineId, cycleId, relationType, parentGuidelineId }) {

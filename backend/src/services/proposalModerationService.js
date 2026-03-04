@@ -1,8 +1,5 @@
-const LINE_SIDES = new Set(['auto', 'left', 'right', 'top', 'bottom']);
-
 function normalizeLineSide(value) {
-  const side = String(value || 'auto').trim().toLowerCase();
-  return LINE_SIDES.has(side) ? side : null;
+  return 'auto';
 }
 
 function normalizeRelationType(value) {
@@ -43,7 +40,7 @@ function mapProposalRow(row) {
     description: row.description || null,
     relationType: row.relation_type || null,
     parentGuidelineId: row.parent_guideline_id || null,
-    lineSide: row.line_side || null,
+    lineSide: normalizeLineSide(row.line_side),
     guidelineIds: parseGuidelineIdsJson(row.guideline_ids_json),
     reviewDecision: row.review_decision || null,
     reviewNote: row.review_note || null,
@@ -58,7 +55,7 @@ function mapProposalRow(row) {
     finalDescription: row.final_description || null,
     finalRelationType: row.final_relation_type || null,
     finalParentGuidelineId: row.final_parent_guideline_id || null,
-    finalLineSide: row.final_line_side || null,
+    finalLineSide: normalizeLineSide(row.final_line_side),
     finalGuidelineIds: parseGuidelineIdsJson(row.final_guideline_ids_json),
     commentCount: Number(row.comment_count || 0)
   };
@@ -214,7 +211,6 @@ function createProposalModerationService({ query, pool }) {
     const normalizedTitle = String(title || '').trim();
     if (!normalizedTitle) throw new Error('title required');
     const normalizedLineSide = normalizeLineSide(lineSide);
-    if (!normalizedLineSide) throw new Error('invalid line side');
 
     const client = await pool.connect();
     try {
@@ -599,10 +595,7 @@ function createProposalModerationService({ query, pool }) {
           ]
         );
       } else {
-        finalLineSide = normalizeLineSide(
-          (normalizedDecision === 'approved_with_changes' ? patch.lineSide : null) || proposal.line_side || 'auto'
-        );
-        if (!finalLineSide) throw new Error('invalid line side');
+        finalLineSide = 'auto';
         const sourceGuidelineIds = normalizedDecision === 'approved_with_changes' && Array.isArray(patch.guidelineIds)
           ? patch.guidelineIds
           : parseGuidelineIdsJson(proposal.guideline_ids_json);
