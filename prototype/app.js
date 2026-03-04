@@ -3833,12 +3833,13 @@ function historyStatusLabel(status) {
   if (key === 'pending') return langText('Laukia tvirtinimo', 'Pending review');
   if (key === 'approved') return langText('Patvirtinta', 'Approved');
   if (key === 'rejected') return langText('Atmesta', 'Rejected');
+  if (key === 'cancelled') return langText('Pasalinta', 'Deleted');
   return key || '-';
 }
 
 function historyKindLabel(kind) {
   const normalized = String(kind || '').trim().toLowerCase();
-  if (normalized === 'guideline') return langText('GairÄ—', 'Guideline');
+  if (normalized === 'guideline') return langText('Gaire', 'Guideline');
   if (normalized === 'initiative') return langText('Iniciatyva', 'Initiative');
   return normalized || '-';
 }
@@ -3848,7 +3849,7 @@ function historyEntryCardHref(entry) {
   if (!item) return '';
   const kind = String(item.entityKind || '').trim().toLowerCase();
   const status = String(item.status || '').trim().toLowerCase();
-  if (status === 'rejected') return '';
+  if (status === 'rejected' || status === 'cancelled') return '';
   const pendingId = String(item.id || '').trim();
   const finalId = String(item.finalEntityId || '').trim();
   if (kind === 'guideline') {
@@ -3860,44 +3861,109 @@ function historyEntryCardHref(entry) {
   return '';
 }
 
-function renderHistoryEntry(entry, options = {}) {
-  const item = entry && typeof entry === 'object' ? entry : null;
-  if (!item) return '';
-  const status = String(item.status || '').trim().toLowerCase();
-  const kind = String(item.entityKind || '').trim().toLowerCase();
-  const title = String(item.finalTitle || item.title || item.id || '-').trim() || '-';
-  const originalTitle = String(item.title || '').trim();
-  const href = historyEntryCardHref(item);
-  const showOriginal = Boolean(status === 'approved' && originalTitle && originalTitle !== title);
-  const requestedAt = formatCommentDateTime(item.requestedAt);
-  const reviewedAt = item.reviewedAt ? formatCommentDateTime(item.reviewedAt) : '';
-  const reviewerName = String(item.reviewedByName || item.reviewedBy || '').trim();
-  const canReview = Boolean(options.canReview && status === 'pending');
+function historyActionLabel(action) {
+  const key = String(action || '').trim().toLowerCase();
+  if (key === 'submitted') return langText('Pasiulyta', 'Suggested');
+  if (key === 'approved') return langText('Patvirtinta', 'Approved');
+  if (key === 'approved_with_changes') return langText('Patvirtinta su pakeitimais', 'Approved with changes');
+  if (key === 'rejected') return langText('Atmesta', 'Rejected');
+  if (key === 'cancelled') return langText('Pasalinta administratoriaus', 'Deleted by admin');
+  return key || '-';
+}
+
+function historyActorLabel(action) {
+  const key = String(action || '').trim().toLowerCase();
+  if (key === 'submitted') return langText('Pateike', 'Submitted by');
+  if (key === 'cancelled') return langText('Pasalino', 'Deleted by');
+  return langText('Perziurejo', 'Reviewed by');
+}
+
+function buildHistoryFeedRows(entries) {
+  const source = Array.isArray(entries) ? entries : [];
+  const rows = [];
+
+  source.forEach((item) => {
+    if (!item || typeof item !== 'object') return;
+    const proposalId = String(item.id || '').trim();
+    const status = String(item.status || '').trim().toLowerCase();
+    const kind = String(item.entityKind || '').trim().toLowerCase();
+    const baseTitle = String(item.title || item.id || '-').trim() || '-';
+    const finalTitle = String(item.finalTitle || '').trim();
+    const description = String(item.finalDescription || item.description || '').trim();
+    const requestedBy = String(item.requestedByName || item.requestedBy || '-').trim() || '-';
+    const reviewedBy = String(item.reviewedByName || item.reviewedBy || '-').trim() || '-';
+    const href = historyEntryCardHref(item);
+
+    if (item.requestedAt && status !== 'cancelled') {
+      rows.push({
+        key: `${proposalId}:submitted`,
+        action: 'submitted',
+        status,
+        kind,
+        title: baseTitle,
+        description: String(item.description || '').trim(),
+        actor: requestedBy,
+        happenedAt: item.requestedAt,
+        href: status === 'pending' ? href : '',
+        note: ''
+      });
+    }
+
+    if (!item.reviewedAt) return;
+    if (status !== 'approved' && status !== 'rejected' && status !== 'cancelled') return;
+
+    const action = status === 'approved' && String(item.reviewDecision || '').trim().toLowerCase() === 'approved_with_changes'
+      ? 'approved_with_changes'
+      : status;
+
+    rows.push({
+      key: `${proposalId}:${action}`,
+      action,
+      status,
+      kind,
+      title: finalTitle || baseTitle,
+      description,
+      actor: reviewedBy,
+      happenedAt: item.reviewedAt,
+      href: status === 'approved' ? href : '',
+      note: String(item.reviewNote || '').trim()
+    });
+  });
+
+  return rows.sort((left, right) => {
+    const leftTs = Date.parse(String(left?.happenedAt || '')) || 0;
+    const rightTs = Date.parse(String(right?.happenedAt || '')) || 0;
+    return rightTs - leftTs;
+  });
+}
+
+function renderHistoryFeedEntry(entry) {
+  const row = entry && typeof entry === 'object' ? entry : null;
+  if (!row) return '';
+  const statusClass = String(row.status || '').trim().toLowerCase() || 'pending';
+  const actionClass = String(row.action || '').trim().toLowerCase() || 'submitted';
+  const kind = String(row.kind || '').trim().toLowerCase();
+  const title = String(row.title || '-').trim() || '-';
+  const description = String(row.description || '').trim();
+  const note = String(row.note || '').trim();
+  const happenedAt = formatCommentDateTime(row.happenedAt);
 
   return `
-    <article class="card history-entry-card history-status-${escapeHtml(status)}">
+    <article class="card history-feed-item history-status-${escapeHtml(statusClass)} history-action-${escapeHtml(actionClass)}">
       <div class="header-row">
         <strong>${escapeHtml(title)}</strong>
         <div class="header-stack">
           <span class="tag">${escapeHtml(historyKindLabel(kind))}</span>
-          <span class="tag ${status === 'pending' ? 'tag-main' : ''}">${escapeHtml(historyStatusLabel(status))}</span>
+          <span class="tag">${escapeHtml(historyActionLabel(actionClass))}</span>
         </div>
       </div>
-      ${showOriginal ? `<p class="prompt">${escapeHtml(langText('Pradinis pavadinimas', 'Original title'))}: ${escapeHtml(originalTitle)}</p>` : ''}
-      <p>${escapeHtml(String(item.description || '').trim() || langText('ApraÅ¡ymas nepateiktas.', 'Description not provided.'))}</p>
-      <div class="header-stack" style="margin-top:8px;">
-        <span class="tag">${escapeHtml(langText('PateikÄ—', 'Requested by'))}: ${escapeHtml(String(item.requestedByName || item.requestedBy || '-').trim() || '-')}</span>
-        <span class="tag">${escapeHtml(langText('Data', 'Date'))}: ${escapeHtml(requestedAt)}</span>
-        ${item.reviewDecision ? `<span class="tag">${escapeHtml(langText('Sprendimas', 'Decision'))}: ${escapeHtml(String(item.reviewDecision || '').trim())}</span>` : ''}
-        ${reviewedAt ? `<span class="tag">${escapeHtml(langText('PerÅ¾iÅ«rÄ—ta', 'Reviewed at'))}: ${escapeHtml(reviewedAt)}</span>` : ''}
-        ${reviewerName ? `<span class="tag">${escapeHtml(status === 'rejected' ? langText('AtmetÄ—', 'Rejected by') : langText('PerÅ¾iÅ«rÄ—jo', 'Reviewed by'))}: ${escapeHtml(reviewerName)}</span>` : ''}
-        ${item.commentCount ? `<span class="tag">${escapeHtml(langText('Komentarai', 'Comments'))}: ${Number(item.commentCount || 0)}</span>` : ''}
+      ${description ? `<p>${escapeHtml(description)}</p>` : ''}
+      <div class="history-feed-meta">
+        <span class="tag">${escapeHtml(historyActorLabel(actionClass))}: ${escapeHtml(String(row.actor || '-').trim() || '-')}</span>
+        <span class="tag">${escapeHtml(langText('Data', 'Date'))}: ${escapeHtml(happenedAt)}</span>
       </div>
-      ${item.reviewNote ? `<p class="prompt" style="margin-top:8px;">${escapeHtml(langText('PerÅ¾iÅ«ros pastaba', 'Review note'))}: ${escapeHtml(item.reviewNote)}</p>` : ''}
-      <div class="header-stack" style="margin-top:10px;">
-        ${href ? `<a class="btn btn-ghost" href="${escapeHtml(href)}">${escapeHtml(langText('Atidaryti kortelÄ™', 'Open card'))}</a>` : ''}
-        ${canReview ? `<button type="button" class="btn btn-primary" data-action="history-review" data-proposal-id="${escapeHtml(item.id)}">${escapeHtml(langText('PerÅ¾iÅ«rÄ—ti', 'Review'))}</button>` : ''}
-      </div>
+      ${note ? `<p class="prompt" style="margin-top:8px;">${escapeHtml(langText('Pastaba', 'Note'))}: ${escapeHtml(note)}</p>` : ''}
+      ${row.href ? `<div class="header-stack" style="margin-top:10px;"><a class="btn btn-ghost" href="${escapeHtml(row.href)}">${escapeHtml(langText('Atidaryti kortele', 'Open card'))}</a></div>` : ''}
     </article>
   `;
 }
@@ -3926,9 +3992,7 @@ function renderHistoryView() {
   }
 
   const entries = Array.isArray(state.historyEntries) ? state.historyEntries : [];
-  const activeGuidelines = (state.guidelines || []).filter((item) => String(item?.status || '').trim().toLowerCase() === 'active');
-  const parentGuidelines = activeGuidelines.filter((item) => normalizeGuidelineRelation(item?.relationType) === 'parent');
-  const decisionEntries = entries.filter((item) => String(item?.status || '').trim().toLowerCase() !== 'pending');
+  const feedRows = buildHistoryFeedRows(entries);
 
   elements.stepView.innerHTML = `
     <div class="step-header">
@@ -3936,7 +4000,7 @@ function renderHistoryView() {
       <div class="header-stack step-header-actions">
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">${langText('Ä®raÅ¡Å³', 'Entries')}: ${decisionEntries.length}</span>
+        <span class="tag">${langText('Irasu', 'Entries')}: ${feedRows.length}</span>
       </div>
     </div>
     ${state.historyError ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(state.historyError)}</strong></div>` : ''}
@@ -3944,12 +4008,12 @@ function renderHistoryView() {
 
     <section class="guideline-group">
       <div class="guideline-group-header">
-        <h3>${langText('SprendimÅ³ Å¾urnalas', 'Decision log')}</h3>
-        <span class="tag">${decisionEntries.length}</span>
+        <h3>${langText('Ivykiu srautas', 'Activity feed')}</h3>
+        <span class="tag">${feedRows.length}</span>
       </div>
-      ${decisionEntries.length
-    ? `<div class="card-list">${decisionEntries.map((entry) => renderHistoryEntry(entry, { canReview: false })).join('')}</div>`
-    : `<div class="card guideline-empty"><strong>${langText('SprendimÅ³ dar nÄ—ra', 'No decisions yet')}</strong></div>`}
+      ${feedRows.length
+    ? `<div class="history-feed">${feedRows.map((entry) => renderHistoryFeedEntry(entry)).join('')}</div>`
+    : `<div class="card guideline-empty"><strong>${langText('Ivykiu dar nera', 'No activity yet')}</strong></div>`}
     </section>
   `;
 
@@ -4136,6 +4200,13 @@ function renderStepView() {
     stats.splice(2, 0, `${langText('Komentarai', 'Comments')}: ${Number(state.summary?.comments_count || 0)}`);
   }
   const relationGroups = buildGuidelineRelationshipGroups(state.guidelines);
+  const activeParentGuidelines = (state.guidelines || []).filter((guideline) => {
+    const status = String(guideline?.status || '').trim().toLowerCase();
+    return status === 'active' && normalizeGuidelineRelation(guideline?.relationType) === 'parent';
+  });
+  const parentGuidelineOptions = activeParentGuidelines
+    .map((guideline) => `<option value="${escapeHtml(guideline.id)}">${escapeHtml(guideline.title || guideline.id)}</option>`)
+    .join('');
 
   elements.stepView.innerHTML = `
     <div class="step-header">
@@ -4246,6 +4317,22 @@ function renderStepView() {
           <div class="form-row">
             <input type="text" name="title" placeholder="${escapeHtml(langText('Gaires pavadinimas', 'Guideline title'))}" required ${state.busy ? 'disabled' : ''}/>
           </div>
+          <div class="form-row">
+            <select name="relationType" id="guidelineRelationType" ${state.busy ? 'disabled' : ''}>
+              <option value="orphan">${escapeHtml(langText('Naslaite gaire', 'Orphan guideline'))}</option>
+              <option value="parent">${escapeHtml(langText('Tevine gaire', 'Parent guideline'))}</option>
+              <option value="child">${escapeHtml(langText('Vaikine gaire', 'Child guideline'))}</option>
+            </select>
+          </div>
+          <div class="form-row" id="guidelineParentRow" hidden>
+            <select name="parentGuidelineId" id="guidelineParentGuidelineId" ${state.busy ? 'disabled' : ''}>
+              <option value="">${escapeHtml(langText('Pasirinkite tevine gaire', 'Select parent guideline'))}</option>
+              ${parentGuidelineOptions}
+            </select>
+          </div>
+          ${activeParentGuidelines.length
+    ? ''
+    : `<p id="guidelineParentHint" class="prompt" hidden>${langText('Nera aktyviu teviniu gairiu. Pirmiausia sukurkite tevine gaire.', 'No active parent guidelines found. Create a parent guideline first.')}</p>`}
           <textarea name="desc" placeholder="${escapeHtml(langText('Trumpas paaiskinimas', 'Short description'))}" ${state.busy ? 'disabled' : ''}></textarea>
           <button class="btn btn-primary guideline-add-submit-btn" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('Prideti gaire', 'Add guideline')}</button>
         </form>
@@ -4279,6 +4366,10 @@ function bindStepEvents() {
   const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
   const exportBtnInline = elements.stepView.querySelector('#exportBtnInline');
   const guidelineForm = elements.stepView.querySelector('#guidelineAddForm');
+  const guidelineRelationType = elements.stepView.querySelector('#guidelineRelationType');
+  const guidelineParentRow = elements.stepView.querySelector('#guidelineParentRow');
+  const guidelineParentSelect = elements.stepView.querySelector('#guidelineParentGuidelineId');
+  const guidelineParentHint = elements.stepView.querySelector('#guidelineParentHint');
   const list = elements.stepView.querySelector('#guidelineGroups');
 
   if (openAuthFromStep) {
@@ -4289,18 +4380,53 @@ function bindStepEvents() {
     exportBtnInline.addEventListener('click', exportSummary);
   }
 
+  const syncGuidelineParentField = () => {
+    if (!(guidelineRelationType instanceof HTMLSelectElement)) return;
+    const isChild = String(guidelineRelationType.value || '').trim().toLowerCase() === 'child';
+    const hasParentOptions = guidelineParentSelect instanceof HTMLSelectElement
+      ? guidelineParentSelect.options.length > 1
+      : false;
+
+    if (guidelineParentRow instanceof HTMLElement) {
+      guidelineParentRow.hidden = !isChild;
+    }
+    if (guidelineParentHint instanceof HTMLElement) {
+      guidelineParentHint.hidden = !isChild || hasParentOptions;
+    }
+    if (guidelineParentSelect instanceof HTMLSelectElement) {
+      guidelineParentSelect.disabled = !isChild || !hasParentOptions;
+      if (!isChild) guidelineParentSelect.value = '';
+    }
+  };
+
+  if (guidelineRelationType instanceof HTMLSelectElement) {
+    guidelineRelationType.addEventListener('change', syncGuidelineParentField);
+    syncGuidelineParentField();
+  }
+
   if (guidelineForm) {
     guidelineForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const fd = new FormData(guidelineForm);
       const title = String(fd.get('title') || '').trim();
       const description = String(fd.get('desc') || '').trim();
+      const relationType = normalizeGuidelineRelation(fd.get('relationType'));
+      const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
       if (!title) return;
+      if (relationType === 'child' && !parentGuidelineId) {
+        notifyError(langText('Pasirinkite tevine gaire vaikinei gairei.', 'Select a parent guideline for a child guideline.'));
+        return;
+      }
 
       await runBusy(async () => {
         await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/guidelines`, {
           method: 'POST',
-          body: { title, description }
+          body: {
+            title,
+            description,
+            relationType,
+            parentGuidelineId: relationType === 'child' ? parentGuidelineId : null
+          }
         });
         await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
       });
@@ -5594,5 +5720,6 @@ function render() {
   flushPendingInitiativeFocus();
   window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }
+
 
 

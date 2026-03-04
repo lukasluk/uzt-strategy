@@ -221,6 +221,73 @@ function createAdminMutationService({ query }) {
     );
   }
 
+  async function createGuidelineDeletionHistoryEntry({
+    institutionId,
+    cycleId,
+    strategyId,
+    guidelineId,
+    title,
+    description,
+    relationType,
+    parentGuidelineId,
+    createdBy,
+    deletedBy,
+    uuid
+  }) {
+    const proposalId = uuid();
+    const normalizedRelation = ['parent', 'child', 'orphan'].includes(String(relationType || '').trim().toLowerCase())
+      ? String(relationType || '').trim().toLowerCase()
+      : 'orphan';
+    await query(
+      `insert into strategy_card_proposals (
+         id,
+         institution_id,
+         cycle_id,
+         strategy_id,
+         entity_kind,
+         title,
+         description,
+         relation_type,
+         parent_guideline_id,
+         line_side,
+         guideline_ids_json,
+         status,
+         review_note,
+         requested_by,
+         reviewed_by,
+         requested_at,
+         reviewed_at,
+         final_entity_id,
+         final_title,
+         final_description,
+         final_relation_type,
+         final_parent_guideline_id,
+         final_line_side,
+         final_guideline_ids_json
+       )
+       values (
+         $1, $2, $3, $4, 'guideline',
+         $5, $6, $7, $8, 'auto', '[]'::jsonb,
+         'cancelled', $9, $10, $11, now(), now(),
+         null, null, null, null, null, null, null
+       )`,
+      [
+        proposalId,
+        institutionId,
+        cycleId,
+        strategyId || null,
+        String(title || '').trim() || guidelineId,
+        String(description || '').trim() || null,
+        normalizedRelation,
+        parentGuidelineId || null,
+        'Guideline deleted by admin',
+        createdBy || deletedBy || null,
+        deletedBy || null
+      ]
+    );
+    return proposalId;
+  }
+
   return {
     createInstitutionInvite,
     setCycleState,
@@ -243,7 +310,8 @@ function createAdminMutationService({ query }) {
     replaceInitiativeGuidelineLinks,
     deleteInitiativeByCycle,
     resetChildrenToOrphan,
-    deleteGuidelineByCycle
+    deleteGuidelineByCycle,
+    createGuidelineDeletionHistoryEntry
   };
 }
 

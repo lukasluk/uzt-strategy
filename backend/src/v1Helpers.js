@@ -81,7 +81,8 @@ function createV1Helpers({ query, authSecret }) {
     replaceInitiativeGuidelineLinks: adminMutationService.replaceInitiativeGuidelineLinks,
     deleteInitiativeByCycle: adminMutationService.deleteInitiativeByCycle,
     resetChildrenToOrphan: adminMutationService.resetChildrenToOrphan,
-    deleteGuidelineByCycle: adminMutationService.deleteGuidelineByCycle
+    deleteGuidelineByCycle: adminMutationService.deleteGuidelineByCycle,
+    createGuidelineDeletionHistoryEntry: adminMutationService.createGuidelineDeletionHistoryEntry
   };
 }
 

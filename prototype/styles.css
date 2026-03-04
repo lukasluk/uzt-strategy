@@ -4009,22 +4009,37 @@ select:focus {
   border-width: 2px;
   box-shadow: 0 0 0 2px rgba(51, 107, 181, 0.08) inset;
 }
-.history-entry-card {
+.history-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.history-feed-item {
   border-color: #d1ddf2;
   background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
 }
-.history-entry-card.history-status-pending {
+.history-feed-item.history-action-submitted {
   border-style: dashed;
   border-width: 2px;
   border-color: #6a8fc3;
 }
-.history-entry-card.history-status-rejected {
+.history-feed-item.history-status-rejected {
   border-color: #e3b8b8;
   background: linear-gradient(180deg, #fffefe 0%, #fff6f6 100%);
 }
-.history-entry-card.history-status-approved {
+.history-feed-item.history-status-approved {
   border-color: #b7d9cb;
   background: linear-gradient(180deg, #ffffff 0%, #f4fcf8 100%);
+}
+.history-feed-item.history-status-cancelled {
+  border-color: #e2cdb1;
+  background: linear-gradient(180deg, #fffdf8 0%, #fff7eb 100%);
+}
+.history-feed-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 .modal-overlay {
   position: fixed;

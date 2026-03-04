@@ -55,7 +55,8 @@ function registerAdminRoutes({
   replaceInitiativeGuidelineLinks,
   deleteInitiativeByCycle,
   resetChildrenToOrphan,
-  deleteGuidelineByCycle
+  deleteGuidelineByCycle,
+  createGuidelineDeletionHistoryEntry
 }) {
   const adminWriteGuard = typeof adminWriteRateLimit === 'function'
     ? adminWriteRateLimit
@@ -2124,6 +2125,20 @@ function registerAdminRoutes({
     const context = await loadGuidelineContext(guidelineId);
     if (!context) return res.status(404).json({ error: 'guideline not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+
+    await createGuidelineDeletionHistoryEntry({
+      institutionId: context.institution_id,
+      cycleId: context.cycle_id,
+      strategyId: context.strategy_id || null,
+      guidelineId: context.guideline_id || guidelineId,
+      title: context.title || guidelineId,
+      description: context.description || null,
+      relationType: context.relation_type || 'orphan',
+      parentGuidelineId: context.parent_guideline_id || null,
+      createdBy: context.created_by || null,
+      deletedBy: req.auth.sub,
+      uuid
+    });
 
     await resetChildrenToOrphan(guidelineId);
     await deleteGuidelineByCycle({ guidelineId, cycleId: context.cycle_id });

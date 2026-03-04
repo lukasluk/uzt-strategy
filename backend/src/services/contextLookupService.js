@@ -18,8 +18,13 @@ function createContextLookupService({ query }) {
               g.title,
               g.description,
               g.status as guideline_status,
+              g.relation_type,
+              g.parent_guideline_id,
+              g.created_by,
+              g.created_at,
               c.id as cycle_id,
               c.state as cycle_state,
+              c.strategy_id,
               c.institution_id
        from strategy_guidelines g
        join strategy_cycles c on c.id = g.cycle_id

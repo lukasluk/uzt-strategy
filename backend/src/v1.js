@@ -188,7 +188,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     replaceInitiativeGuidelineLinks,
     deleteInitiativeByCycle,
     resetChildrenToOrphan,
-    deleteGuidelineByCycle
+    deleteGuidelineByCycle,
+    createGuidelineDeletionHistoryEntry
   } = createV1Helpers({ query, authSecret: AUTH_SECRET });
 
   registerMetaAdminRoutes({
@@ -314,7 +315,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     replaceInitiativeGuidelineLinks,
     deleteInitiativeByCycle,
     resetChildrenToOrphan,
-    deleteGuidelineByCycle
+    deleteGuidelineByCycle,
+    createGuidelineDeletionHistoryEntry
   });
 }
 
