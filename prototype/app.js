@@ -1903,8 +1903,15 @@ function canExpandStepWithAddAction(stepId) {
 }
 
 function quickAddActionLabel(stepId) {
-  if (stepId === 'guidelines') return langText('Prideti nauja gaire', 'Add new guideline');
-  if (stepId === 'initiatives') return langText('Prideti nauja iniciatyva', 'Add new initiative');
+  if (stepId === 'guidelines') return langText('Eiti i "Prideti nauja gaire" forma', 'Go to "Add new guideline" form');
+  if (stepId === 'initiatives') return langText('Eiti i "Prideti nauja iniciatyva" forma', 'Go to "Add new initiative" form');
+  return '';
+}
+
+function stepAddHintLabel(stepId) {
+  if (stepId === 'guidelines' || stepId === 'initiatives') {
+    return langText('Skyriuje yra vidine pridejimo forma', 'This section includes an add form');
+  }
   return '';
 }
 
@@ -2287,11 +2294,13 @@ function renderSteps() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `step-pill${isActive ? ' active' : ''}${item.locked ? ' locked' : ''}${canExpand ? ' step-pill-expandable' : ''}`;
+    const addHint = canExpand ? stepAddHintLabel(item.id) : '';
     button.innerHTML = `
       <div class="step-pill-head">
         <span class="step-icon" aria-hidden="true">${item.icon}</span>
         <h4>${escapeHtml(item.title)}</h4>
       </div>
+      ${addHint ? `<span class="step-pill-subhint">${escapeHtml(addHint)}</span>` : ''}
     `;
     if (item.locked) {
       button.title = 'Administravimas galimas tik savo institucijos administratoriui';

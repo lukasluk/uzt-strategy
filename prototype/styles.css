@@ -344,6 +344,10 @@ body.embed-map-page .stage {
   gap: 6px;
 }
 
+.step-pill-shell.expanded {
+  gap: 0;
+}
+
 .step-utility-shell {
   margin-top: 4px;
 }
@@ -683,7 +687,8 @@ body.embed-map-page .stage {
   text-align: left;
   text-decoration: none;
   color: var(--ink);
-  display: block;
+  display: grid;
+  gap: 4px;
   width: 100%;
 }
 
@@ -692,6 +697,13 @@ body.embed-map-page .stage {
   align-items: center;
   gap: 10px;
   margin-bottom: 0;
+}
+
+.step-pill-subhint {
+  margin-left: 32px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #5f799a;
 }
 
 .step-icon {
@@ -735,19 +747,23 @@ body.embed-map-page .stage {
 }
 
 .step-pill-action {
-  width: 100%;
+  width: calc(100% - 34px);
+  margin-left: 34px;
+  margin-top: -1px;
   border: 1px solid #c1d7f5;
-  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+  border-top: 0;
+  background: linear-gradient(180deg, #f6faff 0%, #ebf3ff 100%);
   color: #1f4f84;
-  border-radius: 10px;
+  border-radius: 0 0 10px 10px;
   min-height: 34px;
-  padding: 7px 10px;
+  padding: 7px 10px 7px 22px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
   text-align: left;
   transition: transform 0.16s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  position: relative;
 }
 
 .step-pill-action:hover {
@@ -760,6 +776,26 @@ body.embed-map-page .stage {
 .step-pill-action:focus-visible {
   outline: 2px solid rgba(63, 143, 230, 0.35);
   outline-offset: 1px;
+}
+
+.step-pill-action::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  width: 1px;
+  height: 14px;
+  background: #adc4e4;
+}
+
+.step-pill-action::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 14px;
+  width: 8px;
+  height: 1px;
+  background: #adc4e4;
 }
 
 .step-add-anchor {
@@ -4451,10 +4487,15 @@ select:focus {
     font-size: 13px;
   }
 
+  .step-pill-subhint {
+    display: none;
+  }
+
   .step-pill-action {
+    width: calc(100% - 22px);
+    margin-left: 22px;
     min-height: 32px;
-    border-radius: 9px;
-    padding: 6px 8px;
+    padding: 6px 8px 6px 18px;
     font-size: 11px;
   }
 
@@ -4827,8 +4868,10 @@ select:focus {
   }
 
   .step-pill-action {
+    width: calc(100% - 18px);
+    margin-left: 18px;
     min-height: 30px;
-    padding: 5px 7px;
+    padding: 5px 7px 5px 16px;
     font-size: 10px;
   }
 
