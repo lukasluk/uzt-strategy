@@ -4026,6 +4026,9 @@ select:focus {
   justify-content: center;
   padding: 18px;
 }
+.modal-overlay[hidden] {
+  display: none;
+}
 .modal-card {
   width: min(720px, 96vw);
   max-height: 90vh;

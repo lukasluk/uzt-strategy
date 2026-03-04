@@ -3990,6 +3990,7 @@ function renderHistoryView() {
   const form = elements.stepView.querySelector('#historyReviewForm');
   const relationFields = elements.stepView.querySelector('#historyReviewRelationFields');
   if (!(modal instanceof HTMLElement) || !(form instanceof HTMLFormElement) || !(relationFields instanceof HTMLElement)) return;
+  modal.hidden = true;
 
   const togglePatchFields = () => {
     const decision = String(form.elements.decision?.value || '').trim().toLowerCase();
