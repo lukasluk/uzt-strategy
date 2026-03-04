@@ -748,7 +748,7 @@ body.embed-map-page .stage {
   color: #1f4f84;
   border-radius: 0;
   min-height: 0;
-  padding: 3px 0 6px 18px;
+  padding: 3px 0 6px 14px;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
@@ -773,23 +773,21 @@ body.embed-map-page .stage {
 .step-pill-action::before {
   content: '';
   position: absolute;
-  left: 2px;
+  left: 0;
   top: -6px;
   width: 1px;
-  height: 14px;
+  height: 22px;
   background: #adc4e4;
 }
 
 .step-pill-action::after {
-  content: '↳';
+  content: '';
   position: absolute;
   left: 0;
-  top: 6px;
-  width: auto;
-  height: auto;
-  color: #7f9ec5;
-  font-size: 11px;
-  line-height: 1;
+  top: 10px;
+  width: 8px;
+  height: 1px;
+  background: #adc4e4;
 }
 
 .step-add-anchor {
