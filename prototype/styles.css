@@ -1743,6 +1743,23 @@ textarea {
   border-color: #2b8a7e;
   box-shadow: 0 10px 22px rgba(43, 138, 126, 0.15);
 }
+.strategy-pick-grid {
+  margin-top: 10px;
+}
+.strategy-pick-option {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.strategy-pick-option:focus-visible {
+  outline: 2px solid rgba(63, 143, 230, 0.35);
+  outline-offset: 2px;
+}
+.strategy-pick-option strong {
+  font-size: 16px;
+  line-height: 1.25;
+}
 .institution-card-header {
   display: flex;
   align-items: center;

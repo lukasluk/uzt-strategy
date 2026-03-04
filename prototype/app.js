@@ -113,6 +113,7 @@ const DEFAULT_ABOUT_TEXT_EN = [
 ].join('\n\n');
 
 const AUTH_STORAGE_KEY = 'uzt-strategy-v1-auth';
+const STRATEGY_SELECTION_MEMORY_KEY = 'uzt-strategy-v1-strategy-memory';
 const INTRO_COLLAPSED_KEY = 'uzt-strategy-v1-intro-collapsed';
 const INTRO_VISITED_KEY = 'uzt-strategy-v1-intro-visited';
 const VOTE_FLOATING_COLLAPSED_KEY = 'uzt-strategy-v1-vote-floating-collapsed';
@@ -724,6 +725,35 @@ function persistVoteFloatingCollapsed() {
   localStorage.setItem(VOTE_FLOATING_COLLAPSED_KEY, state.voteFloatingCollapsed ? '1' : '0');
 }
 
+function readStrategySelectionMemory() {
+  const raw = localStorage.getItem(STRATEGY_SELECTION_MEMORY_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function rememberedStrategySlugForInstitution(institutionSlug) {
+  const normalizedInstitutionSlug = normalizeSlug(institutionSlug);
+  if (!normalizedInstitutionSlug) return '';
+  const memory = readStrategySelectionMemory();
+  return normalizeSlug(memory[normalizedInstitutionSlug]);
+}
+
+function rememberStrategySlugForInstitution(institutionSlug, strategySlug) {
+  const normalizedInstitutionSlug = normalizeSlug(institutionSlug);
+  if (!normalizedInstitutionSlug) return;
+  const normalizedStrategySlug = normalizeSlug(strategySlug);
+  const memory = readStrategySelectionMemory();
+  if (normalizedStrategySlug) memory[normalizedInstitutionSlug] = normalizedStrategySlug;
+  else delete memory[normalizedInstitutionSlug];
+  localStorage.setItem(STRATEGY_SELECTION_MEMORY_KEY, JSON.stringify(memory));
+}
+
 function hydrateAuthFromStorage() {
   const raw = localStorage.getItem(AUTH_STORAGE_KEY);
   if (!raw) return;
@@ -771,8 +801,11 @@ function setSession(payload) {
   state.token = payload.token || null;
   state.user = payload.user || null;
   state.role = payload.role || null;
-  state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
-  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
+  const payloadStrategy = normalizeStrategyRecord(payload.strategy);
+  const selectedStrategySlug = normalizeSlug(state.strategySlug);
+  if (payloadStrategy && selectedStrategySlug && normalizeSlug(payloadStrategy.slug) === selectedStrategySlug) {
+    state.strategy = payloadStrategy;
+  }
   state.accountContext = null;
   persistAuthToStorage();
 }
@@ -1190,15 +1223,17 @@ function ensureSelectedStrategySlug() {
   if (!strategies.length) {
     if (selectedSlug) clearRouteEntity();
     state.strategySlug = '';
+    state.strategy = null;
     return;
   }
-  if (selectedSlug && strategies.some((item) => normalizeSlug(item.slug) === selectedSlug)) {
+  const selectedStrategy = strategies.find((item) => normalizeSlug(item.slug) === selectedSlug) || null;
+  if (selectedStrategy) {
+    state.strategy = selectedStrategy;
     return;
   }
-  const fallback = strategies.find((item) => item.isDefault) || strategies[0];
-  const nextSlug = normalizeSlug(fallback?.slug);
-  if (nextSlug !== selectedSlug) clearRouteEntity();
-  state.strategySlug = nextSlug;
+  if (selectedSlug) clearRouteEntity();
+  state.strategySlug = '';
+  state.strategy = null;
 }
 
 async function loadPublicData() {
@@ -1225,7 +1260,10 @@ async function loadPublicData() {
   state.strategy = normalizeStrategyRecord(
     initiativesPayload.strategy || guidelinesPayload.strategy || summaryPayload.strategy || null
   );
-  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
+  if (state.strategy?.slug) {
+    state.strategySlug = state.strategy.slug;
+    rememberStrategySlugForInstitution(state.institutionSlug, state.strategySlug);
+  }
   state.cycle = initiativesPayload.cycle || guidelinesPayload.cycle || summaryPayload.cycle || null;
   state.summary = summaryPayload.summary || null;
   state.guidelines = Array.isArray(guidelinesPayload.guidelines) ? guidelinesPayload.guidelines : [];
@@ -1247,7 +1285,10 @@ async function refreshGuidelines() {
     state.institution.strategies = payload.strategies.map((item) => normalizeStrategyRecord(item)).filter(Boolean);
   }
   state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
-  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
+  if (state.strategy?.slug) {
+    state.strategySlug = state.strategy.slug;
+    rememberStrategySlugForInstitution(state.institutionSlug, state.strategySlug);
+  }
   state.cycle = payload.cycle || state.cycle;
   state.guidelines = Array.isArray(payload.guidelines) ? payload.guidelines : [];
   state.commentsVisible = Boolean(payload.commentsVisible ?? state.commentsVisible);
@@ -1265,7 +1306,10 @@ async function refreshInitiatives() {
     state.institution.strategies = payload.strategies.map((item) => normalizeStrategyRecord(item)).filter(Boolean);
   }
   state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
-  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
+  if (state.strategy?.slug) {
+    state.strategySlug = state.strategy.slug;
+    rememberStrategySlugForInstitution(state.institutionSlug, state.strategySlug);
+  }
   state.cycle = payload.cycle || state.cycle;
   state.initiatives = Array.isArray(payload.initiatives) ? payload.initiatives : [];
   state.commentsVisible = Boolean(payload.commentsVisible ?? state.commentsVisible);
@@ -1279,7 +1323,10 @@ async function refreshSummary() {
     { auth: 'optional' }
   );
   state.strategy = normalizeStrategyRecord(payload.strategy) || state.strategy;
-  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
+  if (state.strategy?.slug) {
+    state.strategySlug = state.strategy.slug;
+    rememberStrategySlugForInstitution(state.institutionSlug, state.strategySlug);
+  }
   state.summary = payload.summary || state.summary;
   state.commentsVisible = Boolean(payload.commentsVisible ?? state.commentsVisible);
 }
@@ -1507,7 +1554,7 @@ async function loadMemberContext() {
   const selectedSlug = normalizeSlug(state.institutionSlug);
   const currentContextSlug = normalizeSlug(context.institution.slug);
 
-  if (selectedSlug && currentContextSlug !== selectedSlug && !state.embedMapMode) {
+  if (selectedSlug && currentContextSlug !== selectedSlug && !state.embedMapMode && normalizeSlug(state.strategySlug)) {
     try {
       await switchInstitutionSession(selectedSlug, state.strategySlug);
       context = await api(buildContextPath());
@@ -1525,8 +1572,14 @@ async function loadMemberContext() {
   state.accountContext = context;
   state.role = context.membership?.role || state.role || 'member';
   state.user = state.user || context.user || null;
-  state.strategy = normalizeStrategyRecord(context.strategy) || state.strategy;
-  if (state.strategy?.slug) state.strategySlug = state.strategy.slug;
+  const contextStrategy = normalizeStrategyRecord(context.strategy);
+  if (
+    contextStrategy
+    && normalizeSlug(state.strategySlug)
+    && normalizeSlug(contextStrategy.slug) === normalizeSlug(state.strategySlug)
+  ) {
+    state.strategy = contextStrategy;
+  }
   persistAuthToStorage();
 
   if (normalizeSlug(context.institution?.slug) !== selectedSlug) {
@@ -1572,9 +1625,7 @@ async function bootstrap() {
 
   try {
     await loadInstitutions();
-    if (state.institutionSlug) {
-      ensureSelectedStrategySlug();
-    }
+    if (state.institutionSlug) ensureSelectedStrategySlug();
     try {
       await loadContentSettings();
     } catch {
@@ -1602,9 +1653,26 @@ async function bootstrap() {
       return;
     }
 
+    if (!state.strategySlug) {
+      clearRouteEntityForView('guidelines');
+      state.activeView = 'guidelines';
+      state.institution = normalizeInstitutionRecord(
+        (state.institutions || []).find((institution) => normalizeSlug(institution.slug) === normalizeSlug(state.institutionSlug)) || null
+      );
+      state.strategy = null;
+      state.cycle = null;
+      state.summary = null;
+      state.guidelines = [];
+      state.initiatives = [];
+      state.commentsVisible = false;
+      state.context = null;
+      state.userVotes = {};
+      return;
+    }
+
     await loadPublicData();
     ensureSelectedStrategySlug();
-    if (state.token && !state.embedMapMode) {
+    if (state.token && !state.embedMapMode && state.strategySlug) {
       try {
         await loadMemberContext();
       } catch (error) {
@@ -1721,14 +1789,22 @@ function institutionSelectMarkup() {
 function strategySelectMarkup() {
   const selectedSlug = normalizeSlug(state.strategySlug);
   const strategies = strategiesForSelectedInstitution();
+  const rememberedSlug = rememberedStrategySlugForInstitution(state.institutionSlug);
   const hasStrategies = strategies.length > 0;
   const loading = state.loading && !state.institutionsLoaded;
   const options = strategies.map((strategy) => {
     const slug = normalizeSlug(strategy.slug);
+    const isRemembered = rememberedSlug && rememberedSlug === slug;
     const title = String(strategy.title || slug || '-').trim();
+    const decoratedTitle = isRemembered
+      ? `${title} (${langText('paskutinis pasirinktas', 'last used')})`
+      : title;
     const selected = slug === selectedSlug ? ' selected' : '';
-    return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(title)}</option>`;
+    return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(decoratedTitle)}</option>`;
   }).join('');
+  const placeholder = hasStrategies
+    ? `<option value="" ${selectedSlug ? '' : 'selected'} disabled>${escapeHtml(langText('Pasirinkite strategija', 'Select strategy'))}</option>`
+    : '';
 
   const strategyLabel = langText('Strategija', 'Strategy');
   const strategyTitle = langText('Pasirinkite strategija perziurai', 'Select strategy for viewing');
@@ -1736,7 +1812,7 @@ function strategySelectMarkup() {
     <label class="institution-switcher strategy-switcher" title="${escapeHtml(strategyTitle)}">
       <span>${escapeHtml(strategyLabel)}</span>
       <select id="strategySwitchSelect" ${loading || !hasStrategies ? 'disabled' : ''}>
-        ${options}
+        ${placeholder}${options}
       </select>
     </label>
   `;
@@ -1764,10 +1840,7 @@ function selectedInstitutionInfo() {
   const selectedStrategySlug = normalizeSlug(state.strategySlug);
   const institutionStrategies = Array.isArray(base.strategies) ? base.strategies : [];
   const activeStrategy = institutionStrategies.find((item) => normalizeSlug(item.slug) === selectedStrategySlug)
-    || state.strategy
-    || institutionStrategies.find((item) => item && item.isDefault)
-    || institutionStrategies[0]
-    || null;
+    || (normalizeSlug(state.strategy?.slug) === selectedStrategySlug ? state.strategy : null);
 
   const fallback = INSTITUTION_INFO_FALLBACK[currentSlug] || {};
   return {
@@ -1820,20 +1893,17 @@ function bindInstitutionSwitch(container) {
     if (slug === normalizeSlug(state.institutionSlug)) return;
 
     state.institutionSlug = slug;
-    const selectedInstitution = (state.institutions || []).find((institution) => normalizeSlug(institution.slug) === slug) || null;
-    const strategies = Array.isArray(selectedInstitution?.strategies) ? selectedInstitution.strategies : [];
-    const defaultStrategy = strategies.find((item) => item.isDefault) || strategies[0] || null;
-    state.strategySlug = normalizeSlug(defaultStrategy?.slug);
-    state.strategy = defaultStrategy || null;
+    state.strategySlug = '';
+    state.strategy = null;
     state.strategySwitcherDialogOpen = false;
-    clearRouteEntity();
+    clearRouteEntityForView('guidelines');
     if (state.activeView === 'admin') {
       state.activeView = 'guidelines';
     }
     state.expandedStepId = '';
     syncRouteState();
 
-    if (isAuthenticated() && !state.embedMapMode) {
+    if (isAuthenticated() && !state.embedMapMode && normalizeSlug(state.strategySlug)) {
       try {
         await switchInstitutionSession(slug, state.strategySlug);
       } catch (error) {
@@ -1854,10 +1924,12 @@ function bindStrategySwitch(container) {
 
   select.addEventListener('change', async () => {
     const slug = normalizeSlug(select.value);
+    if (!slug) return;
     if (slug === normalizeSlug(state.strategySlug)) return;
 
     state.strategySlug = slug;
     state.strategy = (strategiesForSelectedInstitution() || []).find((item) => normalizeSlug(item.slug) === slug) || null;
+    rememberStrategySlugForInstitution(state.institutionSlug, slug);
     state.strategySwitcherDialogOpen = false;
     clearRouteEntity();
     syncRouteState();
@@ -2030,7 +2102,9 @@ function strategySwitcherCardMarkup(options = {}) {
   const topbar = Boolean(options.topbar);
   const info = selectedInstitutionInfo();
   const institutionName = String(info?.name || state.institutionSlug || '-').trim() || '-';
-  const strategyTitle = String(info?.strategyTitle || state.strategy?.title || state.strategySlug || '-').trim() || '-';
+  const strategyTitle = String(
+    info?.strategyTitle || state.strategy?.title || state.strategySlug || langText('Pasirinkite strategija', 'Select strategy')
+  ).trim() || langText('Pasirinkite strategija', 'Select strategy');
   const loading = state.loading && !state.institutionsLoaded;
   const dialogOpen = Boolean(state.strategySwitcherDialogOpen);
   const showCreateStrategyAction = canManageSelectedInstitution();
@@ -2122,8 +2196,11 @@ function resolveStrategySlugForInstitution(institutionSlug, preferredStrategySlu
   if (normalizedPreferred && strategies.some((item) => normalizeSlug(item.slug) === normalizedPreferred)) {
     return normalizedPreferred;
   }
-  const fallback = strategies.find((item) => item.isDefault) || strategies[0];
-  return normalizeSlug(fallback?.slug);
+  const rememberedSlug = rememberedStrategySlugForInstitution(normalizedInstitutionSlug);
+  if (rememberedSlug && strategies.some((item) => normalizeSlug(item.slug) === rememberedSlug)) {
+    return rememberedSlug;
+  }
+  return '';
 }
 
 async function navigateToStrategyLink(payload = {}) {
@@ -2164,7 +2241,7 @@ async function navigateToStrategyLink(payload = {}) {
     scheduleGuidelineFocus(targetGuidelineId);
     syncRouteState();
 
-    if (isAuthenticated() && !state.embedMapMode) {
+    if (isAuthenticated() && !state.embedMapMode && normalizeSlug(targetStrategySlug)) {
       try {
         await switchInstitutionSession(targetInstitutionSlug, targetStrategySlug);
       } catch (error) {
@@ -2215,7 +2292,7 @@ async function navigateToStrategyPerspective(payload = {}) {
     state.mapStrategicLinksPromise = null;
     syncRouteState();
 
-    if (isAuthenticated() && !state.embedMapMode) {
+    if (isAuthenticated() && !state.embedMapMode && normalizeSlug(targetStrategySlug)) {
       try {
         await switchInstitutionSession(targetInstitutionSlug, targetStrategySlug);
       } catch (error) {
@@ -3640,6 +3717,84 @@ function renderInitiativesView() {
   bindInitiativeCardInteractions(list);
 }
 
+function renderStrategySelectionRequiredView() {
+  const institutionName = String(state.institution?.name || state.institutionSlug || '-').trim() || '-';
+  const strategies = strategiesForSelectedInstitution();
+  const rememberedSlug = rememberedStrategySlugForInstitution(state.institutionSlug);
+  const heading = langText('Pasirinkite strategija', 'Select a strategy');
+  const helper = langText(
+    'Pasirinkite, kuria strategija norite perziureti. Be strategijos pasirinkimo turinys nerodomas.',
+    'Choose which strategy you want to view. Content stays hidden until a strategy is selected.'
+  );
+  const lastUsedLabel = langText('Paskutinis pasirinktas', 'Last used');
+  const noStrategiesTitle = langText('Strategiju kol kas nera', 'No strategies yet');
+  const noStrategiesHint = langText(
+    'Siai institucijai dar nera sukurtu strategiju. Paprasykite administratoriaus sukurti bent viena strategija.',
+    'No strategies are available for this institution yet. Ask an administrator to create at least one strategy.'
+  );
+
+  elements.stepView.innerHTML = `
+    <section class="institution-picker">
+      <div class="institution-picker-card strategy-pick-card">
+        <h3>${escapeHtml(heading)}</h3>
+        <p class="prompt">${escapeHtml(helper)}</p>
+        <div class="header-stack" style="margin-bottom: 12px;">
+          <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(institutionName)}</span>
+        </div>
+        ${strategies.length
+    ? `
+            <div class="institution-grid strategy-pick-grid">
+              ${strategies.map((strategy) => {
+      const slug = normalizeSlug(strategy.slug);
+      const isRemembered = rememberedSlug && rememberedSlug === slug;
+      return `
+                  <button type="button" class="institution-card strategy-pick-option" data-action="pick-strategy" data-strategy-slug="${escapeHtml(slug)}">
+                    <div class="institution-card-header">
+                      <strong>${escapeHtml(String(strategy.title || slug || '-').trim() || '-')}</strong>
+                      ${isRemembered ? `<span class="tag">${escapeHtml(lastUsedLabel)}</span>` : ''}
+                    </div>
+                    ${strategy.description ? `<p class="prompt" style="margin: 0;">${escapeHtml(String(strategy.description || '').trim())}</p>` : ''}
+                  </button>
+                `;
+    }).join('')}
+            </div>
+          `
+    : `
+            <div class="card">
+              <strong>${escapeHtml(noStrategiesTitle)}</strong>
+              <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(noStrategiesHint)}</p>
+            </div>
+          `}
+      </div>
+    </section>
+  `;
+
+  elements.stepView.querySelectorAll('[data-action="pick-strategy"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const slug = normalizeSlug(button.dataset.strategySlug);
+      if (!slug) return;
+      state.strategySlug = slug;
+      state.strategy = strategies.find((item) => normalizeSlug(item.slug) === slug) || null;
+      rememberStrategySlugForInstitution(state.institutionSlug, slug);
+      state.strategySwitcherDialogOpen = false;
+      syncRouteState();
+
+      if (isAuthenticated() && !state.embedMapMode && state.institutionSlug) {
+        try {
+          await switchInstitutionSession(state.institutionSlug, slug);
+        } catch (error) {
+          const raw = String(error?.message || '').toLowerCase();
+          if (raw === 'invalid token' || raw === 'unauthorized') {
+            clearSession();
+          }
+        }
+      }
+
+      await bootstrap();
+    });
+  });
+}
+
 function renderStepView() {
   if (state.embedMapMode && state.activeView !== 'map') {
     clearRouteEntityForView('map');
@@ -3651,6 +3806,17 @@ function renderStepView() {
 
   if (state.activeView === 'guide') {
     renderGuideView();
+    return;
+  }
+
+  if (
+    !state.embedMapMode
+    && normalizeSlug(state.institutionSlug)
+    && !normalizeSlug(state.strategySlug)
+    && !state.loading
+    && !state.error
+  ) {
+    renderStrategySelectionRequiredView();
     return;
   }
 
@@ -4172,7 +4338,7 @@ function downloadJson() {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  const strategyPart = normalizeSlug(state.strategySlug) || 'default';
+  const strategyPart = normalizeSlug(state.strategySlug) || 'unselected';
   link.download = `strategy-${state.institutionSlug}-${strategyPart}.json`;
   link.click();
   URL.revokeObjectURL(link.href);
@@ -4216,10 +4382,8 @@ function ensureInstitutionSelectionForAuth() {
   if (!fallbackInstitutionSlug) return false;
 
   state.institutionSlug = fallbackInstitutionSlug;
-  const strategies = Array.isArray(firstInstitution.strategies) ? firstInstitution.strategies : [];
-  const defaultStrategy = strategies.find((item) => item?.isDefault) || strategies[0] || null;
-  state.strategySlug = normalizeSlug(defaultStrategy?.slug);
-  state.strategy = defaultStrategy || null;
+  state.strategySlug = '';
+  state.strategy = null;
   clearRouteEntity();
   syncRouteState();
   return true;
@@ -4348,12 +4512,11 @@ function showAuthModal(initialMode = 'login') {
     const institutionStrategies = Array.isArray(selectedInstitution?.strategies)
       ? selectedInstitution.strategies
       : [];
-    const defaultStrategy = institutionStrategies.find((item) => item?.isDefault) || institutionStrategies[0] || null;
-    const selectedStrategySlug = normalizeSlug(defaultStrategy?.slug)
-      || resolveStrategySlugForInstitution(institutionSlug, state.strategySlug);
+    const selectedStrategySlug = normalizeSlug(state.strategySlug)
+      || rememberedStrategySlugForInstitution(institutionSlug);
     const selectedStrategy = institutionStrategies.find(
       (item) => normalizeSlug(item?.slug) === selectedStrategySlug
-    ) || defaultStrategy || null;
+    ) || null;
 
     try {
       const payload = await api('/api/v1/auth/login', {
@@ -4878,6 +5041,7 @@ function showStrategyCreateModal() {
       clearRouteEntity();
     }
     state.strategySlug = nextSlug;
+    rememberStrategySlugForInstitution(state.institutionSlug, nextSlug);
     state.strategy = null;
     state.strategySwitcherDialogOpen = false;
     syncRouteState();
