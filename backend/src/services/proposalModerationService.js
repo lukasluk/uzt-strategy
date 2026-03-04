@@ -61,6 +61,24 @@ function mapProposalRow(row) {
   };
 }
 
+function historyActorName(row, idField, nameField, emailField) {
+  if (!row) return '-';
+  const byName = String(row[nameField] || '').trim();
+  if (byName) return byName;
+  const byEmail = String(row[emailField] || '').trim();
+  if (byEmail) return byEmail;
+  const byId = String(row[idField] || '').trim();
+  return byId || '-';
+}
+
+function historySortKey(row) {
+  const action = String(row?.action || '').trim().toLowerCase();
+  if (action === 'strategy_created') return -100;
+  if (action === 'proposal_submitted') return -10;
+  if (action.endsWith('_commented')) return 0;
+  return 10;
+}
+
 function createProposalModerationService({ query, pool }) {
   async function validateActiveParentGuideline(client, { cycleId, guidelineId }) {
     const id = String(guidelineId || '').trim();
@@ -376,6 +394,204 @@ function createProposalModerationService({ query, pool }) {
       [cycleId]
     );
     return res.rows.map((row) => mapProposalRow(row));
+  }
+
+  async function listCycleHistoryRows({ cycleId }) {
+    const historyRows = [];
+
+    const cycleRes = await query(
+      `select c.id as cycle_id,
+              c.title as cycle_title,
+              c.created_at as cycle_created_at,
+              c.strategy_id,
+              s.title as strategy_title
+       from strategy_cycles c
+       left join institution_strategies s on s.id = c.strategy_id
+       where c.id = $1
+       limit 1`,
+      [cycleId]
+    );
+    const cycle = cycleRes.rows[0] || null;
+    if (cycle?.cycle_created_at) {
+      historyRows.push({
+        id: `strategy-created:${cycleId}`,
+        occurredAt: cycle.cycle_created_at,
+        entityKind: 'strategy',
+        action: 'strategy_created',
+        entityId: cycle.strategy_id || null,
+        proposalId: null,
+        title: String(cycle.strategy_title || cycle.cycle_title || 'Strategy').trim() || 'Strategy',
+        details: String(cycle.cycle_title || '').trim() || null,
+        actorId: null,
+        actorName: 'System'
+      });
+    }
+
+    const proposalRes = await query(
+      `select p.*,
+              requester.display_name as requested_by_name,
+              requester.email as requested_by_email,
+              reviewer.display_name as reviewed_by_name,
+              reviewer.email as reviewed_by_email
+       from strategy_card_proposals p
+       left join platform_users requester on requester.id = p.requested_by
+       left join platform_users reviewer on reviewer.id = p.reviewed_by
+       where p.cycle_id = $1`,
+      [cycleId]
+    );
+    proposalRes.rows.forEach((proposal) => {
+      const proposalId = String(proposal.id || '').trim();
+      const entityKind = String(proposal.entity_kind || '').trim().toLowerCase() || 'guideline';
+      const proposalTitle = String(proposal.title || proposalId || '-').trim() || '-';
+      const submittedAt = proposal.requested_at || null;
+      const reviewedAt = proposal.reviewed_at || null;
+      const status = String(proposal.status || '').trim().toLowerCase();
+      const reviewDecision = String(proposal.review_decision || '').trim().toLowerCase();
+
+      if (submittedAt) {
+        historyRows.push({
+          id: `${proposalId}:submitted`,
+          occurredAt: submittedAt,
+          entityKind,
+          action: 'proposal_submitted',
+          entityId: null,
+          proposalId,
+          title: proposalTitle,
+          details: String(proposal.description || '').trim() || null,
+          actorId: proposal.requested_by || null,
+          actorName: historyActorName(proposal, 'requested_by', 'requested_by_name', 'requested_by_email')
+        });
+      }
+
+      if (!reviewedAt) return;
+      if (status !== 'approved' && status !== 'rejected' && status !== 'cancelled') return;
+
+      let action = 'proposal_approved';
+      if (status === 'rejected') action = 'proposal_rejected';
+      if (status === 'cancelled') action = 'proposal_cancelled';
+      if (status === 'approved' && reviewDecision === 'approved_with_changes') {
+        action = 'proposal_approved_with_changes';
+      }
+
+      historyRows.push({
+        id: `${proposalId}:${action}`,
+        occurredAt: reviewedAt,
+        entityKind,
+        action,
+        entityId: String(proposal.final_entity_id || '').trim() || null,
+        proposalId,
+        title: String(proposal.final_title || proposal.title || proposalId || '-').trim() || '-',
+        details: String(proposal.review_note || proposal.final_description || proposal.description || '').trim() || null,
+        actorId: proposal.reviewed_by || null,
+        actorName: historyActorName(proposal, 'reviewed_by', 'reviewed_by_name', 'reviewed_by_email')
+      });
+    });
+
+    const proposalCommentRes = await query(
+      `select c.id,
+              c.body,
+              c.created_at,
+              c.author_id,
+              u.display_name as author_name,
+              u.email as author_email,
+              p.id as proposal_id,
+              p.entity_kind,
+              p.title as proposal_title
+       from strategy_card_proposal_comments c
+       join strategy_card_proposals p on p.id = c.proposal_id
+       left join platform_users u on u.id = c.author_id
+       where p.cycle_id = $1
+         and c.status = 'visible'`,
+      [cycleId]
+    );
+    proposalCommentRes.rows.forEach((row) => {
+      const proposalId = String(row.proposal_id || '').trim();
+      historyRows.push({
+        id: `${row.id}:proposal-comment`,
+        occurredAt: row.created_at,
+        entityKind: String(row.entity_kind || '').trim().toLowerCase() || 'guideline',
+        action: 'proposal_commented',
+        entityId: null,
+        proposalId: proposalId || null,
+        title: String(row.proposal_title || proposalId || '-').trim() || '-',
+        details: String(row.body || '').trim() || null,
+        actorId: row.author_id || null,
+        actorName: historyActorName(row, 'author_id', 'author_name', 'author_email')
+      });
+    });
+
+    const guidelineCommentRes = await query(
+      `select c.id,
+              c.body,
+              c.created_at,
+              c.author_id,
+              u.display_name as author_name,
+              u.email as author_email,
+              g.id as guideline_id,
+              g.title as guideline_title
+       from strategy_comments c
+       join strategy_guidelines g on g.id = c.guideline_id
+       left join platform_users u on u.id = c.author_id
+       where g.cycle_id = $1
+         and c.status = 'visible'`,
+      [cycleId]
+    );
+    guidelineCommentRes.rows.forEach((row) => {
+      const guidelineId = String(row.guideline_id || '').trim();
+      historyRows.push({
+        id: `${row.id}:guideline-comment`,
+        occurredAt: row.created_at,
+        entityKind: 'guideline',
+        action: 'guideline_commented',
+        entityId: guidelineId || null,
+        proposalId: null,
+        title: String(row.guideline_title || guidelineId || '-').trim() || '-',
+        details: String(row.body || '').trim() || null,
+        actorId: row.author_id || null,
+        actorName: historyActorName(row, 'author_id', 'author_name', 'author_email')
+      });
+    });
+
+    const initiativeCommentRes = await query(
+      `select c.id,
+              c.body,
+              c.created_at,
+              c.author_id,
+              u.display_name as author_name,
+              u.email as author_email,
+              i.id as initiative_id,
+              i.title as initiative_title
+       from strategy_initiative_comments c
+       join strategy_initiatives i on i.id = c.initiative_id
+       left join platform_users u on u.id = c.author_id
+       where i.cycle_id = $1
+         and c.status = 'visible'`,
+      [cycleId]
+    );
+    initiativeCommentRes.rows.forEach((row) => {
+      const initiativeId = String(row.initiative_id || '').trim();
+      historyRows.push({
+        id: `${row.id}:initiative-comment`,
+        occurredAt: row.created_at,
+        entityKind: 'initiative',
+        action: 'initiative_commented',
+        entityId: initiativeId || null,
+        proposalId: null,
+        title: String(row.initiative_title || initiativeId || '-').trim() || '-',
+        details: String(row.body || '').trim() || null,
+        actorId: row.author_id || null,
+        actorName: historyActorName(row, 'author_id', 'author_name', 'author_email')
+      });
+    });
+
+    return historyRows.sort((left, right) => {
+      const leftTs = Date.parse(String(left?.occurredAt || '')) || 0;
+      const rightTs = Date.parse(String(right?.occurredAt || '')) || 0;
+      if (leftTs !== rightTs) return leftTs - rightTs;
+      const byWeight = historySortKey(left) - historySortKey(right);
+      if (byWeight !== 0) return byWeight;
+      return String(left?.id || '').localeCompare(String(right?.id || ''));
+    });
   }
 
   async function listCyclePendingProposals({ cycleId }) {
@@ -722,6 +938,7 @@ function createProposalModerationService({ query, pool }) {
     loadInitiativeProposalContext,
     createProposalComment,
     listCycleProposalHistory,
+    listCycleHistoryRows,
     listCyclePendingProposals,
     loadPublicPendingProposals,
     listPublicProposalComments,

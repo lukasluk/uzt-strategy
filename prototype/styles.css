@@ -4009,37 +4009,59 @@ select:focus {
   border-width: 2px;
   box-shadow: 0 0 0 2px rgba(51, 107, 181, 0.08) inset;
 }
-.history-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.history-table-wrap {
+  border: 1px solid #cfdcf0;
+  border-radius: 14px;
+  overflow: auto;
+  background: #ffffff;
 }
-.history-feed-item {
-  border-color: #d1ddf2;
-  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+.history-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 920px;
+  font-size: 14px;
 }
-.history-feed-item.history-action-submitted {
-  border-style: dashed;
-  border-width: 2px;
-  border-color: #6a8fc3;
+.history-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  background: linear-gradient(180deg, #eef5ff 0%, #e5efff 100%);
+  border-bottom: 1px solid #c7d7f2;
+  color: #224a78;
+  font-weight: 700;
+  padding: 10px 12px;
 }
-.history-feed-item.history-status-rejected {
-  border-color: #e3b8b8;
-  background: linear-gradient(180deg, #fffefe 0%, #fff6f6 100%);
+.history-table tbody td {
+  border-bottom: 1px solid #e5edf8;
+  padding: 10px 12px;
+  vertical-align: top;
 }
-.history-feed-item.history-status-approved {
-  border-color: #b7d9cb;
-  background: linear-gradient(180deg, #ffffff 0%, #f4fcf8 100%);
+.history-table tbody tr:nth-child(odd) {
+  background: #fbfdff;
 }
-.history-feed-item.history-status-cancelled {
-  border-color: #e2cdb1;
-  background: linear-gradient(180deg, #fffdf8 0%, #fff7eb 100%);
+.history-table tbody tr:hover {
+  background: #f1f6ff;
 }
-.history-feed-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+.history-table-row.history-action-strategy_created td:first-child {
+  box-shadow: inset 4px 0 0 #2f88ba;
+}
+.history-table-row.history-action-proposal_submitted td:first-child {
+  box-shadow: inset 4px 0 0 #7f94bb;
+}
+.history-table-row.history-action-proposal_approved td:first-child,
+.history-table-row.history-action-proposal_approved_with_changes td:first-child {
+  box-shadow: inset 4px 0 0 #51a37f;
+}
+.history-table-row.history-action-proposal_rejected td:first-child,
+.history-table-row.history-action-proposal_cancelled td:first-child {
+  box-shadow: inset 4px 0 0 #c77b6f;
+}
+.history-table-row.history-action-guideline_commented td:first-child,
+.history-table-row.history-action-initiative_commented td:first-child,
+.history-table-row.history-action-proposal_commented td:first-child {
+  box-shadow: inset 4px 0 0 #5b80bb;
 }
 .modal-overlay {
   position: fixed;

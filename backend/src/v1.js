@@ -162,6 +162,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     loadInitiativeProposalContext,
     createProposalComment,
     listCycleProposalHistory,
+    listCycleHistoryRows,
     listCyclePendingProposals,
     loadPublicPendingProposals,
     listPublicProposalComments,
@@ -266,7 +267,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     loadGuidelineProposalContext,
     loadInitiativeProposalContext,
     createProposalComment,
-    listCycleProposalHistory
+    listCycleProposalHistory,
+    listCycleHistoryRows
   });
 
   registerAdminRoutes({

@@ -26,7 +26,8 @@ function registerMemberRoutes({
   loadGuidelineProposalContext,
   loadInitiativeProposalContext,
   createProposalComment,
-  listCycleProposalHistory
+  listCycleProposalHistory,
+  listCycleHistoryRows
 }) {
   const memberWriteGuard = typeof memberWriteRateLimit === 'function'
     ? memberWriteRateLimit
@@ -292,9 +293,13 @@ function registerMemberRoutes({
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     const entries = await listCycleProposalHistory({ cycleId });
+    const rows = typeof listCycleHistoryRows === 'function'
+      ? await listCycleHistoryRows({ cycleId })
+      : [];
     res.json({
       cycleId,
-      entries
+      entries,
+      rows
     });
   });
 

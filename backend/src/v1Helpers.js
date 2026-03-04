@@ -55,6 +55,7 @@ function createV1Helpers({ query, authSecret }) {
     loadInitiativeProposalContext: proposalModerationService.loadInitiativeProposalContext,
     createProposalComment: proposalModerationService.createProposalComment,
     listCycleProposalHistory: proposalModerationService.listCycleProposalHistory,
+    listCycleHistoryRows: proposalModerationService.listCycleHistoryRows,
     listCyclePendingProposals: proposalModerationService.listCyclePendingProposals,
     loadPublicPendingProposals: proposalModerationService.loadPublicPendingProposals,
     listPublicProposalComments: proposalModerationService.listPublicProposalComments,

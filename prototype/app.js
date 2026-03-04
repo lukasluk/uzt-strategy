@@ -206,6 +206,7 @@ const state = {
   },
   commentsVisible: false,
   historyEntries: [],
+  historyRows: [],
   historyLoading: false,
   historyError: '',
   historyCycleId: '',
@@ -799,6 +800,7 @@ function clearSession() {
   state.commentsVisible = false;
   state.userVotes = {};
   state.historyEntries = [];
+  state.historyRows = [];
   state.historyError = '';
   state.historyCycleId = '';
   state.initiatives = [];
@@ -829,6 +831,7 @@ function syncAuthStateFromStorage() {
     state.strategy = null;
     state.userVotes = {};
     state.historyEntries = [];
+    state.historyRows = [];
     state.historyError = '';
     state.historyCycleId = '';
     return;
@@ -844,6 +847,7 @@ function syncAuthStateFromStorage() {
       state.strategy = null;
       state.userVotes = {};
       state.historyEntries = [];
+      state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
       return;
@@ -1351,6 +1355,7 @@ async function refreshSummary() {
 async function refreshHistory() {
   if (!isLoggedIn() || !state.cycle?.id) {
     state.historyEntries = [];
+    state.historyRows = [];
     state.historyError = '';
     state.historyCycleId = '';
     return;
@@ -1361,9 +1366,11 @@ async function refreshHistory() {
   try {
     const payload = await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/history`);
     state.historyEntries = Array.isArray(payload?.entries) ? payload.entries : [];
+    state.historyRows = Array.isArray(payload?.rows) ? payload.rows : [];
     state.historyCycleId = String(payload?.cycleId || state.cycle.id || '').trim();
   } catch (error) {
     state.historyEntries = [];
+    state.historyRows = [];
     state.historyError = toUserMessage(error);
   } finally {
     state.historyLoading = false;
@@ -1690,6 +1697,7 @@ async function bootstrap() {
       state.commentsVisible = false;
       state.userVotes = {};
       state.historyEntries = [];
+      state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
       return;
@@ -1710,6 +1718,7 @@ async function bootstrap() {
       state.context = null;
       state.userVotes = {};
       state.historyEntries = [];
+      state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
       return;
@@ -1731,6 +1740,7 @@ async function bootstrap() {
         state.context = null;
         state.userVotes = {};
         state.historyEntries = [];
+        state.historyRows = [];
         state.historyError = '';
         state.historyCycleId = '';
       }
@@ -1738,10 +1748,12 @@ async function bootstrap() {
       state.context = null;
       state.userVotes = {};
       state.historyEntries = [];
+      state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
     } else {
       state.historyEntries = [];
+      state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
     }
@@ -3828,143 +3840,130 @@ function renderInitiativesView() {
   bindInitiativeCardInteractions(list);
 }
 
-function historyStatusLabel(status) {
-  const key = String(status || '').trim().toLowerCase();
-  if (key === 'pending') return langText('Laukia tvirtinimo', 'Pending review');
-  if (key === 'approved') return langText('Patvirtinta', 'Approved');
-  if (key === 'rejected') return langText('Atmesta', 'Rejected');
-  if (key === 'cancelled') return langText('Pasalinta', 'Deleted');
-  return key || '-';
-}
-
 function historyKindLabel(kind) {
   const normalized = String(kind || '').trim().toLowerCase();
+  if (normalized === 'strategy') return langText('Strategija', 'Strategy');
   if (normalized === 'guideline') return langText('Gaire', 'Guideline');
   if (normalized === 'initiative') return langText('Iniciatyva', 'Initiative');
   return normalized || '-';
 }
 
-function historyEntryCardHref(entry) {
-  const item = entry && typeof entry === 'object' ? entry : null;
-  if (!item) return '';
-  const kind = String(item.entityKind || '').trim().toLowerCase();
-  const status = String(item.status || '').trim().toLowerCase();
-  if (status === 'rejected' || status === 'cancelled') return '';
-  const pendingId = String(item.id || '').trim();
-  const finalId = String(item.finalEntityId || '').trim();
-  if (kind === 'guideline') {
-    return buildGuidelineHref(status === 'approved' && finalId ? finalId : pendingId);
-  }
-  if (kind === 'initiative') {
-    return buildInitiativeHref(status === 'approved' && finalId ? finalId : pendingId);
-  }
-  return '';
-}
-
-function historyActionLabel(action) {
+function historyEventLabel(action) {
   const key = String(action || '').trim().toLowerCase();
-  if (key === 'submitted') return langText('Pasiulyta', 'Suggested');
-  if (key === 'approved') return langText('Patvirtinta', 'Approved');
-  if (key === 'approved_with_changes') return langText('Patvirtinta su pakeitimais', 'Approved with changes');
-  if (key === 'rejected') return langText('Atmesta', 'Rejected');
-  if (key === 'cancelled') return langText('Pasalinta administratoriaus', 'Deleted by admin');
+  if (key === 'strategy_created') return langText('Strategija sukurta', 'Strategy created');
+  if (key === 'proposal_submitted') return langText('Pasiulymas pateiktas', 'Proposal submitted');
+  if (key === 'proposal_approved') return langText('Pasiulymas patvirtintas', 'Proposal approved');
+  if (key === 'proposal_approved_with_changes') return langText('Pasiulymas patvirtintas su pakeitimais', 'Proposal approved with changes');
+  if (key === 'proposal_rejected') return langText('Pasiulymas atmestas', 'Proposal rejected');
+  if (key === 'proposal_cancelled') return langText('Irasas pasalintas administratoriaus', 'Entry deleted by admin');
+  if (key === 'guideline_commented') return langText('Gaire pakomentuota', 'Guideline commented');
+  if (key === 'initiative_commented') return langText('Iniciatyva pakomentuota', 'Initiative commented');
+  if (key === 'proposal_commented') return langText('Pasiulymas pakomentuotas', 'Proposal commented');
   return key || '-';
 }
 
-function historyActorLabel(action) {
+function historyActionPriority(action) {
   const key = String(action || '').trim().toLowerCase();
-  if (key === 'submitted') return langText('Pateike', 'Submitted by');
-  if (key === 'cancelled') return langText('Pasalino', 'Deleted by');
-  return langText('Perziurejo', 'Reviewed by');
+  if (key === 'strategy_created') return -100;
+  if (key === 'proposal_submitted') return -10;
+  if (key.endsWith('_commented')) return 0;
+  return 10;
 }
 
-function buildHistoryFeedRows(entries) {
+function normalizeHistoryRowsForTable(rows) {
+  const source = Array.isArray(rows) ? rows : [];
+  return source
+    .map((row) => {
+      if (!row || typeof row !== 'object') return null;
+      const occurredAt = String(row.occurredAt || row.occurred_at || '').trim();
+      if (!occurredAt) return null;
+      return {
+        id: String(row.id || '').trim() || occurredAt,
+        occurredAt,
+        action: String(row.action || '').trim().toLowerCase(),
+        entityKind: String(row.entityKind || row.entity_kind || '').trim().toLowerCase(),
+        title: String(row.title || '-').trim() || '-',
+        actorName: String(row.actorName || row.actor_name || '-').trim() || '-',
+        details: String(row.details || '').trim()
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      const leftTs = Date.parse(String(left?.occurredAt || '')) || 0;
+      const rightTs = Date.parse(String(right?.occurredAt || '')) || 0;
+      if (leftTs !== rightTs) return leftTs - rightTs;
+      const byAction = historyActionPriority(left?.action) - historyActionPriority(right?.action);
+      if (byAction !== 0) return byAction;
+      return String(left?.id || '').localeCompare(String(right?.id || ''));
+    });
+}
+
+function buildLegacyHistoryTableRows(entries) {
   const source = Array.isArray(entries) ? entries : [];
   const rows = [];
 
   source.forEach((item) => {
     if (!item || typeof item !== 'object') return;
     const proposalId = String(item.id || '').trim();
-    const status = String(item.status || '').trim().toLowerCase();
-    const kind = String(item.entityKind || '').trim().toLowerCase();
-    const baseTitle = String(item.title || item.id || '-').trim() || '-';
-    const finalTitle = String(item.finalTitle || '').trim();
-    const description = String(item.finalDescription || item.description || '').trim();
-    const requestedBy = String(item.requestedByName || item.requestedBy || '-').trim() || '-';
-    const reviewedBy = String(item.reviewedByName || item.reviewedBy || '-').trim() || '-';
-    const href = historyEntryCardHref(item);
+    const entityKind = String(item.entityKind || '').trim().toLowerCase();
+    const title = String(item.finalTitle || item.title || proposalId || '-').trim() || '-';
 
-    if (item.requestedAt && status !== 'cancelled') {
+    if (item.requestedAt) {
       rows.push({
-        key: `${proposalId}:submitted`,
-        action: 'submitted',
-        status,
-        kind,
-        title: baseTitle,
-        description: String(item.description || '').trim(),
-        actor: requestedBy,
-        happenedAt: item.requestedAt,
-        href: status === 'pending' ? href : '',
-        note: ''
+        id: `${proposalId}:proposal_submitted`,
+        occurredAt: item.requestedAt,
+        action: 'proposal_submitted',
+        entityKind,
+        title: String(item.title || title).trim() || title,
+        actorName: String(item.requestedByName || item.requestedBy || '-').trim() || '-',
+        details: String(item.description || '').trim()
       });
     }
 
-    if (!item.reviewedAt) return;
-    if (status !== 'approved' && status !== 'rejected' && status !== 'cancelled') return;
+    if (item.reviewedAt) {
+      const status = String(item.status || '').trim().toLowerCase();
+      let action = '';
+      if (status === 'rejected') action = 'proposal_rejected';
+      else if (status === 'cancelled') action = 'proposal_cancelled';
+      else if (status === 'approved') {
+        action = String(item.reviewDecision || '').trim().toLowerCase() === 'approved_with_changes'
+          ? 'proposal_approved_with_changes'
+          : 'proposal_approved';
+      }
 
-    const action = status === 'approved' && String(item.reviewDecision || '').trim().toLowerCase() === 'approved_with_changes'
-      ? 'approved_with_changes'
-      : status;
-
-    rows.push({
-      key: `${proposalId}:${action}`,
-      action,
-      status,
-      kind,
-      title: finalTitle || baseTitle,
-      description,
-      actor: reviewedBy,
-      happenedAt: item.reviewedAt,
-      href: status === 'approved' ? href : '',
-      note: String(item.reviewNote || '').trim()
-    });
+      if (action) {
+        rows.push({
+          id: `${proposalId}:${action}`,
+          occurredAt: item.reviewedAt,
+          action,
+          entityKind,
+          title,
+          actorName: String(item.reviewedByName || item.reviewedBy || '-').trim() || '-',
+          details: String(item.reviewNote || item.finalDescription || '').trim()
+        });
+      }
+    }
   });
 
-  return rows.sort((left, right) => {
-    const leftTs = Date.parse(String(left?.happenedAt || '')) || 0;
-    const rightTs = Date.parse(String(right?.happenedAt || '')) || 0;
-    return rightTs - leftTs;
-  });
+  return normalizeHistoryRowsForTable(rows);
 }
 
-function renderHistoryFeedEntry(entry) {
-  const row = entry && typeof entry === 'object' ? entry : null;
-  if (!row) return '';
-  const statusClass = String(row.status || '').trim().toLowerCase() || 'pending';
-  const actionClass = String(row.action || '').trim().toLowerCase() || 'submitted';
-  const kind = String(row.kind || '').trim().toLowerCase();
-  const title = String(row.title || '-').trim() || '-';
-  const description = String(row.description || '').trim();
-  const note = String(row.note || '').trim();
-  const happenedAt = formatCommentDateTime(row.happenedAt);
+function renderHistoryTableRow(row, index) {
+  const item = row && typeof row === 'object' ? row : null;
+  if (!item) return '';
+  const actionClass = String(item.action || 'unknown').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+  const kindClass = String(item.entityKind || 'unknown').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
 
   return `
-    <article class="card history-feed-item history-status-${escapeHtml(statusClass)} history-action-${escapeHtml(actionClass)}">
-      <div class="header-row">
-        <strong>${escapeHtml(title)}</strong>
-        <div class="header-stack">
-          <span class="tag">${escapeHtml(historyKindLabel(kind))}</span>
-          <span class="tag">${escapeHtml(historyActionLabel(actionClass))}</span>
-        </div>
-      </div>
-      ${description ? `<p>${escapeHtml(description)}</p>` : ''}
-      <div class="history-feed-meta">
-        <span class="tag">${escapeHtml(historyActorLabel(actionClass))}: ${escapeHtml(String(row.actor || '-').trim() || '-')}</span>
-        <span class="tag">${escapeHtml(langText('Data', 'Date'))}: ${escapeHtml(happenedAt)}</span>
-      </div>
-      ${note ? `<p class="prompt" style="margin-top:8px;">${escapeHtml(langText('Pastaba', 'Note'))}: ${escapeHtml(note)}</p>` : ''}
-      ${row.href ? `<div class="header-stack" style="margin-top:10px;"><a class="btn btn-ghost" href="${escapeHtml(row.href)}">${escapeHtml(langText('Atidaryti kortele', 'Open card'))}</a></div>` : ''}
-    </article>
+    <tr class="history-table-row history-action-${escapeHtml(actionClass)} history-kind-${escapeHtml(kindClass)}">
+      <td>${index + 1}</td>
+      <td>${escapeHtml(formatCommentDateTime(item.occurredAt))}</td>
+      <td>${escapeHtml(historyEventLabel(item.action))}</td>
+      <td>${escapeHtml(historyKindLabel(item.entityKind))}</td>
+      <td>${escapeHtml(item.title || '-')}</td>
+      <td>${escapeHtml(item.actorName || '-')}</td>
+      <td>${escapeHtml(item.details || '-')}</td>
+    </tr>
   `;
 }
 
@@ -3991,8 +3990,9 @@ function renderHistoryView() {
     return;
   }
 
-  const entries = Array.isArray(state.historyEntries) ? state.historyEntries : [];
-  const feedRows = buildHistoryFeedRows(entries);
+  const apiRows = normalizeHistoryRowsForTable(state.historyRows);
+  const fallbackRows = buildLegacyHistoryTableRows(state.historyEntries);
+  const rows = apiRows.length ? apiRows : fallbackRows;
 
   elements.stepView.innerHTML = `
     <div class="step-header">
@@ -4000,7 +4000,7 @@ function renderHistoryView() {
       <div class="header-stack step-header-actions">
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">${langText('Irasu', 'Entries')}: ${feedRows.length}</span>
+        <span class="tag">${langText('Irasu', 'Rows')}: ${rows.length}</span>
       </div>
     </div>
     ${state.historyError ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(state.historyError)}</strong></div>` : ''}
@@ -4008,11 +4008,30 @@ function renderHistoryView() {
 
     <section class="guideline-group">
       <div class="guideline-group-header">
-        <h3>${langText('Ivykiu srautas', 'Activity feed')}</h3>
-        <span class="tag">${feedRows.length}</span>
+        <h3>${langText('Istorijos lentele', 'History table')}</h3>
+        <span class="tag">${rows.length}</span>
       </div>
-      ${feedRows.length
-    ? `<div class="history-feed">${feedRows.map((entry) => renderHistoryFeedEntry(entry)).join('')}</div>`
+      ${rows.length
+    ? `
+          <div class="history-table-wrap">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>${escapeHtml(langText('Laikas', 'Timestamp'))}</th>
+                  <th>${escapeHtml(langText('Ivykis', 'Event'))}</th>
+                  <th>${escapeHtml(langText('Tipas', 'Type'))}</th>
+                  <th>${escapeHtml(langText('Objektas', 'Item'))}</th>
+                  <th>${escapeHtml(langText('Vartotojas', 'User'))}</th>
+                  <th>${escapeHtml(langText('Detales', 'Details'))}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map((row, index) => renderHistoryTableRow(row, index)).join('')}
+              </tbody>
+            </table>
+          </div>
+        `
     : `<div class="card guideline-empty"><strong>${langText('Ivykiu dar nera', 'No activity yet')}</strong></div>`}
     </section>
   `;
@@ -5720,6 +5739,7 @@ function render() {
   flushPendingInitiativeFocus();
   window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }
+
 
 
 
