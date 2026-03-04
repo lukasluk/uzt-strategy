@@ -2391,11 +2391,16 @@ function renderSteps() {
 
   const canOpenAdmin = canOpenAdminView();
   const canOpenHistory = isLoggedIn();
+  const openPendingProposalCount = canOpenAdmin
+    ? (Array.isArray(state.historyEntries)
+      ? state.historyEntries.filter((item) => String(item?.status || '').trim().toLowerCase() === 'pending').length
+      : 0)
+    : 0;
   const items = [
     { id: 'guidelines', icon: '&#9673;', title: langText('Gairės', 'Guidelines'), locked: false },
     { id: 'initiatives', icon: '&#10022;', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
     { id: 'history', icon: '&#128340;', title: langText('Istorija', 'History'), locked: !canOpenHistory },
-    { id: 'admin', icon: '&#9881;', title: 'Admin', locked: !canOpenAdmin },
+    { id: 'admin', icon: '&#9881;', title: 'Admin', locked: !canOpenAdmin, alert: openPendingProposalCount > 0 },
     { id: 'map', icon: '&#8999;', title: langText('Strategijų žemėlapis', 'Strategy map'), locked: false }
   ];
 
@@ -2403,7 +2408,7 @@ function renderSteps() {
     ? items.filter((item) => item.id === 'map')
     : (isEmbeddedContext()
       ? items.filter((item) => item.id !== 'admin' && item.id !== 'history')
-      : items.filter((item) => item.id !== 'history' || canOpenHistory));
+      : items);
 
   if (state.activeView === 'admin' && !visibleItems.some((item) => item.id === 'admin')) {
     clearRouteEntityForView('guidelines');
@@ -2431,10 +2436,13 @@ function renderSteps() {
       <div class="step-pill-head">
         <span class="step-icon" aria-hidden="true">${item.icon}</span>
         <h4>${escapeHtml(item.title)}</h4>
+        ${item.alert ? '<span class="step-alert-dot" aria-hidden="true"></span>' : ''}
       </div>
     `;
     if (item.locked) {
-      button.title = 'Administravimas galimas tik savo institucijos administratoriui';
+      button.title = item.id === 'history'
+        ? langText('Istorija prieinama tik prisijungusiems nariams', 'History is available to signed-in members only')
+        : 'Administravimas galimas tik savo institucijos administratoriui';
     }
     if (isActive) button.setAttribute('aria-current', 'page');
     if (canExpand) button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
@@ -3840,6 +3848,7 @@ function historyEntryCardHref(entry) {
   if (!item) return '';
   const kind = String(item.entityKind || '').trim().toLowerCase();
   const status = String(item.status || '').trim().toLowerCase();
+  if (status === 'rejected') return '';
   const pendingId = String(item.id || '').trim();
   const finalId = String(item.finalEntityId || '').trim();
   if (kind === 'guideline') {
@@ -3862,6 +3871,7 @@ function renderHistoryEntry(entry, options = {}) {
   const showOriginal = Boolean(status === 'approved' && originalTitle && originalTitle !== title);
   const requestedAt = formatCommentDateTime(item.requestedAt);
   const reviewedAt = item.reviewedAt ? formatCommentDateTime(item.reviewedAt) : '';
+  const reviewerName = String(item.reviewedByName || item.reviewedBy || '').trim();
   const canReview = Boolean(options.canReview && status === 'pending');
 
   return `
@@ -3880,6 +3890,7 @@ function renderHistoryEntry(entry, options = {}) {
         <span class="tag">${escapeHtml(langText('Data', 'Date'))}: ${escapeHtml(requestedAt)}</span>
         ${item.reviewDecision ? `<span class="tag">${escapeHtml(langText('Sprendimas', 'Decision'))}: ${escapeHtml(String(item.reviewDecision || '').trim())}</span>` : ''}
         ${reviewedAt ? `<span class="tag">${escapeHtml(langText('PerÅ¾iÅ«rÄ—ta', 'Reviewed at'))}: ${escapeHtml(reviewedAt)}</span>` : ''}
+        ${reviewerName ? `<span class="tag">${escapeHtml(status === 'rejected' ? langText('AtmetÄ—', 'Rejected by') : langText('PerÅ¾iÅ«rÄ—jo', 'Reviewed by'))}: ${escapeHtml(reviewerName)}</span>` : ''}
         ${item.commentCount ? `<span class="tag">${escapeHtml(langText('Komentarai', 'Comments'))}: ${Number(item.commentCount || 0)}</span>` : ''}
       </div>
       ${item.reviewNote ? `<p class="prompt" style="margin-top:8px;">${escapeHtml(langText('PerÅ¾iÅ«ros pastaba', 'Review note'))}: ${escapeHtml(item.reviewNote)}</p>` : ''}
@@ -3915,10 +3926,8 @@ function renderHistoryView() {
   }
 
   const entries = Array.isArray(state.historyEntries) ? state.historyEntries : [];
-  const canReview = canOpenAdminView();
   const activeGuidelines = (state.guidelines || []).filter((item) => String(item?.status || '').trim().toLowerCase() === 'active');
   const parentGuidelines = activeGuidelines.filter((item) => normalizeGuidelineRelation(item?.relationType) === 'parent');
-  const pendingEntries = entries.filter((item) => String(item?.status || '').trim().toLowerCase() === 'pending');
   const decisionEntries = entries.filter((item) => String(item?.status || '').trim().toLowerCase() !== 'pending');
 
   elements.stepView.innerHTML = `
@@ -3927,21 +3936,11 @@ function renderHistoryView() {
       <div class="header-stack step-header-actions">
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">${langText('Ä®raÅ¡Å³', 'Entries')}: ${entries.length}</span>
+        <span class="tag">${langText('Ä®raÅ¡Å³', 'Entries')}: ${decisionEntries.length}</span>
       </div>
     </div>
     ${state.historyError ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(state.historyError)}</strong></div>` : ''}
     ${state.historyLoading ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(langText('Kraunama istorija...', 'Loading history...'))}</strong></div>` : ''}
-
-    <section class="guideline-group">
-      <div class="guideline-group-header">
-        <h3>${langText('Laukiantys pasiÅ«lymai', 'Pending proposals')}</h3>
-        <span class="tag">${pendingEntries.length}</span>
-      </div>
-      ${pendingEntries.length
-    ? `<div id="historyPendingList" class="card-list">${pendingEntries.map((entry) => renderHistoryEntry(entry, { canReview })).join('')}</div>`
-    : `<div class="card guideline-empty"><strong>${langText('LaukianÄiÅ³ pasiÅ«lymÅ³ nÄ—ra', 'No pending proposals')}</strong></div>`}
-    </section>
 
     <section class="guideline-group">
       <div class="guideline-group-header">
@@ -3952,180 +3951,10 @@ function renderHistoryView() {
     ? `<div class="card-list">${decisionEntries.map((entry) => renderHistoryEntry(entry, { canReview: false })).join('')}</div>`
     : `<div class="card guideline-empty"><strong>${langText('SprendimÅ³ dar nÄ—ra', 'No decisions yet')}</strong></div>`}
     </section>
-
-    <div id="historyReviewModal" class="modal-overlay" hidden>
-      <div class="modal-card">
-        <div class="header-row">
-          <strong>${langText('PasiÅ«lymo perÅ¾iÅ«ra', 'Proposal review')}</strong>
-          <button type="button" class="btn btn-ghost" data-action="close-history-review">${langText('UÅ¾daryti', 'Close')}</button>
-        </div>
-        <form id="historyReviewForm" class="guideline-add-form" style="margin-top: 12px;">
-          <input type="hidden" name="proposalId" />
-          <label class="prompt" style="display:block;margin-bottom:6px;">${langText('Sprendimas', 'Decision')}</label>
-          <select name="decision" required>
-            <option value="approved">${langText('Patvirtinti', 'Approve')}</option>
-            <option value="approved_with_changes">${langText('Patvirtinti su pakeitimais', 'Approve with changes')}</option>
-            <option value="rejected">${langText('Atmesti', 'Reject')}</option>
-          </select>
-          <label class="prompt history-patch-field" style="display:block;margin:10px 0 6px;">${langText('Pavadinimas', 'Title')}</label>
-          <input class="history-patch-field" type="text" name="title" />
-          <label class="prompt history-patch-field" style="display:block;margin:10px 0 6px;">${langText('ApraÅ¡ymas', 'Description')}</label>
-          <textarea class="history-patch-field" name="description"></textarea>
-          <div id="historyReviewRelationFields" class="history-patch-field"></div>
-          <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Pastaba', 'Note')}</label>
-          <textarea name="reviewNote" placeholder="${escapeHtml(langText('PaaiÅ¡kinkite sprendimÄ…', 'Explain the decision'))}"></textarea>
-          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('IÅ¡saugoti sprendimÄ…', 'Save decision')}</button>
-        </form>
-      </div>
-    </div>
   `;
 
   const authBtn = elements.stepView.querySelector('#openAuthFromHistory');
   if (authBtn) authBtn.addEventListener('click', () => showAuthModal('login'));
-
-  if (!canReview) return;
-
-  const entryById = new Map(entries.map((entry) => [String(entry?.id || '').trim(), entry]));
-  const modal = elements.stepView.querySelector('#historyReviewModal');
-  const form = elements.stepView.querySelector('#historyReviewForm');
-  const relationFields = elements.stepView.querySelector('#historyReviewRelationFields');
-  if (!(modal instanceof HTMLElement) || !(form instanceof HTMLFormElement) || !(relationFields instanceof HTMLElement)) return;
-  modal.hidden = true;
-
-  const togglePatchFields = () => {
-    const decision = String(form.elements.decision?.value || '').trim().toLowerCase();
-    const patchEnabled = decision === 'approved_with_changes';
-    form.querySelectorAll('.history-patch-field').forEach((node) => {
-      if (!(node instanceof HTMLElement)) return;
-      node.style.display = patchEnabled ? '' : 'none';
-      if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement) {
-        node.disabled = !patchEnabled;
-      }
-    });
-    relationFields.querySelectorAll('input, select, textarea').forEach((node) => {
-      if (!(node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement)) return;
-      node.disabled = !patchEnabled;
-    });
-  };
-
-  const renderRelationFields = (entry) => {
-    const kind = String(entry?.entityKind || '').trim().toLowerCase();
-    if (kind === 'guideline') {
-      const relationType = normalizeGuidelineRelation(entry?.relationType);
-      const parentId = String(entry?.parentGuidelineId || '').trim();
-      relationFields.innerHTML = `
-        <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('RyÅ¡io tipas', 'Relation type')}</label>
-        <select name="relationType">
-          <option value="orphan" ${relationType === 'orphan' ? 'selected' : ''}>${langText('NaÅ¡laitinÄ—', 'Orphan')}</option>
-          <option value="parent" ${relationType === 'parent' ? 'selected' : ''}>${langText('TÄ—vinÄ—', 'Parent')}</option>
-          <option value="child" ${relationType === 'child' ? 'selected' : ''}>${langText('VaikinÄ—', 'Child')}</option>
-        </select>
-        <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('TÄ—vinÄ— gairÄ—', 'Parent guideline')}</label>
-        <select name="parentGuidelineId">
-          <option value="">${langText('Nepasirinkta', 'Not selected')}</option>
-          ${parentGuidelines.map((guideline) => `<option value="${escapeHtml(guideline.id)}" ${guideline.id === parentId ? 'selected' : ''}>${escapeHtml(guideline.title || guideline.id)}</option>`).join('')}
-        </select>
-      `;
-      return;
-    }
-
-    const selectedIds = Array.isArray(entry?.guidelineIds) ? entry.guidelineIds : [];
-    relationFields.innerHTML = `
-      <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Susietos gairÄ—s', 'Linked guidelines')}</label>
-      <div class="guideline-checkbox-panel">
-        ${renderGuidelineCheckboxList(activeGuidelines, { selectedIds, name: 'guidelineIds' })}
-      </div>
-      <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Linijos kryptis', 'Line side')}</label>
-      <select name="lineSide">
-        ${['auto', 'left', 'right', 'top', 'bottom'].map((side) => `<option value="${side}" ${side === String(entry?.lineSide || 'auto').trim().toLowerCase() ? 'selected' : ''}>${escapeHtml(side)}</option>`).join('')}
-      </select>
-    `;
-  };
-
-  const closeModal = () => {
-    modal.hidden = true;
-    form.reset();
-    relationFields.innerHTML = '';
-  };
-
-  const openModal = (entry, forcedDecision = '') => {
-    if (!entry) return;
-    const proposalIdInput = form.querySelector('input[name="proposalId"]');
-    const titleInput = form.querySelector('input[name="title"]');
-    const descriptionInput = form.querySelector('textarea[name="description"]');
-    const decisionSelect = form.querySelector('select[name="decision"]');
-    if (!(proposalIdInput instanceof HTMLInputElement) || !(titleInput instanceof HTMLInputElement) || !(descriptionInput instanceof HTMLTextAreaElement) || !(decisionSelect instanceof HTMLSelectElement)) {
-      return;
-    }
-    proposalIdInput.value = String(entry.id || '').trim();
-    titleInput.value = String(entry.title || '').trim();
-    descriptionInput.value = String(entry.description || '').trim();
-    decisionSelect.value = forcedDecision || 'approved';
-    renderRelationFields(entry);
-    togglePatchFields();
-    modal.hidden = false;
-  };
-
-  elements.stepView.querySelectorAll('[data-action="history-review"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const proposalId = String(button.dataset.proposalId || '').trim();
-      const entry = entryById.get(proposalId);
-      openModal(entry, 'approved');
-    });
-  });
-
-  elements.stepView.querySelectorAll('[data-action="close-history-review"]').forEach((button) => {
-    button.addEventListener('click', closeModal);
-  });
-
-  form.elements.decision?.addEventListener('change', togglePatchFields);
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal) closeModal();
-  });
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const proposalId = String(form.elements.proposalId?.value || '').trim();
-    const decision = String(form.elements.decision?.value || '').trim().toLowerCase();
-    if (!proposalId || !decision) return;
-    const entry = entryById.get(proposalId);
-    if (!entry) return;
-
-    const body = {
-      decision,
-      reviewNote: String(form.elements.reviewNote?.value || '').trim()
-    };
-
-    if (decision === 'approved_with_changes') {
-      body.title = String(form.elements.title?.value || '').trim();
-      body.description = String(form.elements.description?.value || '').trim();
-      if (String(entry.entityKind || '').trim().toLowerCase() === 'guideline') {
-        body.relationType = String(form.elements.relationType?.value || 'orphan').trim().toLowerCase();
-        body.parentGuidelineId = String(form.elements.parentGuidelineId?.value || '').trim() || null;
-      } else {
-        body.lineSide = String(form.elements.lineSide?.value || 'auto').trim().toLowerCase();
-        body.guidelineIds = Array.from(form.querySelectorAll('input[name="guidelineIds"]:checked'))
-          .map((input) => String(input.value || '').trim())
-          .filter(Boolean);
-      }
-    }
-
-    await runBusy(async () => {
-      await api(`/api/v1/admin/proposals/${encodeURIComponent(proposalId)}/decision`, {
-        method: 'POST',
-        body
-      });
-      closeModal();
-      await Promise.all([
-        refreshGuidelines(),
-        refreshInitiatives(),
-        refreshSummary(),
-        loadStrategyMap(),
-        refreshHistory()
-      ]);
-      await resolveRouteEntityAliasIfNeeded();
-    });
-  });
 }
 
 function renderStrategySelectionRequiredView() {

@@ -739,6 +739,16 @@ body.embed-map-page .stage {
   line-height: 1.2;
 }
 
+.step-alert-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #dc3b45;
+  box-shadow: 0 0 0 2px rgba(220, 59, 69, 0.2);
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
 .step-pill-action {
   width: calc(100% - 34px);
   margin-left: 34px;
