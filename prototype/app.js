@@ -1,7 +1,7 @@
 const steps = [
   {
     id: 'guidelines',
-    title: 'Gaires',
+    title: 'Gairės',
     hint: 'Aptarimas, balsavimas, komentarai',
     prompt: 'Kur link judesime ir kokia nauda kursime?'
   },
@@ -58,7 +58,7 @@ const introSlides = [
     title: '6. Naudokite strategiju zemelapi',
     body: 'Strategiju zemelapis yra patogus vizualinis irankis perziureti strategijos struktura ir elementu rysius.',
     points: [
-      'Galite perjungti sluoksnius "Gaires" ir "Iniciatyvos".',
+      'Galite perjungti sluoksnius "Gairės" ir "Iniciatyvos".',
       'Galima centruoti vaizda, priartinti ir naudoti pilno ekrano rezima.'
     ]
   },
@@ -85,7 +85,7 @@ const DEFAULT_VISION_TEXT = 'Ilgalaike kryptis ir siekiama pokycio busena.';
 const DEFAULT_GUIDE_INTRO_TEXT = [
   'digistrategy.eu sistema skirta patogiam jusu institucijos strategijos rengimo procesui. Patogiai susikurkite gairiu struktura ir priskirkite konkrecias iniciatyvas tu gairiu igyvendinimui.',
   'Sistema susideda is 2 pagrindiniu daliu:',
-  '1. Korteliu valdymo modulio (Gaires ir Iniciatyvos) - cia jusu kolegos gali komentuoti, siulyti ivairias strategijos kryptis, balsuoti uz vieni kitu teiktus pasiulymus.',
+  '1. Korteliu valdymo modulio (Gairės ir Iniciatyvos) - cia jusu kolegos gali komentuoti, siulyti ivairias strategijos kryptis, balsuoti uz vieni kitu teiktus pasiulymus.',
   '2. Strategiju zemelapis - patogus vizualinis irankis perziureti strategijos struktura ir rysius tarp skirtingu jos elementu.',
   'Galutini savo interaktyvu strategijos zemelapi ikelkite i intraneta ar vidini puslapi su embeding funkcionalumu. Sistema skirta valstybinems institucijoms, kurios nori savo strategijos kurimo procesa vykdyti efektyviai.'
 ].join('\\n');
@@ -2257,10 +2257,10 @@ function renderSteps() {
 
   const canOpenAdmin = canOpenAdminView();
   const items = [
-    { id: 'guidelines', icon: '&#9673;', title: langText('Gaires', 'Guidelines'), locked: false },
+    { id: 'guidelines', icon: '&#9673;', title: langText('Gairės', 'Guidelines'), locked: false },
     { id: 'initiatives', icon: '&#10022;', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
     { id: 'admin', icon: '&#9881;', title: 'Admin', locked: !canOpenAdmin },
-    { id: 'map', icon: '&#8999;', title: langText('Strategiju zemelapis', 'Strategy map'), locked: false }
+    { id: 'map', icon: '&#8999;', title: langText('Strategijų žemėlapis', 'Strategy map'), locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -2448,7 +2448,7 @@ function renderIntroDeck() {
                 </div>
                 <div class="structure-layer-grid">
                   <article class="structure-step structure-step-layer" role="listitem">
-                    <span class="structure-label">${langText('Gaires', 'Guidelines')}</span>
+                    <span class="structure-label">${langText('Gairės', 'Guidelines')}</span>
                     <p>${langText('Kryptys arba tikslai, atvaizduojami dviem korteliu lygiais.', 'Directions or goals shown in two card levels.')}</p>
                     <div class="structure-mini-cards" aria-hidden="true">
                       <span>${langText('Tevines', 'Parent')}</span>
@@ -2475,7 +2475,7 @@ function renderIntroDeck() {
               </article>
             </div>
             <div class="structure-note-row">
-              <p class="structure-note">${langText('Platformos apimtis: "Gaires" ir "Iniciatyvos" etapai.', 'Platform scope: "Guidelines" and "Initiatives" stages.')}</p>
+              <p class="structure-note">${langText('Platformos apimtis: "Gairės" ir "Iniciatyvos" etapai.', 'Platform scope: "Guidelines" and "Initiatives" stages.')}</p>
               <div data-strategy-url-inline-slot></div>
             </div>
           </section>
@@ -2971,7 +2971,7 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
         <strong>${langText('Gairiu ir iniciatyvu susiejimas', 'Guideline-to-initiative mapping')}</strong>
         <span class="tag">${langText('Lentele', 'Table')}</span>
       </div>
-      <p class="prompt">${langText('Gaires, kurios neturi nei vienos iniciatyvos, pazymetos atskirai.', 'Guidelines with no initiatives are highlighted separately.')}</p>
+      <p class="prompt">${langText('Gairės, kurios neturi nei vienos iniciatyvos, pažymėtos atskirai.', 'Guidelines with no initiatives are highlighted separately.')}</p>
       <div class="initiative-matrix-scroll">
         <table class="initiative-matrix-table">
           <thead>
@@ -3150,7 +3150,7 @@ function buildGuidelineDetailBreadcrumbs(guideline) {
   const strategyTitle = String(state.strategy?.title || state.strategySlug || '-').trim() || '-';
   const parent = resolveGuidelineParent(item);
   const label = langText('Kelias', 'Breadcrumb');
-  const listLabel = langText('Gaires', 'Guidelines');
+  const listLabel = langText('Gairės', 'Guidelines');
   const parentLabel = langText('Tevine gaire', 'Parent guideline');
   const currentTitle = String(item.title || item.id || '-').trim() || '-';
 
@@ -3234,7 +3234,7 @@ function renderGuidelineDetailView() {
       <div class="card">
         <strong>${langText('Gaire nerasta', 'Guideline not found')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuoroda arba grizkite i gairiu sarasa.', 'Check the URL or return to guideline list.')}</p>
-        <button id="backToGuidelinesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('Grizti i gaires', 'Back to guidelines')}</button>
+        <button id="backToGuidelinesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('Grįžti į gaires', 'Back to guidelines')}</button>
       </div>
     `;
     const backButton = elements.stepView.querySelector('#backToGuidelinesBtn');
@@ -3255,8 +3255,8 @@ function renderGuidelineDetailView() {
     <div class="step-header">
       <h2>${langText('Gaires kortele', 'Guideline card')}</h2>
       <div class="header-stack step-header-actions">
-        <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('Grizti i gaires', 'Back to guidelines')}</button>
-        <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti zemelapyje', 'Show on map')}</button>
+        <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('Grįžti į gaires', 'Back to guidelines')}</button>
+        <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti žemėlapyje', 'Show on map')}</button>
       </div>
     </div>
     ${breadcrumbMarkup}
@@ -3403,7 +3403,7 @@ function renderInitiativeDetailView() {
       <div class="card">
         <strong>${langText('Iniciatyva nerasta', 'Initiative not found')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuoroda arba grizkite i iniciatyvu sarasa.', 'Check the URL or return to initiative list.')}</p>
-        <button id="backToInitiativesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('Grizti i iniciatyvas', 'Back to initiatives')}</button>
+        <button id="backToInitiativesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('Grįžti į iniciatyvas', 'Back to initiatives')}</button>
       </div>
     `;
     const backButton = elements.stepView.querySelector('#backToInitiativesBtn');
@@ -3424,8 +3424,8 @@ function renderInitiativeDetailView() {
     <div class="step-header">
       <h2>${langText('Iniciatyvos kortele', 'Initiative card')}</h2>
       <div class="header-stack step-header-actions">
-        <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('Grizti i iniciatyvas', 'Back to initiatives')}</button>
-        <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti zemelapyje', 'Show on map')}</button>
+        <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('Grįžti į iniciatyvas', 'Back to initiatives')}</button>
+        <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti žemėlapyje', 'Show on map')}</button>
       </div>
     </div>
     ${breadcrumbMarkup}
@@ -3718,7 +3718,7 @@ function renderStepView() {
 
   const stats = [
     `${langText('Busena', 'Status')}: ${String(state.cycle?.state || '-').toUpperCase()}`,
-    `${langText('Gaires', 'Guidelines')}: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
+    `${langText('Gairės', 'Guidelines')}: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
     `${langText('Dalyviai', 'Participants')}: ${Number(state.summary?.participant_count || 0)}`
   ];
   if (state.commentsVisible) {
@@ -3728,7 +3728,7 @@ function renderStepView() {
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>${langText('Gaires', 'Guidelines')}</h2>
+      <h2>${langText('Gairės', 'Guidelines')}</h2>
       <div class="header-stack step-header-actions">
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
