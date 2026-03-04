@@ -12,7 +12,10 @@ function registerPublicRoutes({
   resolveInstitutionStrategy,
   getCurrentCycle,
   normalizeLineSide,
-  authSecret
+  authSecret,
+  loadPublicPendingProposals,
+  listPublicProposalComments,
+  resolveProposalAlias
 }) {
   const publicReadGuard = typeof publicReadRateLimit === 'function'
     ? publicReadRateLimit
@@ -60,6 +63,106 @@ function registerPublicRoutes({
       mapX: Number.isFinite(Number(cycle.map_x)) ? Number(cycle.map_x) : null,
       mapY: Number.isFinite(Number(cycle.map_y)) ? Number(cycle.map_y) : null
     };
+  }
+
+  function proposalCommentsById(commentRows) {
+    return (Array.isArray(commentRows) ? commentRows : []).reduce((acc, row) => {
+      const proposalId = String(row.proposal_id || '').trim();
+      if (!proposalId) return acc;
+      if (!acc[proposalId]) acc[proposalId] = [];
+      acc[proposalId].push({
+        id: row.id,
+        body: row.body,
+        createdAt: row.created_at,
+        authorName: row.author_display_name || null,
+        authorEmail: row.author_email || null
+      });
+      return acc;
+    }, {});
+  }
+
+  async function loadPendingGuidelinesForCycle(cycleId, commentsVisible) {
+    const proposals = await loadPublicPendingProposals({ cycleId, entityKind: 'guideline' });
+    const commentRows = commentsVisible
+      ? await listPublicProposalComments({ cycleId, entityKind: 'guideline' })
+      : [];
+    const commentsByProposal = proposalCommentsById(commentRows);
+
+    return proposals.map((proposal) => ({
+      id: proposal.id,
+      title: proposal.title,
+      description: proposal.description,
+      status: 'pending',
+      relationType: proposal.relationType || 'orphan',
+      parentGuidelineId: proposal.parentGuidelineId || null,
+      lineSide: 'auto',
+      totalScore: 0,
+      voterCount: 0,
+      strategyLinks: [],
+      strategyLinkCount: 0,
+      commentCount: commentsVisible ? (commentsByProposal[proposal.id] || []).length : 0,
+      comments: commentsVisible ? (commentsByProposal[proposal.id] || []) : [],
+      createdAt: proposal.requestedAt,
+      pendingProposalId: proposal.id,
+      pendingRequestedAt: proposal.requestedAt,
+      pendingRequestedBy: proposal.requestedBy || null,
+      pendingRequestedByName: proposal.requestedByName || null
+    }));
+  }
+
+  async function loadPendingInitiativesForCycle(cycleId, commentsVisible) {
+    const proposals = await loadPublicPendingProposals({ cycleId, entityKind: 'initiative' });
+    const commentRows = commentsVisible
+      ? await listPublicProposalComments({ cycleId, entityKind: 'initiative' })
+      : [];
+    const commentsByProposal = proposalCommentsById(commentRows);
+
+    const allGuidelineIds = [...new Set(
+      proposals.flatMap((proposal) => Array.isArray(proposal.guidelineIds) ? proposal.guidelineIds : [])
+    )];
+    let guidelineTitleById = {};
+    if (allGuidelineIds.length) {
+      const guidelineRes = await query(
+        `select id, title
+         from strategy_guidelines
+         where cycle_id = $1
+           and status = 'active'
+           and id = any($2::uuid[])`,
+        [cycleId, allGuidelineIds]
+      );
+      guidelineTitleById = Object.fromEntries(
+        guidelineRes.rows.map((row) => [row.id, row.title || row.id])
+      );
+    }
+
+    return proposals.map((proposal) => {
+      const guidelineIds = (proposal.guidelineIds || []).filter((guidelineId) => Boolean(guidelineTitleById[guidelineId]));
+      const guidelineLinks = guidelineIds.map((guidelineId) => ({
+        guidelineId,
+        guidelineTitle: guidelineTitleById[guidelineId] || guidelineId
+      }));
+
+      return {
+        id: proposal.id,
+        title: proposal.title,
+        description: proposal.description,
+        status: 'pending',
+        lineSide: normalizeLineSide(proposal.lineSide) || 'auto',
+        mapX: null,
+        mapY: null,
+        guidelineLinks,
+        guidelineIds,
+        totalScore: 0,
+        voterCount: 0,
+        commentCount: commentsVisible ? (commentsByProposal[proposal.id] || []).length : 0,
+        comments: commentsVisible ? (commentsByProposal[proposal.id] || []) : [],
+        createdAt: proposal.requestedAt,
+        pendingProposalId: proposal.id,
+        pendingRequestedAt: proposal.requestedAt,
+        pendingRequestedBy: proposal.requestedBy || null,
+        pendingRequestedByName: proposal.requestedByName || null
+      };
+    });
   }
 
   async function loadGuidelineStrategyLinksByGuidelineIds(guidelineIds) {
@@ -153,6 +256,34 @@ function registerPublicRoutes({
 
   app.get('/api/v1/health', (_req, res) => {
     res.json({ ok: true, version: 'v1' });
+  });
+
+  app.get('/api/v1/public/institutions/:slug/proposals/:proposalId/resolve', publicReadGuard, async (req, res) => {
+    const proposalId = String(req.params.proposalId || '').trim();
+    if (!proposalId) return res.status(400).json({ error: 'proposalId required' });
+
+    const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
+    const institution = await getInstitutionBySlug(query, req.params.slug);
+    if (!institution) return res.status(404).json({ error: 'institution not found' });
+
+    const resolved = await resolveInstitutionStrategy(query, institution.id, requestedStrategySlug);
+    const strategy = resolved.strategy || null;
+    if (requestedStrategySlug && !strategy) return res.status(404).json({ error: 'strategy not found' });
+
+    const alias = await resolveProposalAlias({
+      proposalId,
+      institutionId: institution.id,
+      strategyId: strategy?.id || null
+    });
+    if (!alias) return res.status(404).json({ error: 'proposal not found' });
+
+    res.json({
+      proposalId: alias.id,
+      entityKind: alias.entityKind,
+      status: alias.status,
+      finalEntityId: alias.finalEntityId || null,
+      shouldRedirect: Boolean(alias.status === 'approved' && alias.finalEntityId)
+    });
   });
 
   app.get('/api/v1/public/institutions', publicReadGuard, async (_req, res) => {
@@ -520,6 +651,27 @@ function registerPublicRoutes({
           createdAt: row.created_at
         });
       });
+
+      const pendingByCycle = await Promise.all(
+        cycleIds.map(async (cycleId) => {
+          const commentsVisible = Boolean(commentVisibilityByCycle[cycleId]);
+          const [pendingGuidelines, pendingInitiatives] = await Promise.all([
+            loadPendingGuidelinesForCycle(cycleId, commentsVisible),
+            loadPendingInitiativesForCycle(cycleId, commentsVisible)
+          ]);
+          return {
+            cycleId,
+            pendingGuidelines,
+            pendingInitiatives
+          };
+        })
+      );
+      pendingByCycle.forEach((item) => {
+        if (!guidelinesByCycle[item.cycleId]) guidelinesByCycle[item.cycleId] = [];
+        if (!initiativesByCycle[item.cycleId]) initiativesByCycle[item.cycleId] = [];
+        guidelinesByCycle[item.cycleId].push(...item.pendingGuidelines);
+        initiativesByCycle[item.cycleId].push(...item.pendingInitiatives);
+      });
     }
 
     res.json({
@@ -563,10 +715,22 @@ function registerPublicRoutes({
 
     const stats = await query(
       `select
-         (select count(*) from strategy_guidelines g where g.cycle_id = $1 and g.status in ('active', 'disabled')) as guidelines_count,
-         (select count(*) from strategy_initiatives i where i.cycle_id = $1 and i.status in ('active', 'disabled')) as initiatives_count,
-         (select count(*) from strategy_comments c join strategy_guidelines g on g.id = c.guideline_id where g.cycle_id = $1 and c.status = 'visible') as comments_count,
-         (select count(*) from strategy_initiative_comments c join strategy_initiatives i on i.id = c.initiative_id where i.cycle_id = $1 and c.status = 'visible') as initiative_comments_count,
+         (
+           (select count(*) from strategy_guidelines g where g.cycle_id = $1 and g.status in ('active', 'disabled'))
+           + (select count(*) from strategy_card_proposals p where p.cycle_id = $1 and p.entity_kind = 'guideline' and p.status = 'pending')
+         ) as guidelines_count,
+         (
+           (select count(*) from strategy_initiatives i where i.cycle_id = $1 and i.status in ('active', 'disabled'))
+           + (select count(*) from strategy_card_proposals p where p.cycle_id = $1 and p.entity_kind = 'initiative' and p.status = 'pending')
+         ) as initiatives_count,
+         (
+           (select count(*) from strategy_comments c join strategy_guidelines g on g.id = c.guideline_id where g.cycle_id = $1 and c.status = 'visible')
+           + (select count(*) from strategy_card_proposal_comments c join strategy_card_proposals p on p.id = c.proposal_id where p.cycle_id = $1 and p.entity_kind = 'guideline' and p.status = 'pending' and c.status = 'visible')
+         ) as comments_count,
+         (
+           (select count(*) from strategy_initiative_comments c join strategy_initiatives i on i.id = c.initiative_id where i.cycle_id = $1 and c.status = 'visible')
+           + (select count(*) from strategy_card_proposal_comments c join strategy_card_proposals p on p.id = c.proposal_id where p.cycle_id = $1 and p.entity_kind = 'initiative' and p.status = 'pending' and c.status = 'visible')
+         ) as initiative_comments_count,
          (
            select count(distinct voter_id)
            from (
@@ -672,26 +836,32 @@ function registerPublicRoutes({
       guidelines.rows.map((row) => row.id)
     );
 
+    const activeGuidelines = guidelines.rows.map((g) => ({
+      id: g.id,
+      title: g.title,
+      description: g.description,
+      status: g.status,
+      relationType: g.relation_type || 'orphan',
+      parentGuidelineId: g.parent_guideline_id || null,
+      lineSide: normalizeLineSide(g.line_side) || 'auto',
+      totalScore: voteByGuideline[g.id]?.totalScore || 0,
+      voterCount: voteByGuideline[g.id]?.voterCount || 0,
+      strategyLinks: strategyLinksByGuideline[g.id] || [],
+      strategyLinkCount: (strategyLinksByGuideline[g.id] || []).length,
+      comments: commentsByGuideline[g.id] || [],
+      createdAt: g.created_at
+    }));
+    const pendingGuidelines = await loadPendingGuidelinesForCycle(cycle.id, commentsVisible);
+    const mergedGuidelines = [...activeGuidelines, ...pendingGuidelines]
+      .sort((left, right) => new Date(left.createdAt || 0).getTime() - new Date(right.createdAt || 0).getTime());
+
     res.json({
       institution,
       strategy: normalizeStrategyOutput(strategy),
       strategies: strategies.map((item) => normalizeStrategyOutput(item)),
       cycle: normalizeCycleOutput(cycle),
       commentsVisible,
-      guidelines: guidelines.rows.map((g) => ({
-        id: g.id,
-        title: g.title,
-        description: g.description,
-        status: g.status,
-        relationType: g.relation_type || 'orphan',
-        parentGuidelineId: g.parent_guideline_id || null,
-        lineSide: normalizeLineSide(g.line_side) || 'auto',
-        totalScore: voteByGuideline[g.id]?.totalScore || 0,
-        voterCount: voteByGuideline[g.id]?.voterCount || 0,
-        strategyLinks: strategyLinksByGuideline[g.id] || [],
-        strategyLinkCount: (strategyLinksByGuideline[g.id] || []).length,
-        comments: commentsByGuideline[g.id] || []
-      }))
+      guidelines: mergedGuidelines
     });
   });
 
@@ -784,26 +954,32 @@ function registerPublicRoutes({
       return acc;
     }, {});
 
+    const activeInitiatives = initiativesRes.rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      lineSide: normalizeLineSide(row.line_side) || 'auto',
+      mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
+      mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
+      guidelineLinks: linksByInitiative[row.id] || [],
+      guidelineIds: (linksByInitiative[row.id] || []).map((item) => item.guidelineId),
+      totalScore: voteByInitiative[row.id]?.totalScore || 0,
+      voterCount: voteByInitiative[row.id]?.voterCount || 0,
+      comments: commentsByInitiative[row.id] || [],
+      createdAt: row.created_at
+    }));
+    const pendingInitiatives = await loadPendingInitiativesForCycle(cycle.id, commentsVisible);
+    const mergedInitiatives = [...activeInitiatives, ...pendingInitiatives]
+      .sort((left, right) => new Date(left.createdAt || 0).getTime() - new Date(right.createdAt || 0).getTime());
+
     res.json({
       institution,
       strategy: normalizeStrategyOutput(strategy),
       strategies: strategies.map((item) => normalizeStrategyOutput(item)),
       cycle: normalizeCycleOutput(cycle),
       commentsVisible,
-      initiatives: initiativesRes.rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        status: row.status,
-        lineSide: normalizeLineSide(row.line_side) || 'auto',
-        mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
-        mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
-        guidelineLinks: linksByInitiative[row.id] || [],
-        guidelineIds: (linksByInitiative[row.id] || []).map((item) => item.guidelineId),
-        totalScore: voteByInitiative[row.id]?.totalScore || 0,
-        voterCount: voteByInitiative[row.id]?.voterCount || 0,
-        comments: commentsByInitiative[row.id] || []
-      }))
+      initiatives: mergedInitiatives
     });
   });
 }

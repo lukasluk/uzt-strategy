@@ -156,6 +156,17 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     createInitiativeWithGuidelines,
     createGuidelineComment,
     createInitiativeComment,
+    createGuidelineProposal,
+    createInitiativeProposal,
+    loadGuidelineProposalContext,
+    loadInitiativeProposalContext,
+    createProposalComment,
+    listCycleProposalHistory,
+    listCyclePendingProposals,
+    loadPublicPendingProposals,
+    listPublicProposalComments,
+    resolveProposalAlias,
+    reviewPendingProposal,
     createInstitutionInvite,
     setCycleState,
     setCycleSettings,
@@ -203,7 +214,10 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
       resolveInstitutionStrategy(institutionId, strategySlug),
     getCurrentCycle: (_query, institutionId, options) => getCurrentCycle(institutionId, options),
     normalizeLineSide,
-    authSecret: AUTH_SECRET
+    authSecret: AUTH_SECRET,
+    loadPublicPendingProposals,
+    listPublicProposalComments,
+    resolveProposalAlias
   });
 
   registerAuthRoutes({
@@ -245,7 +259,13 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     createGuideline,
     createInitiativeWithGuidelines,
     createGuidelineComment,
-    createInitiativeComment
+    createInitiativeComment,
+    createGuidelineProposal,
+    createInitiativeProposal,
+    loadGuidelineProposalContext,
+    loadInitiativeProposalContext,
+    createProposalComment,
+    listCycleProposalHistory
   });
 
   registerAdminRoutes({
@@ -271,6 +291,8 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     loadInitiativeCommentContext,
     validateGuidelineRelationship,
     validateInitiativeGuidelineAssignments,
+    listCyclePendingProposals,
+    reviewPendingProposal,
     createInstitutionInvite,
     setCycleState,
     setCycleSettings,

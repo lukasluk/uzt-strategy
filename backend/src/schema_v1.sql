@@ -258,6 +258,63 @@ alter table if exists strategy_guidelines
 
 create index if not exists idx_guidelines_parent on strategy_guidelines(parent_guideline_id);
 
+create table if not exists strategy_card_proposals (
+  id uuid primary key,
+  institution_id uuid not null references institutions(id) on delete cascade,
+  cycle_id uuid not null references strategy_cycles(id) on delete cascade,
+  strategy_id uuid references institution_strategies(id) on delete set null,
+  entity_kind text not null check (entity_kind in ('guideline', 'initiative')),
+  title text not null,
+  description text,
+  relation_type text check (relation_type in ('orphan', 'parent', 'child')),
+  parent_guideline_id uuid references strategy_guidelines(id) on delete set null,
+  line_side text check (line_side in ('auto', 'left', 'right', 'top', 'bottom')),
+  guideline_ids_json jsonb not null default '[]'::jsonb,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'cancelled')),
+  review_decision text check (review_decision in ('approved', 'rejected', 'approved_with_changes')),
+  review_note text,
+  requested_by uuid references platform_users(id) on delete set null,
+  reviewed_by uuid references platform_users(id) on delete set null,
+  requested_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  final_entity_id uuid,
+  final_title text,
+  final_description text,
+  final_relation_type text check (final_relation_type in ('orphan', 'parent', 'child')),
+  final_parent_guideline_id uuid references strategy_guidelines(id) on delete set null,
+  final_line_side text check (final_line_side in ('auto', 'left', 'right', 'top', 'bottom')),
+  final_guideline_ids_json jsonb
+);
+
+create table if not exists strategy_card_proposal_comments (
+  id uuid primary key,
+  proposal_id uuid not null references strategy_card_proposals(id) on delete cascade,
+  author_id uuid not null references platform_users(id) on delete cascade,
+  body text not null,
+  status text not null default 'visible' check (status in ('visible', 'hidden')),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists strategy_card_proposal_events (
+  id uuid primary key,
+  proposal_id uuid not null references strategy_card_proposals(id) on delete cascade,
+  institution_id uuid not null references institutions(id) on delete cascade,
+  cycle_id uuid not null references strategy_cycles(id) on delete cascade,
+  actor_id uuid references platform_users(id) on delete set null,
+  event_type text not null check (event_type in ('created', 'commented', 'approved', 'approved_with_changes', 'rejected')),
+  payload_json jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_proposals_cycle on strategy_card_proposals(cycle_id);
+create index if not exists idx_proposals_institution on strategy_card_proposals(institution_id);
+create index if not exists idx_proposals_status on strategy_card_proposals(status);
+create index if not exists idx_proposals_kind on strategy_card_proposals(entity_kind);
+create index if not exists idx_proposals_strategy on strategy_card_proposals(strategy_id);
+create index if not exists idx_proposal_comments_proposal on strategy_card_proposal_comments(proposal_id);
+create index if not exists idx_proposal_events_proposal on strategy_card_proposal_events(proposal_id);
+create index if not exists idx_proposal_events_cycle on strategy_card_proposal_events(cycle_id);
+
 alter table if exists strategy_cycles
   add column if not exists map_x integer;
 

@@ -1,7 +1,7 @@
 function createContextLookupService({ query }) {
   async function verifyCycleAccess(cycleId, institutionId) {
     const cycleRes = await query(
-      'select id, institution_id, state from strategy_cycles where id = $1',
+      'select id, institution_id, strategy_id, state from strategy_cycles where id = $1',
       [cycleId]
     );
     const cycle = cycleRes.rows[0];

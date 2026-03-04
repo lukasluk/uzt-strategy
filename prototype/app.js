@@ -124,6 +124,7 @@ const ALLOWED_VIEWS = new Set([
   'guideline-detail',
   'initiatives',
   'initiative-detail',
+  'history',
   'admin',
   'map',
   'guide'
@@ -204,6 +205,10 @@ const state = {
     aboutTextEn: DEFAULT_ABOUT_TEXT_EN
   },
   commentsVisible: false,
+  historyEntries: [],
+  historyLoading: false,
+  historyError: '',
+  historyCycleId: '',
   mapLayer: 'guidelines',
   mapStrategicLinksData: null,
   mapStrategicLinksLoading: false,
@@ -793,6 +798,9 @@ function clearSession() {
   state.strategy = null;
   state.commentsVisible = false;
   state.userVotes = {};
+  state.historyEntries = [];
+  state.historyError = '';
+  state.historyCycleId = '';
   state.initiatives = [];
   localStorage.removeItem(AUTH_STORAGE_KEY);
 }
@@ -820,6 +828,9 @@ function syncAuthStateFromStorage() {
     state.context = null;
     state.strategy = null;
     state.userVotes = {};
+    state.historyEntries = [];
+    state.historyError = '';
+    state.historyCycleId = '';
     return;
   }
   try {
@@ -832,6 +843,9 @@ function syncAuthStateFromStorage() {
       state.context = null;
       state.strategy = null;
       state.userVotes = {};
+      state.historyEntries = [];
+      state.historyError = '';
+      state.historyCycleId = '';
       return;
     }
     state.token = parsed.token;
@@ -1064,6 +1078,9 @@ function toUserMessage(error) {
     'guideline not in cycle': 'Gairė nepriklauso šiam ciklui.',
     'initiative not in cycle': 'Iniciatyva nepriklauso šiam ciklui.',
     'initiative not found': 'Iniciatyva nerasta.',
+    'proposal not found': 'Pasiūlymas nerastas.',
+    'proposal already reviewed': 'Pasiūlymas jau peržiūrėtas.',
+    'invalid decision': 'Neteisingas sprendimo tipas.',
     'at least one guideline required': 'Iniciatyva turi būti priskirta bent vienai gairei.',
     'name required': 'Nurodykite pavadinimą.',
     'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.',
@@ -1329,6 +1346,28 @@ async function refreshSummary() {
   }
   state.summary = payload.summary || state.summary;
   state.commentsVisible = Boolean(payload.commentsVisible ?? state.commentsVisible);
+}
+
+async function refreshHistory() {
+  if (!isLoggedIn() || !state.cycle?.id) {
+    state.historyEntries = [];
+    state.historyError = '';
+    state.historyCycleId = '';
+    return;
+  }
+
+  state.historyLoading = true;
+  state.historyError = '';
+  try {
+    const payload = await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/history`);
+    state.historyEntries = Array.isArray(payload?.entries) ? payload.entries : [];
+    state.historyCycleId = String(payload?.cycleId || state.cycle.id || '').trim();
+  } catch (error) {
+    state.historyEntries = [];
+    state.historyError = toUserMessage(error);
+  } finally {
+    state.historyLoading = false;
+  }
 }
 
 async function loadInstitutions() {
@@ -1650,6 +1689,9 @@ async function bootstrap() {
       state.initiatives = [];
       state.commentsVisible = false;
       state.userVotes = {};
+      state.historyEntries = [];
+      state.historyError = '';
+      state.historyCycleId = '';
       return;
     }
 
@@ -1667,14 +1709,19 @@ async function bootstrap() {
       state.commentsVisible = false;
       state.context = null;
       state.userVotes = {};
+      state.historyEntries = [];
+      state.historyError = '';
+      state.historyCycleId = '';
       return;
     }
 
     await loadPublicData();
     ensureSelectedStrategySlug();
+    await resolveRouteEntityAliasIfNeeded();
     if (state.token && !state.embedMapMode && state.strategySlug) {
       try {
         await loadMemberContext();
+        await refreshHistory();
       } catch (error) {
         const raw = String(error?.message || '').toLowerCase();
         if (raw === 'invalid token' || raw === 'unauthorized') {
@@ -1683,10 +1730,20 @@ async function bootstrap() {
         }
         state.context = null;
         state.userVotes = {};
+        state.historyEntries = [];
+        state.historyError = '';
+        state.historyCycleId = '';
       }
     } else if (state.embedMapMode) {
       state.context = null;
       state.userVotes = {};
+      state.historyEntries = [];
+      state.historyError = '';
+      state.historyCycleId = '';
+    } else {
+      state.historyEntries = [];
+      state.historyError = '';
+      state.historyCycleId = '';
     }
   } catch (error) {
     state.error = toUserMessage(error);
@@ -2333,9 +2390,11 @@ function renderSteps() {
   }
 
   const canOpenAdmin = canOpenAdminView();
+  const canOpenHistory = isLoggedIn();
   const items = [
     { id: 'guidelines', icon: '&#9673;', title: langText('Gairės', 'Guidelines'), locked: false },
     { id: 'initiatives', icon: '&#10022;', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
+    { id: 'history', icon: '&#128340;', title: langText('Istorija', 'History'), locked: !canOpenHistory },
     { id: 'admin', icon: '&#9881;', title: 'Admin', locked: !canOpenAdmin },
     { id: 'map', icon: '&#8999;', title: langText('Strategijų žemėlapis', 'Strategy map'), locked: false }
   ];
@@ -2343,10 +2402,14 @@ function renderSteps() {
   const visibleItems = state.embedMapMode
     ? items.filter((item) => item.id === 'map')
     : (isEmbeddedContext()
-      ? items.filter((item) => item.id !== 'admin')
-      : items);
+      ? items.filter((item) => item.id !== 'admin' && item.id !== 'history')
+      : items.filter((item) => item.id !== 'history' || canOpenHistory));
 
   if (state.activeView === 'admin' && !visibleItems.some((item) => item.id === 'admin')) {
+    clearRouteEntityForView('guidelines');
+    state.activeView = 'guidelines';
+  }
+  if (state.activeView === 'history' && !visibleItems.some((item) => item.id === 'history')) {
     clearRouteEntityForView('guidelines');
     state.activeView = 'guidelines';
   }
@@ -2705,6 +2768,10 @@ function normalizeGuidelineRelation(value) {
   return 'orphan';
 }
 
+function isPendingStatus(value) {
+  return String(value || '').trim().toLowerCase() === 'pending';
+}
+
 function normalizeGuidelineStrategyLinks(value) {
   const list = Array.isArray(value) ? value : [];
   return list
@@ -2850,7 +2917,8 @@ function renderGuidelineCard(guideline, options) {
   const relationKey = normalizeGuidelineRelation(guideline.relationType);
   const relationTag = relation.charAt(0).toUpperCase() + relation.slice(1);
   const guidelineStatus = String(guideline.status || 'active').toLowerCase();
-  const votingDisabled = guidelineStatus === 'disabled';
+  const pendingStatus = guidelineStatus === 'pending';
+  const votingDisabled = guidelineStatus === 'disabled' || pendingStatus;
   const strategyLinks = relationKey === 'parent'
     ? normalizeGuidelineStrategyLinks(guideline.strategyLinks)
     : [];
@@ -2904,12 +2972,13 @@ function renderGuidelineCard(guideline, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card guideline-card ${isLinkable ? 'is-linkable' : ''} guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
+    <article class="card guideline-card ${isLinkable ? 'is-linkable' : ''} guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''} ${pendingStatus ? 'card-pending' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(guideline.title)}</h4>
           <span class="tag">${escapeHtml(relationTag)}</span>
-          ${votingDisabled ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
+          ${pendingStatus ? `<span class="tag tag-main">${langText('Laukia tvirtinimo', 'Pending')}</span>` : ''}
+          ${guidelineStatus === 'disabled' ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
         </div>
         <p>${escapeHtml(guideline.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
         ${shareMarkup}
@@ -2927,7 +2996,7 @@ function renderGuidelineCard(guideline, options) {
               <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" aria-label="${escapeHtml(langText('Prideti bala', 'Increase vote'))}" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
             <div class="vote-total">${langText('Bendras balas', 'Total score')}: <strong>${Number(guideline.totalScore || 0)}</strong></div>
-            ${votingDisabled ? `<div class="vote-total">${langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
+            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiūlymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
           </div>
         </div>
       ` : `
@@ -3090,7 +3159,8 @@ function renderInitiativeCard(initiative, options) {
       : `<li class="comment-item comment-item-empty">${langText('Dar nera komentaru.', 'No comments yet.')}</li>`)
     : `<li class="comment-item comment-item-empty">${escapeHtml(commentsHiddenHintText())}</li>`;
   const initiativeStatus = String(initiative.status || 'active').toLowerCase();
-  const votingDisabled = initiativeStatus === 'disabled';
+  const pendingStatus = initiativeStatus === 'pending';
+  const votingDisabled = initiativeStatus === 'disabled' || pendingStatus;
   const linkedNames = resolveInitiativeGuidelineNames(initiative);
   const initiativeUrl = initiativeShareUrl(initiative.id);
   const shareMarkup = renderCardShareRow({
@@ -3110,11 +3180,12 @@ function renderInitiativeCard(initiative, options) {
   const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
-    <article class="card initiative-card ${isLinkable ? 'is-linkable' : ''} ${votingDisabled ? 'guideline-disabled' : ''}" data-initiative-id="${escapeHtml(initiative.id)}">
+    <article class="card initiative-card ${isLinkable ? 'is-linkable' : ''} ${votingDisabled ? 'guideline-disabled' : ''} ${pendingStatus ? 'card-pending' : ''}" data-initiative-id="${escapeHtml(initiative.id)}">
       <div class="card-top">
         <div class="title-row">
           <h4>${escapeHtml(initiative.title)}</h4>
-          ${votingDisabled ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
+          ${pendingStatus ? `<span class="tag tag-main">${langText('Laukia tvirtinimo', 'Pending')}</span>` : ''}
+          ${initiativeStatus === 'disabled' ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
         </div>
         <p>${escapeHtml(initiative.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
         ${shareMarkup}
@@ -3136,7 +3207,7 @@ function renderInitiativeCard(initiative, options) {
               <button class="vote-btn" data-action="initiative-vote-plus" data-id="${escapeHtml(initiative.id)}" aria-label="${escapeHtml(langText('Prideti bala', 'Increase vote'))}" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
             <div class="vote-total">${langText('Bendras balas', 'Total score')}: <strong>${Number(initiative.totalScore || 0)}</strong></div>
-            ${votingDisabled ? `<div class="vote-total">${langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
+            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiūlymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
           </div>
         </div>
       ` : `
@@ -3178,6 +3249,38 @@ function findInitiativeByRouteEntity() {
   const targetId = String(state.routeEntityId || '').trim();
   if (!targetId) return null;
   return (state.initiatives || []).find((initiative) => String(initiative?.id || '').trim() === targetId) || null;
+}
+
+async function resolveRouteEntityAliasIfNeeded() {
+  const entityKind = String(state.routeEntityKind || '').trim().toLowerCase();
+  const entityId = String(state.routeEntityId || '').trim();
+  if (!entityKind || !entityId) return;
+  if (entityKind !== 'guideline' && entityKind !== 'initiative') return;
+  if (!state.institutionSlug || !state.strategySlug) return;
+
+  const existsInLoadedData = entityKind === 'guideline'
+    ? (state.guidelines || []).some((item) => String(item?.id || '').trim() === entityId)
+    : (state.initiatives || []).some((item) => String(item?.id || '').trim() === entityId);
+  if (existsInLoadedData) return;
+
+  try {
+    const params = new URLSearchParams();
+    if (state.strategySlug) params.set('strategy', state.strategySlug);
+    const payload = await api(
+      `/api/v1/public/institutions/${encodeURIComponent(state.institutionSlug)}/proposals/${encodeURIComponent(entityId)}/resolve?${params.toString()}`,
+      { auth: 'optional' }
+    );
+    if (!payload?.shouldRedirect) return;
+    const finalEntityId = String(payload.finalEntityId || '').trim();
+    const finalKind = String(payload.entityKind || '').trim().toLowerCase();
+    if (!finalEntityId || (finalKind !== 'guideline' && finalKind !== 'initiative')) return;
+
+    setRouteEntity(finalKind, finalEntityId);
+    state.activeView = finalKind === 'guideline' ? 'guideline-detail' : 'initiative-detail';
+    syncRouteState();
+  } catch {
+    // silently keep original URL when alias cannot be resolved
+  }
 }
 
 function findGuidelineById(guidelineId) {
@@ -3441,7 +3544,7 @@ function bindInitiativeCardInteractions(list) {
         method: 'POST',
         body: { body: value }
       });
-      await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap()]);
+      await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
     });
   });
 }
@@ -3589,7 +3692,7 @@ function renderInitiativesView() {
   const initiatives = Array.isArray(state.initiatives) ? state.initiatives : [];
   const eligibleGuidelines = state.guidelines.filter((guideline) => {
     const status = String(guideline.status || 'active').toLowerCase();
-    return status === 'active' || status === 'disabled' || status === 'merged';
+    return status === 'active';
   });
   const guidelineInitiativeMatrix = renderGuidelineInitiativeMatrix(eligibleGuidelines, initiatives);
 
@@ -3710,11 +3813,318 @@ function renderInitiativesView() {
           method: 'POST',
           body: { title, description, guidelineIds, lineSide: 'auto' }
         });
-        await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap()]);
+        await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
       });
     });
   }
   bindInitiativeCardInteractions(list);
+}
+
+function historyStatusLabel(status) {
+  const key = String(status || '').trim().toLowerCase();
+  if (key === 'pending') return langText('Laukia tvirtinimo', 'Pending review');
+  if (key === 'approved') return langText('Patvirtinta', 'Approved');
+  if (key === 'rejected') return langText('Atmesta', 'Rejected');
+  return key || '-';
+}
+
+function historyKindLabel(kind) {
+  const normalized = String(kind || '').trim().toLowerCase();
+  if (normalized === 'guideline') return langText('GairÄ—', 'Guideline');
+  if (normalized === 'initiative') return langText('Iniciatyva', 'Initiative');
+  return normalized || '-';
+}
+
+function historyEntryCardHref(entry) {
+  const item = entry && typeof entry === 'object' ? entry : null;
+  if (!item) return '';
+  const kind = String(item.entityKind || '').trim().toLowerCase();
+  const status = String(item.status || '').trim().toLowerCase();
+  const pendingId = String(item.id || '').trim();
+  const finalId = String(item.finalEntityId || '').trim();
+  if (kind === 'guideline') {
+    return buildGuidelineHref(status === 'approved' && finalId ? finalId : pendingId);
+  }
+  if (kind === 'initiative') {
+    return buildInitiativeHref(status === 'approved' && finalId ? finalId : pendingId);
+  }
+  return '';
+}
+
+function renderHistoryEntry(entry, options = {}) {
+  const item = entry && typeof entry === 'object' ? entry : null;
+  if (!item) return '';
+  const status = String(item.status || '').trim().toLowerCase();
+  const kind = String(item.entityKind || '').trim().toLowerCase();
+  const title = String(item.finalTitle || item.title || item.id || '-').trim() || '-';
+  const originalTitle = String(item.title || '').trim();
+  const href = historyEntryCardHref(item);
+  const showOriginal = Boolean(status === 'approved' && originalTitle && originalTitle !== title);
+  const requestedAt = formatCommentDateTime(item.requestedAt);
+  const reviewedAt = item.reviewedAt ? formatCommentDateTime(item.reviewedAt) : '';
+  const canReview = Boolean(options.canReview && status === 'pending');
+
+  return `
+    <article class="card history-entry-card history-status-${escapeHtml(status)}">
+      <div class="header-row">
+        <strong>${escapeHtml(title)}</strong>
+        <div class="header-stack">
+          <span class="tag">${escapeHtml(historyKindLabel(kind))}</span>
+          <span class="tag ${status === 'pending' ? 'tag-main' : ''}">${escapeHtml(historyStatusLabel(status))}</span>
+        </div>
+      </div>
+      ${showOriginal ? `<p class="prompt">${escapeHtml(langText('Pradinis pavadinimas', 'Original title'))}: ${escapeHtml(originalTitle)}</p>` : ''}
+      <p>${escapeHtml(String(item.description || '').trim() || langText('ApraÅ¡ymas nepateiktas.', 'Description not provided.'))}</p>
+      <div class="header-stack" style="margin-top:8px;">
+        <span class="tag">${escapeHtml(langText('PateikÄ—', 'Requested by'))}: ${escapeHtml(String(item.requestedByName || item.requestedBy || '-').trim() || '-')}</span>
+        <span class="tag">${escapeHtml(langText('Data', 'Date'))}: ${escapeHtml(requestedAt)}</span>
+        ${item.reviewDecision ? `<span class="tag">${escapeHtml(langText('Sprendimas', 'Decision'))}: ${escapeHtml(String(item.reviewDecision || '').trim())}</span>` : ''}
+        ${reviewedAt ? `<span class="tag">${escapeHtml(langText('PerÅ¾iÅ«rÄ—ta', 'Reviewed at'))}: ${escapeHtml(reviewedAt)}</span>` : ''}
+        ${item.commentCount ? `<span class="tag">${escapeHtml(langText('Komentarai', 'Comments'))}: ${Number(item.commentCount || 0)}</span>` : ''}
+      </div>
+      ${item.reviewNote ? `<p class="prompt" style="margin-top:8px;">${escapeHtml(langText('PerÅ¾iÅ«ros pastaba', 'Review note'))}: ${escapeHtml(item.reviewNote)}</p>` : ''}
+      <div class="header-stack" style="margin-top:10px;">
+        ${href ? `<a class="btn btn-ghost" href="${escapeHtml(href)}">${escapeHtml(langText('Atidaryti kortelÄ™', 'Open card'))}</a>` : ''}
+        ${canReview ? `<button type="button" class="btn btn-primary" data-action="history-review" data-proposal-id="${escapeHtml(item.id)}">${escapeHtml(langText('PerÅ¾iÅ«rÄ—ti', 'Review'))}</button>` : ''}
+      </div>
+    </article>
+  `;
+}
+
+function renderHistoryView() {
+  if (!state.institutionSlug) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+      </div>
+    `;
+    return;
+  }
+
+  if (!isLoggedIn()) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Prisijunkite', 'Sign in required')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Istorija rodoma tik prisijungusiems institucijos nariams.', 'History is available to signed-in institution members only.')}</p>
+        <button id="openAuthFromHistory" class="btn btn-primary" style="margin-top: 12px;">${langText('Prisijungti', 'Sign in')}</button>
+      </div>
+    `;
+    const authBtn = elements.stepView.querySelector('#openAuthFromHistory');
+    if (authBtn) authBtn.addEventListener('click', () => showAuthModal('login'));
+    return;
+  }
+
+  const entries = Array.isArray(state.historyEntries) ? state.historyEntries : [];
+  const canReview = canOpenAdminView();
+  const activeGuidelines = (state.guidelines || []).filter((item) => String(item?.status || '').trim().toLowerCase() === 'active');
+  const parentGuidelines = activeGuidelines.filter((item) => normalizeGuidelineRelation(item?.relationType) === 'parent');
+  const pendingEntries = entries.filter((item) => String(item?.status || '').trim().toLowerCase() === 'pending');
+  const decisionEntries = entries.filter((item) => String(item?.status || '').trim().toLowerCase() !== 'pending');
+
+  elements.stepView.innerHTML = `
+    <div class="step-header">
+      <h2>${langText('Istorija', 'History')}</h2>
+      <div class="header-stack step-header-actions">
+        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
+        <span class="tag">${langText('Ä®raÅ¡Å³', 'Entries')}: ${entries.length}</span>
+      </div>
+    </div>
+    ${state.historyError ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(state.historyError)}</strong></div>` : ''}
+    ${state.historyLoading ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(langText('Kraunama istorija...', 'Loading history...'))}</strong></div>` : ''}
+
+    <section class="guideline-group">
+      <div class="guideline-group-header">
+        <h3>${langText('Laukiantys pasiÅ«lymai', 'Pending proposals')}</h3>
+        <span class="tag">${pendingEntries.length}</span>
+      </div>
+      ${pendingEntries.length
+    ? `<div id="historyPendingList" class="card-list">${pendingEntries.map((entry) => renderHistoryEntry(entry, { canReview })).join('')}</div>`
+    : `<div class="card guideline-empty"><strong>${langText('LaukianÄiÅ³ pasiÅ«lymÅ³ nÄ—ra', 'No pending proposals')}</strong></div>`}
+    </section>
+
+    <section class="guideline-group">
+      <div class="guideline-group-header">
+        <h3>${langText('SprendimÅ³ Å¾urnalas', 'Decision log')}</h3>
+        <span class="tag">${decisionEntries.length}</span>
+      </div>
+      ${decisionEntries.length
+    ? `<div class="card-list">${decisionEntries.map((entry) => renderHistoryEntry(entry, { canReview: false })).join('')}</div>`
+    : `<div class="card guideline-empty"><strong>${langText('SprendimÅ³ dar nÄ—ra', 'No decisions yet')}</strong></div>`}
+    </section>
+
+    <div id="historyReviewModal" class="modal-overlay" hidden>
+      <div class="modal-card">
+        <div class="header-row">
+          <strong>${langText('PasiÅ«lymo perÅ¾iÅ«ra', 'Proposal review')}</strong>
+          <button type="button" class="btn btn-ghost" data-action="close-history-review">${langText('UÅ¾daryti', 'Close')}</button>
+        </div>
+        <form id="historyReviewForm" class="guideline-add-form" style="margin-top: 12px;">
+          <input type="hidden" name="proposalId" />
+          <label class="prompt" style="display:block;margin-bottom:6px;">${langText('Sprendimas', 'Decision')}</label>
+          <select name="decision" required>
+            <option value="approved">${langText('Patvirtinti', 'Approve')}</option>
+            <option value="approved_with_changes">${langText('Patvirtinti su pakeitimais', 'Approve with changes')}</option>
+            <option value="rejected">${langText('Atmesti', 'Reject')}</option>
+          </select>
+          <label class="prompt history-patch-field" style="display:block;margin:10px 0 6px;">${langText('Pavadinimas', 'Title')}</label>
+          <input class="history-patch-field" type="text" name="title" />
+          <label class="prompt history-patch-field" style="display:block;margin:10px 0 6px;">${langText('ApraÅ¡ymas', 'Description')}</label>
+          <textarea class="history-patch-field" name="description"></textarea>
+          <div id="historyReviewRelationFields" class="history-patch-field"></div>
+          <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Pastaba', 'Note')}</label>
+          <textarea name="reviewNote" placeholder="${escapeHtml(langText('PaaiÅ¡kinkite sprendimÄ…', 'Explain the decision'))}"></textarea>
+          <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('IÅ¡saugoti sprendimÄ…', 'Save decision')}</button>
+        </form>
+      </div>
+    </div>
+  `;
+
+  const authBtn = elements.stepView.querySelector('#openAuthFromHistory');
+  if (authBtn) authBtn.addEventListener('click', () => showAuthModal('login'));
+
+  if (!canReview) return;
+
+  const entryById = new Map(entries.map((entry) => [String(entry?.id || '').trim(), entry]));
+  const modal = elements.stepView.querySelector('#historyReviewModal');
+  const form = elements.stepView.querySelector('#historyReviewForm');
+  const relationFields = elements.stepView.querySelector('#historyReviewRelationFields');
+  if (!(modal instanceof HTMLElement) || !(form instanceof HTMLFormElement) || !(relationFields instanceof HTMLElement)) return;
+
+  const togglePatchFields = () => {
+    const decision = String(form.elements.decision?.value || '').trim().toLowerCase();
+    const patchEnabled = decision === 'approved_with_changes';
+    form.querySelectorAll('.history-patch-field').forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+      node.style.display = patchEnabled ? '' : 'none';
+      if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement) {
+        node.disabled = !patchEnabled;
+      }
+    });
+    relationFields.querySelectorAll('input, select, textarea').forEach((node) => {
+      if (!(node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement)) return;
+      node.disabled = !patchEnabled;
+    });
+  };
+
+  const renderRelationFields = (entry) => {
+    const kind = String(entry?.entityKind || '').trim().toLowerCase();
+    if (kind === 'guideline') {
+      const relationType = normalizeGuidelineRelation(entry?.relationType);
+      const parentId = String(entry?.parentGuidelineId || '').trim();
+      relationFields.innerHTML = `
+        <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('RyÅ¡io tipas', 'Relation type')}</label>
+        <select name="relationType">
+          <option value="orphan" ${relationType === 'orphan' ? 'selected' : ''}>${langText('NaÅ¡laitinÄ—', 'Orphan')}</option>
+          <option value="parent" ${relationType === 'parent' ? 'selected' : ''}>${langText('TÄ—vinÄ—', 'Parent')}</option>
+          <option value="child" ${relationType === 'child' ? 'selected' : ''}>${langText('VaikinÄ—', 'Child')}</option>
+        </select>
+        <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('TÄ—vinÄ— gairÄ—', 'Parent guideline')}</label>
+        <select name="parentGuidelineId">
+          <option value="">${langText('Nepasirinkta', 'Not selected')}</option>
+          ${parentGuidelines.map((guideline) => `<option value="${escapeHtml(guideline.id)}" ${guideline.id === parentId ? 'selected' : ''}>${escapeHtml(guideline.title || guideline.id)}</option>`).join('')}
+        </select>
+      `;
+      return;
+    }
+
+    const selectedIds = Array.isArray(entry?.guidelineIds) ? entry.guidelineIds : [];
+    relationFields.innerHTML = `
+      <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Susietos gairÄ—s', 'Linked guidelines')}</label>
+      <div class="guideline-checkbox-panel">
+        ${renderGuidelineCheckboxList(activeGuidelines, { selectedIds, name: 'guidelineIds' })}
+      </div>
+      <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Linijos kryptis', 'Line side')}</label>
+      <select name="lineSide">
+        ${['auto', 'left', 'right', 'top', 'bottom'].map((side) => `<option value="${side}" ${side === String(entry?.lineSide || 'auto').trim().toLowerCase() ? 'selected' : ''}>${escapeHtml(side)}</option>`).join('')}
+      </select>
+    `;
+  };
+
+  const closeModal = () => {
+    modal.hidden = true;
+    form.reset();
+    relationFields.innerHTML = '';
+  };
+
+  const openModal = (entry, forcedDecision = '') => {
+    if (!entry) return;
+    const proposalIdInput = form.querySelector('input[name="proposalId"]');
+    const titleInput = form.querySelector('input[name="title"]');
+    const descriptionInput = form.querySelector('textarea[name="description"]');
+    const decisionSelect = form.querySelector('select[name="decision"]');
+    if (!(proposalIdInput instanceof HTMLInputElement) || !(titleInput instanceof HTMLInputElement) || !(descriptionInput instanceof HTMLTextAreaElement) || !(decisionSelect instanceof HTMLSelectElement)) {
+      return;
+    }
+    proposalIdInput.value = String(entry.id || '').trim();
+    titleInput.value = String(entry.title || '').trim();
+    descriptionInput.value = String(entry.description || '').trim();
+    decisionSelect.value = forcedDecision || 'approved';
+    renderRelationFields(entry);
+    togglePatchFields();
+    modal.hidden = false;
+  };
+
+  elements.stepView.querySelectorAll('[data-action="history-review"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const proposalId = String(button.dataset.proposalId || '').trim();
+      const entry = entryById.get(proposalId);
+      openModal(entry, 'approved');
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="close-history-review"]').forEach((button) => {
+    button.addEventListener('click', closeModal);
+  });
+
+  form.elements.decision?.addEventListener('change', togglePatchFields);
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const proposalId = String(form.elements.proposalId?.value || '').trim();
+    const decision = String(form.elements.decision?.value || '').trim().toLowerCase();
+    if (!proposalId || !decision) return;
+    const entry = entryById.get(proposalId);
+    if (!entry) return;
+
+    const body = {
+      decision,
+      reviewNote: String(form.elements.reviewNote?.value || '').trim()
+    };
+
+    if (decision === 'approved_with_changes') {
+      body.title = String(form.elements.title?.value || '').trim();
+      body.description = String(form.elements.description?.value || '').trim();
+      if (String(entry.entityKind || '').trim().toLowerCase() === 'guideline') {
+        body.relationType = String(form.elements.relationType?.value || 'orphan').trim().toLowerCase();
+        body.parentGuidelineId = String(form.elements.parentGuidelineId?.value || '').trim() || null;
+      } else {
+        body.lineSide = String(form.elements.lineSide?.value || 'auto').trim().toLowerCase();
+        body.guidelineIds = Array.from(form.querySelectorAll('input[name="guidelineIds"]:checked'))
+          .map((input) => String(input.value || '').trim())
+          .filter(Boolean);
+      }
+    }
+
+    await runBusy(async () => {
+      await api(`/api/v1/admin/proposals/${encodeURIComponent(proposalId)}/decision`, {
+        method: 'POST',
+        body
+      });
+      closeModal();
+      await Promise.all([
+        refreshGuidelines(),
+        refreshInitiatives(),
+        refreshSummary(),
+        loadStrategyMap(),
+        refreshHistory()
+      ]);
+      await resolveRouteEntityAliasIfNeeded();
+    });
+  });
 }
 
 function renderStrategySelectionRequiredView() {
@@ -3832,6 +4242,11 @@ function renderStepView() {
 
   if (state.activeView === 'initiatives') {
     renderInitiativesView();
+    return;
+  }
+
+  if (state.activeView === 'history') {
+    renderHistoryView();
     return;
   }
 
@@ -4057,7 +4472,7 @@ function bindStepEvents() {
           method: 'POST',
           body: { title, description }
         });
-        await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap()]);
+        await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
       });
     });
   }
@@ -4130,7 +4545,7 @@ function bindStepEvents() {
           method: 'POST',
           body: { body: value }
         });
-        await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap()]);
+        await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
       });
     });
   }
@@ -5349,4 +5764,5 @@ function render() {
   flushPendingInitiativeFocus();
   window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }
+
 

@@ -4,6 +4,61 @@ Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
 ==================================================
+0) LIVE BASELINE - USE THIS FIRST (2026-03-04 13:56)
+==================================================
+Current source baseline:
+- Latest source commit: 4900d9b
+- Stable handoff filename (no date): PROJECT_HANDOFF.txt
+- Working branch: master
+
+Latest major behavior now in source:
+- Strategy is no longer auto-selected by "default".
+- User must explicitly select strategy after selecting institution.
+- Canonical URL without selected strategy: /institution/{institutionSlug}
+- Legacy links with strategy segment still resolve; if strategy is invalid/missing, route normalizes to institution-level path.
+- Last selected strategy is remembered per institution in localStorage (used as hint/assist, not forced as default).
+
+Status to verify before each deploy:
+- This handoff documents source state; deployed state may lag.
+- On server always verify live commit first:
+  - cd /srv/uzt-strategy-src
+  - git rev-parse --short HEAD
+
+Big update prep - locked decisions (confirmed):
+1. Strategy required screen: yes.
+2. URL when institution selected but no strategy: Option A (/institution/{slug}).
+3. Legacy /strategy/default links: keep working, normalize via canonical redirect behavior.
+4. Deep links for non-logged users: must work.
+5. Persistence: remember strategy per institution.
+6. Even with one strategy: explicit user click required.
+
+Big update execution plan (recommended order):
+1. Lock scope and routes:
+   - Keep canonical route rules in code (not only in handoff notes).
+   - Preserve backward-compatible deep-link behavior.
+2. Backend/API contract checks:
+   - Ensure endpoints handle missing strategy filter safely.
+   - Keep strategy lists available for strategy-selection screen.
+3. Frontend routing and view states:
+   - Institution selected + no strategy => strategy selection screen.
+   - Block guidelines/initiatives/map content rendering until strategy chosen.
+4. Session/auth handling:
+   - Do not force default strategy during login/switch-institution flow.
+   - Keep institution switch and strategy switch explicit and predictable.
+5. Smoke tests:
+   - Anonymous deep-link open, refresh, back/forward, and direct URL open.
+   - Logged-in institution switch -> strategy selection required.
+   - Detail links (guideline/initiative) from direct URL and map modal.
+   - EN/LT labels for modal/buttons.
+6. Deploy and verify:
+   - deploy/deploy.sh
+   - /api/v1/health
+   - frontend route sanity checks.
+
+Rollback quick note:
+- If deploy fails, use release backup printed by deploy script and DB backup path from same output.
+
+==================================================
 1) CURRENT SNAPSHOT (2026-03-04)
 ==================================================
 Production domain:

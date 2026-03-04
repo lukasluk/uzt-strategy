@@ -1,9 +1,11 @@
 const { parseBearer, readAuthToken } = require('./security');
+const { pool } = require('./db');
 const { createInstitutionCycleService } = require('./services/institutionCycleService');
 const { createContextLookupService } = require('./services/contextLookupService');
 const { createVoteService } = require('./services/voteService');
 const { createContentMutationService } = require('./services/contentMutationService');
 const { createAdminMutationService } = require('./services/adminMutationService');
+const { createProposalModerationService } = require('./services/proposalModerationService');
 
 function createV1Helpers({ query, authSecret }) {
   const institutionCycleService = createInstitutionCycleService({ query });
@@ -11,6 +13,7 @@ function createV1Helpers({ query, authSecret }) {
   const voteService = createVoteService({ query });
   const contentMutationService = createContentMutationService({ query });
   const adminMutationService = createAdminMutationService({ query });
+  const proposalModerationService = createProposalModerationService({ query, pool });
 
   function requireAuth(req, res, next) {
     const token = parseBearer(req);
@@ -46,6 +49,17 @@ function createV1Helpers({ query, authSecret }) {
     createInitiativeWithGuidelines: contentMutationService.createInitiativeWithGuidelines,
     createGuidelineComment: contentMutationService.createGuidelineComment,
     createInitiativeComment: contentMutationService.createInitiativeComment,
+    createGuidelineProposal: proposalModerationService.createGuidelineProposal,
+    createInitiativeProposal: proposalModerationService.createInitiativeProposal,
+    loadGuidelineProposalContext: proposalModerationService.loadGuidelineProposalContext,
+    loadInitiativeProposalContext: proposalModerationService.loadInitiativeProposalContext,
+    createProposalComment: proposalModerationService.createProposalComment,
+    listCycleProposalHistory: proposalModerationService.listCycleProposalHistory,
+    listCyclePendingProposals: proposalModerationService.listCyclePendingProposals,
+    loadPublicPendingProposals: proposalModerationService.loadPublicPendingProposals,
+    listPublicProposalComments: proposalModerationService.listPublicProposalComments,
+    resolveProposalAlias: proposalModerationService.resolveProposalAlias,
+    reviewPendingProposal: proposalModerationService.reviewPendingProposal,
     createInstitutionInvite: adminMutationService.createInstitutionInvite,
     setCycleState: adminMutationService.setCycleState,
     setCycleSettings: adminMutationService.setCycleSettings,

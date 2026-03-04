@@ -32,6 +32,8 @@ function registerAdminRoutes({
   loadInitiativeCommentContext,
   validateGuidelineRelationship,
   validateInitiativeGuidelineAssignments,
+  listCyclePendingProposals,
+  reviewPendingProposal,
   createInstitutionInvite,
   setCycleState,
   setCycleSettings,
@@ -1273,6 +1275,81 @@ function registerAdminRoutes({
     );
 
     res.json({ participants: participants.rows });
+  });
+
+  app.get('/api/v1/admin/cycles/:cycleId/proposals', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+
+    const entries = await listCyclePendingProposals({ cycleId });
+
+    res.json({
+      cycleId,
+      entries
+    });
+  });
+
+  app.post('/api/v1/admin/proposals/:proposalId/decision', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const proposalId = String(req.params.proposalId || '').trim();
+    if (!proposalId) return res.status(400).json({ error: 'proposalId required' });
+
+    const decision = String(req.body?.decision || '').trim().toLowerCase();
+    if (!['approved', 'approved_with_changes', 'rejected'].includes(decision)) {
+      return res.status(400).json({ error: 'invalid decision' });
+    }
+
+    const patch = {
+      title: String(req.body?.title || '').trim() || undefined,
+      description: String(req.body?.description || '').trim() || undefined,
+      relationType: String(req.body?.relationType || '').trim().toLowerCase() || undefined,
+      parentGuidelineId: String(req.body?.parentGuidelineId || '').trim() || undefined,
+      lineSide: normalizeLineSide(req.body?.lineSide) || undefined,
+      guidelineIds: Array.isArray(req.body?.guidelineIds)
+        ? req.body.guidelineIds.map((item) => String(item || '').trim()).filter(Boolean)
+        : undefined
+    };
+    const reviewNote = String(req.body?.reviewNote || '').trim();
+
+    try {
+      const result = await reviewPendingProposal({
+        proposalId,
+        institutionId: req.auth.institutionId,
+        actorId: req.auth.sub,
+        decision,
+        reviewNote,
+        patch,
+        uuid
+      });
+
+      broadcast({
+        type: 'v1.proposal.reviewed',
+        institutionId: req.auth.institutionId,
+        proposalId,
+        decision: result.decision,
+        finalEntityId: result.finalEntityId || null,
+        entityKind: result.entityKind
+      });
+
+      res.json({
+        ok: true,
+        proposalId,
+        decision: result.decision,
+        status: result.status,
+        entityKind: result.entityKind,
+        finalEntityId: result.finalEntityId || null
+      });
+    } catch (error) {
+      const status = Number(error?.status || 0);
+      if (status >= 400 && status < 500) {
+        return res.status(status).json({ error: String(error?.message || 'proposal decision failed') });
+      }
+      return res.status(400).json({ error: String(error?.message || 'proposal decision failed') });
+    }
   });
 
   app.post('/api/v1/admin/users/:userId/password-reset-link', requireAuth, adminWriteGuard, async (req, res) => {

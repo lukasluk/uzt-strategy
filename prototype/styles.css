@@ -2529,6 +2529,17 @@ body.embed-map-page .map-fullscreen-watermark img {
   border-left-color: #9d9182;
   opacity: 0.72;
 }
+.guideline-node.status-pending {
+  background: repeating-linear-gradient(
+    -45deg,
+    #f7fbff,
+    #f7fbff 8px,
+    #eef4fc 8px,
+    #eef4fc 16px
+  );
+  border-color: #adc3df;
+  border-left-color: #6186bc;
+}
 .initiative-node {
   border: 1px solid #e2c89f;
   background: linear-gradient(180deg, #fffdf8 0%, #f9efdf 100%);
@@ -2573,6 +2584,17 @@ body.embed-map-page .map-fullscreen-watermark img {
   border-color: #d5cec4;
   border-left-color: #948b7f;
   opacity: 0.7;
+}
+.initiative-node.status-pending {
+  background: repeating-linear-gradient(
+    -45deg,
+    #fffcf4,
+    #fffcf4 8px,
+    #f7f0e1 8px,
+    #f7f0e1 16px
+  );
+  border-color: #dfcfb0;
+  border-left-color: #b58a3b;
 }
 .map-vote-square.initiative-square {
   background: #c88527;
@@ -3971,6 +3993,48 @@ select:focus {
 }
 .guideline-card .vote-panel {
   background: #e9f5ff;
+}
+.card-pending {
+  border-style: dashed;
+  border-width: 2px;
+  box-shadow: 0 0 0 2px rgba(51, 107, 181, 0.08) inset;
+}
+.history-entry-card {
+  border-color: #d1ddf2;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+}
+.history-entry-card.history-status-pending {
+  border-style: dashed;
+  border-width: 2px;
+  border-color: #6a8fc3;
+}
+.history-entry-card.history-status-rejected {
+  border-color: #e3b8b8;
+  background: linear-gradient(180deg, #fffefe 0%, #fff6f6 100%);
+}
+.history-entry-card.history-status-approved {
+  border-color: #b7d9cb;
+  background: linear-gradient(180deg, #ffffff 0%, #f4fcf8 100%);
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2400;
+  background: rgba(19, 33, 51, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+.modal-card {
+  width: min(720px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid #d0ddee;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(26, 52, 84, 0.24);
+  padding: 18px;
 }
 .guideline-card.guideline-relation-parent {
   border-color: #bcd9f2;
