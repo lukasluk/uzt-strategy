@@ -1,27 +1,27 @@
 ﻿PROJECT HANDOFF - UZT / digistrategija.lt
-Generated: 2026-02-13 12:34
+Generated: 2026-03-04 10:41
 Repo: https://github.com/lukasluk/uzt-strategy
 Branch: master
 
 ==================================================
-1) CURRENT SNAPSHOT (2026-02-13)
+1) CURRENT SNAPSHOT (2026-03-04)
 ==================================================
 Production domain:
 - https://www.digistrategija.lt
 - https://digistrategija.lt
 
 Most recent verified production deployment:
-- Date/time: 2026-02-23 22:02 UTC
+- Date/time: 2026-03-04 08:32 UTC
 - Result: Deployment completed safely
 - DB backup:
-  /srv/uzt-backups/database/uzt_strategy_20260223T220229Z.dump
+  /srv/uzt-backups/database/uzt_strategy_20260304T083246Z.dump
 - Release backup:
-  /srv/uzt-backups/releases/20260223T220229Z
+  /srv/uzt-backups/releases/20260304T083246Z
 - Health endpoint:
   /api/v1/health => {"ok":true,"version":"v1"}
 
 Latest deployed commit:
-- 8cb9dea - Fix mojibake symbols and UTF-8 text across app and landing
+- b7d55cf - Add canonical strategy deep links and share URLs in UI
 
 Latest applied source update in this handoff cycle (to be deployed if not yet):
 - Institution admin users flow switched from direct password set to one-time URL flow.
@@ -597,3 +597,35 @@ END OF HANDOFF
 - Expected result:
   - cleaner guideline cards with consistent metadata presentation
   - consistent comment button sizing between parent and child cards.
+
+
+==================================================
+29) CLEAN URL ROUTING + SHARE LINKS DEPLOY (2026-03-04)
+==================================================
+- Deployment date/time (UTC): 2026-03-04 08:32
+- Deployed commit:
+  - b7d55cf - Add canonical strategy deep links and share URLs in UI
+- Deployment/runtime evidence:
+  - npm install: added 100 packages; audited 101 packages; found 0 vulnerabilities
+  - nginx config test: syntax is ok; test is successful
+  - API service status: active (running)
+  - local health check passed on attempt 2/20:
+    - http://127.0.0.1:3000/api/v1/health => {"ok":true,"version":"v1"}
+- Backup paths from deploy:
+  - DB backup: /srv/uzt-backups/database/uzt_strategy_20260304T083246Z.dump
+  - Release backup: /srv/uzt-backups/releases/20260304T083246Z
+- Feature delivered in this deploy:
+  - canonical deep-link routing (dual support + canonical redirect) for:
+    - /institution/:institutionSlug/strategy/:strategySlug
+    - /institution/:institutionSlug/strategy/:strategySlug/guideline/:guidelineId
+    - /institution/:institutionSlug/strategy/:strategySlug/initiative/:initiativeId
+  - share URLs now visible and copyable in:
+    - strategy switcher panel
+    - guideline cards
+    - initiative cards
+- Warnings/errors observed:
+  - No deployment-blocking errors.
+- Next-step recommendation:
+  - Validate public deep links in production while logged out (strategy/guideline/initiative).
+  - Verify old query links still open and then rewrite to canonical path.
+  - Continue with planned smoke checks implementation for map layer switch + node drag persistence.
