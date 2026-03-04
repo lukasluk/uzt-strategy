@@ -210,6 +210,7 @@ const state = {
   historyLoading: false,
   historyError: '',
   historyCycleId: '',
+  historySortOrder: 'asc',
   mapLayer: 'guidelines',
   mapStrategicLinksData: null,
   mapStrategicLinksLoading: false,
@@ -4040,7 +4041,12 @@ function renderHistoryView() {
 
   const apiRows = normalizeHistoryRowsForTable(state.historyRows);
   const fallbackRows = buildLegacyHistoryTableRows(state.historyEntries);
-  const rows = apiRows.length ? apiRows : fallbackRows;
+  const chronologicalRows = apiRows.length ? apiRows : fallbackRows;
+  const sortOrder = state.historySortOrder === 'desc' ? 'desc' : 'asc';
+  const rows = sortOrder === 'desc' ? [...chronologicalRows].reverse() : chronologicalRows;
+  const sortLabel = sortOrder === 'desc'
+    ? langText('Laikas: nuo naujausio', 'Timestamp: newest first')
+    : langText('Laikas: nuo seniausio', 'Timestamp: oldest first');
 
   elements.stepView.innerHTML = `
     <div class="step-header">
@@ -4056,7 +4062,7 @@ function renderHistoryView() {
 
     <section class="guideline-group">
       <div class="guideline-group-header">
-        <h3>${langText('Istorijos lentele', 'History table')}</h3>
+        <button id="historySortToggleBtn" type="button" class="history-sort-btn">${escapeHtml(sortLabel)}</button>
         <span class="tag">${rows.length}</span>
       </div>
       ${rows.length
@@ -4084,6 +4090,13 @@ function renderHistoryView() {
     </section>
   `;
 
+  const sortBtn = elements.stepView.querySelector('#historySortToggleBtn');
+  if (sortBtn) {
+    sortBtn.addEventListener('click', () => {
+      state.historySortOrder = state.historySortOrder === 'desc' ? 'asc' : 'desc';
+      renderHistoryView();
+    });
+  }
   const authBtn = elements.stepView.querySelector('#openAuthFromHistory');
   if (authBtn) authBtn.addEventListener('click', () => showAuthModal('login'));
 }

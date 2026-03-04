@@ -4038,6 +4038,27 @@ select:focus {
   overflow: auto;
   background: #ffffff;
 }
+.history-sort-btn {
+  appearance: none;
+  border: 1px solid #b8cdea;
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+  color: #2a568f;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+.history-sort-btn:hover {
+  border-color: #93b4e0;
+  background: linear-gradient(180deg, #ffffff 0%, #e4efff 100%);
+  transform: translateY(-1px);
+}
+.history-sort-btn:focus-visible {
+  outline: 2px solid rgba(63, 143, 230, 0.35);
+  outline-offset: 1px;
+}
 .history-table {
   width: 100%;
   border-collapse: separate;
