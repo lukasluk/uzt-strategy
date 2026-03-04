@@ -124,6 +124,10 @@ const EMBED_QUERY_KEY = 'embed';
 const EMBED_MAP_VALUE = 'map';
 const EMBED_MAP_PATH_PREFIX = '/embed/strategy-map';
 const EMBED_BRAND_LINK = 'https://digistrategy.eu';
+const APP_PATH_INSTITUTION_SEGMENT = 'institution';
+const APP_PATH_STRATEGY_SEGMENT = 'strategy';
+const APP_PATH_GUIDELINE_SEGMENT = 'guideline';
+const APP_PATH_INITIATIVE_SEGMENT = 'initiative';
 const FOCUS_GUIDELINE_QUERY_KEY = 'focusGuideline';
 const FOCUS_INITIATIVE_QUERY_KEY = 'focusInitiative';
 const MAP_INSTITUTION_PULSE_MS = 10000;
@@ -204,6 +208,8 @@ const state = {
   mapTransform: { x: 120, y: 80, scale: 1 },
   expandedStepId: '',
   strategySwitcherDialogOpen: false,
+  routeEntityKind: resolveRouteEntityKind(),
+  routeEntityId: resolveRouteEntityId(),
   pendingAddSectionScrollId: '',
   pendingGuidelineFocusId: resolveGuidelineFocusId(),
   pendingInitiativeFocusId: resolveInitiativeFocusId(),
@@ -271,7 +277,124 @@ function markIntroVisited() {
   localStorage.setItem(INTRO_VISITED_KEY, '1');
 }
 
+function decodePathSegment(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function parseAppPathRoute() {
+  const parts = String(window.location.pathname || '').split('/').filter(Boolean);
+  if (!parts.length) {
+    return {
+      institutionSlug: '',
+      strategySlug: '',
+      focusKind: '',
+      focusId: ''
+    };
+  }
+
+  const first = String(parts[0] || '').trim().toLowerCase();
+  if (first === APP_PATH_INSTITUTION_SEGMENT) {
+    const institutionSlug = normalizeSlug(decodePathSegment(parts[1]));
+    if (!institutionSlug) {
+      return {
+        institutionSlug: '',
+        strategySlug: '',
+        focusKind: '',
+        focusId: ''
+      };
+    }
+
+    const third = String(parts[2] || '').trim().toLowerCase();
+    if (third !== APP_PATH_STRATEGY_SEGMENT) {
+      return {
+        institutionSlug,
+        strategySlug: '',
+        focusKind: '',
+        focusId: ''
+      };
+    }
+
+    const strategySlug = normalizeSlug(decodePathSegment(parts[3]));
+    if (!strategySlug) {
+      return {
+        institutionSlug,
+        strategySlug: '',
+        focusKind: '',
+        focusId: ''
+      };
+    }
+
+    const focusSegment = String(parts[4] || '').trim().toLowerCase();
+    const focusId = String(decodePathSegment(parts[5]) || '').trim();
+    if (!focusSegment || !focusId) {
+      return {
+        institutionSlug,
+        strategySlug,
+        focusKind: '',
+        focusId: ''
+      };
+    }
+
+    const focusKind = focusSegment === APP_PATH_GUIDELINE_SEGMENT
+      ? 'guideline'
+      : (focusSegment === APP_PATH_INITIATIVE_SEGMENT ? 'initiative' : '');
+    return {
+      institutionSlug,
+      strategySlug,
+      focusKind,
+      focusId: focusKind ? focusId : ''
+    };
+  }
+
+  return {
+    institutionSlug: '',
+    strategySlug: '',
+    focusKind: '',
+    focusId: ''
+  };
+}
+
+function resolveRouteEntityFromLocation() {
+  const fromPath = parseAppPathRoute();
+  if (fromPath.focusKind && fromPath.focusId) {
+    return {
+      kind: fromPath.focusKind,
+      id: fromPath.focusId
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const guidelineId = String(params.get(FOCUS_GUIDELINE_QUERY_KEY) || '').trim();
+  if (guidelineId) {
+    return { kind: 'guideline', id: guidelineId };
+  }
+
+  const initiativeId = String(params.get(FOCUS_INITIATIVE_QUERY_KEY) || '').trim();
+  if (initiativeId) {
+    return { kind: 'initiative', id: initiativeId };
+  }
+
+  return { kind: '', id: '' };
+}
+
+function resolveRouteEntityKind() {
+  return resolveRouteEntityFromLocation().kind;
+}
+
+function resolveRouteEntityId() {
+  return resolveRouteEntityFromLocation().id;
+}
+
 function resolveInstitutionSlug() {
+  const fromPath = parseAppPathRoute();
+  if (fromPath.institutionSlug) return fromPath.institutionSlug;
+
   const params = new URLSearchParams(window.location.search);
   const querySlug = normalizeSlug(params.get('institution'));
   if (querySlug) return querySlug;
@@ -294,20 +417,23 @@ function resolveInstitutionSlug() {
 }
 
 function resolveStrategySlug() {
+  const fromPath = parseAppPathRoute();
+  if (fromPath.strategySlug) return fromPath.strategySlug;
+
   const params = new URLSearchParams(window.location.search);
   return normalizeSlug(params.get('strategy'));
 }
 
 function resolveGuidelineFocusId() {
-  const params = new URLSearchParams(window.location.search);
-  const value = String(params.get(FOCUS_GUIDELINE_QUERY_KEY) || '').trim();
-  return value || '';
+  const focus = resolveRouteEntityFromLocation();
+  if (focus.kind !== 'guideline') return '';
+  return focus.id || '';
 }
 
 function resolveInitiativeFocusId() {
-  const params = new URLSearchParams(window.location.search);
-  const value = String(params.get(FOCUS_INITIATIVE_QUERY_KEY) || '').trim();
-  return value || '';
+  const focus = resolveRouteEntityFromLocation();
+  if (focus.kind !== 'initiative') return '';
+  return focus.id || '';
 }
 
 function resolveEmbedMapMode() {
@@ -321,31 +447,79 @@ function resolveEmbedMapMode() {
 
 function resolveInitialView() {
   if (EMBED_MAP_MODE) return 'map';
+  const fromPath = parseAppPathRoute();
+  if (fromPath.focusKind === 'guideline') return 'guidelines';
+  if (fromPath.focusKind === 'initiative') return 'initiatives';
   const params = new URLSearchParams(window.location.search);
   const view = String(params.get('view') || '').trim().toLowerCase();
   return ALLOWED_VIEWS.has(view) ? view : 'guidelines';
 }
 
-function buildCurrentPageHref({ slug = state.institutionSlug, strategySlug = state.strategySlug, view = state.activeView } = {}) {
+function buildCanonicalAppPath({ slug, strategySlug, focusKind, focusId }) {
+  const nextSlug = normalizeSlug(slug);
+  const nextStrategySlug = normalizeSlug(strategySlug);
+  const nextFocusKind = String(focusKind || '').trim().toLowerCase();
+  const nextFocusId = String(focusId || '').trim();
+
+  if (!nextSlug) return '/index.html';
+  if (!nextStrategySlug) return `/${APP_PATH_INSTITUTION_SEGMENT}/${encodeURIComponent(nextSlug)}`;
+
+  let path = `/${APP_PATH_INSTITUTION_SEGMENT}/${encodeURIComponent(nextSlug)}/${APP_PATH_STRATEGY_SEGMENT}/${encodeURIComponent(nextStrategySlug)}`;
+  if (nextFocusKind === 'guideline' && nextFocusId) {
+    path += `/${APP_PATH_GUIDELINE_SEGMENT}/${encodeURIComponent(nextFocusId)}`;
+  } else if (nextFocusKind === 'initiative' && nextFocusId) {
+    path += `/${APP_PATH_INITIATIVE_SEGMENT}/${encodeURIComponent(nextFocusId)}`;
+  }
+  return path;
+}
+
+function buildCurrentPageHref({
+  slug = state.institutionSlug,
+  strategySlug = state.strategySlug,
+  view = state.activeView,
+  routeEntityKind = state.routeEntityKind,
+  routeEntityId = state.routeEntityId
+} = {}) {
   const params = new URLSearchParams(window.location.search);
   const nextSlug = normalizeSlug(slug);
   const nextStrategySlug = normalizeSlug(strategySlug);
   const nextView = state.embedMapMode ? 'map' : (ALLOWED_VIEWS.has(view) ? view : 'guidelines');
+  let path = window.location.pathname || '/index.html';
 
-  if (nextSlug) params.set('institution', nextSlug);
-  else params.delete('institution');
+  if (state.embedMapMode) {
+    if (nextSlug) params.set('institution', nextSlug);
+    else params.delete('institution');
 
-  if (nextStrategySlug) params.set('strategy', nextStrategySlug);
-  else params.delete('strategy');
+    if (nextStrategySlug) params.set('strategy', nextStrategySlug);
+    else params.delete('strategy');
 
-  if (state.embedMapMode) params.set(EMBED_QUERY_KEY, EMBED_MAP_VALUE);
-  else params.delete(EMBED_QUERY_KEY);
+    params.delete(FOCUS_GUIDELINE_QUERY_KEY);
+    params.delete(FOCUS_INITIATIVE_QUERY_KEY);
+    params.set(EMBED_QUERY_KEY, EMBED_MAP_VALUE);
+  } else {
+    params.delete('institution');
+    params.delete('strategy');
+    params.delete(FOCUS_GUIDELINE_QUERY_KEY);
+    params.delete(FOCUS_INITIATIVE_QUERY_KEY);
+    params.delete(EMBED_QUERY_KEY);
+    path = buildCanonicalAppPath({
+      slug: nextSlug,
+      strategySlug: nextStrategySlug,
+      focusKind: routeEntityKind,
+      focusId: routeEntityId
+    });
+  }
 
-  if (nextView !== 'guidelines') params.set('view', nextView);
+  const shouldOmitViewParam = !state.embedMapMode
+    && (
+      (nextView === 'guidelines' && String(routeEntityKind || '').trim().toLowerCase() === 'guideline' && String(routeEntityId || '').trim())
+      || (nextView === 'initiatives' && String(routeEntityKind || '').trim().toLowerCase() === 'initiative' && String(routeEntityId || '').trim())
+    );
+  if (nextView !== 'guidelines' && !shouldOmitViewParam) params.set('view', nextView);
   else params.delete('view');
 
   const query = params.toString();
-  return `${window.location.pathname}${query ? `?${query}` : ''}`;
+  return `${path}${query ? `?${query}` : ''}`;
 }
 
 function syncRouteState() {
@@ -353,6 +527,103 @@ function syncRouteState() {
   const currentHref = `${window.location.pathname}${window.location.search}`;
   if (nextHref !== currentHref) {
     window.history.replaceState(null, '', nextHref);
+  }
+}
+
+function setRouteEntity(kind, entityId) {
+  const normalizedKind = String(kind || '').trim().toLowerCase();
+  const normalizedId = String(entityId || '').trim();
+  if ((normalizedKind !== 'guideline' && normalizedKind !== 'initiative') || !normalizedId) {
+    state.routeEntityKind = '';
+    state.routeEntityId = '';
+    return;
+  }
+  state.routeEntityKind = normalizedKind;
+  state.routeEntityId = normalizedId;
+}
+
+function clearRouteEntity() {
+  state.routeEntityKind = '';
+  state.routeEntityId = '';
+}
+
+function clearRouteEntityForView(nextView) {
+  const normalizedView = String(nextView || '').trim().toLowerCase();
+  if (normalizedView === 'guidelines' && state.routeEntityKind === 'guideline') return;
+  if (normalizedView === 'initiatives' && state.routeEntityKind === 'initiative') return;
+  clearRouteEntity();
+}
+
+function buildAbsoluteUrlFromHref(href) {
+  return new URL(String(href || ''), window.location.origin).toString();
+}
+
+function buildStrategyHref({ institutionSlug = state.institutionSlug, strategySlug = state.strategySlug } = {}) {
+  return buildCurrentPageHref({
+    slug: institutionSlug,
+    strategySlug,
+    view: 'guidelines',
+    routeEntityKind: '',
+    routeEntityId: ''
+  });
+}
+
+function buildGuidelineHref(guidelineId, options = {}) {
+  return buildCurrentPageHref({
+    slug: options.institutionSlug || state.institutionSlug,
+    strategySlug: options.strategySlug || state.strategySlug,
+    view: 'guidelines',
+    routeEntityKind: 'guideline',
+    routeEntityId: guidelineId
+  });
+}
+
+function buildInitiativeHref(initiativeId, options = {}) {
+  return buildCurrentPageHref({
+    slug: options.institutionSlug || state.institutionSlug,
+    strategySlug: options.strategySlug || state.strategySlug,
+    view: 'initiatives',
+    routeEntityKind: 'initiative',
+    routeEntityId: initiativeId
+  });
+}
+
+function strategyShareUrl() {
+  return buildAbsoluteUrlFromHref(buildStrategyHref());
+}
+
+function guidelineShareUrl(guidelineId) {
+  return buildAbsoluteUrlFromHref(buildGuidelineHref(guidelineId));
+}
+
+function initiativeShareUrl(initiativeId) {
+  return buildAbsoluteUrlFromHref(buildInitiativeHref(initiativeId));
+}
+
+async function copyTextToClipboard(value) {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const helper = document.createElement('textarea');
+    helper.value = text;
+    helper.setAttribute('readonly', 'readonly');
+    helper.style.position = 'fixed';
+    helper.style.top = '-9999px';
+    helper.style.left = '-9999px';
+    document.body.appendChild(helper);
+    helper.focus();
+    helper.select();
+    let copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } catch {
+      copied = false;
+    }
+    helper.remove();
+    return copied;
   }
 }
 
@@ -367,6 +638,7 @@ function refreshBrandMapLink() {
   link.addEventListener('click', (event) => {
     event.preventDefault();
     if (state.activeView !== 'map') {
+      clearRouteEntityForView('map');
       state.activeView = 'map';
       render();
       return;
@@ -862,6 +1134,7 @@ function ensureSelectedStrategySlug() {
   const strategies = strategiesForSelectedInstitution();
   const selectedSlug = normalizeSlug(state.strategySlug);
   if (!strategies.length) {
+    if (selectedSlug) clearRouteEntity();
     state.strategySlug = '';
     return;
   }
@@ -869,7 +1142,9 @@ function ensureSelectedStrategySlug() {
     return;
   }
   const fallback = strategies.find((item) => item.isDefault) || strategies[0];
-  state.strategySlug = normalizeSlug(fallback?.slug);
+  const nextSlug = normalizeSlug(fallback?.slug);
+  if (nextSlug !== selectedSlug) clearRouteEntity();
+  state.strategySlug = nextSlug;
 }
 
 async function loadPublicData() {
@@ -1260,6 +1535,7 @@ async function bootstrap() {
     }
 
     if (!state.institutionSlug) {
+      clearRouteEntity();
       state.institution = null;
       state.strategy = null;
       state.strategySlug = '';
@@ -1496,6 +1772,7 @@ function bindInstitutionSwitch(container) {
     state.strategySlug = normalizeSlug(defaultStrategy?.slug);
     state.strategy = defaultStrategy || null;
     state.strategySwitcherDialogOpen = false;
+    clearRouteEntity();
     if (state.activeView === 'admin') {
       state.activeView = 'guidelines';
     }
@@ -1528,6 +1805,7 @@ function bindStrategySwitch(container) {
     state.strategySlug = slug;
     state.strategy = (strategiesForSelectedInstitution() || []).find((item) => normalizeSlug(item.slug) === slug) || null;
     state.strategySwitcherDialogOpen = false;
+    clearRouteEntity();
     syncRouteState();
 
     if (isAuthenticated() && !state.embedMapMode && state.institutionSlug) {
@@ -1560,6 +1838,7 @@ function setActiveView(nextView) {
   if (nextView !== 'map') {
     resetMapInitiativeFocusState();
   }
+  clearRouteEntityForView(nextView);
   state.activeView = nextView;
   syncRouteState();
   render();
@@ -1603,11 +1882,13 @@ function flushPendingAddSectionScroll() {
 
 function scheduleGuidelineFocus(guidelineId) {
   const nextId = String(guidelineId || '').trim();
+  if (nextId) setRouteEntity('guideline', nextId);
   state.pendingGuidelineFocusId = nextId || '';
 }
 
 function scheduleInitiativeFocus(initiativeId) {
   const nextId = String(initiativeId || '').trim();
+  if (nextId) setRouteEntity('initiative', nextId);
   state.pendingInitiativeFocusId = nextId || '';
 }
 
@@ -1685,6 +1966,11 @@ function strategySwitcherCardMarkup(options = {}) {
   const showCreateStrategyAction = canManageSelectedInstitution();
   const createButtonLabel = langText('Sukurti strategija', 'Create strategy');
   const guideButtonLabel = langText('Naudojimosi gidas', 'User guide');
+  const canShareStrategy = Boolean(normalizeSlug(state.institutionSlug) && normalizeSlug(state.strategySlug));
+  const strategyUrl = canShareStrategy ? strategyShareUrl() : '';
+  const strategyUrlLabel = langText('Strategijos nuoroda', 'Strategy URL');
+  const copyStrategyUrlLabel = langText('Kopijuoti nuoroda', 'Copy URL');
+  const openStrategyUrlLabel = langText('Atidaryti', 'Open');
 
   return `
     <div class="step-utility-card strategy-switcher-card ${topbar ? 'strategy-switcher-card-topbar' : ''} ${dialogOpen ? 'is-open' : ''}">
@@ -1710,6 +1996,18 @@ function strategySwitcherCardMarkup(options = {}) {
       <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>
         ${institutionSelectMarkup()}
         ${strategySelectMarkup()}
+        <div class="strategy-share-card">
+          <span class="strategy-share-label">${escapeHtml(strategyUrlLabel)}</span>
+          ${canShareStrategy
+    ? `
+              <a class="strategy-share-url" href="${escapeHtml(strategyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(strategyUrl)}</a>
+              <div class="strategy-share-actions">
+                <button type="button" class="btn btn-ghost" data-action="copy-strategy-url" data-url="${escapeHtml(strategyUrl)}">${escapeHtml(copyStrategyUrlLabel)}</button>
+                <a class="btn btn-ghost" href="${escapeHtml(strategyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(openStrategyUrlLabel)}</a>
+              </div>
+            `
+    : `<span class="prompt">${escapeHtml(langText('Pasirinkite institucija ir strategija.', 'Select institution and strategy.'))}</span>`}
+        </div>
         ${showCreateStrategyAction
     ? `<button id="openStrategyCreateModalBtn" type="button" class="btn btn-primary strategy-switcher-create-btn">${escapeHtml(createButtonLabel)}</button>`
     : ''}
@@ -1740,6 +2038,18 @@ function bindStrategySwitcherDialog(container) {
   if (createStrategyButton) {
     createStrategyButton.addEventListener('click', () => {
       showStrategyCreateModal();
+    });
+  }
+  const copyStrategyUrlButton = container.querySelector('[data-action="copy-strategy-url"]');
+  if (copyStrategyUrlButton instanceof HTMLButtonElement) {
+    copyStrategyUrlButton.addEventListener('click', async () => {
+      const value = String(copyStrategyUrlButton.dataset.url || '').trim();
+      const copied = await copyTextToClipboard(value);
+      if (copied) {
+        notifySuccess(langText('Strategijos nuoroda nukopijuota.', 'Strategy URL copied.'));
+      } else {
+        notifyError(langText('Nepavyko nukopijuoti nuorodos.', 'Failed to copy URL.'));
+      }
     });
   }
 }
@@ -1798,6 +2108,7 @@ async function navigateToStrategyLink(payload = {}) {
     && state.activeView === 'guidelines'
   ) {
     scheduleGuidelineFocus(targetGuidelineId);
+    syncRouteState();
     render();
     return;
   }
@@ -1808,6 +2119,7 @@ async function navigateToStrategyLink(payload = {}) {
     state.strategy = null;
     state.activeView = 'guidelines';
     state.expandedStepId = '';
+    clearRouteEntityForView('guidelines');
     scheduleGuidelineFocus(targetGuidelineId);
     syncRouteState();
 
@@ -1840,6 +2152,7 @@ async function navigateToStrategyPerspective(payload = {}) {
   );
 
   if (samePerspective) {
+    clearRouteEntityForView('map');
     state.activeView = 'map';
     state.mapLayer = nextMapLayer;
     syncRouteState();
@@ -1851,6 +2164,7 @@ async function navigateToStrategyPerspective(payload = {}) {
     state.institutionSlug = targetInstitutionSlug;
     state.strategySlug = targetStrategySlug;
     state.strategy = null;
+    clearRouteEntityForView('map');
     state.activeView = 'map';
     state.mapLayer = nextMapLayer;
     state.expandedStepId = '';
@@ -1872,6 +2186,7 @@ async function navigateToStrategyPerspective(payload = {}) {
     }
 
     await bootstrap();
+    clearRouteEntityForView('map');
     state.activeView = 'map';
     state.mapLayer = nextMapLayer;
     syncRouteState();
@@ -1914,6 +2229,7 @@ function renderSteps() {
       : items);
 
   if (state.activeView === 'admin' && !visibleItems.some((item) => item.id === 'admin')) {
+    clearRouteEntityForView('guidelines');
     state.activeView = 'guidelines';
   }
 
@@ -2332,6 +2648,20 @@ function commentsReadOnlyHintText(options) {
     : 'Prisijunkite, jei norite komentuoti.';
 }
 
+function renderCardShareRow({ url, entityId, copyAction }) {
+  const absoluteUrl = String(url || '').trim();
+  const safeEntityId = String(entityId || '').trim();
+  const action = String(copyAction || '').trim();
+  if (!absoluteUrl || !safeEntityId || !action) return '';
+  return `
+    <div class="card-share-row">
+      <span class="card-share-label">${escapeHtml(langText('Nuoroda', 'URL'))}</span>
+      <a class="card-share-url" href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(absoluteUrl)}</a>
+      <button type="button" class="btn btn-ghost card-share-copy-btn" data-action="${escapeHtml(action)}" data-id="${escapeHtml(safeEntityId)}" data-url="${escapeHtml(absoluteUrl)}">${escapeHtml(langText('Kopijuoti', 'Copy'))}</button>
+    </div>
+  `;
+}
+
 function buildGuidelineRelationshipGroups(guidelines) {
   const list = Array.isArray(guidelines) ? guidelines : [];
   const byId = Object.fromEntries(list.map((guideline) => [guideline.id, guideline]));
@@ -2415,6 +2745,12 @@ function renderGuidelineCard(guideline, options) {
       </div>
     `
     : '';
+  const guidelineUrl = guidelineShareUrl(guideline.id);
+  const shareMarkup = renderCardShareRow({
+    url: guidelineUrl,
+    entityId: guideline.id,
+    copyAction: 'copy-guideline-link'
+  });
 
   const budget = voteBudget();
   const usedWithoutCurrent = usedVotesTotal() - userScore;
@@ -2435,6 +2771,7 @@ function renderGuidelineCard(guideline, options) {
           ${votingDisabled ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
         </div>
         <p>${escapeHtml(guideline.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
+        ${shareMarkup}
         ${strategyLinksMarkup}
       </div>
       ${options.member ? `
@@ -2613,6 +2950,12 @@ function renderInitiativeCard(initiative, options) {
   const initiativeStatus = String(initiative.status || 'active').toLowerCase();
   const votingDisabled = initiativeStatus === 'disabled';
   const linkedNames = resolveInitiativeGuidelineNames(initiative);
+  const initiativeUrl = initiativeShareUrl(initiative.id);
+  const shareMarkup = renderCardShareRow({
+    url: initiativeUrl,
+    entityId: initiative.id,
+    copyAction: 'copy-initiative-link'
+  });
 
   const budget = voteBudget();
   const usedWithoutCurrent = usedVotesTotal() - userScore;
@@ -2632,6 +2975,7 @@ function renderInitiativeCard(initiative, options) {
           ${votingDisabled ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
         </div>
         <p>${escapeHtml(initiative.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
+        ${shareMarkup}
         <div class="header-stack">
           ${(linkedNames.length
             ? linkedNames.map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join('')
@@ -2855,12 +3199,27 @@ function renderInitiativesView() {
           return;
         }
       }
-      const action = target.dataset.action;
-      const initiativeId = target.dataset.id;
+      const actionElement = target.closest('[data-action]');
+      if (!(actionElement instanceof HTMLElement)) return;
+      const action = actionElement.dataset.action;
+      const initiativeId = String(actionElement.dataset.id || '').trim();
       if (!action || !initiativeId) return;
+
+      if (action === 'copy-initiative-link') {
+        const url = String(actionElement.dataset.url || initiativeShareUrl(initiativeId)).trim();
+        const copied = await copyTextToClipboard(url);
+        state.notice = copied
+          ? langText('Iniciatyvos nuoroda nukopijuota.', 'Initiative URL copied.')
+          : langText('Nepavyko nukopijuoti nuorodos.', 'Failed to copy URL.');
+        if (copied) notifySuccess(state.notice);
+        else notifyError(state.notice);
+        render();
+        return;
+      }
+
       if (action === 'initiative-vote-plus' || action === 'initiative-vote-minus') {
         const delta = action === 'initiative-vote-plus' ? 1 : -1;
-        const origin = getElementCenter(target);
+        const origin = getElementCenter(actionElement);
         await runBusy(async () => {
           const changed = await changeInitiativeVote(initiativeId, delta);
           if (changed) triggerVoteBurstAt(origin, delta);
@@ -2891,6 +3250,7 @@ function renderInitiativesView() {
 
 function renderStepView() {
   if (state.embedMapMode && state.activeView !== 'map') {
+    clearRouteEntityForView('map');
     state.activeView = 'map';
   }
   if (state.activeView !== 'map' && document.fullscreenElement === elements.stepView) {
@@ -3147,24 +3507,38 @@ function bindStepEvents() {
           return;
         }
       }
-      const action = target.dataset.action;
+      const actionElement = target.closest('[data-action]');
+      if (!(actionElement instanceof HTMLElement)) return;
+      const action = actionElement.dataset.action;
       if (!action) return;
 
       if (action === 'open-strategy-link') {
         await navigateToStrategyLink({
-          targetInstitutionSlug: target.dataset.targetInstitution,
-          targetStrategySlug: target.dataset.targetStrategy,
-          targetGuidelineId: target.dataset.targetGuideline
+          targetInstitutionSlug: actionElement.dataset.targetInstitution,
+          targetStrategySlug: actionElement.dataset.targetStrategy,
+          targetGuidelineId: actionElement.dataset.targetGuideline
         });
         return;
       }
 
-      const guidelineId = target.dataset.id;
+      const guidelineId = String(actionElement.dataset.id || '').trim();
       if (!guidelineId) return;
+
+      if (action === 'copy-guideline-link') {
+        const url = String(actionElement.dataset.url || guidelineShareUrl(guidelineId)).trim();
+        const copied = await copyTextToClipboard(url);
+        state.notice = copied
+          ? langText('Gaires nuoroda nukopijuota.', 'Guideline URL copied.')
+          : langText('Nepavyko nukopijuoti nuorodos.', 'Failed to copy URL.');
+        if (copied) notifySuccess(state.notice);
+        else notifyError(state.notice);
+        render();
+        return;
+      }
 
       if (action === 'vote-plus' || action === 'vote-minus') {
         const delta = action === 'vote-plus' ? 1 : -1;
-        const origin = getElementCenter(target);
+        const origin = getElementCenter(actionElement);
         await runBusy(async () => {
           const changed = await changeVote(guidelineId, delta);
           if (changed) triggerVoteBurstAt(origin, delta);
@@ -3443,6 +3817,7 @@ function ensureInstitutionSelectionForAuth() {
   const defaultStrategy = strategies.find((item) => item?.isDefault) || strategies[0] || null;
   state.strategySlug = normalizeSlug(defaultStrategy?.slug);
   state.strategy = defaultStrategy || null;
+  clearRouteEntity();
   syncRouteState();
   return true;
 }
@@ -3591,6 +3966,7 @@ function showAuthModal(initialMode = 'login') {
       state.institution = selectedInstitution || state.institution;
       state.strategySlug = selectedStrategySlug;
       state.strategy = selectedStrategy;
+      clearRouteEntity();
       syncRouteState();
       setSession(payload);
       closeModal();
@@ -4095,6 +4471,9 @@ function showStrategyCreateModal() {
   const syncCreatedStrategy = async (strategySlug) => {
     const nextSlug = normalizeSlug(strategySlug);
     if (!nextSlug) return;
+    if (nextSlug !== normalizeSlug(state.strategySlug)) {
+      clearRouteEntity();
+    }
     state.strategySlug = nextSlug;
     state.strategy = null;
     state.strategySwitcherDialogOpen = false;
@@ -4139,6 +4518,7 @@ function showStrategyCreateModal() {
         body: { title, slug, description }
       });
       await syncCreatedStrategy(payload?.strategy?.slug);
+      clearRouteEntityForView('map');
       state.activeView = 'map';
       syncRouteState();
       closePlatformPopups();
@@ -4226,6 +4606,7 @@ function showStrategyCreateModal() {
       if (progress) await progress.markPreparing();
       await syncCreatedStrategy(payload?.strategy?.slug);
       if (progress) await progress.complete();
+      clearRouteEntityForView('map');
       state.activeView = 'map';
       syncRouteState();
       closePlatformPopups();
