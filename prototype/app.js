@@ -2391,6 +2391,54 @@ function openStepAddSection(stepId) {
   flushPendingAddSectionScroll();
 }
 
+function stepIconMarkup(stepId) {
+  const id = String(stepId || '').trim().toLowerCase();
+  const wrap = (inner) => `<svg class="step-icon-svg" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`;
+
+  if (id === 'guidelines') {
+    return wrap(`
+      <circle cx="12" cy="12" r="6.6"></circle>
+      <circle cx="12" cy="12" r="2.4"></circle>
+      <path d="M12 2.8v2.8M12 18.4v2.8M2.8 12h2.8M18.4 12h2.8"></path>
+    `);
+  }
+
+  if (id === 'initiatives') {
+    return wrap(`
+      <path d="M7 3.8v16.4"></path>
+      <path d="M8 5.2h9l-2.3 3.2L17 11.7H8"></path>
+      <circle cx="7" cy="19.2" r="1.4"></circle>
+    `);
+  }
+
+  if (id === 'history') {
+    return wrap(`
+      <path d="M4.2 12a7.8 7.8 0 1 0 2.2-5.4"></path>
+      <path d="M4.2 5.4v3.7h3.7"></path>
+      <path d="M12 7.6v4.7l3.3 2.1"></path>
+    `);
+  }
+
+  if (id === 'admin') {
+    return wrap(`
+      <path d="M4.5 7.2h15"></path>
+      <path d="M4.5 16.8h15"></path>
+      <circle cx="9" cy="7.2" r="2"></circle>
+      <circle cx="15.2" cy="16.8" r="2"></circle>
+    `);
+  }
+
+  if (id === 'map') {
+    return wrap(`
+      <path d="M3.6 6.3L9 4.2l6 2.1 5.4-2.1v13.5L15 19.8l-6-2.1-5.4 2.1z"></path>
+      <path d="M9 4.2v13.5"></path>
+      <path d="M15 6.3v13.5"></path>
+    `);
+  }
+
+  return wrap('<circle cx="12" cy="12" r="6"></circle>');
+}
+
 function renderSteps() {
   if (!elements.steps) return;
   elements.steps.innerHTML = '';
@@ -2409,11 +2457,11 @@ function renderSteps() {
       : 0)
     : 0;
   const items = [
-    { id: 'guidelines', icon: '&#9673;', title: langText('Gairės', 'Guidelines'), locked: false },
-    { id: 'initiatives', icon: '&#10022;', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
-    { id: 'history', icon: '&#128340;', title: langText('Istorija', 'History'), locked: !canOpenHistory },
-    { id: 'admin', icon: '&#9881;', title: 'Admin', locked: !canOpenAdmin, alert: openPendingProposalCount > 0 },
-    { id: 'map', icon: '&#8999;', title: langText('Strategijų žemėlapis', 'Strategy map'), locked: false }
+    { id: 'guidelines', title: langText('Gairės', 'Guidelines'), locked: false },
+    { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
+    { id: 'history', title: langText('Istorija', 'History'), locked: !canOpenHistory },
+    { id: 'admin', title: 'Admin', locked: !canOpenAdmin, alert: openPendingProposalCount > 0 },
+    { id: 'map', title: langText('Strategijų žemėlapis', 'Strategy map'), locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -2446,7 +2494,7 @@ function renderSteps() {
     button.className = `step-pill${isActive ? ' active' : ''}${item.locked ? ' locked' : ''}${canExpand ? ' step-pill-expandable' : ''}`;
     button.innerHTML = `
       <div class="step-pill-head">
-        <span class="step-icon" aria-hidden="true">${item.icon}</span>
+        <span class="step-icon" aria-hidden="true">${stepIconMarkup(item.id)}</span>
         <h4>${escapeHtml(item.title)}</h4>
         ${item.alert ? '<span class="step-alert-dot" aria-hidden="true"></span>' : ''}
       </div>
@@ -5739,6 +5787,7 @@ function render() {
   flushPendingInitiativeFocus();
   window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }
+
 
 
 
