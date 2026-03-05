@@ -134,17 +134,12 @@ function renderDashboard(){
         <button type="button" class="admin-tab-btn ${state.adminTab==='users'?'active':''}" data-admin-tab="users">Vartotojai</button>
         <button type="button" class="admin-tab-btn ${state.adminTab==='guidelines'?'active':''}" data-admin-tab="guidelines">Gairės</button>
         <button type="button" class="admin-tab-btn ${state.adminTab==='initiatives'?'active':''}" data-admin-tab="initiatives">Iniciatyvos</button>
-        <button type="button" class="admin-tab-btn ${state.adminTab==='pending'?'active':''}" data-admin-tab="pending">Laukiantys pasiūlymai (${pendingCount})</button>
+        <button type="button" class="admin-tab-btn ${state.adminTab==='pending'?'active':''}" data-admin-tab="pending">${escapeHtml(langText('Laukiantys pasiūlymai', 'Pending proposals'))} (${pendingCount})</button>
       </div>
     </section>
     <section class="card" data-admin-section="cycle" style="margin-bottom:16px;">
       <div class="header-row">
-        <strong>Bendri nustatymai</strong>
-        <span class="tag">Strategija: ${escapeHtml(state.strategy?.title||'-')}</span>
-      </div>
-      <div class="header-row" style="margin-top:12px;">
-        <span class="tag">Ciklas: ${escapeHtml(cycle?.title||'-')}</span>
-        <span class="tag">Strategijos kūrimas/perjungimas: viršutiniame dešiniajame meniu</span>
+        <strong>${escapeHtml(langText('Bendri nustatymai', 'General settings'))}</strong>
       </div>
       <p class="prompt" style="margin-top:12px;">Būsena valdo, ar nariai gali balsuoti ir komentuoti (OPEN). Uždarius ciklą (CLOSED), balsavimas ir komentavimas išjungiami.</p>
       <div class="inline-form">
@@ -157,8 +152,8 @@ function renderDashboard(){
       </div>
       <div class="admin-edit" style="margin-top:12px;">
         <div class="header-row">
-          <strong>Misija ir vizija</strong>
-          <span class="tag">Rodoma „Naudojimosi gide“</span>
+          <strong>${escapeHtml(langText('Misija ir vizija', 'Mission and vision'))}</strong>
+          <span class="tag">${escapeHtml(langText('Rodoma „Naudojimosi gide“', 'Shown in \"User guide\"'))}</span>
         </div>
         <div class="admin-add-form">
           <div class="form-row admin-cycle-narrative-row">
