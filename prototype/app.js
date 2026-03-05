@@ -210,7 +210,7 @@ const state = {
   historyLoading: false,
   historyError: '',
   historyCycleId: '',
-  historySortOrder: 'asc',
+  historySortOrder: 'desc',
   mapLayer: 'guidelines',
   mapStrategicLinksData: null,
   mapStrategicLinksLoading: false,
@@ -3393,6 +3393,107 @@ function resolveInitiativeLinkedGuidelines(initiative) {
     .filter(Boolean);
 }
 
+function sortCardsByTitle(items) {
+  const source = Array.isArray(items) ? items : [];
+  return [...source].sort((left, right) => {
+    const leftLabel = String(left?.title || left?.id || '').trim();
+    const rightLabel = String(right?.title || right?.id || '').trim();
+    return leftLabel.localeCompare(rightLabel, undefined, { sensitivity: 'base' });
+  });
+}
+
+function resolveGuidelineRelatedItems(guideline) {
+  const item = guideline && typeof guideline === 'object' ? guideline : null;
+  if (!item) {
+    return {
+      heading: langText('Susije korteles', 'Related cards'),
+      emptyLabel: langText('Susijusiu korteliu nerasta.', 'No related cards found.'),
+      items: []
+    };
+  }
+
+  const relation = normalizeGuidelineRelation(item.relationType);
+  const guidelineId = String(item.id || '').trim();
+  const guidelines = Array.isArray(state.guidelines) ? state.guidelines : [];
+
+  if (relation === 'parent') {
+    const children = sortCardsByTitle(guidelines.filter((candidate) => {
+      if (!candidate || typeof candidate !== 'object') return false;
+      if (normalizeGuidelineRelation(candidate.relationType) !== 'child') return false;
+      return String(candidate.parentGuidelineId || '').trim() === guidelineId;
+    }));
+    return {
+      heading: langText('Vaikines gaires', 'Child guidelines'),
+      emptyLabel: langText('Vaikiniu gairiu dar nera.', 'No child guidelines yet.'),
+      items: children
+    };
+  }
+
+  if (relation === 'child') {
+    const parent = resolveGuidelineParent(item);
+    return {
+      heading: langText('Tevine gaire', 'Parent guideline'),
+      emptyLabel: langText('Tevine gaire nepriskirta.', 'No parent guideline is assigned.'),
+      items: parent ? [parent] : []
+    };
+  }
+
+  const otherOrphans = sortCardsByTitle(guidelines.filter((candidate) => {
+    if (!candidate || typeof candidate !== 'object') return false;
+    if (normalizeGuidelineRelation(candidate.relationType) !== 'orphan') return false;
+    return String(candidate.id || '').trim() !== guidelineId;
+  }));
+  return {
+    heading: langText('Kitos naslaiciu gaires', 'Other orphan guidelines'),
+    emptyLabel: langText('Kitu naslaiciu gairiu nera.', 'No other orphan guidelines.'),
+    items: otherOrphans
+  };
+}
+
+function renderRelatedGuidelineSectionMarkup({ heading, emptyLabel, items }) {
+  const cards = Array.isArray(items) ? items : [];
+  return `
+    <section class="guideline-group detail-related-group">
+      <div class="guideline-group-header">
+        <h3>${escapeHtml(heading)}</h3>
+        <span class="tag">${cards.length}</span>
+      </div>
+      ${cards.length
+    ? `<div class="detail-related-links">
+            ${cards.map((card) => `
+              <button
+                type="button"
+                class="detail-related-link"
+                data-action="open-related-guideline-detail"
+                data-guideline-id="${escapeHtml(card.id)}"
+              >${escapeHtml(card.title || card.id)}</button>
+            `).join('')}
+          </div>`
+    : `<div class="card guideline-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`}
+    </section>
+  `;
+}
+
+function renderGuidelineRelatedSection(guideline) {
+  return renderRelatedGuidelineSectionMarkup(resolveGuidelineRelatedItems(guideline));
+}
+
+function renderInitiativeRelatedGuidelinesSection(initiative) {
+  const linked = resolveInitiativeLinkedGuidelines(initiative);
+  const uniqueById = new Map();
+  linked.forEach((card) => {
+    const cardId = String(card?.id || '').trim();
+    if (!cardId) return;
+    if (uniqueById.has(cardId)) return;
+    uniqueById.set(cardId, card);
+  });
+  return renderRelatedGuidelineSectionMarkup({
+    heading: langText('Palaikomos gaires', 'Supported guidelines'),
+    emptyLabel: langText('Susietu gairiu nerasta.', 'No linked guidelines found.'),
+    items: sortCardsByTitle(Array.from(uniqueById.values()))
+  });
+}
+
 function buildGuidelineDetailBreadcrumbs(guideline) {
   const item = guideline && typeof guideline === 'object' ? guideline : null;
   if (!item) return '';
@@ -3500,6 +3601,7 @@ function renderGuidelineDetailView() {
   const writable = member && cycleIsWritable();
   const cardUrl = guidelineShareUrl(guideline.id);
   const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
+  const relatedGuidelinesMarkup = renderGuidelineRelatedSection(guideline);
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>${langText('Gaires kortele', 'Guideline card')}</h2>
@@ -3525,6 +3627,7 @@ function renderGuidelineDetailView() {
   })}
       </div>
     </section>
+    ${relatedGuidelinesMarkup}
   `;
 
   bindStepEvents();
@@ -3544,6 +3647,13 @@ function renderGuidelineDetailView() {
       const parentId = String(button.dataset.guidelineId || '').trim();
       if (!parentId) return;
       openGuidelineDetail(parentId);
+    });
+  });
+  elements.stepView.querySelectorAll('[data-action="open-related-guideline-detail"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const relatedId = String(button.dataset.guidelineId || '').trim();
+      if (!relatedId) return;
+      openGuidelineDetail(relatedId);
     });
   });
   const openMapButton = elements.stepView.querySelector('#openGuidelineMapBtn');
@@ -3669,6 +3779,7 @@ function renderInitiativeDetailView() {
   const writable = member && cycleIsWritable();
   const cardUrl = initiativeShareUrl(initiative.id);
   const breadcrumbMarkup = buildInitiativeDetailBreadcrumbs(initiative);
+  const relatedGuidelinesMarkup = renderInitiativeRelatedGuidelinesSection(initiative);
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>${langText('Iniciatyvos kortele', 'Initiative card')}</h2>
@@ -3694,6 +3805,7 @@ function renderInitiativeDetailView() {
   })}
       </div>
     </section>
+    ${relatedGuidelinesMarkup}
   `;
 
   const backButton = elements.stepView.querySelector('#backToInitiativesBtn');
@@ -3708,6 +3820,13 @@ function renderInitiativeDetailView() {
     });
   });
   elements.stepView.querySelectorAll('[data-action="open-guideline-detail-from-initiative"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const guidelineId = String(button.dataset.guidelineId || '').trim();
+      if (!guidelineId) return;
+      openGuidelineDetail(guidelineId);
+    });
+  });
+  elements.stepView.querySelectorAll('[data-action="open-related-guideline-detail"]').forEach((button) => {
     button.addEventListener('click', () => {
       const guidelineId = String(button.dataset.guidelineId || '').trim();
       if (!guidelineId) return;
@@ -3931,6 +4050,8 @@ function normalizeHistoryRowsForTable(rows) {
         occurredAt,
         action: String(row.action || '').trim().toLowerCase(),
         entityKind: String(row.entityKind || row.entity_kind || '').trim().toLowerCase(),
+        entityId: String(row.entityId || row.entity_id || '').trim(),
+        proposalId: String(row.proposalId || row.proposal_id || '').trim(),
         title: String(row.title || '-').trim() || '-',
         actorName: String(row.actorName || row.actor_name || '-').trim() || '-',
         details: String(row.details || '').trim()
@@ -3963,6 +4084,8 @@ function buildLegacyHistoryTableRows(entries) {
         occurredAt: item.requestedAt,
         action: 'proposal_submitted',
         entityKind,
+        entityId: String(item.entityId || item.finalEntityId || '').trim(),
+        proposalId,
         title: String(item.title || title).trim() || title,
         actorName: String(item.requestedByName || item.requestedBy || '-').trim() || '-',
         details: String(item.description || '').trim()
@@ -3986,6 +4109,8 @@ function buildLegacyHistoryTableRows(entries) {
           occurredAt: item.reviewedAt,
           action,
           entityKind,
+          entityId: String(item.finalEntityId || item.entityId || '').trim(),
+          proposalId,
           title,
           actorName: String(item.reviewedByName || item.reviewedBy || '-').trim() || '-',
           details: String(item.reviewNote || item.finalDescription || '').trim()
@@ -3997,11 +4122,44 @@ function buildLegacyHistoryTableRows(entries) {
   return normalizeHistoryRowsForTable(rows);
 }
 
+function historyRowNavigationTarget(row) {
+  const item = row && typeof row === 'object' ? row : null;
+  if (!item) return null;
+  const kind = String(item.entityKind || '').trim().toLowerCase();
+  if (kind !== 'guideline' && kind !== 'initiative') return null;
+
+  const action = String(item.action || '').trim().toLowerCase();
+  const entityId = String(item.entityId || '').trim();
+  const proposalId = String(item.proposalId || '').trim();
+  const fallbackAllowed = action === 'proposal_approved' || action === 'proposal_approved_with_changes';
+  const targetId = entityId || (fallbackAllowed ? proposalId : '');
+  if (!targetId) return null;
+
+  return {
+    kind,
+    targetId,
+    href: kind === 'initiative'
+      ? buildInitiativeHref(targetId)
+      : buildGuidelineHref(targetId)
+  };
+}
+
 function renderHistoryTableRow(row, index) {
   const item = row && typeof row === 'object' ? row : null;
   if (!item) return '';
   const actionClass = String(item.action || 'unknown').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
   const kindClass = String(item.entityKind || 'unknown').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+  const navigationTarget = historyRowNavigationTarget(item);
+  const linkLabel = langText('Atidaryti', 'Open');
+  const linkCell = navigationTarget
+    ? `<a
+          class="history-entity-link"
+          href="${escapeHtml(navigationTarget.href)}"
+          data-action="open-history-entity"
+          data-kind="${escapeHtml(navigationTarget.kind)}"
+          data-entity-id="${escapeHtml(navigationTarget.targetId)}"
+        >${escapeHtml(linkLabel)}</a>`
+    : `<span class="history-entity-link is-disabled">-</span>`;
 
   return `
     <tr class="history-table-row history-action-${escapeHtml(actionClass)} history-kind-${escapeHtml(kindClass)}">
@@ -4010,6 +4168,7 @@ function renderHistoryTableRow(row, index) {
       <td>${escapeHtml(historyEventLabel(item.action))}</td>
       <td>${escapeHtml(historyKindLabel(item.entityKind))}</td>
       <td>${escapeHtml(item.title || '-')}</td>
+      <td>${linkCell}</td>
       <td>${escapeHtml(item.actorName || '-')}</td>
       <td>${escapeHtml(item.details || '-')}</td>
     </tr>
@@ -4076,6 +4235,7 @@ function renderHistoryView() {
                   <th>${escapeHtml(langText('Ivykis', 'Event'))}</th>
                   <th>${escapeHtml(langText('Tipas', 'Type'))}</th>
                   <th>${escapeHtml(langText('Objektas', 'Item'))}</th>
+                  <th>${escapeHtml(langText('Nuoroda', 'Link'))}</th>
                   <th>${escapeHtml(langText('Vartotojas', 'User'))}</th>
                   <th>${escapeHtml(langText('Detales', 'Details'))}</th>
                 </tr>
@@ -4097,6 +4257,19 @@ function renderHistoryView() {
       renderHistoryView();
     });
   }
+  elements.stepView.querySelectorAll('[data-action="open-history-entity"]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const kind = String(link.dataset.kind || '').trim().toLowerCase();
+      const entityId = String(link.dataset.entityId || '').trim();
+      if (!entityId) return;
+      if (kind === 'initiative') {
+        openInitiativeDetail(entityId);
+        return;
+      }
+      openGuidelineDetail(entityId);
+    });
+  });
   const authBtn = elements.stepView.querySelector('#openAuthFromHistory');
   if (authBtn) authBtn.addEventListener('click', () => showAuthModal('login'));
 }
