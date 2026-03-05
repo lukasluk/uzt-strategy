@@ -1,5 +1,7 @@
 (function () {
   const searchInput = document.getElementById('searchInput');
+  const strategyLangSelect = document.getElementById('strategyLangSelect');
+  const openPlatformHeaderLink = document.getElementById('openPlatformHeaderLink');
   const sectorSelect = document.getElementById('sectorSelect');
   const themeSelect = document.getElementById('themeSelect');
   const regionSelect = document.getElementById('regionSelect');
@@ -13,6 +15,7 @@
 
   const state = {
     loading: false,
+    lang: 'en',
     selectedStrategyId: '',
     strategies: [],
     filters: {
@@ -30,6 +33,11 @@
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
+  }
+
+  function normalizeLang(value) {
+    const token = String(value || '').trim().toLowerCase();
+    return token === 'lt' ? 'lt' : 'en';
   }
 
   function truncateText(value, maxLength) {
@@ -50,6 +58,7 @@
 
   function readFiltersFromUrl() {
     const params = new URLSearchParams(window.location.search);
+    state.lang = normalizeLang(params.get('lang'));
     state.filters.q = String(params.get('q') || '').trim();
     state.filters.sector = String(params.get('sector') || '').trim();
     state.filters.theme = String(params.get('theme') || '').trim();
@@ -74,6 +83,7 @@
   }
 
   function setFilterControlsFromState() {
+    if (strategyLangSelect) strategyLangSelect.value = state.lang;
     if (searchInput) searchInput.value = state.filters.q;
     if (sectorSelect) sectorSelect.value = state.filters.sector;
     if (themeSelect) themeSelect.value = state.filters.theme;
@@ -110,7 +120,8 @@
       if (previewTitle) previewTitle.textContent = 'Select a card to preview map';
       if (previewSubline) previewSubline.textContent = 'Map preview appears here once a strategy is selected.';
       if (strategyPreviewFrame) strategyPreviewFrame.removeAttribute('src');
-      if (openFullMapLink) openFullMapLink.setAttribute('href', '/index.html?view=map&lang=en');
+      if (openFullMapLink) openFullMapLink.setAttribute('href', `/index.html?view=map&lang=${encodeURIComponent(state.lang)}`);
+      if (openPlatformHeaderLink) openPlatformHeaderLink.setAttribute('href', `/index.html?view=map&lang=${encodeURIComponent(state.lang)}`);
       return;
     }
 
@@ -119,7 +130,8 @@
       previewSubline.textContent = `${strategy.institutionName || 'Institution'} | ${strategy.periodLabel || 'N/A'} | ${strategy.theme || 'Theme'}`;
     }
     if (strategyPreviewFrame) strategyPreviewFrame.setAttribute('src', strategy.embedMapUrl || '');
-    if (openFullMapLink) openFullMapLink.setAttribute('href', strategy.mapUrl || '/index.html?view=map&lang=en');
+    if (openFullMapLink) openFullMapLink.setAttribute('href', strategy.mapUrl || `/index.html?view=map&lang=${encodeURIComponent(state.lang)}`);
+    if (openPlatformHeaderLink) openPlatformHeaderLink.setAttribute('href', strategy.mapUrl || `/index.html?view=map&lang=${encodeURIComponent(state.lang)}`);
   }
 
   function renderCards() {
@@ -201,6 +213,7 @@
 
   function buildApiUrl() {
     const url = new URL('/api/v1/public/strategies', window.location.origin);
+    url.searchParams.set('lang', state.lang);
     if (state.filters.q) url.searchParams.set('q', state.filters.q);
     if (state.filters.sector) url.searchParams.set('sector', state.filters.sector);
     if (state.filters.theme) url.searchParams.set('theme', state.filters.theme);
@@ -248,6 +261,13 @@
   }
 
   function bindFilterEvents() {
+    if (strategyLangSelect) {
+      strategyLangSelect.addEventListener('change', () => {
+        state.lang = normalizeLang(strategyLangSelect.value);
+        syncFiltersToUrl();
+        loadStrategies();
+      });
+    }
     if (sectorSelect) {
       sectorSelect.addEventListener('change', () => {
         state.filters.sector = String(sectorSelect.value || '').trim();
@@ -297,3 +317,4 @@
   bindFilterEvents();
   loadStrategies();
 })();
+    url.searchParams.set('lang', state.lang);

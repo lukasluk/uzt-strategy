@@ -397,7 +397,11 @@ async function runRefreshStrategyCatalogClassifications({
   force = false,
   requireAi = false
 }) {
-  await ensureClassificationStorage(query);
+  try {
+    await ensureClassificationStorage(query);
+  } catch (error) {
+    throw new Error(`classification storage unavailable: ${String(error?.message || error || 'unknown').trim()}`);
+  }
 
   const refreshFilter = force
     ? ''
@@ -539,32 +543,44 @@ async function refreshStrategyCatalogClassifications({
 }
 
 async function loadStrategyCatalogClassificationSummary(query) {
-  await ensureClassificationStorage(query);
+  try {
+    await ensureClassificationStorage(query);
 
-  const [totalsRes, sectorRes] = await Promise.all([
-    query(
-      `select count(*)::int as total_classified,
-              max(classified_at) as last_classified_at
-       from strategy_catalog_classifications`
-    ),
-    query(
-      `select sector, count(*)::int as total
-       from strategy_catalog_classifications
-       group by sector
-       order by count(*) desc, sector asc`
-    )
-  ]);
+    const [totalsRes, sectorRes] = await Promise.all([
+      query(
+        `select count(*)::int as total_classified,
+                max(classified_at) as last_classified_at
+         from strategy_catalog_classifications`
+      ),
+      query(
+        `select sector, count(*)::int as total
+         from strategy_catalog_classifications
+         group by sector
+         order by count(*) desc, sector asc`
+      )
+    ]);
 
-  const totals = totalsRes.rows[0] || {};
-  return {
-    totalClassified: Number(totals.total_classified || 0),
-    lastClassifiedAt: totals.last_classified_at || null,
-    bySector: (sectorRes.rows || []).map((row) => ({
-      sector: row.sector,
-      total: Number(row.total || 0)
-    })),
-    supportedSectors: Array.from(VALID_SECTORS.values())
-  };
+    const totals = totalsRes.rows[0] || {};
+    return {
+      totalClassified: Number(totals.total_classified || 0),
+      lastClassifiedAt: totals.last_classified_at || null,
+      bySector: (sectorRes.rows || []).map((row) => ({
+        sector: row.sector,
+        total: Number(row.total || 0)
+      })),
+      supportedSectors: Array.from(VALID_SECTORS.values()),
+      storageReady: true
+    };
+  } catch (error) {
+    console.warn('[strategy-catalog] classification summary unavailable', error?.message || error);
+    return {
+      totalClassified: 0,
+      lastClassifiedAt: null,
+      bySector: [],
+      supportedSectors: Array.from(VALID_SECTORS.values()),
+      storageReady: false
+    };
+  }
 }
 
 module.exports = {

@@ -373,6 +373,7 @@ function registerPublicRoutes({
       console.warn('[public/strategies] classification refresh failed', error?.message || error);
     }
 
+    const lang = String(req.query?.lang || '').trim().toLowerCase() === 'lt' ? 'lt' : 'en';
     const rowsRes = await query(
       `select s.id as strategy_id,
               s.title as strategy_title,
@@ -461,8 +462,8 @@ function registerPublicRoutes({
         region,
         classifiedAt: row.classified_at || null,
         classifiedModel: row.classified_model || fallbackClassification.model || null,
-        mapUrl: `/index.html?institution=${encodeURIComponent(row.institution_slug)}&strategy=${encodeURIComponent(row.strategy_slug)}&view=map&lang=en`,
-        embedMapUrl: `/embed/strategy-map/?institution=${encodeURIComponent(row.institution_slug)}&strategy=${encodeURIComponent(row.strategy_slug)}&lang=en`
+        mapUrl: `/index.html?institution=${encodeURIComponent(row.institution_slug)}&strategy=${encodeURIComponent(row.strategy_slug)}&view=map&lang=${encodeURIComponent(lang)}`,
+        embedMapUrl: `/embed/strategy-map/?institution=${encodeURIComponent(row.institution_slug)}&strategy=${encodeURIComponent(row.strategy_slug)}&lang=${encodeURIComponent(lang)}`
       };
     });
 

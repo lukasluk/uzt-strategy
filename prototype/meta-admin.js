@@ -111,6 +111,9 @@ function syncStrategyDeleteSelection(institutions) {
 
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
+  if (raw.startsWith('classification storage unavailable:')) {
+    return 'Nepavyko pasiekti strategiju klasifikacijos saugyklos. Patikrinkite DB schema/migracija serveryje.';
+  }
   if (raw.startsWith('strategy catalog ai classification failed:')) {
     return 'AI nepavyko perklasifikuoti strategiju. Patikrinkite API rakta, modeli arba pabandykite veliau.';
   }

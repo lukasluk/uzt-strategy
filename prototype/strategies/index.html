@@ -17,23 +17,49 @@
   <meta property="og:url" content="https://digistrategy.eu/strategies" />
   <link rel="canonical" href="https://digistrategy.eu/strategies" />
   <link rel="icon" type="image/svg+xml" href="/assets/digistrategija-favicon.svg?v=20260212b" />
+  <link rel="stylesheet" href="/landing.css" />
   <link rel="stylesheet" href="/strategies/strategies.css" />
 </head>
-<body>
+<body class="landing-page strategy-library-page">
+  <div class="landing-bg" aria-hidden="true">
+    <div class="landing-orb landing-orb-a"></div>
+    <div class="landing-orb landing-orb-b"></div>
+    <div class="landing-grid"></div>
+  </div>
+
   <div class="library-shell">
-    <header class="library-header">
-      <a href="/" class="brand" aria-label="digistrategy.eu home">
-        <img src="/assets/ds-mark.svg?v=20260212a" alt="DS logo" />
-        <span>digistrategy.eu</span>
+    <header class="landing-header is-visible">
+      <a class="landing-brand" href="/" aria-label="digistrategy.eu home">
+        <span class="landing-brand-mark-wrap">
+          <img src="/assets/ds-mark.svg?v=20260212a" alt="DS logo" class="landing-brand-mark" />
+        </span>
+        <span class="landing-brand-text">digistrategy.eu</span>
       </a>
-      <nav class="header-nav" aria-label="Primary">
-        <a href="/">Home</a>
-        <a href="/index.html?view=map&lang=en">Active map</a>
+
+      <nav class="landing-nav" aria-label="Primary">
+        <a class="landing-nav-link active" href="/strategies">Strategy library</a>
+        <a class="landing-nav-link" href="/#how">How it works</a>
+        <a class="landing-nav-link" href="/#usp">Why it stands out</a>
+        <a class="landing-nav-link" href="/#trust">Trust</a>
+        <a class="landing-nav-link" href="/#finalCta">Launch</a>
       </nav>
+
+      <div class="landing-header-actions">
+        <div class="landing-lang-switch-wrap" data-i18n-skip="1">
+          <label class="landing-lang-switch" for="strategyLangSelect">
+            <span>Language</span>
+            <select id="strategyLangSelect" aria-label="Language switch">
+              <option value="lt">LT</option>
+              <option value="en">EN</option>
+            </select>
+          </label>
+        </div>
+        <a id="openPlatformHeaderLink" class="btn btn-outline" href="/index.html?view=map&lang=en">Open Platform</a>
+      </div>
     </header>
 
     <main class="library-main">
-      <section class="hero">
+      <section class="library-hero">
         <p class="eyebrow">Public Strategy Catalog</p>
         <h1>Strategy Library</h1>
         <p>
@@ -83,7 +109,7 @@
             <h2 id="previewTitle">Select a card to preview map</h2>
             <p id="previewSubline">Map preview appears here once a strategy is selected.</p>
             <a id="openFullMapLink" href="/index.html?view=map&lang=en" target="_blank" rel="noopener noreferrer">
-              Open full map
+              Open Platform
             </a>
           </div>
           <div class="preview-frame-wrap">
