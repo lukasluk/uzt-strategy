@@ -114,6 +114,9 @@ function toUserMessage(error) {
   if (raw.startsWith('classification storage unavailable:')) {
     return 'Nepavyko pasiekti strategiju klasifikacijos saugyklos. Patikrinkite DB schema/migracija serveryje.';
   }
+  if (raw === 'classification storage not initialized') {
+    return 'Strategiju klasifikacijos lentele dar nesukurta serveryje. Paleiskite naujausia deploy/migracija.';
+  }
   if (raw.startsWith('strategy catalog ai classification failed:')) {
     return 'AI nepavyko perklasifikuoti strategiju. Patikrinkite API rakta, modeli arba pabandykite veliau.';
   }

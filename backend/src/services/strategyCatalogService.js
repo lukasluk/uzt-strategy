@@ -48,44 +48,6 @@ const VALID_SECTORS = new Set([
   'Private'
 ]);
 let activeRefreshPromise = null;
-let ensureStoragePromise = null;
-
-async function ensureClassificationStorage(query) {
-  if (ensureStoragePromise) return ensureStoragePromise;
-  ensureStoragePromise = (async () => {
-    await query(
-      `create table if not exists strategy_catalog_classifications (
-         strategy_id uuid primary key references institution_strategies(id) on delete cascade,
-         sector text not null,
-         theme text not null,
-         region text not null,
-         confidence numeric(4,3),
-         model text,
-         raw_json jsonb,
-         classified_at timestamptz not null default now()
-       )`
-    );
-    await query(
-      `create index if not exists idx_strategy_catalog_sector
-       on strategy_catalog_classifications(sector)`
-    );
-    await query(
-      `create index if not exists idx_strategy_catalog_theme
-       on strategy_catalog_classifications(theme)`
-    );
-    await query(
-      `create index if not exists idx_strategy_catalog_region
-       on strategy_catalog_classifications(region)`
-    );
-    await query(
-      `create index if not exists idx_strategy_catalog_classified_at
-       on strategy_catalog_classifications(classified_at)`
-    );
-  })().finally(() => {
-    ensureStoragePromise = null;
-  });
-  return ensureStoragePromise;
-}
 
 function trimText(value, maxLength = 400) {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
@@ -397,45 +359,47 @@ async function runRefreshStrategyCatalogClassifications({
   force = false,
   requireAi = false
 }) {
+  let staleRes;
   try {
-    await ensureClassificationStorage(query);
+    const refreshFilter = force
+      ? ''
+      : `
+         and (
+           cls.strategy_id is null
+           or cls.classified_at < (now() - interval '7 days')
+         )`;
+    staleRes = await query(
+      `select s.id as strategy_id,
+              s.title as strategy_title,
+              s.description as strategy_description,
+              s.created_at as strategy_created_at,
+              i.name as institution_name,
+              i.country_code,
+              latest_cycle.title as latest_cycle_title,
+              cls.classified_at
+       from institution_strategies s
+       join institutions i on i.id = s.institution_id
+       left join lateral (
+         select sc.title
+         from strategy_cycles sc
+         where sc.strategy_id = s.id
+         order by sc.created_at desc
+         limit 1
+       ) latest_cycle on true
+       left join strategy_catalog_classifications cls on cls.strategy_id = s.id
+       where s.status = 'active'
+         and i.status = 'active'
+         ${refreshFilter}
+       order by cls.classified_at asc nulls first, s.created_at desc
+       limit $1`,
+      [Math.max(1, Math.min(300, Number(maxStrategies) || 24))]
+    );
   } catch (error) {
-    throw new Error(`classification storage unavailable: ${String(error?.message || error || 'unknown').trim()}`);
+    if (String(error?.code || '') === '42P01') {
+      throw new Error('classification storage not initialized');
+    }
+    throw error;
   }
-
-  const refreshFilter = force
-    ? ''
-    : `
-       and (
-         cls.strategy_id is null
-         or cls.classified_at < (now() - interval '7 days')
-       )`;
-  const staleRes = await query(
-    `select s.id as strategy_id,
-            s.title as strategy_title,
-            s.description as strategy_description,
-            s.created_at as strategy_created_at,
-            i.name as institution_name,
-            i.country_code,
-            latest_cycle.title as latest_cycle_title,
-            cls.classified_at
-     from institution_strategies s
-     join institutions i on i.id = s.institution_id
-     left join lateral (
-       select sc.title
-       from strategy_cycles sc
-       where sc.strategy_id = s.id
-       order by sc.created_at desc
-       limit 1
-     ) latest_cycle on true
-     left join strategy_catalog_classifications cls on cls.strategy_id = s.id
-     where s.status = 'active'
-       and i.status = 'active'
-       ${refreshFilter}
-     order by cls.classified_at asc nulls first, s.created_at desc
-     limit $1`,
-    [Math.max(1, Math.min(300, Number(maxStrategies) || 24))]
-  );
 
   const staleRows = Array.isArray(staleRes?.rows) ? staleRes.rows : [];
   if (!staleRows.length) {
@@ -544,8 +508,6 @@ async function refreshStrategyCatalogClassifications({
 
 async function loadStrategyCatalogClassificationSummary(query) {
   try {
-    await ensureClassificationStorage(query);
-
     const [totalsRes, sectorRes] = await Promise.all([
       query(
         `select count(*)::int as total_classified,
@@ -572,7 +534,9 @@ async function loadStrategyCatalogClassificationSummary(query) {
       storageReady: true
     };
   } catch (error) {
-    console.warn('[strategy-catalog] classification summary unavailable', error?.message || error);
+    if (String(error?.code || '') !== '42P01') {
+      console.warn('[strategy-catalog] classification summary unavailable', error?.message || error);
+    }
     return {
       totalClassified: 0,
       lastClassifiedAt: null,

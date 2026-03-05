@@ -1324,35 +1324,49 @@ function registerMetaAdminRoutes({
   });
 
   app.post('/api/v1/meta-admin/strategies/reclassify', requireMetaAdminSession, async (req, res) => {
-    const force = true;
-    const maxStrategies = Math.max(1, Math.min(500, Number(req.body?.maxStrategies || 500)));
-    const refreshResult = await refreshStrategyCatalogClassifications({
-      query,
-      maxStrategies,
-      force,
-      requireAi: true
-    });
-    const strategyClassification = await loadStrategyCatalogClassificationSummary(query);
-
-    await logAuditEvent({
-      query,
-      uuid,
-      action: 'meta_admin.strategy_catalog.reclassified',
-      entityType: 'strategy_catalog_classification',
-      payload: metaAuditPayload(req, {
+    try {
+      const force = true;
+      const maxStrategies = Math.max(1, Math.min(500, Number(req.body?.maxStrategies || 500)));
+      const refreshResult = await refreshStrategyCatalogClassifications({
+        query,
         maxStrategies,
         force,
-        processed: Number(refreshResult?.processed || 0),
-        updated: Number(refreshResult?.updated || 0),
-        mode: String(refreshResult?.mode || 'unknown')
-      })
-    });
+        requireAi: true
+      });
+      const strategyClassification = await loadStrategyCatalogClassificationSummary(query);
 
-    res.json({
-      ok: true,
-      refresh: refreshResult,
-      strategyClassification
-    });
+      await logAuditEvent({
+        query,
+        uuid,
+        action: 'meta_admin.strategy_catalog.reclassified',
+        entityType: 'strategy_catalog_classification',
+        payload: metaAuditPayload(req, {
+          maxStrategies,
+          force,
+          processed: Number(refreshResult?.processed || 0),
+          updated: Number(refreshResult?.updated || 0),
+          mode: String(refreshResult?.mode || 'unknown')
+        })
+      });
+
+      res.json({
+        ok: true,
+        refresh: refreshResult,
+        strategyClassification
+      });
+    } catch (error) {
+      const message = String(error?.message || '').trim();
+      if (message === 'ai api key not configured') {
+        return res.status(503).json({ error: message });
+      }
+      if (message === 'classification storage not initialized') {
+        return res.status(503).json({ error: message });
+      }
+      if (message.startsWith('strategy catalog ai classification failed:')) {
+        return res.status(502).json({ error: message });
+      }
+      throw error;
+    }
   });
 
   app.put('/api/v1/meta-admin/content-settings', requireMetaAdminSession, async (req, res) => {
