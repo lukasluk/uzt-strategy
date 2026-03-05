@@ -4814,12 +4814,15 @@ function renderUserBar() {
     container.innerHTML = `
       <div class="user-toolbar user-toolbar-main">
         ${strategySwitcherCardMarkup({ topbar: true })}
+        <button id="openRegisterBtn" class="btn btn-ghost">${langText('Registruotis', 'Register')}</button>
         <button id="openAuthBtn" class="btn btn-primary">${langText('Prisijungti', 'Sign in')}</button>
       </div>
     `;
     bindStrategySwitcherDialog(container);
     bindInstitutionSwitch(container);
     bindStrategySwitch(container);
+    const registerBtn = container.querySelector('#openRegisterBtn');
+    if (registerBtn) registerBtn.addEventListener('click', () => showAccessRequestModal());
     const openBtn = container.querySelector('#openAuthBtn');
     if (openBtn) openBtn.addEventListener('click', () => showAuthModal('login'));
     return;
