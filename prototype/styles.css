@@ -4153,23 +4153,23 @@ select:focus {
   pointer-events: none;
 }
 .history-table-row.history-action-strategy_created td:first-child {
-  box-shadow: inset 4px 0 0 #2f88ba;
+  box-shadow: inset 6px 0 0 #00d9ff;
 }
 .history-table-row.history-action-proposal_submitted td:first-child {
-  box-shadow: inset 4px 0 0 #7f94bb;
+  box-shadow: inset 6px 0 0 #7c4dff;
 }
 .history-table-row.history-action-proposal_approved td:first-child,
 .history-table-row.history-action-proposal_approved_with_changes td:first-child {
-  box-shadow: inset 4px 0 0 #51a37f;
+  box-shadow: inset 6px 0 0 #00e676;
 }
 .history-table-row.history-action-proposal_rejected td:first-child,
 .history-table-row.history-action-proposal_cancelled td:first-child {
-  box-shadow: inset 4px 0 0 #c77b6f;
+  box-shadow: inset 6px 0 0 #ff3b30;
 }
 .history-table-row.history-action-guideline_commented td:first-child,
 .history-table-row.history-action-initiative_commented td:first-child,
 .history-table-row.history-action-proposal_commented td:first-child {
-  box-shadow: inset 4px 0 0 #5b80bb;
+  box-shadow: inset 6px 0 0 #2979ff;
 }
 .modal-overlay {
   position: fixed;
@@ -4276,10 +4276,14 @@ select:focus {
   cursor: pointer;
 }
 
-.guideline-card.is-linkable:hover,
-.initiative-card.is-linkable:hover {
+.guideline-card.is-linkable:hover {
   border-color: #5f8fc9;
   box-shadow: 0 0 0 3px rgba(66, 125, 196, 0.2), 0 12px 24px rgba(38, 77, 132, 0.14);
+}
+
+.initiative-card.is-linkable:hover {
+  border-color: #bf9a77;
+  box-shadow: 0 0 0 3px rgba(191, 154, 119, 0.24), 0 14px 26px rgba(160, 104, 29, 0.18);
 }
 
 .strategy-map-node.map-node-focus-pulse {
@@ -4300,15 +4304,50 @@ select:focus {
 }
 
 .initiative-card {
-  border-color: #c5d0f5;
-  background: linear-gradient(180deg, #ffffff 0%, #f2f3ff 100%);
+  border-color: #e2c89f;
+  background: linear-gradient(180deg, #fffdf8 0%, #f9efdf 100%);
+  box-shadow: 0 10px 24px rgba(160, 104, 29, 0.14);
 }
 .initiative-card .card-top {
-  border-left: 4px solid #5b6fc7;
-  padding-left: 10px;
+  border-left: 5px solid #c88527;
+  padding-left: 12px;
+}
+.initiative-card .card-top p {
+  color: #6f5c43;
+}
+.initiative-card .card-share-label {
+  color: #846341;
+}
+.initiative-card .card-share-url {
+  color: #6f5128;
+}
+.initiative-card .tag {
+  background: #f5e7cf;
+  border-color: #e4c8a4;
+  color: #5a4425;
 }
 .initiative-card .vote-panel {
-  background: #ecefff;
+  border: 1px solid #e1c8a2;
+  background: linear-gradient(180deg, #fff8ee 0%, #f6e7d1 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+.initiative-card .vote-label,
+.initiative-card .vote-total,
+.initiative-card .comment-meta {
+  color: #705b3f;
+}
+.initiative-card .inline-form input[type='text'] {
+  border-color: #d6b891;
+  background: #fffaf2;
+}
+.initiative-card .inline-form .btn-ghost {
+  border-color: #d2b189;
+  background: linear-gradient(180deg, #fff8ee 0%, #f7e6cf 100%);
+  color: #5b472c;
+}
+.initiative-card .inline-form .btn-ghost:hover {
+  border-color: #bf9a77;
+  background: linear-gradient(180deg, #fffdf8 0%, #f7e3cc 100%);
 }
 
 .vote-panel {

@@ -5,7 +5,6 @@ function buildMapHeaderMarkup({ graph, activeLayer, editable }) {
   if (state.embedMapMode) return '';
   return `
       <div class="step-header">
-        <h2>${escapeHtml(mapLang('Strategijų žemėlapis', 'Strategy map'))}</h2>
         <div class="header-stack step-header-actions">
           <span class="tag">${escapeHtml(mapLang('Institucija', 'Institution'))}: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
           <span class="tag">${escapeHtml(mapLang('Strategija', 'Strategy'))}: ${escapeHtml(graph.institution.strategy?.title || '-')}</span>

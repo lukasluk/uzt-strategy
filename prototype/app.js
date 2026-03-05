@@ -2781,9 +2781,6 @@ function renderAboutView() {
 function renderAdminView() {
   elements.stepView.innerHTML = `
     <section class="admin-inline-shell">
-      <div class="step-header">
-        <h2>Admin</h2>
-      </div>
       <div id="adminRoot" class="admin-inline-host">
         <section class="card">
           <strong>Kraunamas administravimo langas...</strong>
@@ -3895,7 +3892,6 @@ function renderInitiativesView() {
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>${langText('Iniciatyvos', 'Initiatives')}</h2>
       <div class="header-stack step-header-actions">
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
@@ -4209,7 +4205,6 @@ function renderHistoryView() {
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>${langText('Istorija', 'History')}</h2>
       <div class="header-stack step-header-actions">
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
@@ -4463,7 +4458,6 @@ function renderStepView() {
 
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>${langText('Gairės', 'Guidelines')}</h2>
       <div class="header-stack step-header-actions">
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
