@@ -1,21 +1,8 @@
 // Map render markup builders extracted from app-map.js
 // This file must load before app-map.js.
 
-function buildMapHeaderMarkup({ graph, activeLayer, editable }) {
-  if (state.embedMapMode) return '';
-  return `
-      <div class="step-header">
-        <div class="header-stack step-header-actions">
-          <span class="tag">${escapeHtml(mapLang('Institucija', 'Institution'))}: ${escapeHtml(graph.institution.name || graph.institution.slug)}</span>
-          <span class="tag">${escapeHtml(mapLang('Strategija', 'Strategy'))}: ${escapeHtml(graph.institution.strategy?.title || '-')}</span>
-          ${activeLayer === 'strategic-links' ? `<span class="tag tag-main">${escapeHtml(mapLang('Rodoma', 'Viewing'))}: ${escapeHtml(graph.institution.name || graph.institution.slug)} / ${escapeHtml(graph.institution.strategy?.title || '-')} - Strategic links</span>` : ''}
-          ${editable ? `<span class="tag tag-main">${escapeHtml(mapLang('Admin: galite tempti', 'Admin: you can drag'))} ${escapeHtml(activeLayer === 'initiatives' ? mapLang('iniciatyvų korteles', 'initiative cards') : mapLang('gairių korteles', 'guideline cards'))}</span>` : ''}
-        </div>
-      </div>
-      <p class="prompt">${activeLayer === 'strategic-links'
-        ? escapeHtml(mapLang('Peržiūrėkite tiesioginius tarpstrateginius ryšius. Rodoma aktyvios strategijos struktūra ir susietos kitų strategijų gairės.', 'Review direct cross-strategy links. You see the active strategy structure and linked guidelines from related strategies.'))
-        : escapeHtml(mapLang('Peržiūrėkite pasirinktos institucijos strategijos sluoksnius. Iniciatyvų sluoksnyje gairių kortelės lieka matomos, bet užrakintos.', 'Review selected institution strategy layers. In the initiatives layer, guideline cards remain visible, but locked.'))}</p>
-    `;
+function buildMapHeaderMarkup() {
+  return '';
 }
 
 function buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes }) {
