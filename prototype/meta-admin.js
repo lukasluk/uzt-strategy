@@ -15,6 +15,8 @@ const state = {
   lastAiGeneration: null,
   lastAiGenerationAt: null,
   aiGenerationProgress: null,
+  lastStrategyClassificationRunAt: null,
+  lastStrategyClassificationRunResult: null,
   strategyDeleteSelectionByInstitution: {},
   guidelineLinksInstitutionFilter: '',
   guidelineLinksStrategyFilter: '',
@@ -109,6 +111,9 @@ function syncStrategyDeleteSelection(institutions) {
 
 function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
+  if (raw.startsWith('strategy catalog ai classification failed:')) {
+    return 'AI nepavyko perklasifikuoti strategiju. Patikrinkite API rakta, modeli arba pabandykite veliau.';
+  }
   const map = {
     unauthorized: 'Sesija negalioja. Prisijunkite is naujo.',
     'invalid token': 'Sesija negalioja. Prisijunkite is naujo.',
@@ -1107,6 +1112,60 @@ function renderContentSettingsCard(contentSettings) {
     </section>
   `;
 }
+
+function renderStrategyClassificationCard(strategyClassification) {
+  const summary = strategyClassification && typeof strategyClassification === 'object'
+    ? strategyClassification
+    : {};
+  const supportedSectors = Array.isArray(summary.supportedSectors) ? summary.supportedSectors : [];
+  const bySector = Array.isArray(summary.bySector) ? summary.bySector : [];
+  const lastClassifiedAt = summary.lastClassifiedAt || state.lastStrategyClassificationRunAt || null;
+  const lastRunResult = state.lastStrategyClassificationRunResult || null;
+
+  return `
+    <section class="card meta-admin-card" data-meta-section="institutions">
+      <div class="header-row">
+        <strong>Strategy classification</strong>
+        ${renderTag(`${Number(summary.totalClassified || 0)} classified`, 'count')}
+      </div>
+      <p class="prompt">Naudokite AI perklasifikuoti visas strategijas. Sektoriu taksonomija apima "All Government" ir isskaidytus "Gov-*" sektorius.</p>
+      <div class="inline-form">
+        <button id="reclassifyStrategiesBtn" class="btn btn-primary" type="button" ${state.busy ? 'disabled' : ''}>AI reclassify all strategies</button>
+        <span class="tag">Last classified: ${escapeHtml(lastClassifiedAt ? formatDateTime(lastClassifiedAt) : '-')}</span>
+        ${lastRunResult ? `<span class="tag">Last run: updated ${Number(lastRunResult.updated || 0)} / processed ${Number(lastRunResult.processed || 0)}</span>` : ''}
+      </div>
+      <div class="header-stack" style="margin-top:8px;">
+        ${(supportedSectors.length ? supportedSectors : [
+          'All Government',
+          'Gov-Digital',
+          'Gov-Health',
+          'Gov-Education',
+          'Gov-Social',
+          'Gov-Finance',
+          'Gov-Justice',
+          'Gov-Environment',
+          'Gov-Transport',
+          'Gov-PublicSafety',
+          'Municipality',
+          'NGO',
+          'University',
+          'Private'
+        ]).map((sector) => renderTag(String(sector), 'scope')).join('')}
+      </div>
+      <ul class="mini-list meta-admin-list" style="margin-top:10px;">
+        ${bySector.length
+          ? bySector.map((entry) => `
+            <li class="meta-admin-list-item">
+              <strong>${escapeHtml(String(entry.sector || '-'))}</strong>
+              ${renderTag(`${Number(entry.total || 0)}`, 'count')}
+            </li>
+          `).join('')
+          : '<li>Klasifikacijos irasu dar nera.</li>'}
+      </ul>
+    </section>
+  `;
+}
+
 function renderDashboard() {
   const institutions = state.overview?.institutions || [];
   syncStrategyDeleteSelection(institutions);
@@ -1118,6 +1177,7 @@ function renderDashboard() {
   const pendingAccessRequests = accessRequests.filter((item) => String(item?.status || '').trim() === 'pending');
   const monitoring = state.overview?.monitoring || null;
   const contentSettings = state.overview?.contentSettings || {};
+  const strategyClassification = state.overview?.strategyClassification || {};
 
   root.innerHTML = `
     <div class="meta-admin-dashboard">
@@ -1208,6 +1268,8 @@ function renderDashboard() {
           </div>
         ` : ''}
       </section>
+
+      ${renderStrategyClassificationCard(strategyClassification)}
 
       <section class="card meta-admin-card" data-meta-section="institutions">
         <div class="header-row">
@@ -1383,6 +1445,7 @@ function bindDashboardEvents() {
   const createInstitutionForm = document.getElementById('createInstitutionForm');
   const createAiStrategyForm = document.getElementById('createAiStrategyForm');
   const createInviteForm = document.getElementById('createInviteForm');
+  const reclassifyStrategiesBtn = document.getElementById('reclassifyStrategiesBtn');
   const createGuidelineLinkForm = document.getElementById('createGuidelineLinkForm');
   const guidelineLinksFilterForm = document.getElementById('guidelineLinksFilterForm');
   const copyInviteUrlBtn = document.getElementById('copyInviteUrlBtn');
@@ -1631,6 +1694,26 @@ function bindDashboardEvents() {
     if (!outcome.ok && !outcome.skipped && outcome.error) {
       notifyError(`Nepavyko sukurti slaptazodzio keitimo nuorodos: ${outcome.error}`);
     }
+  }
+
+  if (reclassifyStrategiesBtn) {
+    reclassifyStrategiesBtn.addEventListener('click', async () => {
+      await runBusy(async () => {
+        const payload = await api('/api/v1/meta-admin/strategies/reclassify', {
+          method: 'POST',
+          body: { maxStrategies: 500 }
+        });
+        const refresh = payload?.refresh || {};
+        state.lastStrategyClassificationRunAt = new Date().toISOString();
+        state.lastStrategyClassificationRunResult = {
+          processed: Number(refresh.processed || 0),
+          updated: Number(refresh.updated || 0),
+          mode: String(refresh.mode || '')
+        };
+        setNotice(`AI perklasifikavo strategijas: atnaujinta ${Number(refresh.updated || 0)} is ${Number(refresh.processed || 0)}.`);
+        await loadOverview();
+      });
+    });
   }
 
   async function copyPasswordResetLink() {

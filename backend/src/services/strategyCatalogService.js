@@ -28,8 +28,64 @@ const EU_COUNTRY_NAMES = {
   SE: 'Sweden'
 };
 
-const VALID_SECTORS = new Set(['Government', 'Municipality', 'NGO', 'University', 'Private']);
+const GOVERNMENT_SECTORS = [
+  'All Government',
+  'Gov-Digital',
+  'Gov-Health',
+  'Gov-Education',
+  'Gov-Social',
+  'Gov-Finance',
+  'Gov-Justice',
+  'Gov-Environment',
+  'Gov-Transport',
+  'Gov-PublicSafety'
+];
+const VALID_SECTORS = new Set([
+  ...GOVERNMENT_SECTORS,
+  'Municipality',
+  'NGO',
+  'University',
+  'Private'
+]);
 let activeRefreshPromise = null;
+let ensureStoragePromise = null;
+
+async function ensureClassificationStorage(query) {
+  if (ensureStoragePromise) return ensureStoragePromise;
+  ensureStoragePromise = (async () => {
+    await query(
+      `create table if not exists strategy_catalog_classifications (
+         strategy_id uuid primary key references institution_strategies(id) on delete cascade,
+         sector text not null,
+         theme text not null,
+         region text not null,
+         confidence numeric(4,3),
+         model text,
+         raw_json jsonb,
+         classified_at timestamptz not null default now()
+       )`
+    );
+    await query(
+      `create index if not exists idx_strategy_catalog_sector
+       on strategy_catalog_classifications(sector)`
+    );
+    await query(
+      `create index if not exists idx_strategy_catalog_theme
+       on strategy_catalog_classifications(theme)`
+    );
+    await query(
+      `create index if not exists idx_strategy_catalog_region
+       on strategy_catalog_classifications(region)`
+    );
+    await query(
+      `create index if not exists idx_strategy_catalog_classified_at
+       on strategy_catalog_classifications(classified_at)`
+    );
+  })().finally(() => {
+    ensureStoragePromise = null;
+  });
+  return ensureStoragePromise;
+}
 
 function trimText(value, maxLength = 400) {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
@@ -85,7 +141,17 @@ function countryNameFromCode(countryCode) {
 
 function normalizeSector(value, fallback) {
   const raw = trimText(value, 40).toLowerCase();
-  if (raw === 'government' || raw === 'public' || raw === 'state') return 'Government';
+  if (raw === 'government' || raw === 'public' || raw === 'state') return 'All Government';
+  if (raw === 'all government') return 'All Government';
+  if (raw === 'gov-digital' || raw === 'gov digital') return 'Gov-Digital';
+  if (raw === 'gov-health' || raw === 'gov health') return 'Gov-Health';
+  if (raw === 'gov-education' || raw === 'gov education') return 'Gov-Education';
+  if (raw === 'gov-social' || raw === 'gov social') return 'Gov-Social';
+  if (raw === 'gov-finance' || raw === 'gov finance') return 'Gov-Finance';
+  if (raw === 'gov-justice' || raw === 'gov justice') return 'Gov-Justice';
+  if (raw === 'gov-environment' || raw === 'gov environment') return 'Gov-Environment';
+  if (raw === 'gov-transport' || raw === 'gov transport') return 'Gov-Transport';
+  if (raw === 'gov-publicsafety' || raw === 'gov public safety' || raw === 'gov-public-safety') return 'Gov-PublicSafety';
   if (raw === 'municipality' || raw === 'local government' || raw === 'city') return 'Municipality';
   if (raw === 'ngo' || raw === 'non-profit' || raw === 'nonprofit') return 'NGO';
   if (raw === 'university' || raw === 'education') return 'University';
@@ -118,14 +184,29 @@ function normalizeRegion(value, countryCode, fallback) {
   return fallback;
 }
 
+function inferGovernmentSubsector(rawText) {
+  const text = String(rawText || '').toLowerCase();
+  if (!text) return 'All Government';
+  if (/\b(health|hospital|clinic|medical|care)\b/.test(text)) return 'Gov-Health';
+  if (/\b(digital|it|technology|data|cyber|platform)\b/.test(text)) return 'Gov-Digital';
+  if (/\b(education|school|learning|student|curriculum)\b/.test(text)) return 'Gov-Education';
+  if (/\b(social|welfare|employment|labor|benefit)\b/.test(text)) return 'Gov-Social';
+  if (/\b(finance|budget|treasury|tax|fiscal)\b/.test(text)) return 'Gov-Finance';
+  if (/\b(justice|court|legal|law|prosecution)\b/.test(text)) return 'Gov-Justice';
+  if (/\b(environment|climate|energy|sustainab|green)\b/.test(text)) return 'Gov-Environment';
+  if (/\b(transport|mobility|traffic|rail|road)\b/.test(text)) return 'Gov-Transport';
+  if (/\b(police|fire|rescue|emergency|public safety|security)\b/.test(text)) return 'Gov-PublicSafety';
+  return 'All Government';
+}
+
 function inferSectorFromText(rawText) {
   const text = String(rawText || '').toLowerCase();
-  if (!text) return 'Government';
+  if (!text) return 'All Government';
   if (/\b(city|municipality|municipal|local council|local authority)\b/.test(text)) return 'Municipality';
   if (/\b(university|college|faculty|academic|research institute)\b/.test(text)) return 'University';
   if (/\b(ngo|non-profit|nonprofit|association|foundation|charity)\b/.test(text)) return 'NGO';
   if (/\b(ltd|uab|ab|inc|corp|company|private|enterprise|group)\b/.test(text)) return 'Private';
-  return 'Government';
+  return inferGovernmentSubsector(text);
 }
 
 function inferThemeFromText(rawText) {
@@ -224,7 +305,7 @@ async function requestAiClassifications({
     '{ "classifications": [',
     '  {',
     '    "strategyId": "uuid from input",',
-    '    "sector": "Government|Municipality|NGO|University|Private",',
+    '    "sector": "All Government|Gov-Digital|Gov-Health|Gov-Education|Gov-Social|Gov-Finance|Gov-Justice|Gov-Environment|Gov-Transport|Gov-PublicSafety|Municipality|NGO|University|Private",',
     '    "theme": "2-4 words in English",',
     '    "region": "EU-CountryName for EU member countries, otherwise CountryName",',
     '    "confidence": 0.0',
@@ -310,7 +391,21 @@ function normalizeClassifiedRecord(strategy, candidate, modelHint) {
   };
 }
 
-async function runRefreshStrategyCatalogClassifications({ query, maxStrategies = 24 }) {
+async function runRefreshStrategyCatalogClassifications({
+  query,
+  maxStrategies = 24,
+  force = false,
+  requireAi = false
+}) {
+  await ensureClassificationStorage(query);
+
+  const refreshFilter = force
+    ? ''
+    : `
+       and (
+         cls.strategy_id is null
+         or cls.classified_at < (now() - interval '7 days')
+       )`;
   const staleRes = await query(
     `select s.id as strategy_id,
             s.title as strategy_title,
@@ -332,13 +427,10 @@ async function runRefreshStrategyCatalogClassifications({ query, maxStrategies =
      left join strategy_catalog_classifications cls on cls.strategy_id = s.id
      where s.status = 'active'
        and i.status = 'active'
-       and (
-         cls.strategy_id is null
-         or cls.classified_at < (now() - interval '7 days')
-       )
+       ${refreshFilter}
      order by cls.classified_at asc nulls first, s.created_at desc
      limit $1`,
-    [Math.max(1, Math.min(60, Number(maxStrategies) || 24))]
+    [Math.max(1, Math.min(300, Number(maxStrategies) || 24))]
   );
 
   const staleRows = Array.isArray(staleRes?.rows) ? staleRes.rows : [];
@@ -363,6 +455,10 @@ async function runRefreshStrategyCatalogClassifications({ query, maxStrategies =
   let aiByStrategyId = {};
   let aiModel = null;
   let mode = 'fallback';
+  if (requireAi && !apiKey) {
+    throw new Error('ai api key not configured');
+  }
+
   if (apiKey) {
     try {
       const aiResult = await requestAiClassifications({
@@ -376,6 +472,9 @@ async function runRefreshStrategyCatalogClassifications({ query, maxStrategies =
       aiModel = aiResult?.model || model;
       mode = 'ai';
     } catch (error) {
+      if (requireAi) {
+        throw error;
+      }
       console.warn('[strategy-catalog] AI refresh failed, using fallback classification', error?.message || error);
     }
   }
@@ -420,16 +519,56 @@ async function runRefreshStrategyCatalogClassifications({ query, maxStrategies =
   return { processed: staleRows.length, updated, mode };
 }
 
-async function refreshStrategyCatalogClassifications({ query, maxStrategies = 24 }) {
+async function refreshStrategyCatalogClassifications({
+  query,
+  maxStrategies = 24,
+  force = false,
+  requireAi = false
+}) {
   if (activeRefreshPromise) return activeRefreshPromise;
-  activeRefreshPromise = runRefreshStrategyCatalogClassifications({ query, maxStrategies })
+  activeRefreshPromise = runRefreshStrategyCatalogClassifications({
+    query,
+    maxStrategies,
+    force,
+    requireAi
+  })
     .finally(() => {
       activeRefreshPromise = null;
     });
   return activeRefreshPromise;
 }
 
+async function loadStrategyCatalogClassificationSummary(query) {
+  await ensureClassificationStorage(query);
+
+  const [totalsRes, sectorRes] = await Promise.all([
+    query(
+      `select count(*)::int as total_classified,
+              max(classified_at) as last_classified_at
+       from strategy_catalog_classifications`
+    ),
+    query(
+      `select sector, count(*)::int as total
+       from strategy_catalog_classifications
+       group by sector
+       order by count(*) desc, sector asc`
+    )
+  ]);
+
+  const totals = totalsRes.rows[0] || {};
+  return {
+    totalClassified: Number(totals.total_classified || 0),
+    lastClassifiedAt: totals.last_classified_at || null,
+    bySector: (sectorRes.rows || []).map((row) => ({
+      sector: row.sector,
+      total: Number(row.total || 0)
+    })),
+    supportedSectors: Array.from(VALID_SECTORS.values())
+  };
+}
+
 module.exports = {
   buildFallbackStrategyCatalogClassification,
-  refreshStrategyCatalogClassifications
+  refreshStrategyCatalogClassifications,
+  loadStrategyCatalogClassificationSummary
 };

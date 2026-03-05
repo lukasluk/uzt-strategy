@@ -28,6 +28,10 @@ const {
   extractPdfTexts,
   generateStrategyFromAi
 } = require('./aiStrategyService');
+const {
+  refreshStrategyCatalogClassifications,
+  loadStrategyCatalogClassificationSummary
+} = require('./services/strategyCatalogService');
 
 function registerMetaAdminRoutes({
   app,
@@ -1264,10 +1268,11 @@ function registerMetaAdminRoutes({
         };
       })
       .sort((left, right) => right.views - left.views);
-    const [contentSettings, parentGuidelines, guidelineLinks] = await Promise.all([
+    const [contentSettings, parentGuidelines, guidelineLinks, strategyClassification] = await Promise.all([
       loadContentSettings(query),
       loadParentGuidelineCatalog(),
-      loadGuidelineLinksOverview()
+      loadGuidelineLinksOverview(),
+      loadStrategyCatalogClassificationSummary(query)
     ]);
 
     res.json({
@@ -1308,12 +1313,45 @@ function registerMetaAdminRoutes({
         parentGuidelines,
         links: guidelineLinks
       },
+      strategyClassification,
       contentSettings,
       monitoring: {
         ...monitoringSnapshot,
         rateLimitConfig: rateLimitConfig || null,
         embedViewsByInstitution
       }
+    });
+  });
+
+  app.post('/api/v1/meta-admin/strategies/reclassify', requireMetaAdminSession, async (req, res) => {
+    const force = true;
+    const maxStrategies = Math.max(1, Math.min(500, Number(req.body?.maxStrategies || 500)));
+    const refreshResult = await refreshStrategyCatalogClassifications({
+      query,
+      maxStrategies,
+      force,
+      requireAi: true
+    });
+    const strategyClassification = await loadStrategyCatalogClassificationSummary(query);
+
+    await logAuditEvent({
+      query,
+      uuid,
+      action: 'meta_admin.strategy_catalog.reclassified',
+      entityType: 'strategy_catalog_classification',
+      payload: metaAuditPayload(req, {
+        maxStrategies,
+        force,
+        processed: Number(refreshResult?.processed || 0),
+        updated: Number(refreshResult?.updated || 0),
+        mode: String(refreshResult?.mode || 'unknown')
+      })
+    });
+
+    res.json({
+      ok: true,
+      refresh: refreshResult,
+      strategyClassification
     });
   });
 
