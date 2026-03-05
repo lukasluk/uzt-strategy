@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategy Library | digistrategy.eu</title>
+  <meta
+    name="description"
+    content="Explore digital strategies from institutions across Europe. Filter by sector, theme, and region, then open an embedded strategy map."
+  />
+  <meta property="og:title" content="Strategy Library | digistrategy.eu" />
+  <meta
+    property="og:description"
+    content="Catalog of public digital strategies with filters and embedded map preview."
+  />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://digistrategy.eu/strategies" />
+  <link rel="canonical" href="https://digistrategy.eu/strategies" />
+  <link rel="icon" type="image/svg+xml" href="/assets/digistrategija-favicon.svg?v=20260212b" />
+  <link rel="stylesheet" href="/strategies/strategies.css" />
+</head>
+<body>
+  <div class="library-shell">
+    <header class="library-header">
+      <a href="/" class="brand" aria-label="digistrategy.eu home">
+        <img src="/assets/ds-mark.svg?v=20260212a" alt="DS logo" />
+        <span>digistrategy.eu</span>
+      </a>
+      <nav class="header-nav" aria-label="Primary">
+        <a href="/">Home</a>
+        <a href="/index.html?view=map&lang=en">Active map</a>
+      </nav>
+    </header>
+
+    <main class="library-main">
+      <section class="hero">
+        <p class="eyebrow">Public Strategy Catalog</p>
+        <h1>Strategy Library</h1>
+        <p>
+          Discover institutional digital strategies, compare goals and initiatives, and open each one directly as
+          an embedded strategy map.
+        </p>
+      </section>
+
+      <section class="filters" aria-label="Catalog filters">
+        <label>
+          Search
+          <input id="searchInput" type="search" placeholder="Search by strategy, institution, or theme" />
+        </label>
+        <label>
+          Sector
+          <select id="sectorSelect">
+            <option value="">All sectors</option>
+          </select>
+        </label>
+        <label>
+          Theme
+          <select id="themeSelect">
+            <option value="">All themes</option>
+          </select>
+        </label>
+        <label>
+          Region
+          <select id="regionSelect">
+            <option value="">All regions</option>
+          </select>
+        </label>
+        <button id="resetFiltersButton" type="button">Reset</button>
+      </section>
+
+      <section class="library-layout">
+        <div class="catalog-column">
+          <div class="catalog-meta">
+            <strong id="resultCount">0</strong>
+            <span>strategies</span>
+          </div>
+          <div id="cardsGrid" class="cards-grid" aria-live="polite"></div>
+        </div>
+
+        <aside class="preview-column">
+          <div class="preview-meta">
+            <p class="preview-label">Selected strategy</p>
+            <h2 id="previewTitle">Select a card to preview map</h2>
+            <p id="previewSubline">Map preview appears here once a strategy is selected.</p>
+            <a id="openFullMapLink" href="/index.html?view=map&lang=en" target="_blank" rel="noopener noreferrer">
+              Open full map
+            </a>
+          </div>
+          <div class="preview-frame-wrap">
+            <iframe
+              id="strategyPreviewFrame"
+              title="Embedded strategy map preview"
+              loading="lazy"
+              referrerpolicy="strict-origin-when-cross-origin"
+            ></iframe>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <script src="/strategies/strategies.js"></script>
+</body>
+</html>

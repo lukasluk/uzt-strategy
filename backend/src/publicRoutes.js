@@ -1,5 +1,9 @@
 const { loadContentSettings } = require('./contentSettings');
 const { parseBearer, readAuthToken } = require('./security');
+const {
+  buildFallbackStrategyCatalogClassification,
+  refreshStrategyCatalogClassifications
+} = require('./services/strategyCatalogService');
 
 function registerPublicRoutes({
   app,
@@ -63,6 +67,46 @@ function registerPublicRoutes({
       mapX: Number.isFinite(Number(cycle.map_x)) ? Number(cycle.map_x) : null,
       mapY: Number.isFinite(Number(cycle.map_y)) ? Number(cycle.map_y) : null
     };
+  }
+
+  function normalizeFilterToken(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function normalizeSearchToken(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  }
+
+  function toYear(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.getUTCFullYear();
+  }
+
+  function buildPeriodLabel({ startYear, endYear, fallbackYear }) {
+    if (startYear && endYear && startYear !== endYear) {
+      return `${startYear}-${endYear}`;
+    }
+    if (startYear) return String(startYear);
+    if (endYear) return String(endYear);
+    if (fallbackYear) return String(fallbackYear);
+    return 'N/A';
+  }
+
+  function buildFilterOptions(items, fieldName) {
+    const counts = new Map();
+    (Array.isArray(items) ? items : []).forEach((item) => {
+      const value = String(item?.[fieldName] || '').trim();
+      if (!value) return;
+      counts.set(value, (counts.get(value) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((left, right) => left.value.localeCompare(right.value, 'en', { sensitivity: 'base' }));
   }
 
   function proposalCommentsById(commentRows) {
@@ -320,6 +364,141 @@ function registerPublicRoutes({
   app.get('/api/v1/public/content-settings', publicReadGuard, async (_req, res) => {
     const contentSettings = await loadContentSettings(query);
     res.json({ contentSettings });
+  });
+
+  app.get('/api/v1/public/strategies', publicReadGuard, async (req, res) => {
+    try {
+      await refreshStrategyCatalogClassifications({ query, maxStrategies: 24 });
+    } catch (error) {
+      console.warn('[public/strategies] classification refresh failed', error?.message || error);
+    }
+
+    const rowsRes = await query(
+      `select s.id as strategy_id,
+              s.title as strategy_title,
+              s.slug as strategy_slug,
+              s.description as strategy_description,
+              s.created_at as strategy_created_at,
+              i.id as institution_id,
+              i.name as institution_name,
+              i.slug as institution_slug,
+              i.country_code,
+              latest_cycle.id as cycle_id,
+              latest_cycle.title as cycle_title,
+              latest_cycle.created_at as cycle_created_at,
+              period.start_year,
+              period.end_year,
+              coalesce(goal_stats.goals_count, 0)::int as goals_count,
+              coalesce(initiative_stats.initiatives_count, 0)::int as initiatives_count,
+              cls.sector as classified_sector,
+              cls.theme as classified_theme,
+              cls.region as classified_region,
+              cls.classified_at,
+              cls.model as classified_model
+       from institution_strategies s
+       join institutions i on i.id = s.institution_id
+       left join lateral (
+         select sc.id, sc.title, sc.created_at
+         from strategy_cycles sc
+         where sc.strategy_id = s.id
+         order by sc.created_at desc
+         limit 1
+       ) latest_cycle on true
+       left join lateral (
+         select min(extract(year from coalesce(sc.starts_at, sc.created_at)))::int as start_year,
+                max(extract(year from coalesce(sc.ends_at, sc.created_at)))::int as end_year
+         from strategy_cycles sc
+         where sc.strategy_id = s.id
+       ) period on true
+       left join lateral (
+         select count(*)::int as goals_count
+         from strategy_guidelines g
+         where g.cycle_id = latest_cycle.id
+           and g.status in ('active', 'disabled')
+       ) goal_stats on true
+       left join lateral (
+         select count(*)::int as initiatives_count
+         from strategy_initiatives si
+         where si.cycle_id = latest_cycle.id
+           and si.status in ('active', 'disabled')
+       ) initiative_stats on true
+       left join strategy_catalog_classifications cls on cls.strategy_id = s.id
+       where s.status = 'active'
+         and i.status = 'active'
+       order by s.created_at desc`,
+      []
+    );
+
+    const rows = Array.isArray(rowsRes?.rows) ? rowsRes.rows : [];
+    const strategies = rows.map((row) => {
+      const fallbackClassification = buildFallbackStrategyCatalogClassification(row);
+      const sector = String(row.classified_sector || fallbackClassification.sector || '').trim();
+      const theme = String(row.classified_theme || fallbackClassification.theme || '').trim();
+      const region = String(row.classified_region || fallbackClassification.region || '').trim();
+      const strategyCreatedYear = toYear(row.strategy_created_at);
+
+      return {
+        id: row.strategy_id,
+        strategyId: row.strategy_id,
+        strategyTitle: row.strategy_title,
+        strategySlug: row.strategy_slug,
+        strategyDescription: row.strategy_description || null,
+        institutionId: row.institution_id,
+        institutionName: row.institution_name,
+        institutionSlug: row.institution_slug,
+        countryCode: row.country_code || null,
+        cycleId: row.cycle_id || null,
+        cycleTitle: row.cycle_title || null,
+        goalsCount: Number(row.goals_count || 0),
+        initiativesCount: Number(row.initiatives_count || 0),
+        periodLabel: buildPeriodLabel({
+          startYear: Number.isFinite(Number(row.start_year)) ? Number(row.start_year) : null,
+          endYear: Number.isFinite(Number(row.end_year)) ? Number(row.end_year) : null,
+          fallbackYear: strategyCreatedYear
+        }),
+        sector,
+        theme,
+        region,
+        classifiedAt: row.classified_at || null,
+        classifiedModel: row.classified_model || fallbackClassification.model || null,
+        mapUrl: `/index.html?institution=${encodeURIComponent(row.institution_slug)}&strategy=${encodeURIComponent(row.strategy_slug)}&view=map&lang=en`,
+        embedMapUrl: `/embed/strategy-map/?institution=${encodeURIComponent(row.institution_slug)}&strategy=${encodeURIComponent(row.strategy_slug)}&lang=en`
+      };
+    });
+
+    const allFilterOptions = {
+      sectors: buildFilterOptions(strategies, 'sector'),
+      themes: buildFilterOptions(strategies, 'theme'),
+      regions: buildFilterOptions(strategies, 'region')
+    };
+
+    const filterSector = normalizeFilterToken(req.query?.sector);
+    const filterTheme = normalizeFilterToken(req.query?.theme);
+    const filterRegion = normalizeFilterToken(req.query?.region);
+    const searchQuery = normalizeSearchToken(req.query?.q);
+    const filtered = strategies.filter((item) => {
+      if (filterSector && normalizeFilterToken(item.sector) !== filterSector) return false;
+      if (filterTheme && normalizeFilterToken(item.theme) !== filterTheme) return false;
+      if (filterRegion && normalizeFilterToken(item.region) !== filterRegion) return false;
+      if (!searchQuery) return true;
+
+      const searchable = normalizeSearchToken([
+        item.strategyTitle,
+        item.strategyDescription,
+        item.institutionName,
+        item.theme,
+        item.sector,
+        item.region
+      ].filter(Boolean).join(' '));
+      return searchable.includes(searchQuery);
+    });
+
+    res.json({
+      strategies: filtered,
+      total: filtered.length,
+      filters: allFilterOptions,
+      generatedAt: new Date().toISOString()
+    });
   });
 
   app.post('/api/v1/public/access-requests', publicWriteGuard, async (req, res) => {

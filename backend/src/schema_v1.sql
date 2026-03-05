@@ -494,3 +494,23 @@ alter table if exists strategy_ai_generations
 alter table if exists strategy_ai_generations
   add constraint strategy_ai_generations_status_check
   check (status in ('pending', 'processing', 'applying', 'completed', 'failed'));
+
+create table if not exists strategy_catalog_classifications (
+  strategy_id uuid primary key references institution_strategies(id) on delete cascade,
+  sector text not null,
+  theme text not null,
+  region text not null,
+  confidence numeric(4,3),
+  model text,
+  raw_json jsonb,
+  classified_at timestamptz not null default now()
+);
+
+create index if not exists idx_strategy_catalog_sector
+  on strategy_catalog_classifications(sector);
+create index if not exists idx_strategy_catalog_theme
+  on strategy_catalog_classifications(theme);
+create index if not exists idx_strategy_catalog_region
+  on strategy_catalog_classifications(region);
+create index if not exists idx_strategy_catalog_classified_at
+  on strategy_catalog_classifications(classified_at);
