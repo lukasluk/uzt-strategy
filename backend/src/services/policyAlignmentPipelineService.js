@@ -596,7 +596,8 @@ async function compareRequirementBatch({ requirements, sourceRefsById, localeHin
   const response = await requestPolicyAlignmentJson({
     ...aiConfig,
     systemText,
-    userText
+    userText,
+    operationName: 'policy-alignment-compare'
   });
   return {
     model: response.model,
@@ -614,7 +615,8 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
     const response = await requestPolicyAlignmentJson({
       ...aiConfig,
       systemText,
-      userText
+      userText,
+      operationName: 'policy-alignment-extract-requirements'
     });
     const requirements = normalizeExtractedRequirements(response.parsed);
     return {
@@ -646,7 +648,11 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
       threshold: 0.08,
       limit: 8
     });
-    const batches = batchRequirements(requirementsWithIds, 10);
+    const batchSize = Math.max(
+      3,
+      Math.min(8, Number(process.env.POLICY_ALIGNMENT_REQUIREMENT_BATCH_SIZE || 6))
+    );
+    const batches = batchRequirements(requirementsWithIds, batchSize);
 
     const rawFindings = [];
     const modelSet = new Set();
