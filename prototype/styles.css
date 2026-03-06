@@ -5955,3 +5955,187 @@ body.meta-admin-page .tag-slug {
     grid-template-columns: 1fr;
   }
 }
+.policy-alignment-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.policy-alignment-column {
+  min-width: 0;
+}
+.policy-alignment-analysis-list,
+.policy-alignment-gap-list,
+.policy-alignment-suggestion-list {
+  display: grid;
+  gap: 12px;
+}
+.policy-alignment-analysis-item {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #d2e0f4;
+  background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%);
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+  color: #17365e;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.policy-alignment-analysis-item:hover {
+  transform: translateY(-1px);
+  border-color: #a8c2e5;
+  box-shadow: 0 10px 24px rgba(44, 84, 136, 0.12);
+}
+.policy-alignment-analysis-item.active {
+  border-color: #3f7fce;
+  box-shadow: 0 0 0 2px rgba(63, 127, 206, 0.14);
+  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+}
+.policy-alignment-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.policy-alignment-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.policy-alignment-summary-card {
+  border: 1px solid #d6e2f2;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+}
+.policy-alignment-summary-card span {
+  color: #61799a;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.policy-alignment-summary-card strong {
+  font-size: 28px;
+  color: #17365e;
+}
+.policy-alignment-filter-grid,
+.policy-alignment-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.policy-alignment-upload-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 12px 0;
+}
+.policy-alignment-filter-grid label,
+.policy-alignment-upload-card,
+.policy-alignment-checkbox {
+  display: grid;
+  gap: 8px;
+}
+.policy-alignment-upload-card {
+  border: 1px dashed #bdd0e9;
+  border-radius: 14px;
+  background: #f9fbff;
+  padding: 14px;
+}
+.policy-alignment-checkbox {
+  align-content: center;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+}
+.policy-alignment-checkbox input {
+  margin: 0;
+}
+.policy-alignment-modal-card {
+  width: min(880px, 96vw);
+}
+.policy-alignment-create-form textarea {
+  min-height: 110px;
+}
+.policy-alignment-table {
+  min-width: 1260px;
+}
+.policy-alignment-theme-row td {
+  background: #edf4ff;
+  color: #224a78;
+  font-weight: 700;
+}
+.policy-alignment-table-row.status-missing td:first-child,
+.policy-alignment-gap-item.status-missing {
+  box-shadow: inset 5px 0 0 #ff3b30;
+}
+.policy-alignment-table-row.status-weak td:first-child,
+.policy-alignment-gap-item.status-weak {
+  box-shadow: inset 5px 0 0 #ff9f0a;
+}
+.policy-alignment-table-row.status-partial td:first-child,
+.policy-alignment-gap-item.status-partial {
+  box-shadow: inset 5px 0 0 #7c4dff;
+}
+.policy-alignment-table-row.status-covered td:first-child {
+  box-shadow: inset 5px 0 0 #00c853;
+}
+.policy-alignment-table-row.status-contradicted td:first-child,
+.policy-alignment-gap-item.status-contradicted {
+  box-shadow: inset 5px 0 0 #d50000;
+}
+.policy-alignment-table-row.status-unclear td:first-child,
+.policy-alignment-gap-item.status-unclear {
+  box-shadow: inset 5px 0 0 #2979ff;
+}
+.policy-alignment-evidence-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+.policy-alignment-evidence-list li {
+  display: grid;
+  gap: 3px;
+}
+.policy-alignment-subgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.policy-alignment-gap-item,
+.policy-alignment-suggestion-item {
+  border: 1px solid #d7e4f6;
+  border-radius: 14px;
+  background: #fbfdff;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.policy-alignment-inline-btn {
+  justify-self: start;
+}
+@media (max-width: 1100px) {
+  .policy-alignment-layout,
+  .policy-alignment-subgrid,
+  .policy-alignment-summary-grid,
+  .policy-alignment-filter-grid,
+  .policy-alignment-upload-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.policy-alignment-action-stack {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.policy-alignment-link-note {
+  border: 1px solid #d9e5f5;
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 12px;
+  align-content: start;
+}

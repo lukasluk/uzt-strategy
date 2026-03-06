@@ -514,3 +514,221 @@ create index if not exists idx_strategy_catalog_region
   on strategy_catalog_classifications(region);
 create index if not exists idx_strategy_catalog_classified_at
   on strategy_catalog_classifications(classified_at);
+
+create table if not exists policy_alignment_frameworks (
+  id uuid primary key,
+  institution_id uuid references institutions(id) on delete cascade,
+  strategy_id uuid references institution_strategies(id) on delete set null,
+  cycle_id uuid references strategy_cycles(id) on delete set null,
+  title text not null,
+  slug text,
+  description text,
+  status text not null default 'active' check (status in ('active', 'archived')),
+  source_hash text,
+  meta_json jsonb not null default '{}'::jsonb,
+  created_by uuid references platform_users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists policy_alignment_analyses (
+  id uuid primary key,
+  institution_id uuid not null references institutions(id) on delete cascade,
+  strategy_id uuid references institution_strategies(id) on delete set null,
+  cycle_id uuid references strategy_cycles(id) on delete cascade,
+  target_framework_id uuid references policy_alignment_frameworks(id) on delete set null,
+  title text not null,
+  description text,
+  source_mode text not null check (source_mode in ('uploaded_document', 'existing_strategy', 'existing_cycle', 'mixed')),
+  target_mode text not null check (target_mode in ('uploaded_document', 'framework')),
+  status text not null default 'draft' check (status in ('draft', 'queued', 'processing', 'completed', 'failed')),
+  source_summary_json jsonb not null default '{}'::jsonb,
+  target_summary_json jsonb not null default '{}'::jsonb,
+  summary_json jsonb not null default '{}'::jsonb,
+  error_message text,
+  started_at timestamptz,
+  completed_at timestamptz,
+  created_by uuid references platform_users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists policy_alignment_documents (
+  id uuid primary key,
+  analysis_id uuid references policy_alignment_analyses(id) on delete cascade,
+  framework_id uuid references policy_alignment_frameworks(id) on delete cascade,
+  role text not null check (role in ('source', 'target')),
+  source_kind text not null check (
+    source_kind in ('uploaded_pdf', 'existing_strategy_export', 'existing_cycle_export', 'framework_document')
+  ),
+  filename text not null,
+  mime_type text,
+  file_bytes integer,
+  page_count integer,
+  sha256_hash text,
+  extracted_text text not null default '',
+  extraction_status text not null default 'pending' check (extraction_status in ('pending', 'completed', 'failed')),
+  extraction_error text,
+  meta_json jsonb not null default '{}'::jsonb,
+  created_by uuid references platform_users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  check (analysis_id is not null or framework_id is not null)
+);
+
+create table if not exists policy_alignment_chunks (
+  id uuid primary key,
+  analysis_id uuid references policy_alignment_analyses(id) on delete cascade,
+  document_id uuid not null references policy_alignment_documents(id) on delete cascade,
+  chunk_role text not null check (chunk_role in ('source', 'target')),
+  ordinal integer not null,
+  page_from integer,
+  page_to integer,
+  section_path text,
+  heading text,
+  token_estimate integer,
+  text_excerpt text not null,
+  meta_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (document_id, ordinal)
+);
+
+create table if not exists policy_alignment_requirements (
+  id uuid primary key,
+  framework_id uuid references policy_alignment_frameworks(id) on delete cascade,
+  analysis_id uuid references policy_alignment_analyses(id) on delete cascade,
+  source_document_id uuid references policy_alignment_documents(id) on delete set null,
+  requirement_key text,
+  theme text,
+  title text not null,
+  description text,
+  status text not null default 'active' check (status in ('active', 'archived')),
+  ordinal integer not null default 0,
+  evidence_json jsonb not null default '[]'::jsonb,
+  raw_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (framework_id is not null or analysis_id is not null)
+);
+
+create table if not exists policy_alignment_source_refs (
+  id uuid primary key,
+  analysis_id uuid not null references policy_alignment_analyses(id) on delete cascade,
+  entity_kind text not null check (entity_kind in ('document', 'guideline', 'initiative', 'cycle', 'strategy_framework')),
+  entity_id uuid,
+  title text not null,
+  description text,
+  source_document_id uuid references policy_alignment_documents(id) on delete set null,
+  source_chunk_id uuid references policy_alignment_chunks(id) on delete set null,
+  meta_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists policy_alignment_findings (
+  id uuid primary key,
+  analysis_id uuid not null references policy_alignment_analyses(id) on delete cascade,
+  requirement_id uuid references policy_alignment_requirements(id) on delete set null,
+  theme text,
+  requirement_title text not null,
+  requirement_description text,
+  coverage_status text not null default 'unclear' check (
+    coverage_status in ('covered', 'partial', 'weak', 'missing', 'contradicted', 'unclear')
+  ),
+  confidence numeric(4,3),
+  explanation text,
+  overlap_summary text,
+  evidence_json jsonb not null default '[]'::jsonb,
+  matched_source_refs_json jsonb not null default '[]'::jsonb,
+  actionability text not null default 'review' check (
+    actionability in ('none', 'review', 'suggest_guideline', 'suggest_initiative')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists policy_alignment_suggestions (
+  id uuid primary key,
+  analysis_id uuid not null references policy_alignment_analyses(id) on delete cascade,
+  finding_id uuid references policy_alignment_findings(id) on delete cascade,
+  suggestion_kind text not null check (suggestion_kind in ('guideline', 'initiative')),
+  title text not null,
+  description text,
+  rationale text,
+  status text not null default 'draft' check (status in ('draft', 'converted', 'dismissed')),
+  linked_guideline_id uuid references strategy_guidelines(id) on delete set null,
+  linked_initiative_id uuid references strategy_initiatives(id) on delete set null,
+  proposal_id uuid references strategy_card_proposals(id) on delete set null,
+  meta_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists idx_policy_alignment_frameworks_slug
+  on policy_alignment_frameworks(institution_id, slug)
+  where slug is not null;
+create index if not exists idx_policy_alignment_frameworks_strategy
+  on policy_alignment_frameworks(strategy_id);
+create index if not exists idx_policy_alignment_frameworks_cycle
+  on policy_alignment_frameworks(cycle_id);
+create index if not exists idx_policy_alignment_frameworks_status
+  on policy_alignment_frameworks(status);
+
+create index if not exists idx_policy_alignment_analyses_cycle
+  on policy_alignment_analyses(cycle_id);
+create index if not exists idx_policy_alignment_analyses_institution
+  on policy_alignment_analyses(institution_id);
+create index if not exists idx_policy_alignment_analyses_strategy
+  on policy_alignment_analyses(strategy_id);
+create index if not exists idx_policy_alignment_analyses_status
+  on policy_alignment_analyses(status);
+create index if not exists idx_policy_alignment_analyses_created_at
+  on policy_alignment_analyses(created_at desc);
+
+create index if not exists idx_policy_alignment_documents_analysis
+  on policy_alignment_documents(analysis_id);
+create index if not exists idx_policy_alignment_documents_framework
+  on policy_alignment_documents(framework_id);
+create index if not exists idx_policy_alignment_documents_role
+  on policy_alignment_documents(role);
+create index if not exists idx_policy_alignment_documents_sha256
+  on policy_alignment_documents(sha256_hash);
+
+create index if not exists idx_policy_alignment_chunks_document
+  on policy_alignment_chunks(document_id, ordinal);
+create index if not exists idx_policy_alignment_chunks_analysis
+  on policy_alignment_chunks(analysis_id);
+create index if not exists idx_policy_alignment_chunks_role
+  on policy_alignment_chunks(chunk_role);
+
+create index if not exists idx_policy_alignment_requirements_framework
+  on policy_alignment_requirements(framework_id, ordinal);
+create index if not exists idx_policy_alignment_requirements_analysis
+  on policy_alignment_requirements(analysis_id, ordinal);
+create index if not exists idx_policy_alignment_requirements_theme
+  on policy_alignment_requirements(theme);
+create index if not exists idx_policy_alignment_requirements_key
+  on policy_alignment_requirements(requirement_key);
+
+create index if not exists idx_policy_alignment_source_refs_analysis
+  on policy_alignment_source_refs(analysis_id);
+create index if not exists idx_policy_alignment_source_refs_kind
+  on policy_alignment_source_refs(entity_kind);
+create index if not exists idx_policy_alignment_source_refs_entity
+  on policy_alignment_source_refs(entity_id);
+
+create index if not exists idx_policy_alignment_findings_analysis
+  on policy_alignment_findings(analysis_id);
+create index if not exists idx_policy_alignment_findings_requirement
+  on policy_alignment_findings(requirement_id);
+create index if not exists idx_policy_alignment_findings_status
+  on policy_alignment_findings(coverage_status);
+create index if not exists idx_policy_alignment_findings_theme
+  on policy_alignment_findings(theme);
+
+create index if not exists idx_policy_alignment_suggestions_analysis
+  on policy_alignment_suggestions(analysis_id);
+create index if not exists idx_policy_alignment_suggestions_finding
+  on policy_alignment_suggestions(finding_id);
+create index if not exists idx_policy_alignment_suggestions_status
+  on policy_alignment_suggestions(status);
+create index if not exists idx_policy_alignment_suggestions_kind
+  on policy_alignment_suggestions(suggestion_kind);

@@ -1,7 +1,7 @@
-const steps = [
+﻿const steps = [
   {
     id: 'guidelines',
-    title: 'Gairės',
+    title: 'GairÄ—s',
     hint: 'Aptarimas, balsavimas, komentarai',
     prompt: 'Kur link judesime ir kokia nauda kursime?'
   },
@@ -58,7 +58,7 @@ const introSlides = [
     title: '6. Naudokite strategiju zemelapi',
     body: 'Strategiju zemelapis yra patogus vizualinis irankis perziureti strategijos struktura ir elementu rysius.',
     points: [
-      'Galite perjungti sluoksnius "Gairės" ir "Iniciatyvos".',
+      'Galite perjungti sluoksnius "GairÄ—s" ir "Iniciatyvos".',
       'Galima centruoti vaizda, priartinti ir naudoti pilno ekrano rezima.'
     ]
   },
@@ -85,19 +85,19 @@ const DEFAULT_VISION_TEXT = 'Ilgalaike kryptis ir siekiama pokycio busena.';
 const DEFAULT_GUIDE_INTRO_TEXT = [
   'digistrategy.eu sistema skirta patogiam jusu institucijos strategijos rengimo procesui. Patogiai susikurkite gairiu struktura ir priskirkite konkrecias iniciatyvas tu gairiu igyvendinimui.',
   'Sistema susideda is 2 pagrindiniu daliu:',
-  '1. Korteliu valdymo modulio (Gairės ir Iniciatyvos) - cia jusu kolegos gali komentuoti, siulyti ivairias strategijos kryptis, balsuoti uz vieni kitu teiktus pasiulymus.',
+  '1. Korteliu valdymo modulio (GairÄ—s ir Iniciatyvos) - cia jusu kolegos gali komentuoti, siulyti ivairias strategijos kryptis, balsuoti uz vieni kitu teiktus pasiulymus.',
   '2. Strategiju zemelapis - patogus vizualinis irankis perziureti strategijos struktura ir rysius tarp skirtingu jos elementu.',
   'Galutini savo interaktyvu strategijos zemelapi ikelkite i intraneta ar vidini puslapi su embeding funkcionalumu. Sistema skirta valstybinems institucijoms, kurios nori savo strategijos kurimo procesa vykdyti efektyviai.'
 ].join('\\n');
 const DEFAULT_ABOUT_TEXT = [
-  'Lietuvos viešajame sektoriuje skaitmenizacija vis dažniau suvokiama ne kaip pavienių IT projektų rinkinys, o kaip sisteminis pokytis, apimantis paslaugų kokybę, duomenų valdymą ir naujų technologijų taikymą. Todėl vis didesnę reikšmę įgyja ne tik technologiniai sprendimai, bet ir aiškios, įgyvendinamos skaitmenizacijos strategijos (arba IT plėtros planai).',
-  'Praktika rodo, kad tradiciniai, didelės apimties strateginiai dokumentai dažnai tampa sunkiai pritaikomi greitai besikeičiančioje aplinkoje. Dėl to vis daugiau dėmesio skiriama lanksčioms, įtraukioms ir duomenimis grįstoms strategijų formavimo praktikoms, kurios leidžia greičiau susitarti dėl prioritetų ir krypties.',
-  'Vienas iš būdų tai pasiekti - aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:',
-  '- Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).\n- Duomenų kokybė ir duomenų valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
-  'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi būti suprantamas, įtraukiantis ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.',
-  'Šiame kontekste atsirado digistrategy.eu - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
-  'Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti veikiančius, naudotojams suprantamus įrankius.',
-  'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos, kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.'
+  'Lietuvos vieÅ¡ajame sektoriuje skaitmenizacija vis daÅ¾niau suvokiama ne kaip pavieniÅ³ IT projektÅ³ rinkinys, o kaip sisteminis pokytis, apimantis paslaugÅ³ kokybÄ™, duomenÅ³ valdymÄ… ir naujÅ³ technologijÅ³ taikymÄ…. TodÄ—l vis didesnÄ™ reikÅ¡mÄ™ Ä¯gyja ne tik technologiniai sprendimai, bet ir aiÅ¡kios, Ä¯gyvendinamos skaitmenizacijos strategijos (arba IT plÄ—tros planai).',
+  'Praktika rodo, kad tradiciniai, didelÄ—s apimties strateginiai dokumentai daÅ¾nai tampa sunkiai pritaikomi greitai besikeiÄianÄioje aplinkoje. DÄ—l to vis daugiau dÄ—mesio skiriama lanksÄioms, Ä¯traukioms ir duomenimis grÄ¯stoms strategijÅ³ formavimo praktikoms, kurios leidÅ¾ia greiÄiau susitarti dÄ—l prioritetÅ³ ir krypties.',
+  'Vienas iÅ¡ bÅ«dÅ³ tai pasiekti - aiÅ¡kiai iÅ¡sigryninti pagrindines aÅ¡is, aplink kurias sukasi dauguma sprendimÅ³:',
+  '- KokybiÅ¡kÅ³ paslaugÅ³ teikimas (vidiniams ir iÅ¡oriniams naudotojams).\n- DuomenÅ³ kokybÄ— ir duomenÅ³ valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
+  'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi bÅ«ti suprantamas, Ä¯traukiantis ir skatinantis bendrÄ… atsakomybÄ™. Tam vis daÅ¾niau pasitelkiami paprasti skaitmeniniai Ä¯rankiai, leidÅ¾iantys dalyviams siÅ«lyti gaires, jas komentuoti, balsuoti ir vieÅ¡ai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumÄ…, tarpinstitucinÄ¯ mokymÄ…si ir gerosios praktikos dalijimÄ…si.',
+  'Å iame kontekste atsirado digistrategy.eu - eksperimentinis, atviras Ä¯rankis, skirtas skaitmenizacijos strategijÅ³ ar IT plÄ—tros planÅ³ gairÄ—ms formuoti ir prioritetizuoti. Jis leidÅ¾ia dalyviams struktÅ«ruotai Ä¯sitraukti Ä¯ strateginÄ¯ procesÄ… ir padeda greiÄiau pereiti nuo abstrakÄiÅ³ idÄ—jÅ³ prie aiÅ¡kiÅ³ sprendimÅ³ krypÄiÅ³.',
+  'Svarbu pabrÄ—Å¾ti, kad tai nÄ—ra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant Å¡iuolaikines technologijas ir dirbtinÄ¯ intelektÄ… galima greitai sukurti veikianÄius, naudotojams suprantamus Ä¯rankius.',
+  'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keiÄia vieÅ¡ojo sektoriaus veiklos modelius. Organizacijos, kurios drÄ…siai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realiÄ… galimybÄ™ judÄ—ti greiÄiau ir iÅ¡likti konkurencingos sparÄiai besikeiÄianÄioje aplinkoje.'
 ].join('\n\n');
 const DEFAULT_GUIDE_INTRO_TEXT_EN = [
   'digistrategy.eu is designed to make your institution strategy process practical and collaborative. Build a clear guideline structure and connect concrete initiatives to guideline delivery.',
@@ -124,6 +124,7 @@ const ALLOWED_VIEWS = new Set([
   'guideline-detail',
   'initiatives',
   'initiative-detail',
+  'policy-alignment',
   'history',
   'admin',
   'map',
@@ -205,6 +206,20 @@ const state = {
     aboutTextEn: DEFAULT_ABOUT_TEXT_EN
   },
   commentsVisible: false,
+  policyAlignments: [],
+  policyAlignmentFrameworks: [],
+  policyAlignmentFrameworkLoading: false,
+  policyAlignmentFrameworkError: '',
+  policyAlignmentFrameworkSelectedId: '',
+  policyAlignmentLoading: false,
+  policyAlignmentError: '',
+  policyAlignmentCycleId: '',
+  policyAlignmentSelectedId: '',
+  policyAlignmentCurrent: null,
+  policyAlignmentDetailLoading: false,
+  policyAlignmentFilterStatus: 'all',
+  policyAlignmentFilterTheme: 'all',
+  policyAlignmentGroupBy: 'theme',
   historyEntries: [],
   historyRows: [],
   historyLoading: false,
@@ -258,7 +273,7 @@ function ensureAdminAppLoaded() {
           reject(new Error('Admin scenarijus neinicijuotas.'));
         }
       };
-      const onError = () => reject(new Error('Nepavyko įkelti admin.js'));
+      const onError = () => reject(new Error('Nepavyko Ä¯kelti admin.js'));
       existing.addEventListener('load', onLoad, { once: true });
       existing.addEventListener('error', onError, { once: true });
       return;
@@ -275,7 +290,7 @@ function ensureAdminAppLoaded() {
         reject(new Error('Admin scenarijus neinicijuotas.'));
       }
     };
-    script.onerror = () => reject(new Error('Nepavyko įkelti admin.js'));
+    script.onerror = () => reject(new Error('Nepavyko Ä¯kelti admin.js'));
     document.body.appendChild(script);
   }).catch((error) => {
     adminAppLoadPromise = null;
@@ -851,6 +866,7 @@ function syncAuthStateFromStorage() {
       state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
+      resetPolicyAlignmentState();
       return;
     }
     state.token = parsed.token;
@@ -974,6 +990,12 @@ function stepPrompt(stepId) {
       'Which concrete initiatives will we implement?'
     );
   }
+  if (id === 'policy-alignment') {
+    return langText(
+      'Kaip dabartine strategija atitinka pasirinktÄ… politikos ar reikalavimu dokumenta?',
+      'How well does the current strategy align with the selected policy or requirements document?'
+    );
+  }
   return langText(
     'Kur link judesime ir kokia nauda kursime?',
     'Where are we heading and what value will we create?'
@@ -1060,76 +1082,92 @@ function toUserMessage(error) {
   const raw = String(error?.message || error || '').trim();
   const map = {
     unauthorized: 'Reikia prisijungti.',
-    'invalid token': 'Sesija nebegalioja. Prisijunkite iš naujo.',
+    'invalid token': 'Sesija nebegalioja. Prisijunkite iÅ¡ naujo.',
     'institution not found': `Institucija "${state.institutionSlug}" nerasta.`,
     'strategy not found': 'Pasirinkta strategija nerasta.',
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
-    'cycle not writable': 'Ciklas nebeleidžia redaguoti (tik skaitymas).',
-    'guideline voting disabled': 'Ši gairė išjungta: balsuoti negalima.',
-    'initiative voting disabled': 'Ši iniciatyva išjungta: balsuoti negalima.',
-    'vote budget exceeded': 'Viršytas balsų biudžetas.',
-    forbidden: 'Veiksmas neleidžiamas.',
-    'membership inactive': 'Narystė neaktyvi.',
+    'cycle not writable': 'Ciklas nebeleidÅ¾ia redaguoti (tik skaitymas).',
+    'guideline voting disabled': 'Å i gairÄ— iÅ¡jungta: balsuoti negalima.',
+    'initiative voting disabled': 'Å i iniciatyva iÅ¡jungta: balsuoti negalima.',
+    'vote budget exceeded': 'VirÅ¡ytas balsÅ³ biudÅ¾etas.',
+    forbidden: 'Veiksmas neleidÅ¾iamas.',
+    'membership inactive': 'NarystÄ— neaktyvi.',
     'invalid credentials': 'Neteisingi prisijungimo duomenys.',
     'invite not found': 'Kvietimas nerastas.',
     'invite expired': 'Kvietimas nebegalioja.',
-    'invite revoked': 'Kvietimas atšauktas.',
+    'invite revoked': 'Kvietimas atÅ¡auktas.',
     'invite already used': 'Kvietimas jau panaudotas.',
-    'too many requests': 'Per daug užklausų. Pabandykite po kelių sekundžių.',
-    'guidelineId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
-    'initiativeId and score(0..5) required': 'Balsas turi būti tarp 0 ir 5.',
-    'initiativeId and body required': 'Komentaras negali būti tuščias.',
-    'layout payload required': 'Nepateikti žemėlapio išdėstymo duomenys.',
-    'guideline not in cycle': 'Gairė nepriklauso šiam ciklui.',
-    'initiative not in cycle': 'Iniciatyva nepriklauso šiam ciklui.',
+    'too many requests': 'Per daug uÅ¾klausÅ³. Pabandykite po keliÅ³ sekundÅ¾iÅ³.',
+    'guidelineId and score(0..5) required': 'Balsas turi bÅ«ti tarp 0 ir 5.',
+    'initiativeId and score(0..5) required': 'Balsas turi bÅ«ti tarp 0 ir 5.',
+    'initiativeId and body required': 'Komentaras negali bÅ«ti tuÅ¡Äias.',
+    'layout payload required': 'Nepateikti Å¾emÄ—lapio iÅ¡dÄ—stymo duomenys.',
+    'guideline not in cycle': 'GairÄ— nepriklauso Å¡iam ciklui.',
+    'initiative not in cycle': 'Iniciatyva nepriklauso Å¡iam ciklui.',
     'initiative not found': 'Iniciatyva nerasta.',
-    'proposal not found': 'Pasiūlymas nerastas.',
-    'proposal already reviewed': 'Pasiūlymas jau peržiūrėtas.',
+    'proposal not found': 'PasiÅ«lymas nerastas.',
+    'proposal already reviewed': 'PasiÅ«lymas jau perÅ¾iÅ«rÄ—tas.',
     'invalid decision': 'Neteisingas sprendimo tipas.',
-    'at least one guideline required': 'Iniciatyva turi būti priskirta bent vienai gairei.',
-    'name required': 'Nurodykite pavadinimą.',
-    'token and displayName required': 'Nurodykite kvietimo žetoną ir vardą.',
-    'institutionId required': 'Pasirinkite instituciją.',
-    'institutionName required': 'Įveskite institucijos pavadinimą.',
+    'at least one guideline required': 'Iniciatyva turi bÅ«ti priskirta bent vienai gairei.',
+    'name required': 'Nurodykite pavadinimÄ….',
+    'token and displayName required': 'Nurodykite kvietimo Å¾etonÄ… ir vardÄ….',
+    'institutionId required': 'Pasirinkite institucijÄ….',
+    'institutionName required': 'Ä®veskite institucijos pavadinimÄ….',
     'institutionName too long': 'Institucijos pavadinimas per ilgas.',
-    'fullName required': 'Įveskite vardą ir pavardę.',
-    'workEmail required': 'Įveskite darbinį el. paštą.',
-    'phone required': 'Įveskite kontaktinį telefono numerį.',
-    'fullName too long': 'Vardas ir pavardė per ilgi.',
-    'workEmail too long': 'El. paštas per ilgas.',
+    'fullName required': 'Ä®veskite vardÄ… ir pavardÄ™.',
+    'workEmail required': 'Ä®veskite darbinÄ¯ el. paÅ¡tÄ….',
+    'phone required': 'Ä®veskite kontaktinÄ¯ telefono numerÄ¯.',
+    'fullName too long': 'Vardas ir pavardÄ— per ilgi.',
+    'workEmail too long': 'El. paÅ¡tas per ilgas.',
     'phone too long': 'Telefono numeris per ilgas.',
     'notes too long': 'Papildoma informacija per ilga.',
-    'ai api key not configured': 'AI API raktas nesukonfigūruotas serveryje.',
-    'clarification required': 'Nurodykite AI patikslinimą.',
-    'at least one pdf file required': 'Įkelkite bent vieną PDF failą.',
-    'only pdf files allowed': 'Leidžiami tik PDF failai.',
+    'ai api key not configured': 'AI API raktas nesukonfigÅ«ruotas serveryje.',
+    'clarification required': 'Nurodykite AI patikslinimÄ….',
+    'at least one pdf file required': 'Ä®kelkite bent vienÄ… PDF failÄ….',
+    'only pdf files allowed': 'LeidÅ¾iami tik PDF failai.',
     'pdf file too large': 'PDF failas per didelis.',
-    'too many pdf files': 'Įkelta per daug PDF failų.',
+    'too many pdf files': 'Ä®kelta per daug PDF failÅ³.',
     'pdf parsing failed': 'Nepavyko nuskaityti PDF turinio.',
-    'pdf content too large': 'PDF turinys per didelės apimties.',
+    'pdf content too large': 'PDF turinys per didelÄ—s apimties.',
     'ai response invalid': 'AI atsakymas netinkamo formato.',
-    'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar kartą.',
-    'generated guidelines missing': 'AI nesugeneravo pakankamai gairių.',
-    'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvų.',
-    'generationId required': 'Trūksta generavimo užklausos ID.',
+    'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar kartÄ….',
+    'generated guidelines missing': 'AI nesugeneravo pakankamai gairiÅ³.',
+    'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvÅ³.',
+    'generationId required': 'TrÅ«ksta generavimo uÅ¾klausos ID.',
     'generation not found': currentLanguage() === 'en'
       ? 'AI generation was not found. Please retry.'
-      : 'AI generavimo užklausa nerasta. Pabandykite dar kartą.',
+      : 'AI generavimo uÅ¾klausa nerasta. Pabandykite dar kartÄ….',
     'ai generation timeout': currentLanguage() === 'en'
       ? 'AI generation is still running. Please wait and try again shortly.'
-      : 'AI generavimas vis dar vyksta. Pabandykite dar po kelių sekundžių.',
+      : 'AI generavimas vis dar vyksta. Pabandykite dar po keliÅ³ sekundÅ¾iÅ³.',
     'ai generation failed': currentLanguage() === 'en'
       ? 'AI generation failed.'
       : 'AI generavimas nepavyko.',
-    'documents upload failed': 'Nepavyko įkelti dokumentų.',
+    'documents upload failed': 'Nepavyko Ä¯kelti dokumentÅ³.',
+    'analysis title required': 'Nurodykite analizÄ—s pavadinimÄ….',
+    'analysis not found': 'Policy Alignment analizÄ— nerasta.',
+    'analysis access forbidden': 'Neturite prieigos prie Å¡ios analizÄ—s.',
+    'analysis target framework required': 'Pasirinkite analizÄ—s karkasÄ… arba Ä¯kelkite tikslinÄ¯ dokumentÄ….',
+    'target documents required': 'Ä®kelkite bent vienÄ… tikslinÄ¯ dokumentÄ….',
+    'source material required': 'TrÅ«ksta Å¡altinio medÅ¾iagos palyginimui.',
+    'target requirements missing': 'Nepavyko iÅ¡gauti tikslinio dokumento reikalavimÅ³.',
+    'cannot upload target documents when target framework is selected': 'Pasirinkus karkasÄ… naujÅ³ tiksliniÅ³ dokumentÅ³ Ä¯kelti negalima.',
+    'suggestion not found': 'PasiÅ«lymas nerastas.',
+    'suggestion already processed': 'Å is pasiÅ«lymas jau buvo apdorotas.',
+    'finding not found': 'Atitikties iÅ¡vada nerasta.',
+    'initiative suggestion requires linked guidelines': 'Iniciatyvos pasiÅ«lymui reikia bent vienos susietos gairÄ—s.',
+    'role required': 'Nurodykite dokumento vaidmenÄ¯.',
+    'invalid role': 'Netinkamas dokumento vaidmuo.',
+    'framework not found': 'Atitikties karkasas nerastas.',
+    'framework title required': 'Nurodykite karkaso pavadinimą.',
     'HTTP 504': currentLanguage() === 'en'
       ? 'AI processing took longer than gateway timeout. Checking server result...'
       : 'AI apdorojimas truko ilgiau nei gateway limitas. Tikrinamas serverio rezultatas...',
     'strategy limit reached': currentLanguage() === 'en'
       ? 'This institution already reached the maximum number of strategies (5).'
-      : 'Ši institucija jau pasiekė maksimalų strategijų limitą (5).'
+      : 'Å i institucija jau pasiekÄ— maksimalÅ³ strategijÅ³ limitÄ… (5).'
   };
-  return map[raw] || raw || 'Nepavyko įvykdyti užklausos.';
+  return map[raw] || raw || 'Nepavyko Ä¯vykdyti uÅ¾klausos.';
 }
 
 function notifySuccess(message) {
@@ -1375,6 +1413,146 @@ async function refreshHistory() {
     state.historyError = toUserMessage(error);
   } finally {
     state.historyLoading = false;
+  }
+}
+
+function resetPolicyAlignmentState() {
+  state.policyAlignments = [];
+  state.policyAlignmentFrameworks = [];
+  state.policyAlignmentFrameworkLoading = false;
+  state.policyAlignmentFrameworkError = '';
+  state.policyAlignmentFrameworkSelectedId = '';
+  state.policyAlignmentLoading = false;
+  state.policyAlignmentError = '';
+  state.policyAlignmentCycleId = '';
+  state.policyAlignmentSelectedId = '';
+  state.policyAlignmentCurrent = null;
+  state.policyAlignmentDetailLoading = false;
+  state.policyAlignmentFilterStatus = 'all';
+  state.policyAlignmentFilterTheme = 'all';
+  state.policyAlignmentGroupBy = 'theme';
+}
+
+function normalizePolicyAlignmentAnalysis(value) {
+  if (!value || typeof value !== 'object') return null;
+  return {
+    ...value,
+    id: String(value.id || '').trim(),
+    cycleId: String(value.cycleId || value.cycle_id || '').trim(),
+    institutionId: String(value.institutionId || value.institution_id || '').trim(),
+    strategyId: String(value.strategyId || value.strategy_id || '').trim(),
+    targetFrameworkId: String(value.targetFrameworkId || value.target_framework_id || '').trim() || null,
+    title: String(value.title || '').trim(),
+    description: String(value.description || '').trim(),
+    sourceMode: String(value.sourceMode || value.source_mode || 'uploaded_document').trim().toLowerCase(),
+    targetMode: String(value.targetMode || value.target_mode || 'uploaded_document').trim().toLowerCase(),
+    status: String(value.status || 'draft').trim().toLowerCase(),
+    sourceSummary: value.sourceSummary && typeof value.sourceSummary === 'object' ? value.sourceSummary : {},
+    targetSummary: value.targetSummary && typeof value.targetSummary === 'object' ? value.targetSummary : {},
+    summary: value.summary && typeof value.summary === 'object' ? value.summary : {},
+    errorMessage: String(value.errorMessage || value.error_message || '').trim() || null,
+    startedAt: value.startedAt || value.started_at || null,
+    completedAt: value.completedAt || value.completed_at || null,
+    createdBy: value.createdBy || value.created_by || null,
+    createdAt: value.createdAt || value.created_at || null,
+    updatedAt: value.updatedAt || value.updated_at || null,
+    documentCount: Number(value.documentCount || value.document_count || 0) || 0,
+    findingCount: Number(value.findingCount || value.finding_count || 0) || 0,
+    suggestionCount: Number(value.suggestionCount || value.suggestion_count || 0) || 0,
+    documents: Array.isArray(value.documents) ? value.documents : [],
+    sourceRefs: Array.isArray(value.sourceRefs) ? value.sourceRefs : [],
+    requirements: Array.isArray(value.requirements) ? value.requirements : [],
+    findings: Array.isArray(value.findings) ? value.findings : [],
+    suggestions: Array.isArray(value.suggestions) ? value.suggestions : []
+  };
+}
+
+function sortedPolicyAlignments(list) {
+  return [...(Array.isArray(list) ? list : [])].sort((left, right) => {
+    const leftTime = new Date(left?.updatedAt || left?.createdAt || 0).getTime() || 0;
+    const rightTime = new Date(right?.updatedAt || right?.createdAt || 0).getTime() || 0;
+    return rightTime - leftTime;
+  });
+}
+
+function selectedPolicyAlignmentFromState() {
+  const selectedId = String(state.policyAlignmentSelectedId || '').trim();
+  if (selectedId && state.policyAlignmentCurrent?.id === selectedId) {
+    return state.policyAlignmentCurrent;
+  }
+  return sortedPolicyAlignments(state.policyAlignments).find((item) => item.id === selectedId) || null;
+}
+
+async function loadPolicyAlignmentDetail(analysisId, { silent = false } = {}) {
+  const nextId = String(analysisId || '').trim();
+  if (!nextId || !isLoggedIn()) return null;
+  if (!silent) {
+    state.policyAlignmentDetailLoading = true;
+    state.policyAlignmentError = '';
+    render();
+  }
+  try {
+    const payload = await api(`/api/v1/policy-alignments/${encodeURIComponent(nextId)}`);
+    const analysis = normalizePolicyAlignmentAnalysis(payload?.analysis);
+    if (!analysis) throw new Error('analysis not found');
+    state.policyAlignmentCurrent = analysis;
+    state.policyAlignmentSelectedId = analysis.id;
+    state.policyAlignments = sortedPolicyAlignments(
+      state.policyAlignments.some((item) => item.id === analysis.id)
+        ? state.policyAlignments.map((item) => (item.id === analysis.id ? { ...item, ...analysis } : item))
+        : [...state.policyAlignments, analysis]
+    );
+    return analysis;
+  } catch (error) {
+    state.policyAlignmentError = toUserMessage(error);
+    return null;
+  } finally {
+    if (!silent) {
+      state.policyAlignmentDetailLoading = false;
+      render();
+    }
+  }
+}
+
+async function refreshPolicyAlignments({ selectedId = null, silent = false } = {}) {
+  if (!isLoggedIn() || !state.cycle?.id) {
+    resetPolicyAlignmentState();
+    return [];
+  }
+  if (!silent) {
+    state.policyAlignmentLoading = true;
+    state.policyAlignmentError = '';
+    render();
+  }
+  try {
+    const payload = await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/policy-alignments`);
+    const analyses = sortedPolicyAlignments(
+      (Array.isArray(payload?.analyses) ? payload.analyses : [])
+        .map((item) => normalizePolicyAlignmentAnalysis(item))
+        .filter(Boolean)
+    );
+    state.policyAlignments = analyses;
+    state.policyAlignmentCycleId = String(payload?.cycleId || state.cycle.id || '').trim();
+    const preferredId = String(selectedId || state.policyAlignmentSelectedId || analyses[0]?.id || '').trim();
+    state.policyAlignmentSelectedId = preferredId;
+    if (!preferredId) {
+      state.policyAlignmentCurrent = null;
+      return analyses;
+    }
+    const needsDetail = !state.policyAlignmentCurrent || state.policyAlignmentCurrent.id !== preferredId || !Array.isArray(state.policyAlignmentCurrent.findings);
+    if (needsDetail) {
+      await loadPolicyAlignmentDetail(preferredId, { silent: true });
+    }
+    return analyses;
+  } catch (error) {
+    resetPolicyAlignmentState();
+    state.policyAlignmentError = toUserMessage(error);
+    return [];
+  } finally {
+    if (!silent) {
+      state.policyAlignmentLoading = false;
+      render();
+    }
   }
 }
 
@@ -1701,6 +1879,7 @@ async function bootstrap() {
       state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
+      resetPolicyAlignmentState();
       return;
     }
 
@@ -1744,6 +1923,7 @@ async function bootstrap() {
         state.historyRows = [];
         state.historyError = '';
         state.historyCycleId = '';
+        resetPolicyAlignmentState();
       }
     } else if (state.embedMapMode) {
       state.context = null;
@@ -1752,11 +1932,13 @@ async function bootstrap() {
       state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
+      resetPolicyAlignmentState();
     } else {
       state.historyEntries = [];
       state.historyRows = [];
       state.historyError = '';
       state.historyCycleId = '';
+      resetPolicyAlignmentState();
     }
   } catch (error) {
     state.error = toUserMessage(error);
@@ -2045,8 +2227,8 @@ function canExpandStepWithAddAction(stepId) {
 }
 
 function quickAddActionLabel(stepId) {
-  if (stepId === 'guidelines') return langText('Pridėti naują gairę', 'Add new guideline');
-  if (stepId === 'initiatives') return langText('Pridėti naują iniciatyvą', 'Add new initiative');
+  if (stepId === 'guidelines') return langText('PridÄ—ti naujÄ… gairÄ™', 'Add new guideline');
+  if (stepId === 'initiatives') return langText('PridÄ—ti naujÄ… iniciatyvÄ…', 'Add new initiative');
   return '';
 }
 
@@ -2412,6 +2594,18 @@ function stepIconMarkup(stepId) {
     `);
   }
 
+  if (id === 'policy-alignment') {
+    return wrap(`
+      <path d="M5.4 5.2h6.8v13.6H5.4z"></path>
+      <path d="M12.2 7.4h6.4v11.4h-6.4z"></path>
+      <path d="M7.2 8.6h3.2"></path>
+      <path d="M7.2 11.4h3.2"></path>
+      <path d="M14.2 11h2.4"></path>
+      <path d="M14.2 13.8h2.4"></path>
+      <path d="M9.8 15.8l3.2-2.2"></path>
+    `);
+  }
+
   if (id === 'history') {
     return wrap(`
       <path d="M4.2 12a7.8 7.8 0 1 0 2.2-5.4"></path>
@@ -2452,17 +2646,19 @@ function renderSteps() {
 
   const canOpenAdmin = canOpenAdminView();
   const canOpenHistory = isLoggedIn();
+  const canOpenPolicyAlignment = isLoggedIn();
   const openPendingProposalCount = canOpenAdmin
     ? (Array.isArray(state.historyEntries)
       ? state.historyEntries.filter((item) => String(item?.status || '').trim().toLowerCase() === 'pending').length
       : 0)
     : 0;
   const items = [
-    { id: 'guidelines', title: langText('Gairės', 'Guidelines'), locked: false },
+    { id: 'guidelines', title: langText('GairÄ—s', 'Guidelines'), locked: false },
     { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
+    { id: 'policy-alignment', title: langText('Politikos atitiktis', 'Policy Alignment'), locked: !canOpenPolicyAlignment },
     { id: 'history', title: langText('Istorija', 'History'), locked: !canOpenHistory },
     { id: 'admin', title: 'Admin', locked: !canOpenAdmin, alert: openPendingProposalCount > 0 },
-    { id: 'map', title: langText('Strategijų žemėlapis', 'Strategy map'), locked: false }
+    { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -2476,6 +2672,10 @@ function renderSteps() {
     state.activeView = 'guidelines';
   }
   if (state.activeView === 'history' && !visibleItems.some((item) => item.id === 'history')) {
+    clearRouteEntityForView('guidelines');
+    state.activeView = 'guidelines';
+  }
+  if (state.activeView === 'policy-alignment' && !visibleItems.some((item) => item.id === 'policy-alignment')) {
     clearRouteEntityForView('guidelines');
     state.activeView = 'guidelines';
   }
@@ -2501,8 +2701,8 @@ function renderSteps() {
       </div>
     `;
     if (item.locked) {
-      button.title = item.id === 'history'
-        ? langText('Istorija prieinama tik prisijungusiems nariams', 'History is available to signed-in members only')
+      button.title = item.id === 'history' || item.id === 'policy-alignment'
+        ? langText('Sis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only')
         : 'Administravimas galimas tik savo institucijos administratoriui';
     }
     if (isActive) button.setAttribute('aria-current', 'page');
@@ -2657,7 +2857,7 @@ function renderIntroDeck() {
                 </div>
                 <div class="structure-layer-grid">
                   <article class="structure-step structure-step-layer" role="listitem">
-                    <span class="structure-label">${langText('Gairės', 'Guidelines')}</span>
+                    <span class="structure-label">${langText('GairÄ—s', 'Guidelines')}</span>
                     <p>${langText('Kryptys arba tikslai, atvaizduojami dviem korteliu lygiais.', 'Directions or goals shown in two card levels.')}</p>
                     <div class="structure-mini-cards" aria-hidden="true">
                       <span>${langText('Tevines', 'Parent')}</span>
@@ -2684,7 +2884,7 @@ function renderIntroDeck() {
               </article>
             </div>
             <div class="structure-note-row">
-              <p class="structure-note">${langText('Platformos apimtis: "Gairės" ir "Iniciatyvos" etapai.', 'Platform scope: "Guidelines" and "Initiatives" stages.')}</p>
+              <p class="structure-note">${langText('Platformos apimtis: "GairÄ—s" ir "Iniciatyvos" etapai.', 'Platform scope: "Guidelines" and "Initiatives" stages.')}</p>
               <div data-strategy-url-inline-slot></div>
             </div>
           </section>
@@ -2816,7 +3016,7 @@ function renderAdminView() {
       if (!mountPoint) return;
       mountPoint.innerHTML = `
         <section class="card">
-          <strong>Nepavyko įkelti administravimo lango</strong>
+          <strong>Nepavyko Ä¯kelti administravimo lango</strong>
           <p class="prompt" style="margin-top:8px;">${escapeHtml(toUserMessage(error))}</p>
         </section>
       `;
@@ -2909,12 +3109,12 @@ function commentsReadOnlyHintText(options) {
   if (options.member && !options.writable) {
     return currentLanguage() === 'en'
       ? 'Cycle is locked: comments cannot be added.'
-      : 'Ciklas užrakintas: komentuoti negalima.';
+      : 'Ciklas uÅ¾rakintas: komentuoti negalima.';
   }
   if (options.authenticated && !options.member) {
     return currentLanguage() === 'en'
       ? 'You are signed in to another institution. Commenting is disabled here.'
-      : 'Prisijungta prie kitos institucijos. Komentuoti čia negalite.';
+      : 'Prisijungta prie kitos institucijos. Komentuoti Äia negalite.';
   }
   return currentLanguage() === 'en'
     ? 'Sign in to add comments.'
@@ -3062,7 +3262,7 @@ function renderGuidelineCard(guideline, options) {
               <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" aria-label="${escapeHtml(langText('Prideti bala', 'Increase vote'))}" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
             <div class="vote-total">${langText('Bendras balas', 'Total score')}: <strong>${Number(guideline.totalScore || 0)}</strong></div>
-            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiūlymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
+            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiÅ«lymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
           </div>
         </div>
       ` : `
@@ -3120,7 +3320,7 @@ function renderGuidelineCheckboxList(guidelines, { selectedIds = [], name = 'gui
   const guidelineList = Array.isArray(guidelines) ? guidelines : [];
   const selectedSet = new Set((Array.isArray(selectedIds) ? selectedIds : []).map((id) => String(id || '').trim()));
   if (!guidelineList.length) {
-    return '<p class="prompt guideline-checkbox-empty">Nėra aktyvių gairių pasirinkimui.</p>';
+    return '<p class="prompt guideline-checkbox-empty">NÄ—ra aktyviÅ³ gairiÅ³ pasirinkimui.</p>';
   }
   return `
     <div class="guideline-checkbox-list">
@@ -3183,7 +3383,7 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
         <strong>${langText('Gairiu ir iniciatyvu susiejimas', 'Guideline-to-initiative mapping')}</strong>
         <span class="tag">${langText('Lentele', 'Table')}</span>
       </div>
-      <p class="prompt">${langText('Gairės, kurios neturi nei vienos iniciatyvos, pažymėtos atskirai.', 'Guidelines with no initiatives are highlighted separately.')}</p>
+      <p class="prompt">${langText('GairÄ—s, kurios neturi nei vienos iniciatyvos, paÅ¾ymÄ—tos atskirai.', 'Guidelines with no initiatives are highlighted separately.')}</p>
       <div class="initiative-matrix-scroll">
         <table class="initiative-matrix-table">
           <thead>
@@ -3199,7 +3399,7 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
                   <td class="initiative-matrix-guideline">${escapeHtml(row.guidelineTitle)}</td>
                   <td>
                     ${row.unassigned
-                      ? '<span class="initiative-matrix-empty">Nepriskirta nė viena iniciatyva</span>'
+                      ? '<span class="initiative-matrix-empty">Nepriskirta nÄ— viena iniciatyva</span>'
                       : `<div class="initiative-matrix-initiative-list">${row.initiativeTitles.map((title) => `<span class="initiative-matrix-chip">${escapeHtml(title)}</span>`).join('')}</div>`}
                   </td>
                 </tr>
@@ -3273,7 +3473,7 @@ function renderInitiativeCard(initiative, options) {
               <button class="vote-btn" data-action="initiative-vote-plus" data-id="${escapeHtml(initiative.id)}" aria-label="${escapeHtml(langText('Prideti bala', 'Increase vote'))}" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
             <div class="vote-total">${langText('Bendras balas', 'Total score')}: <strong>${Number(initiative.totalScore || 0)}</strong></div>
-            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiūlymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
+            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiÅ«lymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
           </div>
         </div>
       ` : `
@@ -3497,7 +3697,7 @@ function buildGuidelineDetailBreadcrumbs(guideline) {
   const strategyTitle = String(state.strategy?.title || state.strategySlug || '-').trim() || '-';
   const parent = resolveGuidelineParent(item);
   const label = langText('Kelias', 'Breadcrumb');
-  const listLabel = langText('Gairės', 'Guidelines');
+  const listLabel = langText('GairÄ—s', 'Guidelines');
   const parentLabel = langText('Tevine gaire', 'Parent guideline');
   const currentTitle = String(item.title || item.id || '-').trim() || '-';
 
@@ -3581,7 +3781,7 @@ function renderGuidelineDetailView() {
       <div class="card">
         <strong>${langText('Gaire nerasta', 'Guideline not found')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuoroda arba grizkite i gairiu sarasa.', 'Check the URL or return to guideline list.')}</p>
-        <button id="backToGuidelinesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('Grįžti į gaires', 'Back to guidelines')}</button>
+        <button id="backToGuidelinesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('GrÄ¯Å¾ti Ä¯ gaires', 'Back to guidelines')}</button>
       </div>
     `;
     const backButton = elements.stepView.querySelector('#backToGuidelinesBtn');
@@ -3603,8 +3803,8 @@ function renderGuidelineDetailView() {
     <div class="step-header">
       <h2>${langText('Gaires kortele', 'Guideline card')}</h2>
       <div class="header-stack step-header-actions">
-        <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('Grįžti į gaires', 'Back to guidelines')}</button>
-        <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti žemėlapyje', 'Show on map')}</button>
+        <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ gaires', 'Back to guidelines')}</button>
+        <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
       </div>
     </div>
     ${breadcrumbMarkup}
@@ -3759,7 +3959,7 @@ function renderInitiativeDetailView() {
       <div class="card">
         <strong>${langText('Iniciatyva nerasta', 'Initiative not found')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuoroda arba grizkite i iniciatyvu sarasa.', 'Check the URL or return to initiative list.')}</p>
-        <button id="backToInitiativesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('Grįžti į iniciatyvas', 'Back to initiatives')}</button>
+        <button id="backToInitiativesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('GrÄ¯Å¾ti Ä¯ iniciatyvas', 'Back to initiatives')}</button>
       </div>
     `;
     const backButton = elements.stepView.querySelector('#backToInitiativesBtn');
@@ -3781,8 +3981,8 @@ function renderInitiativeDetailView() {
     <div class="step-header">
       <h2>${langText('Iniciatyvos kortele', 'Initiative card')}</h2>
       <div class="header-stack step-header-actions">
-        <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('Grįžti į iniciatyvas', 'Back to initiatives')}</button>
-        <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti žemėlapyje', 'Show on map')}</button>
+        <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ iniciatyvas', 'Back to initiatives')}</button>
+        <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
       </div>
     </div>
     ${breadcrumbMarkup}
@@ -4387,6 +4587,11 @@ function renderStepView() {
     return;
   }
 
+  if (state.activeView === 'policy-alignment') {
+    renderPolicyAlignmentView();
+    return;
+  }
+
   if (state.activeView === 'history') {
     renderHistoryView();
     return;
@@ -4441,7 +4646,7 @@ function renderStepView() {
 
   const stats = [
     `${langText('Busena', 'Status')}: ${String(state.cycle?.state || '-').toUpperCase()}`,
-    `${langText('Gairės', 'Guidelines')}: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
+    `${langText('GairÄ—s', 'Guidelines')}: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
     `${langText('Dalyviai', 'Participants')}: ${Number(state.summary?.participant_count || 0)}`
   ];
   if (state.commentsVisible) {
@@ -4884,13 +5089,13 @@ function renderVoteFloating() {
   floating.classList.toggle('collapsed', state.voteFloatingCollapsed);
   floating.innerHTML = `
     <div class="vote-floating-inner">
-      <button id="toggleVoteFloatingBtn" class="vote-floating-toggle" type="button" aria-label="${state.voteFloatingCollapsed ? 'Rodyti balsų biudžetą' : 'Slėpti balsų biudžetą'}">
+      <button id="toggleVoteFloatingBtn" class="vote-floating-toggle" type="button" aria-label="${state.voteFloatingCollapsed ? 'Rodyti balsÅ³ biudÅ¾etÄ…' : 'SlÄ—pti balsÅ³ biudÅ¾etÄ…'}">
         ${state.voteFloatingCollapsed ? '>' : '<'}
       </button>
       <div class="vote-floating-content">
-        <div class="vote-floating-title">Balsų biudžetas</div>
+        <div class="vote-floating-title">BalsÅ³ biudÅ¾etas</div>
         <div class="vote-floating-count">${remaining} / ${budget}</div>
-        <div class="vote-total">${locked ? 'Ciklas užrakintas' : 'Balsavimas aktyvus'}</div>
+        <div class="vote-total">${locked ? 'Ciklas uÅ¾rakintas' : 'Balsavimas aktyvus'}</div>
       </div>
     </div>
   `;
@@ -4910,32 +5115,32 @@ function buildSummary() {
   lines.push(`Institucija: ${state.institution?.name || state.institutionSlug}`);
   lines.push(`Strategija: ${state.strategy?.title || '-'}`);
   lines.push(`Ciklas: ${state.cycle?.title || '-'}`);
-  lines.push(`Būsena: ${state.cycle?.state || '-'}`);
+  lines.push(`BÅ«sena: ${state.cycle?.state || '-'}`);
   lines.push('');
-  lines.push('Gairės:');
+  lines.push('GairÄ—s:');
 
   if (!state.guidelines.length) {
-    lines.push('- Nėra duomenų');
+    lines.push('- NÄ—ra duomenÅ³');
     return lines.join('\n');
   }
 
   state.guidelines.forEach((guideline) => {
     lines.push(`- ${guideline.title} (bendras balas: ${Number(guideline.totalScore || 0)})`);
-    lines.push(`  aprašymas: ${guideline.description || 'be paaiškinimo'}`);
-    lines.push(`  komentarų: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
+    lines.push(`  apraÅ¡ymas: ${guideline.description || 'be paaiÅ¡kinimo'}`);
+    lines.push(`  komentarÅ³: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
   });
 
   lines.push('');
   lines.push('Iniciatyvos:');
   if (!state.initiatives.length) {
-    lines.push('- Nėra duomenų');
+    lines.push('- NÄ—ra duomenÅ³');
   } else {
     state.initiatives.forEach((initiative) => {
       const linkedNames = resolveInitiativeGuidelineNames(initiative);
       lines.push(`- ${initiative.title} (bendras balas: ${Number(initiative.totalScore || 0)})`);
-      lines.push(`  aprašymas: ${initiative.description || 'be paaiškinimo'}`);
-      lines.push(`  susietos gairės: ${linkedNames.length ? linkedNames.join(', ') : 'nėra'}`);
-      lines.push(`  komentarų: ${Array.isArray(initiative.comments) ? initiative.comments.length : 0}`);
+      lines.push(`  apraÅ¡ymas: ${initiative.description || 'be paaiÅ¡kinimo'}`);
+      lines.push(`  susietos gairÄ—s: ${linkedNames.length ? linkedNames.join(', ') : 'nÄ—ra'}`);
+      lines.push(`  komentarÅ³: ${Array.isArray(initiative.comments) ? initiative.comments.length : 0}`);
     });
   }
 
@@ -5012,7 +5217,7 @@ function ensureInstitutionSelectionForAuth() {
 
 function showAuthModal(initialMode = 'login') {
   if (!ensureInstitutionSelectionForAuth()) {
-    notifyError('Pirma pasirinkite instituciją.');
+    notifyError('Pirma pasirinkite institucijÄ….');
     return;
   }
   void initialMode;
@@ -5043,7 +5248,7 @@ function showAuthModal(initialMode = 'login') {
     <div class="login-card">
       <div class="header-row" style="margin-bottom: 8px;">
         <h2>Prisijungimas</h2>
-        <button id="closeAuthModal" class="btn btn-ghost" type="button">Uždaryti</button>
+        <button id="closeAuthModal" class="btn btn-ghost" type="button">UÅ¾daryti</button>
       </div>
       <div id="authError" class="error" style="display:none;"></div>
       <p id="authHint" class="prompt auth-hint" style="display:none;"></p>
@@ -5051,18 +5256,18 @@ function showAuthModal(initialMode = 'login') {
       <form id="loginForm" class="login-form login-form-auth">
         <label class="auth-label" for="authInstitution">Institucija</label>
         ${authInstitutionSelect}
-        <label class="auth-label" for="authEmail">El. paštas</label>
-        <input id="authEmail" type="email" name="email" placeholder="El. paštas" autocomplete="email" required />
-        <label class="auth-label" for="authPassword">Slaptažodis</label>
+        <label class="auth-label" for="authEmail">El. paÅ¡tas</label>
+        <input id="authEmail" type="email" name="email" placeholder="El. paÅ¡tas" autocomplete="email" required />
+        <label class="auth-label" for="authPassword">SlaptaÅ¾odis</label>
         <div class="auth-password-field">
-          <input id="authPassword" type="password" name="password" placeholder="Slaptažodis" autocomplete="current-password" required />
-          <button id="toggleAuthPassword" class="auth-password-toggle" type="button" aria-label="Rodyti slaptažodį">Rodyti</button>
+          <input id="authPassword" type="password" name="password" placeholder="SlaptaÅ¾odis" autocomplete="current-password" required />
+          <button id="toggleAuthPassword" class="auth-password-toggle" type="button" aria-label="Rodyti slaptaÅ¾odÄ¯">Rodyti</button>
         </div>
         <button class="btn btn-primary" type="submit">Prisijungti</button>
       </form>
 
       <div class="auth-separator"></div>
-      <button id="forgotPasswordBtn" class="btn btn-ghost auth-forgot-btn" type="button">Pamiršau slaptažodį</button>
+      <button id="forgotPasswordBtn" class="btn btn-ghost auth-forgot-btn" type="button">PamirÅ¡au slaptaÅ¾odÄ¯</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -5111,11 +5316,11 @@ function showAuthModal(initialMode = 'login') {
   toggleAuthPassword.addEventListener('click', () => {
     const nextType = authPasswordInput.type === 'password' ? 'text' : 'password';
     authPasswordInput.type = nextType;
-    toggleAuthPassword.textContent = nextType === 'password' ? 'Rodyti' : 'Slėpti';
-    toggleAuthPassword.setAttribute('aria-label', nextType === 'password' ? 'Rodyti slaptažodį' : 'Slėpti slaptažodį');
+    toggleAuthPassword.textContent = nextType === 'password' ? 'Rodyti' : 'SlÄ—pti';
+    toggleAuthPassword.setAttribute('aria-label', nextType === 'password' ? 'Rodyti slaptaÅ¾odÄ¯' : 'SlÄ—pti slaptaÅ¾odÄ¯');
   });
   forgotPasswordBtn.addEventListener('click', () => {
-    showHint('Susisiekite su savo organizacijos administratoriumi dėl vienkartinės slaptažodžio keitimo nuorodos.');
+    showHint('Susisiekite su savo organizacijos administratoriumi dÄ—l vienkartinÄ—s slaptaÅ¾odÅ¾io keitimo nuorodos.');
   });
   authEmailInput?.focus();
 
@@ -5194,30 +5399,30 @@ function strategyCreateUiText() {
     };
   }
   return {
-    title: 'Sukurti strategiją',
-    subtitle: 'Sukurkite naują strategiją pasirinktai institucijai.',
-    close: 'Uždaryti',
+    title: 'Sukurti strategijÄ…',
+    subtitle: 'Sukurkite naujÄ… strategijÄ… pasirinktai institucijai.',
+    close: 'UÅ¾daryti',
     manualTab: 'Rankinis',
-    aiTab: 'AI iš PDF',
+    aiTab: 'AI iÅ¡ PDF',
     strategySetup: 'Strategijos nustatymai',
     aiSetup: 'AI generavimo nustatymai',
     strategyTitle: 'Strategijos pavadinimas',
-    strategySlug: 'Strategijos slug (nebūtina)',
-    strategyDescription: 'Trumpas aprašymas (nebūtina)',
-    createManual: 'Sukurti strategiją',
+    strategySlug: 'Strategijos slug (nebÅ«tina)',
+    strategyDescription: 'Trumpas apraÅ¡ymas (nebÅ«tina)',
+    createManual: 'Sukurti strategijÄ…',
     localeHint: 'Rezultato kalba',
     clarification: 'AI patikslinimas',
     clarificationPlaceholder: 'Koks lygis, tonas, prioritetai, ko vengti.',
     documents: 'PDF dokumentai',
-    createAi: 'Generuoti strategiją su AI',
+    createAi: 'Generuoti strategijÄ… su AI',
     progressTitle: 'AI generavimas vyksta',
-    progressUploading: 'Įkeliami dokumentai',
+    progressUploading: 'Ä®keliami dokumentai',
     progressAnalyses: 'Analizuojama su AI',
-    progressPreparing: 'Ruošiamas digistrategy.eu formatas',
-    progressDone: 'Užbaigiama',
+    progressPreparing: 'RuoÅ¡iamas digistrategy.eu formatas',
+    progressDone: 'UÅ¾baigiama',
     progressRecovering: 'Laukiamas serverio patvirtinimas',
     successManual: 'Strategija sukurta:',
-    successAi: 'AI sugeneravo strategiją:'
+    successAi: 'AI sugeneravo strategijÄ…:'
   };
 }
 
@@ -5551,7 +5756,7 @@ function showStrategyCreateModal() {
   if (!canManageSelectedInstitution()) {
     notifyError(currentLanguage() === 'en'
       ? 'Only institution admin can create strategies in selected institution.'
-      : 'Strategijas šioje institucijoje gali kurti tik institucijos administratorius.');
+      : 'Strategijas Å¡ioje institucijoje gali kurti tik institucijos administratorius.');
     return;
   }
 
@@ -5836,16 +6041,16 @@ function accessRequestUiText() {
     };
   }
   return {
-    title: 'Prieigos užklausa',
-    description: 'Pateikite trumpą informaciją ir peržiūrėsime jūsų užklausą.',
+    title: 'Prieigos uÅ¾klausa',
+    description: 'Pateikite trumpÄ… informacijÄ… ir perÅ¾iÅ«rÄ—sime jÅ«sÅ³ uÅ¾klausÄ….',
     institution: 'Institucija',
-    fullName: 'Vardas ir pavardė',
-    workEmail: 'Darbinis el. paštas',
+    fullName: 'Vardas ir pavardÄ—',
+    workEmail: 'Darbinis el. paÅ¡tas',
     phone: 'Kontaktinis telefono numeris',
-    notes: 'Papildoma informacija (nebūtina)',
-    submit: 'Pateikti užklausą',
-    close: 'Uždaryti',
-    success: 'Užklausa gauta. Užregistruota: ',
+    notes: 'Papildoma informacija (nebÅ«tina)',
+    submit: 'Pateikti uÅ¾klausÄ…',
+    close: 'UÅ¾daryti',
+    success: 'UÅ¾klausa gauta. UÅ¾registruota: ',
     linkedinLead: 'Taip pat galite susisiekti tiesiogiai per LinkedIn:'
   };
 }
@@ -5884,7 +6089,7 @@ function showAccessRequestModal() {
       </form>
       <p class="prompt auth-hint" style="margin-top:8px;">
         ${escapeHtml(ui.linkedinLead)}
-        <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas Lukosevičius</a>.
+        <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas LukoseviÄius</a>.
       </p>
     </div>
   `;
@@ -5970,6 +6175,8 @@ function render() {
   flushPendingInitiativeFocus();
   window.dispatchEvent(new CustomEvent('uzt-rendered'));
 }
+
+
 
 
 
