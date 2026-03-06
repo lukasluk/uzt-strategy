@@ -1007,6 +1007,18 @@ function createPolicyAlignmentService({ query, uuid }) {
     };
   }
 
+  async function deleteAnalysis(analysisId) {
+    const finalAnalysisId = String(analysisId || '').trim();
+    if (!finalAnalysisId) throw new Error('analysisId required');
+    const result = await query(
+      `delete from policy_alignment_analyses
+       where id = $1
+       returning id`,
+      [finalAnalysisId]
+    );
+    return !!result.rowCount;
+  }
+
   return {
     ALIGNMENT_ANALYSIS_STATUSES,
     ALIGNMENT_COVERAGE_STATUSES,
@@ -1043,7 +1055,8 @@ function createPolicyAlignmentService({ query, uuid }) {
     replaceFindings,
     replaceSuggestions,
     listAnalysesForCycle,
-    getAnalysisById
+    getAnalysisById,
+    deleteAnalysis
   };
 }
 

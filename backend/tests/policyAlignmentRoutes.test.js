@@ -143,6 +143,8 @@ function buildAppWithRouteMocks({
   frameworkDetail = null,
   analyses = [],
   createdAnalysis = null,
+  deleteAnalysis = async () => true,
+  getAnalysisById = async () => null,
   verifyCycleAccess = async () => ({ ok: true, status: 200, cycle: { strategy_id: 'strategy-1' } }),
   auth = { institutionId: 'inst-1', sub: 'user-1', role: 'institution_admin' }
 } = {}) {
@@ -186,7 +188,7 @@ function buildAppWithRouteMocks({
       listFrameworksForCycle: async () => frameworks,
       getFrameworkById: async () => frameworkDetail,
       createAnalysis: async () => createdAnalysis || null,
-      getAnalysisById: async () => null,
+      getAnalysisById,
       setAnalysisStatus: async () => {},
       updateAnalysisSummary: async () => {},
       createDocument: async () => null,
@@ -194,7 +196,8 @@ function buildAppWithRouteMocks({
       replaceRequirements: async () => [],
       replaceSourceRefs: async () => [],
       replaceFindings: async () => [],
-      replaceSuggestions: async () => []
+      replaceSuggestions: async () => [],
+      deleteAnalysis
     })
   }));
 
@@ -326,6 +329,60 @@ test('POST /api/v1/cycles/:cycleId/policy-alignments creates framework-based ana
     assert.equal(response.status, 201);
     assert.equal(payload.analysis.targetMode, 'framework');
     assert.equal(payload.analysis.targetFrameworkId, 'framework-1');
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('POST /api/v1/policy-alignments/:analysisId/delete requires admin role', async () => {
+  const fixture = buildAppWithRouteMocks({
+    auth: { institutionId: 'inst-1', sub: 'user-1', role: 'member' }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/policy-alignments/analysis-1/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 403);
+    assert.equal(payload.error, 'admin role required');
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('POST /api/v1/policy-alignments/:analysisId/delete removes analysis for admin', async () => {
+  let deletedId = '';
+  const fixture = buildAppWithRouteMocks({
+    getAnalysisById: async () => ({
+      id: 'analysis-1',
+      institutionId: 'inst-1',
+      cycleId: 'cycle-1',
+      documents: [],
+      findings: [],
+      suggestions: []
+    }),
+    deleteAnalysis: async (analysisId) => {
+      deletedId = analysisId;
+      return true;
+    }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/policy-alignments/analysis-1/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.analysisId, 'analysis-1');
+    assert.equal(deletedId, 'analysis-1');
   } finally {
     await server.close();
     fixture.teardown();

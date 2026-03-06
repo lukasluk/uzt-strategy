@@ -549,6 +549,35 @@ function openPolicyAlignmentCreateModal() {
     }
   });
 }
+
+async function deletePolicyAlignmentAnalysis(analysisId) {
+  const finalAnalysisId = String(analysisId || '').trim();
+  if (!finalAnalysisId || state.role !== 'institution_admin') return;
+
+  const confirmed = window.confirm(
+    langText(
+      'Ar tikrai norite pašalinti šią Policy Alignment analizę? Susiję dokumentai, radiniai ir siūlymai bus ištrinti.',
+      'Do you want to remove this Policy Alignment analysis? Related documents, findings, and suggestions will be deleted.'
+    )
+  );
+  if (!confirmed) return;
+
+  try {
+    await api(`/api/v1/policy-alignments/${encodeURIComponent(finalAnalysisId)}/delete`, {
+      method: 'POST',
+      body: {}
+    });
+    if (String(state.policyAlignmentSelectedId || '').trim() === finalAnalysisId) {
+      state.policyAlignmentSelectedId = '';
+      state.policyAlignmentCurrent = null;
+    }
+    await refreshPolicyAlignments({ silent: true });
+    notifySuccess(langText('Policy Alignment analizė pašalinta.', 'Policy Alignment analysis removed.'));
+    render();
+  } catch (error) {
+    notifyError(toUserMessage(error));
+  }
+}
 function renderPolicyAlignmentView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
@@ -656,20 +685,31 @@ function renderPolicyAlignmentView() {
           ${analyses.length
     ? `<div class="policy-alignment-analysis-list">
               ${analyses.map((item) => `
-                <button
-                  type="button"
-                  class="policy-alignment-analysis-item${analysis?.id === item.id ? ' active' : ''}"
-                  data-action="select-policy-analysis"
-                  data-analysis-id="${escapeHtml(item.id)}"
-                >
-                  <strong>${escapeHtml(item.title || item.id)}</strong>
-                  <span>${escapeHtml(policyAlignmentAnalysisStatusLabel(item.status))}</span>
-                  <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
-                  <div class="policy-alignment-chip-list">
-                    <span class="tag">${escapeHtml(policyAlignmentSourceModeLabel(item.sourceMode))}</span>
-                    <span class="tag">${escapeHtml(langText('Radiniai', 'Findings'))}: ${Number(item.findingCount || 0)}</span>
-                  </div>
-                </button>
+                <div class="policy-alignment-analysis-row${analysis?.id === item.id ? ' active' : ''}">
+                  <button
+                    type="button"
+                    class="policy-alignment-analysis-item${analysis?.id === item.id ? ' active' : ''}"
+                    data-action="select-policy-analysis"
+                    data-analysis-id="${escapeHtml(item.id)}"
+                  >
+                    <strong>${escapeHtml(item.title || item.id)}</strong>
+                    <span>${escapeHtml(policyAlignmentAnalysisStatusLabel(item.status))}</span>
+                    <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
+                    <div class="policy-alignment-chip-list">
+                      <span class="tag">${escapeHtml(policyAlignmentSourceModeLabel(item.sourceMode))}</span>
+                      <span class="tag">${escapeHtml(langText('Radiniai', 'Findings'))}: ${Number(item.findingCount || 0)}</span>
+                    </div>
+                  </button>
+                  ${state.role === 'institution_admin'
+                    ? `<button
+                        type="button"
+                        class="btn btn-danger policy-alignment-delete-btn"
+                        data-action="delete-policy-analysis"
+                        data-analysis-id="${escapeHtml(item.id)}"
+                        aria-label="${escapeHtml(langText('Pašalinti analizę', 'Remove analysis'))}"
+                      >${escapeHtml(langText('Šalinti', 'Remove'))}</button>`
+                    : ''}
+                </div>
               `).join('')}
             </div>`
     : `<p class="prompt">${escapeHtml(langText('Dar nėra analizės įrašų. Sukurkite pirmą Policy Alignment analizę.', 'No analysis records yet. Create the first Policy Alignment analysis.'))}</p>`}
@@ -904,6 +944,16 @@ function renderPolicyAlignmentView() {
       if (!analysisId) return;
       state.policyAlignmentSelectedId = analysisId;
       void loadPolicyAlignmentDetail(analysisId, { silent: false });
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="delete-policy-analysis"]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const analysisId = String(button.dataset.analysisId || '').trim();
+      if (!analysisId) return;
+      void deletePolicyAlignmentAnalysis(analysisId);
     });
   });
 

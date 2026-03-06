@@ -5970,6 +5970,12 @@ body.meta-admin-page .tag-slug {
   display: grid;
   gap: 12px;
 }
+.policy-alignment-analysis-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+}
 .policy-alignment-analysis-item {
   appearance: none;
   width: 100%;
@@ -5993,6 +5999,11 @@ body.meta-admin-page .tag-slug {
   border-color: #3f7fce;
   box-shadow: 0 0 0 2px rgba(63, 127, 206, 0.14);
   background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+}
+.policy-alignment-delete-btn {
+  align-self: stretch;
+  min-width: 92px;
+  border-radius: 14px;
 }
 .policy-alignment-chip-list {
   display: flex;
@@ -6124,6 +6135,9 @@ body.meta-admin-page .tag-slug {
   .policy-alignment-summary-grid,
   .policy-alignment-filter-grid,
   .policy-alignment-upload-grid {
+    grid-template-columns: 1fr;
+  }
+  .policy-alignment-analysis-row {
     grid-template-columns: 1fr;
   }
 }

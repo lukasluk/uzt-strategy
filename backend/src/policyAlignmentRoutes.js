@@ -382,6 +382,27 @@ function registerPolicyAlignmentRoutes({
     }
   });
 
+  app.post('/api/v1/policy-alignments/:analysisId/delete', requireAuth, memberWriteGuard, async (req, res) => {
+    const analysisId = String(req.params.analysisId || '').trim();
+    if (!analysisId) return res.status(400).json({ error: 'analysisId required' });
+    if (req.auth.role !== 'institution_admin') {
+      return res.status(403).json({ error: 'admin role required' });
+    }
+
+    try {
+      await loadAccessibleAnalysis(analysisId, req.auth);
+      const deleted = await withTransaction(async ({ alignmentService }) => {
+        return alignmentService.deleteAnalysis(analysisId);
+      });
+      if (!deleted) {
+        return res.status(404).json({ error: 'analysis not found' });
+      }
+      res.json({ ok: true, analysisId });
+    } catch (error) {
+      res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
+    }
+  });
+
   app.post('/api/v1/policy-alignments/:analysisId/run', requireAuth, memberWriteGuard, async (req, res) => {
     const analysisId = String(req.params.analysisId || '').trim();
     if (!analysisId) return res.status(400).json({ error: 'analysisId required' });
