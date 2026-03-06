@@ -479,7 +479,8 @@ function registerPolicyAlignmentRoutes({
           targetFrameworkId = framework.id;
           await alignmentService.replaceRequirements({
             frameworkId: framework.id,
-            requirements: comparison.requirements
+            requirements: comparison.requirements,
+            regenerateIds: true
           });
           await query(
             `update policy_alignment_analyses

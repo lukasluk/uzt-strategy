@@ -577,10 +577,11 @@ function buildSummaryFromFindings(findings) {
   return summary;
 }
 
-function attachIds(items, makeId) {
+function attachIds(items, makeId, options = {}) {
+  const preserveExisting = options.preserveExisting !== false;
   return (Array.isArray(items) ? items : []).map((item) => ({
     ...item,
-    id: String(item?.id || makeId()).trim()
+    id: String((preserveExisting ? item?.id : '') || makeId()).trim()
   })).filter((item) => item.id);
 }
 
@@ -636,7 +637,8 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
   }
 
   async function compareRequirementsToSource({ requirements, sourceRefs, localeHint = 'en' }) {
-    const requirementsWithIds = attachIds(requirements, nextId);
+    // Requirement rows are persisted per analysis, so framework-owned ids must not be reused here.
+    const requirementsWithIds = attachIds(requirements, nextId, { preserveExisting: false });
     const sourceRefsWithIds = attachIds(sourceRefs, nextId);
     const requirementsById = new Map(requirementsWithIds.map((item) => [item.id, item]));
     const sourceRefsById = new Map(sourceRefsWithIds.map((item) => [item.id, item]));

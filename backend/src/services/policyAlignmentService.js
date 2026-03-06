@@ -688,7 +688,8 @@ function createPolicyAlignmentService({ query, uuid }) {
     analysisId = null,
     frameworkId = null,
     sourceDocumentId = null,
-    requirements
+    requirements,
+    regenerateIds = false
   }) {
     if (!analysisId && !frameworkId) throw new Error('analysisId or frameworkId required');
     const inputRequirements = Array.isArray(requirements) ? requirements : [];
@@ -709,7 +710,7 @@ function createPolicyAlignmentService({ query, uuid }) {
 
     for (let index = 0; index < inputRequirements.length; index += 1) {
       const item = inputRequirements[index] || {};
-      const requirementId = String(item.id || nextId()).trim();
+      const requirementId = String((regenerateIds ? '' : item.id) || nextId()).trim();
       if (!requirementId) throw new Error('requirement id required');
       const title = trimText(item.title, 400);
       if (!title) continue;
