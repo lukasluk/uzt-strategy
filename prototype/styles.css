@@ -5961,8 +5961,19 @@ body.meta-admin-page .tag-slug {
   gap: 16px;
   align-items: start;
 }
+.policy-alignment-layout.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+.policy-alignment-layout.sidebar-collapsed .policy-alignment-sidebar {
+  display: none;
+}
 .policy-alignment-column {
   min-width: 0;
+}
+.policy-alignment-stage-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .policy-alignment-analysis-list,
 .policy-alignment-gap-list,
@@ -6068,11 +6079,38 @@ body.meta-admin-page .tag-slug {
 .policy-alignment-modal-card {
   width: min(880px, 96vw);
 }
+.policy-alignment-document-modal {
+  width: min(1100px, 96vw);
+}
+.policy-alignment-document-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.policy-alignment-document-body {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid #d8e3f3;
+  border-radius: 14px;
+  background: #f9fbff;
+  padding: 14px;
+}
+.policy-alignment-document-body pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 13px/1.6 Consolas, Monaco, monospace;
+  color: #22395d;
+}
 .policy-alignment-create-form textarea {
   min-height: 110px;
 }
 .policy-alignment-table {
   min-width: 1260px;
+}
+.policy-alignment-table.policy-alignment-table-compact {
+  min-width: 760px;
 }
 .policy-alignment-theme-row td {
   background: #edf4ff;
@@ -6117,6 +6155,12 @@ body.meta-admin-page .tag-slug {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
+.policy-alignment-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
 .policy-alignment-gap-item,
 .policy-alignment-suggestion-item {
   border: 1px solid #d7e4f6;
@@ -6132,6 +6176,7 @@ body.meta-admin-page .tag-slug {
 @media (max-width: 1100px) {
   .policy-alignment-layout,
   .policy-alignment-subgrid,
+  .policy-alignment-section-grid,
   .policy-alignment-summary-grid,
   .policy-alignment-filter-grid,
   .policy-alignment-upload-grid {

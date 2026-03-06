@@ -211,12 +211,16 @@ const state = {
   policyAlignmentFrameworkLoading: false,
   policyAlignmentFrameworkError: '',
   policyAlignmentFrameworkSelectedId: '',
+  policyAlignmentFrameworkCurrent: null,
+  policyAlignmentFrameworkDetailLoading: false,
   policyAlignmentLoading: false,
   policyAlignmentError: '',
   policyAlignmentCycleId: '',
   policyAlignmentSelectedId: '',
   policyAlignmentCurrent: null,
   policyAlignmentDetailLoading: false,
+  policyAlignmentWorkspaceTab: 'frameworks',
+  policyAlignmentSidebarCollapsed: false,
   policyAlignmentFilterStatus: 'all',
   policyAlignmentFilterTheme: 'all',
   policyAlignmentGroupBy: 'theme',
@@ -1422,12 +1426,16 @@ function resetPolicyAlignmentState() {
   state.policyAlignmentFrameworkLoading = false;
   state.policyAlignmentFrameworkError = '';
   state.policyAlignmentFrameworkSelectedId = '';
+  state.policyAlignmentFrameworkCurrent = null;
+  state.policyAlignmentFrameworkDetailLoading = false;
   state.policyAlignmentLoading = false;
   state.policyAlignmentError = '';
   state.policyAlignmentCycleId = '';
   state.policyAlignmentSelectedId = '';
   state.policyAlignmentCurrent = null;
   state.policyAlignmentDetailLoading = false;
+  state.policyAlignmentWorkspaceTab = 'frameworks';
+  state.policyAlignmentSidebarCollapsed = false;
   state.policyAlignmentFilterStatus = 'all';
   state.policyAlignmentFilterTheme = 'all';
   state.policyAlignmentGroupBy = 'theme';

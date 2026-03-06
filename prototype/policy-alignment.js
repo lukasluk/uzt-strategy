@@ -68,6 +68,8 @@ async function refreshPolicyAlignmentFrameworks({ silent = false } = {}) {
     state.policyAlignmentFrameworkLoading = false;
     state.policyAlignmentFrameworkError = '';
     state.policyAlignmentFrameworkSelectedId = '';
+    state.policyAlignmentFrameworkCurrent = null;
+    state.policyAlignmentFrameworkDetailLoading = false;
     return [];
   }
   if (!silent) {
@@ -82,13 +84,17 @@ async function refreshPolicyAlignmentFrameworks({ silent = false } = {}) {
         .map((item) => normalizePolicyAlignmentFramework(item))
         .filter(Boolean)
     );
-    if (!state.policyAlignmentFrameworkSelectedId && state.policyAlignmentFrameworks[0]?.id) {
-      state.policyAlignmentFrameworkSelectedId = state.policyAlignmentFrameworks[0].id;
+    const selectedId = String(state.policyAlignmentFrameworkSelectedId || '').trim();
+    const selectedExists = selectedId && state.policyAlignmentFrameworks.some((item) => item.id === selectedId);
+    if (!selectedExists) {
+      state.policyAlignmentFrameworkSelectedId = String(state.policyAlignmentFrameworks[0]?.id || '').trim();
+      state.policyAlignmentFrameworkCurrent = null;
     }
     return state.policyAlignmentFrameworks;
   } catch (error) {
     state.policyAlignmentFrameworks = [];
     state.policyAlignmentFrameworkError = toUserMessage(error);
+    state.policyAlignmentFrameworkCurrent = null;
     return [];
   } finally {
     if (!silent) {
@@ -346,13 +352,213 @@ function openPolicyAlignmentLinkModal(analysis, finding) {
     }
   });
 }
+function selectedPolicyAlignmentFrameworkFromState() {
+  const selectedId = String(state.policyAlignmentFrameworkSelectedId || '').trim();
+  if (selectedId && state.policyAlignmentFrameworkCurrent?.id === selectedId) {
+    return state.policyAlignmentFrameworkCurrent;
+  }
+  return sortedPolicyAlignmentFrameworks(state.policyAlignmentFrameworks).find((item) => item.id === selectedId) || null;
+}
+
+async function loadPolicyAlignmentFrameworkDetail(frameworkId, { silent = false } = {}) {
+  const nextId = String(frameworkId || '').trim();
+  if (!nextId || !isLoggedIn()) return null;
+  if (!silent) {
+    state.policyAlignmentFrameworkDetailLoading = true;
+    state.policyAlignmentFrameworkError = '';
+    render();
+  }
+  try {
+    const payload = await api(`/api/v1/policy-alignment-frameworks/${encodeURIComponent(nextId)}`);
+    const framework = normalizePolicyAlignmentFramework(payload?.framework);
+    if (!framework) throw new Error('framework not found');
+    state.policyAlignmentFrameworkCurrent = framework;
+    state.policyAlignmentFrameworkSelectedId = framework.id;
+    state.policyAlignmentFrameworks = sortedPolicyAlignmentFrameworks(
+      state.policyAlignmentFrameworks.some((item) => item.id === framework.id)
+        ? state.policyAlignmentFrameworks.map((item) => (item.id === framework.id ? { ...item, ...framework } : item))
+        : [...state.policyAlignmentFrameworks, framework]
+    );
+    return framework;
+  } catch (error) {
+    state.policyAlignmentFrameworkError = toUserMessage(error);
+    return null;
+  } finally {
+    if (!silent) {
+      state.policyAlignmentFrameworkDetailLoading = false;
+      render();
+    }
+  }
+}
+
+function openPolicyAlignmentFrameworkDocumentModal(framework, documentRecord) {
+  const currentFramework = framework && typeof framework === 'object' ? framework : null;
+  const documentItem = documentRecord && typeof documentRecord === 'object' ? documentRecord : null;
+  if (!currentFramework?.id || !documentItem?.id) return;
+
+  const existing = document.getElementById('policyAlignmentFrameworkDocOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'policyAlignmentFrameworkDocOverlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card policy-alignment-modal-card policy-alignment-document-modal" role="dialog" aria-modal="true" aria-labelledby="policyAlignmentFrameworkDocTitle">
+      <div class="auth-modal-header">
+        <div>
+          <h3 id="policyAlignmentFrameworkDocTitle">${escapeHtml(documentItem.filename || '-')}</h3>
+          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(currentFramework.title || '-')}</p>
+        </div>
+        <button type="button" class="btn btn-ghost" id="closePolicyAlignmentFrameworkDocModal">${escapeHtml(langText('Close', 'Close'))}</button>
+      </div>
+      <div class="policy-alignment-document-meta">
+        <span class="tag">${escapeHtml(langText('Built into framework', 'Built into framework'))}</span>
+        <span class="tag">${escapeHtml(langText('Uploaded', 'Uploaded'))}: ${escapeHtml(formatCommentDateTime(documentItem.createdAt))}</span>
+        <span class="tag">${escapeHtml(langText('Chars', 'Chars'))}: ${Number(documentItem.meta?.chars || String(documentItem.extractedText || '').length || 0)}</span>
+      </div>
+      <div class="policy-alignment-document-body"><pre>${escapeHtml(String(documentItem.extractedText || '').trim() || langText('No extracted text available.', 'No extracted text available.'))}</pre></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeModal = () => {
+    const current = document.getElementById('policyAlignmentFrameworkDocOverlay');
+    if (current) current.remove();
+  };
+  overlay.querySelector('#closePolicyAlignmentFrameworkDocModal')?.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeModal();
+  });
+}
+
+function openPolicyAlignmentFrameworkCreateModal() {
+  if (!state.cycle?.id || state.role !== 'institution_admin') return;
+  const existing = document.getElementById('policyAlignmentFrameworkCreateOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'policyAlignmentFrameworkCreateOverlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card policy-alignment-modal-card" role="dialog" aria-modal="true" aria-labelledby="policyAlignmentFrameworkCreateTitle">
+      <div class="auth-modal-header">
+        <div>
+          <h3 id="policyAlignmentFrameworkCreateTitle">${escapeHtml(langText('Create policy framework', 'Create policy framework'))}</h3>
+          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Upload one or more target policy documents. The framework library will be built from those documents first.', 'Upload one or more target policy documents. The framework library will be built from those documents first.'))}</p>
+        </div>
+        <button type="button" class="btn btn-ghost" id="closePolicyAlignmentFrameworkCreateModal">${escapeHtml(langText('Close', 'Close'))}</button>
+      </div>
+      <form id="policyAlignmentFrameworkCreateForm" class="policy-alignment-create-form">
+        <div class="inline-form-grid">
+          <input type="text" name="title" placeholder="${escapeHtml(langText('Framework title', 'Framework title'))}" required />
+          <select name="localeHint">
+            <option value="en">${escapeHtml(langText('Extract requirements in EN', 'Extract requirements in EN'))}</option>
+            <option value="lt">${escapeHtml(langText('Extract requirements in LT', 'Extract requirements in LT'))}</option>
+          </select>
+        </div>
+        <textarea name="description" placeholder="${escapeHtml(langText('What policy or framework is this document set representing?', 'What policy or framework is this document set representing?'))}"></textarea>
+        <label class="policy-alignment-upload-card">
+          <strong>${escapeHtml(langText('Framework source documents', 'Framework source documents'))}</strong>
+          <span class="prompt">${escapeHtml(langText('Upload the target policy PDF files used to build the reusable framework.', 'Upload the target policy PDF files used to build the reusable framework.'))}</span>
+          <input type="file" id="policyAlignmentFrameworkFiles" accept="application/pdf,.pdf" multiple required />
+        </label>
+        <div id="policyAlignmentFrameworkCreateError" class="auth-error" style="display:none;"></div>
+        <div class="form-actions">
+          <button type="submit" id="policyAlignmentFrameworkCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Build framework', 'Build framework'))}</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeModal = () => {
+    const current = document.getElementById('policyAlignmentFrameworkCreateOverlay');
+    if (current) current.remove();
+  };
+  const closeBtn = overlay.querySelector('#closePolicyAlignmentFrameworkCreateModal');
+  const form = overlay.querySelector('#policyAlignmentFrameworkCreateForm');
+  const errorBox = overlay.querySelector('#policyAlignmentFrameworkCreateError');
+  const submitButton = overlay.querySelector('#policyAlignmentFrameworkCreateSubmit');
+  const fileInput = overlay.querySelector('#policyAlignmentFrameworkFiles');
+
+  function showError(message) {
+    const text = String(message || '').trim();
+    errorBox.textContent = text;
+    errorBox.style.display = text ? 'block' : 'none';
+    if (text) notifyError(text);
+  }
+
+  closeBtn?.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeModal();
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showError('');
+    if (!submitButton) return;
+    const fd = new FormData(form);
+    const title = String(fd.get('title') || '').trim();
+    const description = String(fd.get('description') || '').trim();
+    const localeHint = String(fd.get('localeHint') || currentLanguage() || 'en').trim().toLowerCase();
+    const files = Array.from(fileInput?.files || []);
+
+    if (!title) {
+      showError(toUserMessage(new Error('framework title required')));
+      return;
+    }
+    if (!files.length) {
+      showError(toUserMessage(new Error('target documents required')));
+      return;
+    }
+
+    submitButton.disabled = true;
+    const initialLabel = submitButton.textContent;
+    submitButton.textContent = langText('Building...', 'Building...');
+    try {
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('localeHint', localeHint);
+      files.forEach((file) => formData.append('documents', file));
+
+      const payload = await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/policy-alignment-frameworks`, {
+        method: 'POST',
+        body: formData
+      });
+      const framework = normalizePolicyAlignmentFramework(payload?.framework);
+      if (framework?.id) {
+        state.policyAlignmentFrameworkSelectedId = framework.id;
+        state.policyAlignmentFrameworkCurrent = framework;
+      }
+      state.policyAlignmentWorkspaceTab = 'frameworks';
+      await refreshPolicyAlignmentFrameworks({ silent: true });
+      if (framework?.id) {
+        await loadPolicyAlignmentFrameworkDetail(framework.id, { silent: true });
+      }
+      closeModal();
+      notifySuccess(langText('Framework created from uploaded policy documents.', 'Framework created from uploaded policy documents.'));
+      render();
+    } catch (error) {
+      showError(toUserMessage(error));
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = initialLabel;
+    }
+  });
+}
+
 function openPolicyAlignmentCreateModal() {
   if (!state.cycle?.id) return;
-  const existing = document.getElementById('policyAlignmentCreateOverlay');
-  if (existing) existing.remove();
   const frameworks = sortedPolicyAlignmentFrameworks(state.policyAlignmentFrameworks);
   const selectedFrameworkId = String(state.policyAlignmentFrameworkSelectedId || frameworks[0]?.id || '').trim();
+  if (!selectedFrameworkId) {
+    notifyError(langText('Create a framework first, then run an analysis from it.', 'Create a framework first, then run an analysis from it.'));
+    return;
+  }
 
+  const existing = document.getElementById('policyAlignmentCreateOverlay');
+  if (existing) existing.remove();
   const overlay = document.createElement('div');
   overlay.id = 'policyAlignmentCreateOverlay';
   overlay.className = 'modal-overlay';
@@ -360,57 +566,39 @@ function openPolicyAlignmentCreateModal() {
     <div class="modal-card policy-alignment-modal-card" role="dialog" aria-modal="true" aria-labelledby="policyAlignmentCreateTitle">
       <div class="auth-modal-header">
         <div>
-          <h3 id="policyAlignmentCreateTitle">${escapeHtml(langText('Nauja Policy Alignment analizė', 'New Policy Alignment analysis'))}</h3>
-          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Įkelkite šaltinio ir tikslinį dokumentus, tada paleiskite AI palyginimą.', 'Upload source and target documents, then run the AI comparison.'))}</p>
+          <h3 id="policyAlignmentCreateTitle">${escapeHtml(langText('Create analysis from framework', 'Create analysis from framework'))}</h3>
+          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Second step: choose the framework and compare your current strategy against it.', 'Second step: choose the framework and compare your current strategy against it.'))}</p>
         </div>
-        <button type="button" class="btn btn-ghost" id="closePolicyAlignmentCreateModal">${escapeHtml(langText('Uždaryti', 'Close'))}</button>
+        <button type="button" class="btn btn-ghost" id="closePolicyAlignmentCreateModal">${escapeHtml(langText('Close', 'Close'))}</button>
       </div>
       <form id="policyAlignmentCreateForm" class="policy-alignment-create-form">
         <div class="inline-form-grid">
-          <input type="text" name="title" placeholder="${escapeHtml(langText('Analizės pavadinimas', 'Analysis title'))}" required />
-          <select name="targetMode" id="policyAlignmentTargetMode">
-            <option value="uploaded_document">${escapeHtml(langText('Tikslas: įkelti dokumentą', 'Target: uploaded document'))}</option>
-            <option value="framework" ${frameworks.length ? '' : 'disabled'}>${escapeHtml(langText('Tikslas: iš bibliotekos', 'Target: from library'))}</option>
+          <input type="text" name="title" placeholder="${escapeHtml(langText('Analysis title', 'Analysis title'))}" required />
+          <select name="targetFrameworkId" id="policyAlignmentFrameworkSelect">
+            ${frameworks.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === selectedFrameworkId ? 'selected' : ''}>${escapeHtml(item.title)} (${item.requirementCount})</option>`).join('')}
           </select>
         </div>
         <div class="inline-form-grid">
           <select name="sourceMode">
-            <option value="mixed">${escapeHtml(langText('Mišrus šaltinis', 'Mixed source'))}</option>
-            <option value="existing_strategy">${escapeHtml(langText('Tik esama strategija', 'Existing strategy only'))}</option>
-            <option value="existing_cycle">${escapeHtml(langText('Tik esamas ciklas', 'Existing cycle only'))}</option>
-            <option value="uploaded_document">${escapeHtml(langText('Tik įkelti dokumentai', 'Uploaded documents only'))}</option>
+            <option value="existing_strategy">${escapeHtml(langText('Use current strategy as source', 'Use current strategy as source'))}</option>
+            <option value="existing_cycle">${escapeHtml(langText('Use current cycle as source', 'Use current cycle as source'))}</option>
+            <option value="mixed">${escapeHtml(langText('Strategy plus uploaded source files', 'Strategy plus uploaded source files'))}</option>
+            <option value="uploaded_document">${escapeHtml(langText('Uploaded source files only', 'Uploaded source files only'))}</option>
           </select>
-          <select name="targetFrameworkId" id="policyAlignmentFrameworkSelect" ${frameworks.length ? '' : 'disabled'} hidden>
-            <option value="">${escapeHtml(langText('Pasirinkite karkasą', 'Select framework'))}</option>
-            ${frameworks.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === selectedFrameworkId ? 'selected' : ''}>${escapeHtml(item.title)} (${item.requirementCount})</option>`).join('')}
-          </select>
-        </div>
-        <textarea name="description" placeholder="${escapeHtml(langText('Trumpas analizės tikslas', 'Short analysis objective'))}"></textarea>
-        <div class="policy-alignment-upload-grid" id="policyAlignmentUploadGrid">
-          <label class="policy-alignment-upload-card">
-            <strong>${escapeHtml(langText('Šaltinio dokumentai', 'Source documents'))}</strong>
-            <span class="prompt">${escapeHtml(langText('Nebūtina, jei remiatės esama strategija ar ciklu.', 'Optional if you rely on the existing strategy or cycle.'))}</span>
-            <input type="file" id="policyAlignmentSourceFiles" accept="application/pdf,.pdf" multiple />
-          </label>
-          <label class="policy-alignment-upload-card">
-            <strong>${escapeHtml(langText('Tikslinis politikos dokumentas', 'Target policy document'))}</strong>
-            <span class="prompt">${escapeHtml(langText('Privaloma bent vienas PDF dokumentas.', 'At least one PDF is required.'))}</span>
-            <input type="file" id="policyAlignmentTargetFiles" accept="application/pdf,.pdf" multiple required />
-          </label>
-        </div>
-        <div class="inline-form-grid">
           <select name="localeHint">
-            <option value="en">${escapeHtml(langText('Rezultatai EN', 'Results in EN'))}</option>
-            <option value="lt">${escapeHtml(langText('Rezultatai LT', 'Results in LT'))}</option>
+            <option value="en">${escapeHtml(langText('Results in EN', 'Results in EN'))}</option>
+            <option value="lt">${escapeHtml(langText('Results in LT', 'Results in LT'))}</option>
           </select>
-          <label class="policy-alignment-checkbox" id="policyAlignmentSaveFrameworkWrap">
-            <input type="checkbox" name="saveTargetAsFramework" value="true" ${state.role === 'institution_admin' ? '' : 'disabled'} />
-            <span>${escapeHtml(langText('Išsaugoti tikslą kaip pakartotinai naudojamą karkasą', 'Save target as reusable framework'))}</span>
-          </label>
         </div>
+        <textarea name="description" placeholder="${escapeHtml(langText('What do you want to learn from this comparison?', 'What do you want to learn from this comparison?'))}"></textarea>
+        <label class="policy-alignment-upload-card">
+          <strong>${escapeHtml(langText('Optional source documents', 'Optional source documents'))}</strong>
+          <span class="prompt">${escapeHtml(langText('Only needed if your strategy evidence is outside the current strategy or cycle records.', 'Only needed if your strategy evidence is outside the current strategy or cycle records.'))}</span>
+          <input type="file" id="policyAlignmentSourceFiles" accept="application/pdf,.pdf" multiple />
+        </label>
         <div id="policyAlignmentCreateError" class="auth-error" style="display:none;"></div>
         <div class="form-actions">
-          <button type="submit" id="policyAlignmentCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Sukurti ir paleisti analizę', 'Create and run analysis'))}</button>
+          <button type="submit" id="policyAlignmentCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Run analysis', 'Run analysis'))}</button>
         </div>
       </form>
     </div>
@@ -426,11 +614,6 @@ function openPolicyAlignmentCreateModal() {
   const errorBox = overlay.querySelector('#policyAlignmentCreateError');
   const submitButton = overlay.querySelector('#policyAlignmentCreateSubmit');
   const sourceInput = overlay.querySelector('#policyAlignmentSourceFiles');
-  const targetInput = overlay.querySelector('#policyAlignmentTargetFiles');
-  const targetModeSelect = overlay.querySelector('#policyAlignmentTargetMode');
-  const frameworkSelect = overlay.querySelector('#policyAlignmentFrameworkSelect');
-  const uploadGrid = overlay.querySelector('#policyAlignmentUploadGrid');
-  const saveFrameworkWrap = overlay.querySelector('#policyAlignmentSaveFrameworkWrap');
 
   function showError(message) {
     const text = String(message || '').trim();
@@ -439,23 +622,10 @@ function openPolicyAlignmentCreateModal() {
     if (text) notifyError(text);
   }
 
-  function syncTargetModeUi() {
-    const mode = String(targetModeSelect?.value || 'uploaded_document').trim().toLowerCase();
-    const useFramework = mode === 'framework';
-    if (frameworkSelect) {
-      frameworkSelect.hidden = !useFramework;
-      frameworkSelect.disabled = !useFramework || !frameworks.length;
-    }
-    if (uploadGrid) uploadGrid.hidden = useFramework;
-    if (saveFrameworkWrap) saveFrameworkWrap.hidden = useFramework;
-  }
-
   closeBtn?.addEventListener('click', closeModal);
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) closeModal();
   });
-  targetModeSelect?.addEventListener('change', syncTargetModeUi);
-  syncTargetModeUi();
 
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -464,24 +634,17 @@ function openPolicyAlignmentCreateModal() {
     const fd = new FormData(form);
     const title = String(fd.get('title') || '').trim();
     const description = String(fd.get('description') || '').trim();
-    const sourceMode = String(fd.get('sourceMode') || 'mixed').trim().toLowerCase();
-    const targetMode = String(fd.get('targetMode') || 'uploaded_document').trim().toLowerCase();
+    const sourceMode = String(fd.get('sourceMode') || 'existing_strategy').trim().toLowerCase();
     const targetFrameworkId = String(fd.get('targetFrameworkId') || '').trim();
     const localeHint = String(fd.get('localeHint') || currentLanguage() || 'en').trim().toLowerCase();
-    const saveTargetAsFramework = String(fd.get('saveTargetAsFramework') || '').trim().toLowerCase() === 'true';
     const sourceFiles = Array.from(sourceInput?.files || []);
-    const targetFiles = Array.from(targetInput?.files || []);
 
     if (!title) {
       showError(toUserMessage(new Error('analysis title required')));
       return;
     }
-    if (targetMode === 'framework' && !targetFrameworkId) {
+    if (!targetFrameworkId) {
       showError(toUserMessage(new Error('analysis target framework required')));
-      return;
-    }
-    if (targetMode !== 'framework' && !targetFiles.length) {
-      showError(toUserMessage(new Error('target documents required')));
       return;
     }
     if (sourceMode === 'uploaded_document' && !sourceFiles.length) {
@@ -491,7 +654,7 @@ function openPolicyAlignmentCreateModal() {
 
     submitButton.disabled = true;
     const initialLabel = submitButton.textContent;
-    submitButton.textContent = langText('Vykdoma...', 'Running...');
+    submitButton.textContent = langText('Running...', 'Running...');
     try {
       const created = await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/policy-alignments`, {
         method: 'POST',
@@ -499,8 +662,8 @@ function openPolicyAlignmentCreateModal() {
           title,
           description,
           sourceMode,
-          targetMode,
-          targetFrameworkId: targetMode === 'framework' ? targetFrameworkId : undefined
+          targetMode: 'framework',
+          targetFrameworkId
         }
       });
       const analysisId = String(created?.analysis?.id || '').trim();
@@ -517,29 +680,19 @@ function openPolicyAlignmentCreateModal() {
         });
       }
 
-      if (targetMode !== 'framework') {
-        const targetForm = new FormData();
-        targetForm.append('role', 'target');
-        targetForm.append('replaceExisting', 'true');
-        targetFiles.forEach((file) => targetForm.append('documents', file));
-        await api(`/api/v1/policy-alignments/${encodeURIComponent(analysisId)}/documents`, {
-          method: 'POST',
-          body: targetForm
-        });
-      }
-
       const executed = await api(`/api/v1/policy-alignments/${encodeURIComponent(analysisId)}/run`, {
         method: 'POST',
-        body: { localeHint, saveTargetAsFramework: targetMode === 'framework' ? false : saveTargetAsFramework }
+        body: { localeHint, saveTargetAsFramework: false }
       });
       const finalAnalysis = normalizePolicyAlignmentAnalysis(executed?.analysis);
       if (finalAnalysis) {
         state.policyAlignmentCurrent = finalAnalysis;
         state.policyAlignmentSelectedId = finalAnalysis.id;
       }
+      state.policyAlignmentWorkspaceTab = 'analyses';
       await refreshPolicyAlignments({ selectedId: analysisId, silent: true });
       closeModal();
-      notifySuccess(langText('Policy Alignment analizė parengta.', 'Policy Alignment analysis completed.'));
+      notifySuccess(langText('Policy Alignment analysis completed.', 'Policy Alignment analysis completed.'));
       render();
     } catch (error) {
       showError(toUserMessage(error));
@@ -606,7 +759,12 @@ function renderPolicyAlignmentView() {
     return;
   }
 
-  if (!state.policyAlignmentLoading && state.policyAlignmentCycleId !== String(state.cycle.id || '').trim()) {
+  const activeCycleId = String(state.cycle.id || '').trim();
+  if (!state.policyAlignmentLoading && state.policyAlignmentCycleId !== activeCycleId) {
+    state.policyAlignmentCurrent = null;
+    state.policyAlignmentSelectedId = '';
+    state.policyAlignmentFrameworkCurrent = null;
+    state.policyAlignmentFrameworkSelectedId = '';
     void refreshPolicyAlignments({ silent: false });
     void refreshPolicyAlignmentFrameworks({ silent: false });
   } else if (
@@ -617,8 +775,17 @@ function renderPolicyAlignmentView() {
   ) {
     void loadPolicyAlignmentDetail(state.policyAlignmentSelectedId, { silent: false });
   }
+  if (
+    !state.policyAlignmentFrameworkLoading
+    && state.policyAlignmentFrameworkSelectedId
+    && (!state.policyAlignmentFrameworkCurrent || state.policyAlignmentFrameworkCurrent.id !== state.policyAlignmentFrameworkSelectedId || !Array.isArray(state.policyAlignmentFrameworkCurrent.requirements))
+    && !state.policyAlignmentFrameworkDetailLoading
+  ) {
+    void loadPolicyAlignmentFrameworkDetail(state.policyAlignmentFrameworkSelectedId, { silent: false });
+  }
 
   const analysis = selectedPolicyAlignmentFromState();
+  const framework = selectedPolicyAlignmentFrameworkFromState();
   const analyses = sortedPolicyAlignments(state.policyAlignments);
   const frameworks = sortedPolicyAlignmentFrameworks(state.policyAlignmentFrameworks);
   const frameworkById = new Map(frameworks.map((item) => [item.id, item]));
@@ -632,92 +799,204 @@ function renderPolicyAlignmentView() {
   } = buildPolicyAlignmentFindingsModel(analysis);
   const gapFindings = filteredFindings.filter((item) => policyAlignmentFindingRisky(item?.coverageStatus));
   const overlapFindings = filteredFindings.filter((item) => Array.isArray(item?.matchedSourceRefs) && item.matchedSourceRefs.length);
+  const activeTab = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase() === 'analyses' ? 'analyses' : 'frameworks';
+  const sidebarCollapsed = !!state.policyAlignmentSidebarCollapsed;
+  const frameworkDocuments = Array.isArray(framework?.documents) ? framework.documents : [];
+  const frameworkRequirements = Array.isArray(framework?.requirements) ? framework.requirements : [];
 
   elements.stepView.innerHTML = `
     <div class="step-header">
       <div class="header-stack step-header-actions">
-        <button id="openPolicyAlignmentCreateBtn" class="btn btn-primary">${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>
+        ${activeTab === 'frameworks'
+          ? `<button id="openPolicyAlignmentFrameworkCreateBtn" class="btn btn-primary" ${state.role === 'institution_admin' ? '' : 'disabled'}>${escapeHtml(langText('Naujas karkasas', 'New framework'))}</button>`
+          : `<button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${frameworks.length ? '' : 'disabled'}>${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>`}
         <button id="refreshPolicyAlignmentBtn" class="btn btn-ghost">${escapeHtml(langText('Atnaujinti', 'Refresh'))}</button>
+        <button id="togglePolicyAlignmentSidebarBtn" class="btn btn-ghost">${escapeHtml(sidebarCollapsed ? langText('Rodyti skydelį', 'Show panel') : langText('Slėpti skydelį', 'Hide panel'))}</button>
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
+        <span class="tag">${langText('Karkasų', 'Frameworks')}: ${frameworks.length}</span>
         <span class="tag">${langText('Analizių', 'Analyses')}: ${analyses.length}</span>
+      </div>
+      <p class="prompt" style="margin-top:12px;">${escapeHtml(activeTab === 'frameworks'
+        ? langText('Pirma sukurkite karkasą iš įkeltų politikos dokumentų. Tada jį naudokite kaip pakartotinai naudojamą atskaitos tašką analizėms.', 'First build a framework from uploaded policy documents. Then use it as a reusable reference point for analyses.')
+        : langText('Antrame etape palyginkite dabartinę strategiją su pasirinktu karkasu ir peržiūrėkite padengimo lentelę pilname darbiniame plote.', 'In the second phase, compare the current strategy against the selected framework and review the coverage table in a wider workspace.'))}</p>
+    </div>
+
+    <div class="card policy-alignment-stage-card" style="margin-bottom: 16px;">
+      <div class="policy-alignment-stage-tabs">
+        <button type="button" class="btn ${activeTab === 'frameworks' ? 'btn-primary' : 'btn-ghost'}" data-action="policy-alignment-tab" data-tab="frameworks">${escapeHtml(langText('1. Karkasai', '1. Frameworks'))}</button>
+        <button type="button" class="btn ${activeTab === 'analyses' ? 'btn-primary' : 'btn-ghost'}" data-action="policy-alignment-tab" data-tab="analyses">${escapeHtml(langText('2. Analizės', '2. Analyses'))}</button>
       </div>
     </div>
 
-    <p class="prompt">${escapeHtml(stepPrompt('policy-alignment'))}</p>
     ${state.policyAlignmentError ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(state.policyAlignmentError)}</strong></div>` : ''}
-    ${state.policyAlignmentLoading ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(langText('Kraunamos Policy Alignment analizės...', 'Loading Policy Alignment analyses...'))}</strong></div>` : ''}
+    ${(state.policyAlignmentLoading || state.policyAlignmentFrameworkLoading || state.policyAlignmentFrameworkDetailLoading)
+      ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(langText('Atnaujinami Policy Alignment duomenys...', 'Refreshing Policy Alignment data...'))}</strong></div>`
+      : ''}
 
-    <section class="policy-alignment-layout">
-      <div class="policy-alignment-column policy-alignment-column-list">
-        <div class="card" style="margin-bottom: 16px;">
-          <div class="guideline-group-header">
-            <strong>${escapeHtml(langText('Karkasų biblioteka', 'Framework library'))}</strong>
-            <span class="tag">${frameworks.length}</span>
-          </div>
-          ${state.policyAlignmentFrameworkError ? `<p class="prompt">${escapeHtml(state.policyAlignmentFrameworkError)}</p>` : ''}
-          ${state.policyAlignmentFrameworkLoading ? `<p class="prompt">${escapeHtml(langText('Kraunami karkasai...', 'Loading frameworks...'))}</p>` : ''}
-          ${frameworks.length
-    ? `<div class="policy-alignment-analysis-list">
-              ${frameworks.map((item) => `
-                <button
-                  type="button"
-                  class="policy-alignment-analysis-item${state.policyAlignmentFrameworkSelectedId === item.id ? ' active' : ''}"
-                  data-action="select-policy-framework"
-                  data-framework-id="${escapeHtml(item.id)}"
-                >
-                  <strong>${escapeHtml(item.title || item.id)}</strong>
-                  <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
-                  <div class="policy-alignment-chip-list">
-                    <span class="tag">${escapeHtml(langText('Reikalavimų', 'Requirements'))}: ${Number(item.requirementCount || 0)}</span>
-                    <span class="tag">${escapeHtml(langText('Dokumentų', 'Documents'))}: ${Number(item.documentCount || 0)}</span>
-                  </div>
-                </button>
-              `).join('')}
-            </div>`
-    : `<p class="prompt">${escapeHtml(langText('Išsaugotų karkasų dar nėra. Juos sukursite pažymėję išsaugojimą analizės paleidimo metu.', 'No saved frameworks yet. They are created when you save a target during analysis run.'))}</p>`}
-        </div>
-        <div class="card">
-          <div class="guideline-group-header">
-            <strong>${escapeHtml(langText('Analizių sąrašas', 'Analysis list'))}</strong>
-            <span class="tag">${analyses.length}</span>
-          </div>
-          ${analyses.length
-    ? `<div class="policy-alignment-analysis-list">
-              ${analyses.map((item) => `
-                <div class="policy-alignment-analysis-row${analysis?.id === item.id ? ' active' : ''}">
-                  <button
-                    type="button"
-                    class="policy-alignment-analysis-item${analysis?.id === item.id ? ' active' : ''}"
-                    data-action="select-policy-analysis"
-                    data-analysis-id="${escapeHtml(item.id)}"
-                  >
-                    <strong>${escapeHtml(item.title || item.id)}</strong>
-                    <span>${escapeHtml(policyAlignmentAnalysisStatusLabel(item.status))}</span>
-                    <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
-                    <div class="policy-alignment-chip-list">
-                      <span class="tag">${escapeHtml(policyAlignmentSourceModeLabel(item.sourceMode))}</span>
-                      <span class="tag">${escapeHtml(langText('Radiniai', 'Findings'))}: ${Number(item.findingCount || 0)}</span>
-                    </div>
-                  </button>
-                  ${state.role === 'institution_admin'
-                    ? `<button
-                        type="button"
-                        class="btn btn-danger policy-alignment-delete-btn"
-                        data-action="delete-policy-analysis"
-                        data-analysis-id="${escapeHtml(item.id)}"
-                        aria-label="${escapeHtml(langText('Pašalinti analizę', 'Remove analysis'))}"
-                      >${escapeHtml(langText('Šalinti', 'Remove'))}</button>`
-                    : ''}
+    <section class="policy-alignment-layout${sidebarCollapsed ? ' sidebar-collapsed' : ''}">
+      <div class="policy-alignment-column policy-alignment-sidebar">
+        ${activeTab === 'frameworks'
+          ? `
+              <div class="card">
+                <div class="guideline-group-header">
+                  <strong>${escapeHtml(langText('Karkasų biblioteka', 'Framework library'))}</strong>
+                  <span class="tag">${frameworks.length}</span>
                 </div>
-              `).join('')}
-            </div>`
-    : `<p class="prompt">${escapeHtml(langText('Dar nėra analizės įrašų. Sukurkite pirmą Policy Alignment analizę.', 'No analysis records yet. Create the first Policy Alignment analysis.'))}</p>`}
-        </div>
+                ${state.policyAlignmentFrameworkError ? `<p class="prompt">${escapeHtml(state.policyAlignmentFrameworkError)}</p>` : ''}
+                ${frameworks.length
+                  ? `<div class="policy-alignment-analysis-list">
+                      ${frameworks.map((item) => `
+                        <button
+                          type="button"
+                          class="policy-alignment-analysis-item${framework?.id === item.id ? ' active' : ''}"
+                          data-action="select-policy-framework"
+                          data-framework-id="${escapeHtml(item.id)}"
+                        >
+                          <strong>${escapeHtml(item.title || item.id)}</strong>
+                          <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
+                          <div class="policy-alignment-chip-list">
+                            <span class="tag">${escapeHtml(langText('Requirements', 'Requirements'))}: ${Number(item.requirementCount || 0)}</span>
+                            <span class="tag">${escapeHtml(langText('Documents', 'Documents'))}: ${Number(item.documentCount || 0)}</span>
+                          </div>
+                        </button>
+                      `).join('')}
+                    </div>`
+                  : `<p class="prompt">${escapeHtml(langText('No frameworks yet. Build the first reusable framework from uploaded policy documents.', 'No frameworks yet. Build the first reusable framework from uploaded policy documents.'))}</p>`}
+              </div>
+            `
+          : `
+              <div class="card">
+                <div class="guideline-group-header">
+                  <strong>${escapeHtml(langText('Analizių sąrašas', 'Analysis list'))}</strong>
+                  <span class="tag">${analyses.length}</span>
+                </div>
+                ${frameworks.length
+                  ? `<p class="prompt">${escapeHtml(langText('Analizės turi būti kuriamos iš pasirinkto karkaso. Jei reikia, grįžkite į pirmą žingsnį ir pasirinkite ar sukurkite karkasą.', 'Analyses should be created from a selected framework. If needed, go back to step one and choose or build a framework.'))}</p>`
+                  : `<p class="prompt">${escapeHtml(langText('Pirma sukurkite karkasą iš įkeltų politikos dokumentų. Be karkaso analizės paleisti nereikėtų.', 'Build a framework from uploaded policy documents first. Analyses should not start without a framework.'))}</p>`}
+                ${analyses.length
+                  ? `<div class="policy-alignment-analysis-list">
+                      ${analyses.map((item) => `
+                        <div class="policy-alignment-analysis-row${analysis?.id === item.id ? ' active' : ''}">
+                          <button
+                            type="button"
+                            class="policy-alignment-analysis-item${analysis?.id === item.id ? ' active' : ''}"
+                            data-action="select-policy-analysis"
+                            data-analysis-id="${escapeHtml(item.id)}"
+                          >
+                            <strong>${escapeHtml(item.title || item.id)}</strong>
+                            <span>${escapeHtml(policyAlignmentAnalysisStatusLabel(item.status))}</span>
+                            <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
+                            <div class="policy-alignment-chip-list">
+                              <span class="tag">${escapeHtml(policyAlignmentSourceModeLabel(item.sourceMode))}</span>
+                              <span class="tag">${escapeHtml(langText('Findings', 'Findings'))}: ${Number(item.findingCount || 0)}</span>
+                            </div>
+                          </button>
+                          ${state.role === 'institution_admin'
+                            ? `<button
+                                type="button"
+                                class="btn btn-danger policy-alignment-delete-btn"
+                                data-action="delete-policy-analysis"
+                                data-analysis-id="${escapeHtml(item.id)}"
+                              >${escapeHtml(langText('Remove', 'Remove'))}</button>`
+                            : ''}
+                        </div>
+                      `).join('')}
+                    </div>`
+                  : `<p class="prompt">${escapeHtml(langText('No analyses yet. Create the first analysis from the selected framework.', 'No analyses yet. Create the first analysis from the selected framework.'))}</p>`}
+              </div>
+            `}
       </div>
 
       <div class="policy-alignment-column policy-alignment-column-main">
-        ${analysis
+        ${activeTab === 'frameworks'
+          ? (framework
+            ? `
+                <section class="card" style="margin-bottom: 16px;">
+                  <div class="guideline-group-header">
+                    <div>
+                      <strong>${escapeHtml(framework.title || framework.id)}</strong>
+                      ${framework.description ? `<p class="prompt" style="margin: 6px 0 0;">${escapeHtml(framework.description)}</p>` : ''}
+                    </div>
+                    <div class="policy-alignment-chip-list">
+                      <span class="tag">${escapeHtml(langText('Reusable framework', 'Reusable framework'))}</span>
+                      <span class="tag">${escapeHtml(langText('Built', 'Built'))}: ${escapeHtml(formatCommentDateTime(framework.updatedAt || framework.createdAt))}</span>
+                    </div>
+                  </div>
+                  <div class="policy-alignment-summary-grid">
+                    <div class="policy-alignment-summary-card">
+                      <span>${escapeHtml(langText('Source documents', 'Source documents'))}</span>
+                      <strong>${Number(frameworkDocuments.length || 0)}</strong>
+                    </div>
+                    <div class="policy-alignment-summary-card">
+                      <span>${escapeHtml(langText('Requirements', 'Requirements'))}</span>
+                      <strong>${Number(framework.requirementCount || frameworkRequirements.length || 0)}</strong>
+                    </div>
+                    <div class="policy-alignment-summary-card">
+                      <span>${escapeHtml(langText('Institution', 'Institution'))}</span>
+                      <strong style="font-size:18px;">${escapeHtml(state.institution?.name || state.institutionSlug || '-')}</strong>
+                    </div>
+                    <div class="policy-alignment-summary-card">
+                      <span>${escapeHtml(langText('Next step', 'Next step'))}</span>
+                      <button type="button" class="btn btn-primary policy-alignment-inline-btn" data-action="open-analysis-create-from-framework">${escapeHtml(langText('Create analysis', 'Create analysis'))}</button>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="policy-alignment-subgrid">
+                  <div class="card">
+                    <div class="guideline-group-header">
+                      <strong>${escapeHtml(langText('Built from uploaded documents', 'Built from uploaded documents'))}</strong>
+                      <span class="tag">${frameworkDocuments.length}</span>
+                    </div>
+                    ${frameworkDocuments.length
+                      ? `<div class="policy-alignment-analysis-list">
+                          ${frameworkDocuments.map((documentItem) => `
+                            <article class="policy-alignment-gap-item">
+                              <strong>${escapeHtml(documentItem.filename || '-')}</strong>
+                              <div class="policy-alignment-chip-list">
+                                <span class="tag">${escapeHtml(langText('Uploaded', 'Uploaded'))}: ${escapeHtml(formatCommentDateTime(documentItem.createdAt))}</span>
+                                <span class="tag">${escapeHtml(langText('Chars', 'Chars'))}: ${Number(documentItem.meta?.chars || String(documentItem.extractedText || '').length || 0)}</span>
+                              </div>
+                              <button type="button" class="btn btn-ghost policy-alignment-inline-btn" data-action="view-policy-framework-document" data-document-id="${escapeHtml(documentItem.id)}">${escapeHtml(langText('View document', 'View document'))}</button>
+                            </article>
+                          `).join('')}
+                        </div>`
+                      : `<p class="prompt">${escapeHtml(langText('No source documents stored for this framework.', 'No source documents stored for this framework.'))}</p>`}
+                  </div>
+
+                  <div class="card">
+                    <div class="guideline-group-header">
+                      <strong>${escapeHtml(langText('Extracted requirements preview', 'Extracted requirements preview'))}</strong>
+                      <span class="tag">${frameworkRequirements.length}</span>
+                    </div>
+                    ${frameworkRequirements.length
+                      ? `<div class="history-table-wrap">
+                          <table class="history-table policy-alignment-table policy-alignment-table-compact">
+                            <thead>
+                              <tr>
+                                <th>${escapeHtml(langText('Theme', 'Theme'))}</th>
+                                <th>${escapeHtml(langText('Requirement', 'Requirement'))}</th>
+                                <th>${escapeHtml(langText('Description', 'Description'))}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              ${frameworkRequirements.slice(0, 24).map((requirement) => `
+                                <tr>
+                                  <td>${escapeHtml(requirement.theme || '-')}</td>
+                                  <td><strong>${escapeHtml(requirement.title || '-')}</strong></td>
+                                  <td>${escapeHtml(requirement.description || '-')}</td>
+                                </tr>
+                              `).join('')}
+                            </tbody>
+                          </table>
+                        </div>`
+                      : `<p class="prompt">${escapeHtml(langText('No extracted requirements stored for this framework yet.', 'No extracted requirements stored for this framework yet.'))}</p>`}
+                  </div>
+                </section>
+              `
+            : `<div class="card"><strong>${escapeHtml(langText('Select a framework or build a new one from uploaded policy documents.', 'Select a framework or build a new one from uploaded policy documents.'))}</strong></div>`)
+          : (analysis
     ? `
             <section class="card" style="margin-bottom: 16px;">
               <div class="guideline-group-header">
@@ -756,6 +1035,9 @@ function renderPolicyAlignmentView() {
                 ${(Array.isArray(analysis.documents) ? analysis.documents : []).map((document) => `
                   <span class="tag">${escapeHtml(document.role === 'target' ? langText('Tikslas', 'Target') : langText('Šaltinis', 'Source'))}: ${escapeHtml(document.filename || '-')}</span>
                 `).join('')}
+                ${analysis.targetFrameworkId && frameworkById.get(analysis.targetFrameworkId)
+                  ? `<span class="tag">${escapeHtml(langText('Framework', 'Framework'))}: ${escapeHtml(frameworkById.get(analysis.targetFrameworkId).title)}</span>`
+                  : ''}
               </div>
               ${analysis.errorMessage ? `<div class="prompt" style="margin-top: 12px; color: #a23333;">${escapeHtml(analysis.errorMessage)}</div>` : ''}
             </section>
@@ -904,16 +1186,45 @@ function renderPolicyAlignmentView() {
     : `<p class="prompt">${escapeHtml(langText('AI kol kas nepasiūlė naujų gairių ar iniciatyvų juodraščių.', 'AI has not suggested any new guideline or initiative drafts yet.'))}</p>`}
             </section>
           `
-    : `<div class="card"><strong>${escapeHtml(langText('Pasirinkite analizę arba sukurkite naują.', 'Select an analysis or create a new one.'))}</strong></div>`}
+    : `<div class="card"><strong>${escapeHtml(langText('Select an analysis from the list or create one from the selected framework.', 'Select an analysis from the list or create one from the selected framework.'))}</strong></div>`)}
       </div>
     </section>
   `;
 
   const createBtn = elements.stepView.querySelector('#openPolicyAlignmentCreateBtn');
   if (createBtn) createBtn.addEventListener('click', openPolicyAlignmentCreateModal);
+  const frameworkCreateBtn = elements.stepView.querySelector('#openPolicyAlignmentFrameworkCreateBtn');
+  if (frameworkCreateBtn) frameworkCreateBtn.addEventListener('click', openPolicyAlignmentFrameworkCreateModal);
   const refreshBtn = elements.stepView.querySelector('#refreshPolicyAlignmentBtn');
   if (refreshBtn) refreshBtn.addEventListener('click', () => {
-    void refreshPolicyAlignments({ selectedId: analysis?.id || '', silent: false });
+    void Promise.all([
+      refreshPolicyAlignments({ selectedId: analysis?.id || '', silent: true }),
+      refreshPolicyAlignmentFrameworks({ silent: true })
+    ]).then(async () => {
+      if (framework?.id) {
+        await loadPolicyAlignmentFrameworkDetail(framework.id, { silent: true });
+      }
+    }).finally(() => render());
+  });
+  const sidebarBtn = elements.stepView.querySelector('#togglePolicyAlignmentSidebarBtn');
+  if (sidebarBtn) {
+    sidebarBtn.addEventListener('click', () => {
+      state.policyAlignmentSidebarCollapsed = !state.policyAlignmentSidebarCollapsed;
+      renderPolicyAlignmentView();
+    });
+  }
+  elements.stepView.querySelectorAll('[data-action="policy-alignment-tab"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.policyAlignmentWorkspaceTab = String(button.dataset.tab || 'frameworks').trim().toLowerCase() === 'analyses' ? 'analyses' : 'frameworks';
+      renderPolicyAlignmentView();
+    });
+  });
+  elements.stepView.querySelectorAll('[data-action="open-analysis-create-from-framework"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.policyAlignmentWorkspaceTab = 'analyses';
+      renderPolicyAlignmentView();
+      openPolicyAlignmentCreateModal();
+    });
   });
 
   const statusFilter = elements.stepView.querySelector('#policyAlignmentStatusFilter');
@@ -962,7 +1273,17 @@ function renderPolicyAlignmentView() {
       const frameworkId = String(button.dataset.frameworkId || '').trim();
       if (!frameworkId) return;
       state.policyAlignmentFrameworkSelectedId = frameworkId;
-      renderPolicyAlignmentView();
+      void loadPolicyAlignmentFrameworkDetail(frameworkId, { silent: false });
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="view-policy-framework-document"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const documentId = String(button.dataset.documentId || '').trim();
+      const currentFramework = selectedPolicyAlignmentFrameworkFromState();
+      const documentItem = (Array.isArray(currentFramework?.documents) ? currentFramework.documents : []).find((item) => String(item?.id || '').trim() === documentId);
+      if (!currentFramework || !documentItem) return;
+      openPolicyAlignmentFrameworkDocumentModal(currentFramework, documentItem);
     });
   });
 

@@ -103,6 +103,7 @@ function registerPolicyAlignmentRoutes({
       'cycleId required',
       'analysisId required',
       'analysis title required',
+      'framework title required',
       'institutionId required',
       'frameworkId required',
       'filename required',
@@ -131,7 +132,8 @@ function registerPolicyAlignmentRoutes({
     }
     if ([
       'cycle not found',
-      'analysis not found'
+      'analysis not found',
+      'framework not found'
     ].includes(message)) {
       return 404;
     }
@@ -230,6 +232,113 @@ function registerPolicyAlignmentRoutes({
       const alignmentService = createScopedService((text, params) => pool.query(text, params));
       const frameworks = await alignmentService.listFrameworksForCycle(cycleId, req.auth.institutionId);
       res.json({ cycleId, frameworks });
+    } catch (error) {
+      res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
+    }
+  });
+
+  app.post('/api/v1/cycles/:cycleId/policy-alignment-frameworks', requireAuth, memberWriteGuard, uploadMiddleware, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+    if (req.auth.role !== 'institution_admin') {
+      return res.status(403).json({ error: 'admin role required' });
+    }
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+
+    const title = String(req.body?.title || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const localeHint = normalizeLocaleHint(req.body?.localeHint || 'en');
+
+    try {
+      const files = Array.isArray(req.files) ? req.files : [];
+      if (!files.length) {
+        return res.status(400).json({ error: 'target documents required' });
+      }
+
+      const docs = await extractPdfTexts(files, { maxCombinedChars: MAX_COMBINED_TEXT_CHARS });
+      const effectiveTitle = title || String(docs[0]?.filename || '').replace(/\.pdf$/i, '').trim() || buildDefaultAnalysisTitle(cycleId);
+
+      const framework = await withTransaction(async ({ query, alignmentService, pipelineService }) => {
+        const createdFramework = await alignmentService.createFramework({
+          institutionId: req.auth.institutionId,
+          strategyId: cycleAccess.cycle.strategy_id || null,
+          cycleId,
+          title: effectiveTitle,
+          description,
+          sourceHash: null,
+          meta: {
+            localeHint,
+            sourceDocuments: docs.map((item) => item.filename),
+            createdFrom: 'policy_alignment_framework_upload'
+          },
+          createdBy: req.auth.sub
+        });
+
+        const createdDocuments = [];
+        for (let index = 0; index < docs.length; index += 1) {
+          const file = files[index] || {};
+          const extracted = docs[index] || {};
+          const createdDocument = await alignmentService.createDocument({
+            frameworkId: createdFramework.id,
+            role: 'target',
+            sourceKind: 'framework_document',
+            filename: extracted.filename,
+            mimeType: String(file?.mimetype || 'application/pdf').trim() || 'application/pdf',
+            fileBytes: extracted.bytes || Number(file?.size || 0),
+            pageCount: null,
+            sha256Hash: sha256(file?.buffer || extracted.text || extracted.filename),
+            extractedText: extracted.text,
+            extractionStatus: 'completed',
+            extractionError: null,
+            meta: {
+              chars: extracted.chars || String(extracted.text || '').length,
+              uploadedBy: req.auth.sub
+            },
+            createdBy: req.auth.sub
+          });
+
+          const chunks = pipelineService.buildDocumentChunks([createdDocument]);
+          await alignmentService.replaceDocumentChunks({
+            analysisId: null,
+            documentId: createdDocument.id,
+            chunks
+          });
+          createdDocuments.push(createdDocument);
+        }
+
+        const extractedRequirements = await pipelineService.extractRequirementsFromTargetDocuments({
+          documents: createdDocuments,
+          localeHint
+        });
+
+        await alignmentService.replaceRequirements({
+          frameworkId: createdFramework.id,
+          requirements: extractedRequirements.requirements
+        });
+
+        await query(
+          `update policy_alignment_frameworks
+           set source_hash = $2,
+               meta_json = coalesce(meta_json, '{}'::jsonb) || $3::jsonb,
+               updated_at = now()
+           where id = $1`,
+          [
+            createdFramework.id,
+            sha256(createdDocuments.map((item) => item.sha256Hash || item.filename).join('|')),
+            JSON.stringify({
+              localeHint,
+              model: extractedRequirements.model || null,
+              sourceDocuments: createdDocuments.map((item) => item.filename)
+            })
+          ]
+        );
+
+        return alignmentService.getFrameworkById(createdFramework.id);
+      });
+
+      res.status(201).json({ ok: true, framework });
     } catch (error) {
       res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
     }

@@ -141,6 +141,7 @@ async function readJson(response) {
 function buildAppWithRouteMocks({
   frameworks = [],
   frameworkDetail = null,
+  createdFramework = null,
   analyses = [],
   createdAnalysis = null,
   deleteAnalysis = async () => true,
@@ -175,7 +176,11 @@ function buildAppWithRouteMocks({
   teardown.push(mockModule('../src/services/policyAlignmentPipelineService', {
     createPolicyAlignmentPipelineService: () => ({
       buildDocumentChunks: () => [],
-      extractRequirementsFromTargetDocuments: async () => ({ requirements: [], chunks: [], model: 'test-model' }),
+      extractRequirementsFromTargetDocuments: async () => ({
+        requirements: [{ title: 'Requirement A', description: 'Description A', theme: 'General' }],
+        chunks: [],
+        model: 'test-model'
+      }),
       loadFrameworkRequirements: async () => [],
       buildSourceReferences: async () => ({ refs: [] }),
       compareRequirementsToSource: async () => ({ requirements: [], sourceRefs: [], findings: [], suggestions: [], summary: {}, model: 'test-model' })
@@ -187,6 +192,7 @@ function buildAppWithRouteMocks({
       listAnalysesForCycle: async () => analyses,
       listFrameworksForCycle: async () => frameworks,
       getFrameworkById: async () => frameworkDetail,
+      createFramework: async () => createdFramework || frameworkDetail || null,
       createAnalysis: async () => createdAnalysis || null,
       getAnalysisById,
       setAnalysisStatus: async () => {},
@@ -250,6 +256,26 @@ test('GET /api/v1/cycles/:cycleId/policy-alignment-frameworks returns framework 
     assert.equal(response.status, 200);
     assert.equal(payload.frameworks.length, 1);
     assert.equal(payload.frameworks[0].title, 'EU Digital Policy');
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('POST /api/v1/cycles/:cycleId/policy-alignment-frameworks requires admin role', async () => {
+  const fixture = buildAppWithRouteMocks({
+    auth: { institutionId: 'inst-1', sub: 'user-1', role: 'member' }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/cycles/cycle-1/policy-alignment-frameworks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 403);
+    assert.equal(payload.error, 'admin role required');
   } finally {
     await server.close();
     fixture.teardown();
