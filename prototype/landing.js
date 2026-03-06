@@ -431,6 +431,11 @@
           <label for="landingAccessNotes">${escapeHtml(labels.accessRequestNotes || 'Additional information (optional)')}</label>
           <textarea id="landingAccessNotes" name="notes" rows="4"></textarea>
 
+          <div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+            <label for="landingAccessOrgWebsite">Organization website</label>
+            <input id="landingAccessOrgWebsite" type="text" name="organizationWebsite" tabindex="-1" autocomplete="off" />
+          </div>
+
           <button type="submit" class="btn btn-primary">${escapeHtml(labels.accessRequestSubmit || 'Submit request')}</button>
         </form>
         <p class="landing-access-linkedin">
@@ -475,7 +480,8 @@
           fullName: String(fd.get('fullName') || '').trim(),
           workEmail: String(fd.get('workEmail') || '').trim(),
           phone: String(fd.get('phone') || '').trim(),
-          notes: String(fd.get('notes') || '').trim()
+          notes: String(fd.get('notes') || '').trim(),
+          organizationWebsite: String(fd.get('organizationWebsite') || '').trim()
         };
 
         const response = await fetch('/api/v1/public/access-requests', {

@@ -80,6 +80,20 @@ function registerPublicRoutes({
       .replace(/\s+/g, ' ');
   }
 
+  function buildAccessRequestReceipt() {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(now.getUTCDate()).padStart(2, '0');
+    const suffix = Math.random().toString(16).slice(2, 10).toUpperCase().padEnd(8, '0').slice(0, 8);
+    return {
+      requestId: null,
+      requestCode: `REQ-${y}${m}${d}-${suffix}`,
+      status: 'pending',
+      createdAt: now.toISOString()
+    };
+  }
+
   function toYear(value) {
     if (!value) return null;
     const date = new Date(value);
@@ -509,6 +523,18 @@ function registerPublicRoutes({
     const workEmail = normalizeEmail ? normalizeEmail(req.body?.workEmail) : String(req.body?.workEmail || '').trim().toLowerCase();
     const phone = String(req.body?.phone || '').trim();
     const notes = String(req.body?.notes || '').trim();
+    const organizationWebsite = String(req.body?.organizationWebsite || '').trim();
+
+    if (organizationWebsite) {
+      const receipt = buildAccessRequestReceipt();
+      return res.status(201).json({
+        ok: true,
+        requestId: receipt.requestId,
+        requestCode: receipt.requestCode,
+        status: receipt.status,
+        createdAt: receipt.createdAt
+      });
+    }
 
     if (!institutionNameInput) return res.status(400).json({ error: 'institutionName required' });
     if (!fullName) return res.status(400).json({ error: 'fullName required' });

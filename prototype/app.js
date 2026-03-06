@@ -6093,6 +6093,10 @@ function showAccessRequestModal() {
         <input id="accessRequestPhone" type="text" name="phone" required />
         <label class="auth-label" for="accessRequestNotes">${escapeHtml(ui.notes)}</label>
         <textarea id="accessRequestNotes" name="notes" rows="4"></textarea>
+        <div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+          <label for="accessRequestOrgWebsite">Organization website</label>
+          <input id="accessRequestOrgWebsite" type="text" name="organizationWebsite" tabindex="-1" autocomplete="off" />
+        </div>
         <button class="btn btn-primary" type="submit">${escapeHtml(ui.submit)}</button>
       </form>
       <p class="prompt auth-hint" style="margin-top:8px;">
@@ -6145,7 +6149,8 @@ function showAccessRequestModal() {
           fullName: String(fd.get('fullName') || '').trim(),
           workEmail: String(fd.get('workEmail') || '').trim(),
           phone: String(fd.get('phone') || '').trim(),
-          notes: String(fd.get('notes') || '').trim()
+          notes: String(fd.get('notes') || '').trim(),
+          organizationWebsite: String(fd.get('organizationWebsite') || '').trim()
         }
       });
       const requestCode = String(payload?.requestCode || '').trim();
