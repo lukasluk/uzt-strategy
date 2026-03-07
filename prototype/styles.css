@@ -6007,13 +6007,19 @@ body.meta-admin-page .tag-slug {
   flex-wrap: wrap;
   gap: 10px;
 }
-.policy-alignment-toolbar {
+.policy-alignment-sidebar-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin: 12px 0 14px;
 }
-.policy-alignment-toolbar-note {
+.policy-alignment-sidebar-actions .btn {
+  min-width: 0;
+}
+.policy-alignment-collapsed-actions {
+  padding: 14px 16px;
+}
+.policy-alignment-collapsed-actions .policy-alignment-sidebar-actions {
   margin: 0;
 }
 .policy-alignment-analysis-list,
