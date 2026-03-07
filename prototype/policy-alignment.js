@@ -903,7 +903,7 @@ function renderPolicyAlignmentView() {
   const frameworkRequirements = Array.isArray(framework?.requirements) ? framework.requirements : [];
 
   elements.stepView.innerHTML = `
-    <div class="step-header">
+    <div class="policy-alignment-toolbar">
       <div class="header-stack step-header-actions">
         ${activeTab === 'frameworks'
           ? `<button id="openPolicyAlignmentFrameworkCreateBtn" class="btn btn-primary" ${state.role === 'institution_admin' ? '' : 'disabled'}>${escapeHtml(langText('Naujas politikos karkasas', 'New policy framework'))}</button>`
@@ -915,16 +915,9 @@ function renderPolicyAlignmentView() {
         <span class="tag">${langText('Politikos karkasų', 'Policy frameworks')}: ${frameworks.length}</span>
         <span class="tag">${langText('Analizių', 'Analyses')}: ${analyses.length}</span>
       </div>
-      <p class="prompt" style="margin-top:12px;">${escapeHtml(activeTab === 'frameworks'
+      <p class="prompt policy-alignment-toolbar-note">${escapeHtml(activeTab === 'frameworks'
         ? langText('Pirma sukurkite politikos karkasą iš įkeltų politikos dokumentų. Tada jį naudokite kaip pakartotinai naudojamą atskaitos tašką analizėms.', 'First build a policy framework from uploaded policy documents. Then use it as a reusable reference point for analyses.')
         : langText('Antrame etape palyginkite dabartinę strategiją su pasirinktu politikos karkasu ir peržiūrėkite padengimo lentelę pilname darbiniame plote.', 'In the second phase, compare the current strategy against the selected policy framework and review the coverage table in a wider workspace.'))}</p>
-    </div>
-
-    <div class="card policy-alignment-stage-card" style="margin-bottom: 16px;">
-      <div class="policy-alignment-stage-tabs">
-        <button type="button" class="btn ${activeTab === 'frameworks' ? 'btn-primary' : 'btn-ghost'}" data-action="policy-alignment-tab" data-tab="frameworks">${escapeHtml(langText('1. Politikos karkasai', '1. Policy frameworks'))}</button>
-        <button type="button" class="btn ${activeTab === 'analyses' ? 'btn-primary' : 'btn-ghost'}" data-action="policy-alignment-tab" data-tab="analyses">${escapeHtml(langText('2. Analizės', '2. Analyses'))}</button>
-      </div>
     </div>
 
     ${processingFrameworks.length
@@ -1343,12 +1336,6 @@ function renderPolicyAlignmentView() {
       renderPolicyAlignmentView();
     });
   }
-  elements.stepView.querySelectorAll('[data-action="policy-alignment-tab"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.policyAlignmentWorkspaceTab = String(button.dataset.tab || 'frameworks').trim().toLowerCase() === 'analyses' ? 'analyses' : 'frameworks';
-      renderPolicyAlignmentView();
-    });
-  });
   elements.stepView.querySelectorAll('[data-action="open-analysis-create-from-framework"]').forEach((button) => {
     button.addEventListener('click', () => {
       state.policyAlignmentWorkspaceTab = 'analyses';

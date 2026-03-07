@@ -5997,6 +5997,14 @@ body.meta-admin-page .tag-slug {
   flex-wrap: wrap;
   gap: 10px;
 }
+.policy-alignment-toolbar {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.policy-alignment-toolbar-note {
+  margin: 0;
+}
 .policy-alignment-analysis-list,
 .policy-alignment-gap-list,
 .policy-alignment-suggestion-list {
