@@ -33,6 +33,10 @@ function registerPolicyAlignmentRoutes({
     60 * 1000,
     Number(process.env.POLICY_ALIGNMENT_STALE_BUILD_MS || 10 * 60 * 1000)
   );
+  const ANALYSIS_RUN_STALE_MS = Math.max(
+    60 * 1000,
+    Number(process.env.POLICY_ALIGNMENT_STALE_ANALYSIS_MS || 15 * 60 * 1000)
+  );
 
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -167,6 +171,37 @@ function registerPolicyAlignmentRoutes({
     return stale.length;
   }
 
+  async function failStaleAnalysisRuns({ cycleId = null, analysisId = null, institutionId = null } = {}) {
+    const candidatesRes = await pool.query(
+      `select analysis.id,
+              analysis.updated_at
+       from policy_alignment_analyses analysis
+       where ($1::uuid is null or analysis.cycle_id = $1)
+         and ($2::uuid is null or analysis.id = $2)
+         and ($3::uuid is null or analysis.institution_id = $3)
+         and analysis.status = 'processing'`,
+      [cycleId || null, analysisId || null, institutionId || null]
+    );
+
+    const stale = candidatesRes.rows.filter((row) => {
+      const updatedAt = new Date(row?.updated_at || 0).getTime();
+      if (!updatedAt) return true;
+      return (Date.now() - updatedAt) >= ANALYSIS_RUN_STALE_MS;
+    });
+
+    for (const row of stale) {
+      await withTransaction(async ({ alignmentService }) => {
+        await alignmentService.setAnalysisStatus({
+          analysisId: row.id,
+          status: 'failed',
+          errorMessage: 'Analysis run was interrupted. Please run it again.'
+        });
+      });
+    }
+
+    return stale.length;
+  }
+
   function processFrameworkBuildInBackground({
     frameworkId,
     docs,
@@ -219,6 +254,146 @@ function registerPolicyAlignmentRoutes({
           // ignore secondary update errors
         }
         console.error('[policy-alignment-framework-build]', frameworkId, error);
+      }
+    });
+  }
+
+  function processAnalysisRunInBackground({
+    analysisId,
+    localeHint,
+    saveTargetAsFramework,
+    auth
+  }) {
+    Promise.resolve().then(async () => {
+      try {
+        await withTransaction(async ({ query, alignmentService, pipelineService }) => {
+          const currentAnalysis = await alignmentService.getAnalysisById(analysisId);
+          if (!currentAnalysis) throw new Error('analysis not found');
+
+          const sourceDocuments = (currentAnalysis.documents || []).filter((item) => item.role === 'source');
+          const targetDocuments = (currentAnalysis.documents || []).filter((item) => item.role === 'target');
+
+          let rawRequirements = [];
+          let targetModel = null;
+          let targetFrameworkId = currentAnalysis.targetFrameworkId || null;
+
+          if (currentAnalysis.targetMode === 'framework' && targetFrameworkId) {
+            rawRequirements = await pipelineService.loadFrameworkRequirements(targetFrameworkId);
+          } else {
+            if (!targetDocuments.length) throw new Error('target documents required');
+            const targetExtraction = await pipelineService.extractRequirementsFromTargetDocuments({
+              documents: targetDocuments,
+              localeHint
+            });
+            rawRequirements = targetExtraction.requirements;
+            targetModel = targetExtraction.model;
+          }
+
+          if (!rawRequirements.length) throw new Error('target requirements missing');
+
+          const sourceBundle = await pipelineService.buildSourceReferences({
+            cycleId: currentAnalysis.cycleId,
+            sourceDocuments,
+            includeCycleEntities: currentAnalysis.sourceMode !== 'uploaded_document'
+          });
+          if (!sourceBundle.refs.length) throw new Error('source material required');
+
+          const comparison = await pipelineService.compareRequirementsToSource({
+            requirements: rawRequirements,
+            sourceRefs: sourceBundle.refs,
+            localeHint
+          });
+
+          await alignmentService.replaceSourceRefs({
+            analysisId,
+            refs: comparison.sourceRefs
+          });
+
+          await alignmentService.replaceRequirements({
+            analysisId,
+            requirements: comparison.requirements
+          });
+
+          await alignmentService.replaceFindings({
+            analysisId,
+            findings: comparison.findings
+          });
+
+          await alignmentService.replaceSuggestions({
+            analysisId,
+            suggestions: comparison.suggestions
+          });
+
+          if (!targetFrameworkId && saveTargetAsFramework) {
+            const framework = await alignmentService.createFramework({
+              institutionId: currentAnalysis.institutionId,
+              strategyId: currentAnalysis.strategyId,
+              cycleId: currentAnalysis.cycleId,
+              title: currentAnalysis.title,
+              description: currentAnalysis.description || 'Saved from policy alignment analysis',
+              slug: null,
+              sourceHash: sha256(targetDocuments.map((item) => item.sha256Hash || item.filename).join('|')),
+              meta: {
+                createdFromAnalysisId: currentAnalysis.id,
+                localeHint,
+                model: targetModel || comparison.model || null
+              },
+              createdBy: auth.sub
+            });
+            targetFrameworkId = framework.id;
+            await alignmentService.replaceRequirements({
+              frameworkId: framework.id,
+              requirements: comparison.requirements,
+              regenerateIds: true
+            });
+            await query(
+              `update policy_alignment_analyses
+               set target_framework_id = $2,
+                   target_mode = 'framework',
+                   updated_at = now()
+               where id = $1`,
+              [analysisId, framework.id]
+            );
+          }
+
+          await alignmentService.updateAnalysisSummary({
+            analysisId,
+            sourceSummary: {
+              sourceMode: currentAnalysis.sourceMode,
+              sourceDocumentCount: sourceDocuments.length,
+              generatedSourceRefCount: comparison.sourceRefs.length
+            },
+            targetSummary: {
+              targetMode: targetFrameworkId ? 'framework' : currentAnalysis.targetMode,
+              targetDocumentCount: targetDocuments.length,
+              requirementCount: comparison.requirements.length,
+              targetFrameworkId: targetFrameworkId || null,
+              targetModel: targetModel || null
+            },
+            summary: {
+              ...comparison.summary,
+              sourceRefCount: comparison.sourceRefs.length,
+              suggestionCount: comparison.suggestions.length,
+              comparisonModel: comparison.model || null,
+              localeHint
+            },
+            errorMessage: null
+          });
+
+          await alignmentService.setAnalysisStatus({ analysisId, status: 'completed', errorMessage: null });
+        });
+      } catch (error) {
+        try {
+          await withTransaction(async ({ alignmentService }) => {
+            await alignmentService.setAnalysisStatus({
+              analysisId,
+              status: 'failed',
+              errorMessage: String(error?.message || 'internal server error')
+            });
+          });
+        } catch {
+          // ignore error state persistence failures
+        }
       }
     });
   }
@@ -346,6 +521,7 @@ function registerPolicyAlignmentRoutes({
     const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
+    await failStaleAnalysisRuns({ cycleId, institutionId: req.auth.institutionId });
     const alignmentService = createScopedService((text, params) => pool.query(text, params));
     const analyses = await alignmentService.listAnalysesForCycle(cycleId);
     res.json({ cycleId, analyses });
@@ -634,6 +810,7 @@ function registerPolicyAlignmentRoutes({
     if (!analysisId) return res.status(400).json({ error: 'analysisId required' });
 
     try {
+      await failStaleAnalysisRuns({ analysisId, institutionId: req.auth.institutionId });
       const analysis = await loadAccessibleAnalysis(analysisId, req.auth);
       res.json({ ok: true, analysis });
     } catch (error) {
@@ -667,7 +844,7 @@ function registerPolicyAlignmentRoutes({
     if (!analysisId) return res.status(400).json({ error: 'analysisId required' });
 
     try {
-      const accessibleAnalysis = await loadAccessibleAnalysis(analysisId, req.auth);
+      await loadAccessibleAnalysis(analysisId, req.auth);
       const localeHint = normalizeLocaleHint(req.body?.localeHint || 'en');
       const saveTargetAsFramework = normalizeBoolean(req.body?.saveTargetAsFramework);
       if (saveTargetAsFramework && req.auth.role !== 'institution_admin') {
@@ -677,142 +854,16 @@ function registerPolicyAlignmentRoutes({
       await withTransaction(async ({ alignmentService }) => {
         await alignmentService.setAnalysisStatus({ analysisId, status: 'processing', errorMessage: null });
       });
-
-      const analysis = await withTransaction(async ({ query, alignmentService, pipelineService }) => {
-        const currentAnalysis = await alignmentService.getAnalysisById(analysisId);
-        if (!currentAnalysis) throw new Error('analysis not found');
-
-        const sourceDocuments = (currentAnalysis.documents || []).filter((item) => item.role === 'source');
-        const targetDocuments = (currentAnalysis.documents || []).filter((item) => item.role === 'target');
-
-        let rawRequirements = [];
-        let targetModel = null;
-        let targetFrameworkId = currentAnalysis.targetFrameworkId || null;
-
-        if (currentAnalysis.targetMode === 'framework' && targetFrameworkId) {
-          rawRequirements = await pipelineService.loadFrameworkRequirements(targetFrameworkId);
-        } else {
-          if (!targetDocuments.length) throw new Error('target documents required');
-          const targetExtraction = await pipelineService.extractRequirementsFromTargetDocuments({
-            documents: targetDocuments,
-            localeHint
-          });
-          rawRequirements = targetExtraction.requirements;
-          targetModel = targetExtraction.model;
-        }
-
-        if (!rawRequirements.length) {
-          throw new Error('target requirements missing');
-        }
-
-        const sourceBundle = await pipelineService.buildSourceReferences({
-          cycleId: currentAnalysis.cycleId,
-          sourceDocuments,
-          includeCycleEntities: currentAnalysis.sourceMode !== 'uploaded_document'
-        });
-        if (!sourceBundle.refs.length) {
-          throw new Error('source material required');
-        }
-
-        const comparison = await pipelineService.compareRequirementsToSource({
-          requirements: rawRequirements,
-          sourceRefs: sourceBundle.refs,
-          localeHint
-        });
-
-        await alignmentService.replaceSourceRefs({
-          analysisId,
-          refs: comparison.sourceRefs
-        });
-
-        await alignmentService.replaceRequirements({
-          analysisId,
-          requirements: comparison.requirements
-        });
-
-        await alignmentService.replaceFindings({
-          analysisId,
-          findings: comparison.findings
-        });
-
-        await alignmentService.replaceSuggestions({
-          analysisId,
-          suggestions: comparison.suggestions
-        });
-
-        if (!targetFrameworkId && saveTargetAsFramework) {
-          const framework = await alignmentService.createFramework({
-            institutionId: currentAnalysis.institutionId,
-            strategyId: currentAnalysis.strategyId,
-            cycleId: currentAnalysis.cycleId,
-            title: currentAnalysis.title,
-            description: currentAnalysis.description || 'Saved from policy alignment analysis',
-            slug: null,
-            sourceHash: sha256(targetDocuments.map((item) => item.sha256Hash || item.filename).join('|')),
-            meta: {
-              createdFromAnalysisId: currentAnalysis.id,
-              localeHint,
-              model: targetModel || comparison.model || null
-            },
-            createdBy: req.auth.sub
-          });
-          targetFrameworkId = framework.id;
-          await alignmentService.replaceRequirements({
-            frameworkId: framework.id,
-            requirements: comparison.requirements,
-            regenerateIds: true
-          });
-          await query(
-            `update policy_alignment_analyses
-             set target_framework_id = $2,
-                 target_mode = 'framework',
-                 updated_at = now()
-             where id = $1`,
-            [analysisId, framework.id]
-          );
-        }
-
-        await alignmentService.updateAnalysisSummary({
-          analysisId,
-          sourceSummary: {
-            sourceMode: currentAnalysis.sourceMode,
-            sourceDocumentCount: sourceDocuments.length,
-            generatedSourceRefCount: comparison.sourceRefs.length
-          },
-          targetSummary: {
-            targetMode: targetFrameworkId ? 'framework' : currentAnalysis.targetMode,
-            targetDocumentCount: targetDocuments.length,
-            requirementCount: comparison.requirements.length,
-            targetFrameworkId: targetFrameworkId || null,
-            targetModel: targetModel || null
-          },
-          summary: {
-            ...comparison.summary,
-            sourceRefCount: comparison.sourceRefs.length,
-            suggestionCount: comparison.suggestions.length,
-            comparisonModel: comparison.model || null,
-            localeHint
-          },
-          errorMessage: null
-        });
-
-        await alignmentService.setAnalysisStatus({ analysisId, status: 'completed', errorMessage: null });
-        return alignmentService.getAnalysisById(analysisId);
+      const alignmentService = createScopedService((text, params) => pool.query(text, params));
+      const analysis = await alignmentService.getAnalysisById(analysisId);
+      processAnalysisRunInBackground({
+        analysisId,
+        localeHint,
+        saveTargetAsFramework,
+        auth: req.auth
       });
-
-      res.json({ ok: true, analysis });
+      res.status(202).json({ ok: true, analysis });
     } catch (error) {
-      try {
-        await withTransaction(async ({ alignmentService }) => {
-          await alignmentService.setAnalysisStatus({
-            analysisId,
-            status: 'failed',
-            errorMessage: String(error?.message || 'internal server error')
-          });
-        });
-      } catch {
-        // ignore error state persistence failures
-      }
       res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
     }
   });

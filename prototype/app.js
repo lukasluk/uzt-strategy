@@ -214,6 +214,7 @@ const state = {
   policyAlignmentFrameworkCurrent: null,
   policyAlignmentFrameworkDetailLoading: false,
   policyAlignmentFrameworkPollTimerId: 0,
+  policyAlignmentAnalysisPollTimerId: 0,
   policyAlignmentLoading: false,
   policyAlignmentError: '',
   policyAlignmentCycleId: '',
@@ -1425,6 +1426,9 @@ function resetPolicyAlignmentState() {
   if (state.policyAlignmentFrameworkPollTimerId) {
     window.clearTimeout(state.policyAlignmentFrameworkPollTimerId);
   }
+  if (state.policyAlignmentAnalysisPollTimerId) {
+    window.clearTimeout(state.policyAlignmentAnalysisPollTimerId);
+  }
   state.policyAlignments = [];
   state.policyAlignmentFrameworks = [];
   state.policyAlignmentFrameworkLoading = false;
@@ -1433,6 +1437,7 @@ function resetPolicyAlignmentState() {
   state.policyAlignmentFrameworkCurrent = null;
   state.policyAlignmentFrameworkDetailLoading = false;
   state.policyAlignmentFrameworkPollTimerId = 0;
+  state.policyAlignmentAnalysisPollTimerId = 0;
   state.policyAlignmentLoading = false;
   state.policyAlignmentError = '';
   state.policyAlignmentCycleId = '';

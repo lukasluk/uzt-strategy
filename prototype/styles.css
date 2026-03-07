@@ -6165,6 +6165,56 @@ body.meta-admin-page .tag-slug {
 }
 .policy-alignment-modal-card {
   width: min(880px, 96vw);
+  position: relative;
+}
+.policy-alignment-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  min-width: 42px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 26px;
+  line-height: 1;
+}
+.policy-alignment-create-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.policy-alignment-choice-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d7e4f6;
+  border-radius: 16px;
+  background: #fbfdff;
+  padding: 16px;
+}
+.policy-alignment-source-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid #d6e2f2;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%);
+  padding: 12px;
+}
+.policy-alignment-source-option input {
+  margin-top: 3px;
+}
+.policy-alignment-source-option span {
+  display: grid;
+  gap: 4px;
+}
+.policy-alignment-source-option small {
+  color: #61799a;
+  line-height: 1.45;
+}
+.policy-alignment-framework-choice-meta {
+  min-height: 22px;
 }
 .policy-alignment-document-modal {
   width: min(1100px, 96vw);
@@ -6266,6 +6316,7 @@ body.meta-admin-page .tag-slug {
   .policy-alignment-section-grid,
   .policy-alignment-summary-grid,
   .policy-alignment-framework-subgrid,
+  .policy-alignment-create-grid,
   .policy-alignment-filter-grid,
   .policy-alignment-upload-grid {
     grid-template-columns: 1fr;

@@ -79,6 +79,73 @@ test('compareRequirementsToSource regenerates requirement ids for analysis rows'
   }
 });
 
+test('compareRequirementsToSource deduplicates comparable requirements before analysis', async () => {
+  const teardown = [];
+  teardown.push(mockModule('../src/services/policyAlignmentAiService', {
+    getPolicyAlignmentAiConfig: () => ({ model: 'test-model' }),
+    requestPolicyAlignmentJson: async () => ({
+      model: 'test-model',
+      parsed: {
+        findings: [{
+          requirementId: 'generated-1',
+          coverageStatus: 'missing',
+          confidence: 0.22,
+          explanation: 'No sufficient coverage found.',
+          overlapSummary: '',
+          matchedSourceRefIds: [],
+          evidence: [],
+          actionability: 'suggest_guideline'
+        }]
+      }
+    })
+  }));
+
+  const modulePath = require.resolve('../src/services/policyAlignmentPipelineService');
+  delete require.cache[modulePath];
+  const { createPolicyAlignmentPipelineService } = require('../src/services/policyAlignmentPipelineService');
+
+  try {
+    let counter = 0;
+    const service = createPolicyAlignmentPipelineService({
+      query: async () => ({ rows: [], rowCount: 0 }),
+      uuid: () => {
+        counter += 1;
+        return `generated-${counter}`;
+      }
+    });
+
+    const result = await service.compareRequirementsToSource({
+      requirements: [
+        {
+          title: 'Increase sustainable employment transitions',
+          theme: 'Employment',
+          description: 'Provide individualized labour market services and active labour market measures.'
+        },
+        {
+          title: 'Increase sustainable employment transitions',
+          theme: 'Employment',
+          description: 'Provide individualized labour market services and active labour market measures.'
+        }
+      ],
+      sourceRefs: [{
+        id: 'source-1',
+        entityKind: 'guideline',
+        entityId: 'guideline-1',
+        title: 'Employment support',
+        description: 'Support employment transitions.'
+      }],
+      localeHint: 'en'
+    });
+
+    assert.equal(result.requirements.length, 1);
+    assert.equal(result.findings.length, 1);
+    assert.equal(result.summary.total, 1);
+  } finally {
+    delete require.cache[modulePath];
+    teardown.reverse().forEach((restore) => restore());
+  }
+});
+
 test('extractRequirementsFromTargetDocuments splits timed out batches and merges results', async () => {
   const teardown = [];
   teardown.push(mockModule('../src/services/policyAlignmentAiService', {

@@ -358,6 +358,14 @@ function normalizeRequirementMergeKey(requirement, index = 0) {
   return key || `requirement-${index + 1}`;
 }
 
+function normalizeComparableRequirementKey(requirement, index = 0) {
+  const theme = trimText(requirement?.theme, 240).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const title = trimText(requirement?.title, 400).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const description = trimText(requirement?.description, 1200).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const combined = [theme, title, description].filter(Boolean).join(' | ');
+  return combined || `comparable-requirement-${index + 1}`;
+}
+
 function mergeExtractedRequirements(requirements) {
   const merged = new Map();
 
@@ -400,6 +408,54 @@ function mergeExtractedRequirements(requirements) {
       description: (current.description || '').length >= String(item?.description || '').trim().length
         ? current.description
         : trimText(item?.description, 4000) || current.description,
+      evidence: dedupedEvidence
+    });
+  });
+
+  return Array.from(merged.values());
+}
+
+function dedupeComparableRequirements(requirements) {
+  const merged = new Map();
+
+  (Array.isArray(requirements) ? requirements : []).forEach((item, index) => {
+    const title = trimText(item?.title, 400);
+    if (!title) return;
+    const mergeKey = normalizeComparableRequirementKey(item, index);
+    const current = merged.get(mergeKey);
+    const nextEvidence = (Array.isArray(item?.evidence) ? item.evidence : [])
+      .map((evidence) => ({
+        chunkOrdinal: Number.isFinite(Number(evidence?.chunkOrdinal)) ? Number(evidence.chunkOrdinal) : null,
+        quote: trimText(evidence?.quote, 800)
+      }))
+      .filter((evidence) => evidence.chunkOrdinal !== null || evidence.quote);
+
+    if (!current) {
+      merged.set(mergeKey, {
+        ...item,
+        requirementKey: trimText(item?.requirementKey, 120) || normalizeRequirementMergeKey(item, index),
+        theme: trimText(item?.theme, 240) || 'General',
+        title,
+        description: trimText(item?.description, 4000) || null,
+        evidence: nextEvidence
+      });
+      return;
+    }
+
+    const dedupedEvidence = [];
+    const seenEvidence = new Set();
+    [...(Array.isArray(current.evidence) ? current.evidence : []), ...nextEvidence].forEach((evidence) => {
+      const token = `${evidence.chunkOrdinal ?? ''}:${String(evidence.quote || '').toLowerCase()}`;
+      if (seenEvidence.has(token)) return;
+      seenEvidence.add(token);
+      dedupedEvidence.push(evidence);
+    });
+
+    merged.set(mergeKey, {
+      ...current,
+      description: (String(current.description || '').length >= String(item?.description || '').trim().length)
+        ? current.description
+        : (trimText(item?.description, 4000) || current.description),
       evidence: dedupedEvidence
     });
   });
@@ -783,7 +839,8 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
 
   async function compareRequirementsToSource({ requirements, sourceRefs, localeHint = 'en' }) {
     // Requirement rows are persisted per analysis, so framework-owned ids must not be reused here.
-    const requirementsWithIds = attachIds(requirements, nextId, { preserveExisting: false });
+    const comparableRequirements = dedupeComparableRequirements(requirements);
+    const requirementsWithIds = attachIds(comparableRequirements, nextId, { preserveExisting: false });
     const sourceRefsWithIds = attachIds(sourceRefs, nextId);
     const requirementsById = new Map(requirementsWithIds.map((item) => [item.id, item]));
     const sourceRefsById = new Map(sourceRefsWithIds.map((item) => [item.id, item]));
