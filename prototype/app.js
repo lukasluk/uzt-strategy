@@ -2899,7 +2899,7 @@ function cycleWorkshopTitleText() {
 
 function renderIntroDeck() {
   if (!elements.introDeck) return;
-  if (state.embedMapMode) {
+  if (state.embedMapMode || state.activeView === 'policy-alignment') {
     elements.introDeck.hidden = true;
     elements.introDeck.innerHTML = '';
     return;

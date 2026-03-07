@@ -5998,7 +5998,8 @@ body.meta-admin-page .tag-slug {
   gap: 10px;
 }
 .policy-alignment-toolbar {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -6042,9 +6043,22 @@ body.meta-admin-page .tag-slug {
   background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
 }
 .policy-alignment-delete-btn {
-  align-self: stretch;
-  min-width: 92px;
-  border-radius: 14px;
+  align-self: start;
+  min-width: 74px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+.policy-alignment-item-docs {
+  display: grid;
+  gap: 6px;
+}
+.policy-alignment-item-docs-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #61799a;
 }
 .policy-alignment-chip-list {
   display: flex;
@@ -6112,6 +6126,12 @@ body.meta-admin-page .tag-slug {
 .policy-alignment-summary-card strong {
   font-size: 28px;
   color: #17365e;
+}
+.policy-alignment-framework-subgrid {
+  grid-template-columns: minmax(320px, 0.9fr) minmax(520px, 1.5fr);
+}
+.policy-alignment-preview-wrap {
+  max-height: 860px;
 }
 .policy-alignment-filter-grid,
 .policy-alignment-upload-grid {
@@ -6245,6 +6265,7 @@ body.meta-admin-page .tag-slug {
   .policy-alignment-subgrid,
   .policy-alignment-section-grid,
   .policy-alignment-summary-grid,
+  .policy-alignment-framework-subgrid,
   .policy-alignment-filter-grid,
   .policy-alignment-upload-grid {
     grid-template-columns: 1fr;

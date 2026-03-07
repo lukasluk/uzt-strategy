@@ -905,6 +905,9 @@ function renderPolicyAlignmentView() {
   const sidebarCollapsed = !!state.policyAlignmentSidebarCollapsed;
   const frameworkDocuments = Array.isArray(framework?.documents) ? framework.documents : [];
   const frameworkRequirements = Array.isArray(framework?.requirements) ? framework.requirements : [];
+  const selectedFrameworkDocumentNames = frameworkDocuments
+    .map((item) => String(item?.filename || '').trim())
+    .filter(Boolean);
 
   elements.stepView.innerHTML = `
     <div class="policy-alignment-toolbar">
@@ -914,14 +917,7 @@ function renderPolicyAlignmentView() {
           : `<button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${(state.role === 'institution_admin' && frameworks.some((item) => policyAlignmentFrameworkReady(item))) ? '' : 'disabled'}>${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>`}
         <button id="refreshPolicyAlignmentBtn" class="btn btn-ghost">${escapeHtml(langText('Atnaujinti', 'Refresh'))}</button>
         <button id="togglePolicyAlignmentSidebarBtn" class="btn btn-ghost">${escapeHtml(sidebarCollapsed ? langText('Rodyti skydelį', 'Show panel') : langText('Slėpti skydelį', 'Hide panel'))}</button>
-        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
-        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">${langText('Politikos karkasų', 'Policy frameworks')}: ${frameworks.length}</span>
-        <span class="tag">${langText('Analizių', 'Analyses')}: ${analyses.length}</span>
       </div>
-      <p class="prompt policy-alignment-toolbar-note">${escapeHtml(activeTab === 'frameworks'
-        ? langText('Pirma sukurkite politikos karkasą iš įkeltų politikos dokumentų. Tada jį naudokite kaip pakartotinai naudojamą atskaitos tašką analizėms.', 'First build a policy framework from uploaded policy documents. Then use it as a reusable reference point for analyses.')
-        : langText('Antrame etape palyginkite dabartinę strategiją su pasirinktu politikos karkasu ir peržiūrėkite padengimo lentelę pilname darbiniame plote.', 'In the second phase, compare the current strategy against the selected policy framework and review the coverage table in a wider workspace.'))}</p>
     </div>
 
     ${processingFrameworks.length
@@ -965,6 +961,14 @@ function renderPolicyAlignmentView() {
                                 ? renderPolicyAlignmentProcessingIndicator(policyAlignmentFrameworkBuildStatusLabel(item))
                                 : `<span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(item))}</span>`}
                             </div>
+                            ${framework?.id === item.id && selectedFrameworkDocumentNames.length
+                              ? `<div class="policy-alignment-item-docs">
+                                  <span class="policy-alignment-item-docs-label">${escapeHtml(langText('Used documents', 'Used documents'))}</span>
+                                  <div class="policy-alignment-chip-list">
+                                    ${selectedFrameworkDocumentNames.map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join('')}
+                                  </div>
+                                </div>`
+                              : ''}
                           </button>
                           ${state.role === 'institution_admin'
                             ? `<button
@@ -1061,7 +1065,7 @@ function renderPolicyAlignmentView() {
                   </div>
                 </section>
 
-                <section class="policy-alignment-subgrid">
+                <section class="policy-alignment-subgrid policy-alignment-framework-subgrid">
                   <div class="card">
                     <div class="guideline-group-header">
                       <strong>${escapeHtml(langText('Built from uploaded documents', 'Built from uploaded documents'))}</strong>
@@ -1098,7 +1102,7 @@ function renderPolicyAlignmentView() {
                       <span class="tag">${frameworkRequirements.length}</span>
                     </div>
                     ${frameworkRequirements.length
-                      ? `<div class="history-table-wrap">
+                      ? `<div class="history-table-wrap policy-alignment-preview-wrap">
                           <table class="history-table policy-alignment-table policy-alignment-table-compact">
                             <thead>
                               <tr>
@@ -1108,7 +1112,7 @@ function renderPolicyAlignmentView() {
                               </tr>
                             </thead>
                             <tbody>
-                              ${frameworkRequirements.slice(0, 24).map((requirement) => `
+                              ${frameworkRequirements.slice(0, 60).map((requirement) => `
                                 <tr>
                                   <td>${escapeHtml(requirement.theme || '-')}</td>
                                   <td><strong>${escapeHtml(requirement.title || '-')}</strong></td>
