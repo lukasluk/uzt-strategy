@@ -75,7 +75,7 @@ function registerMetaAdminRoutes({
   ).trim();
   const AI_STRATEGY_TIMEOUT_MS = Math.max(15000, Number(process.env.AI_STRATEGY_TIMEOUT_MS || 120000));
   const AI_STRATEGY_MAX_FILES = Math.min(8, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILES || 4)));
-  const AI_STRATEGY_MAX_FILE_MB = Math.min(20, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILE_MB || 8)));
+  const AI_STRATEGY_MAX_FILE_MB = Math.min(20, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILE_MB || 20)));
   const AI_STRATEGY_MAX_COMBINED_TEXT_CHARS = Math.max(
     30000,
     Number(process.env.AI_STRATEGY_MAX_COMBINED_TEXT_CHARS || 120000)

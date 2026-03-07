@@ -24,7 +24,7 @@ function registerPolicyAlignmentRoutes({
     : (_req, _res, next) => next();
 
   const MAX_FILES = Math.min(8, Math.max(1, Number(process.env.POLICY_ALIGNMENT_MAX_FILES || process.env.AI_STRATEGY_MAX_FILES || 4)));
-  const MAX_FILE_MB = Math.min(20, Math.max(1, Number(process.env.POLICY_ALIGNMENT_MAX_FILE_MB || process.env.AI_STRATEGY_MAX_FILE_MB || 8)));
+  const MAX_FILE_MB = Math.min(20, Math.max(1, Number(process.env.POLICY_ALIGNMENT_MAX_FILE_MB || process.env.AI_STRATEGY_MAX_FILE_MB || 20)));
   const MAX_COMBINED_TEXT_CHARS = Math.max(
     30000,
     Number(process.env.POLICY_ALIGNMENT_MAX_COMBINED_TEXT_CHARS || process.env.AI_STRATEGY_MAX_COMBINED_TEXT_CHARS || 120000)
