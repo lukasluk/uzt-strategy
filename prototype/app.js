@@ -1448,6 +1448,13 @@ function resetPolicyAlignmentState() {
 
 function normalizePolicyAlignmentAnalysis(value) {
   if (!value || typeof value !== 'object') return null;
+  const detailLoaded = (
+    Object.prototype.hasOwnProperty.call(value, 'documents')
+    || Object.prototype.hasOwnProperty.call(value, 'sourceRefs')
+    || Object.prototype.hasOwnProperty.call(value, 'requirements')
+    || Object.prototype.hasOwnProperty.call(value, 'findings')
+    || Object.prototype.hasOwnProperty.call(value, 'suggestions')
+  );
   return {
     ...value,
     id: String(value.id || '').trim(),
@@ -1472,6 +1479,7 @@ function normalizePolicyAlignmentAnalysis(value) {
     documentCount: Number(value.documentCount || value.document_count || 0) || 0,
     findingCount: Number(value.findingCount || value.finding_count || 0) || 0,
     suggestionCount: Number(value.suggestionCount || value.suggestion_count || 0) || 0,
+    detailLoaded,
     documents: Array.isArray(value.documents) ? value.documents : [],
     sourceRefs: Array.isArray(value.sourceRefs) ? value.sourceRefs : [],
     requirements: Array.isArray(value.requirements) ? value.requirements : [],
@@ -1499,6 +1507,11 @@ function selectedPolicyAlignmentFromState() {
 async function loadPolicyAlignmentDetail(analysisId, { silent = false } = {}) {
   const nextId = String(analysisId || '').trim();
   if (!nextId || !isLoggedIn()) return null;
+  const cached = sortedPolicyAlignments(state.policyAlignments).find((item) => item.id === nextId) || null;
+  if (cached) {
+    state.policyAlignmentSelectedId = nextId;
+    state.policyAlignmentCurrent = cached;
+  }
   if (!silent) {
     state.policyAlignmentDetailLoading = true;
     state.policyAlignmentError = '';
@@ -1552,9 +1565,13 @@ async function refreshPolicyAlignments({ selectedId = null, silent = false } = {
       state.policyAlignmentCurrent = null;
       return analyses;
     }
-    const needsDetail = !state.policyAlignmentCurrent || state.policyAlignmentCurrent.id !== preferredId || !Array.isArray(state.policyAlignmentCurrent.findings);
+    const preferredSummary = analyses.find((item) => item.id === preferredId) || null;
+    if (preferredSummary) {
+      state.policyAlignmentCurrent = preferredSummary;
+    }
+    const needsDetail = !preferredSummary || !preferredSummary.detailLoaded;
     if (needsDetail) {
-      await loadPolicyAlignmentDetail(preferredId, { silent: true });
+      void loadPolicyAlignmentDetail(preferredId, { silent: true });
     }
     return analyses;
   } catch (error) {

@@ -867,10 +867,14 @@ function renderPolicyAlignmentView() {
   } else if (
     !state.policyAlignmentLoading
     && state.policyAlignmentSelectedId
-    && (!state.policyAlignmentCurrent || state.policyAlignmentCurrent.id !== state.policyAlignmentSelectedId)
+    && (
+      !state.policyAlignmentCurrent
+      || state.policyAlignmentCurrent.id !== state.policyAlignmentSelectedId
+      || !state.policyAlignmentCurrent.detailLoaded
+    )
     && !state.policyAlignmentDetailLoading
   ) {
-    void loadPolicyAlignmentDetail(state.policyAlignmentSelectedId, { silent: false });
+    void loadPolicyAlignmentDetail(state.policyAlignmentSelectedId, { silent: true }).then(() => render());
   }
   if (
     !state.policyAlignmentFrameworkLoading
@@ -1370,8 +1374,18 @@ function renderPolicyAlignmentView() {
     button.addEventListener('click', () => {
       const analysisId = String(button.dataset.analysisId || '').trim();
       if (!analysisId) return;
+      const cached = analyses.find((item) => item.id === analysisId) || null;
       state.policyAlignmentSelectedId = analysisId;
-      void loadPolicyAlignmentDetail(analysisId, { silent: false });
+      if (cached) {
+        state.policyAlignmentCurrent = cached;
+      }
+      state.policyAlignmentDetailLoading = true;
+      renderPolicyAlignmentView();
+      void loadPolicyAlignmentDetail(analysisId, { silent: true })
+        .finally(() => {
+          state.policyAlignmentDetailLoading = false;
+          renderPolicyAlignmentView();
+        });
     });
   });
 
