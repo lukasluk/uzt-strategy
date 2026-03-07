@@ -29,6 +29,10 @@ function registerPolicyAlignmentRoutes({
     30000,
     Number(process.env.POLICY_ALIGNMENT_MAX_COMBINED_TEXT_CHARS || process.env.AI_STRATEGY_MAX_COMBINED_TEXT_CHARS || 120000)
   );
+  const FRAMEWORK_BUILD_STALE_MS = Math.max(
+    60 * 1000,
+    Number(process.env.POLICY_ALIGNMENT_STALE_BUILD_MS || 10 * 60 * 1000)
+  );
 
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -118,6 +122,49 @@ function registerPolicyAlignmentRoutes({
       [frameworkId, nextSourceHash, JSON.stringify(nextMeta)]
     );
     return updated.rowCount ? updated.rows[0] : null;
+  }
+
+  async function failStaleFrameworkBuilds({ cycleId = null, frameworkId = null, institutionId = null } = {}) {
+    const candidatesRes = await pool.query(
+      `select framework.id,
+              framework.updated_at,
+              framework.meta_json,
+              (
+                select count(*)
+                from policy_alignment_requirements requirement
+                where requirement.framework_id = framework.id
+              ) as requirement_count
+       from policy_alignment_frameworks framework
+       where ($1::uuid is null or framework.cycle_id = $1)
+         and ($2::uuid is null or framework.id = $2)
+         and ($3::uuid is null or framework.institution_id = $3)`,
+      [cycleId || null, frameworkId || null, institutionId || null]
+    );
+
+    const stale = candidatesRes.rows.filter((row) => {
+      const meta = row?.meta_json && typeof row.meta_json === 'object' ? row.meta_json : {};
+      const buildStatus = String(meta.buildStatus || '').trim().toLowerCase();
+      const requirementCount = Number(row?.requirement_count || 0) || 0;
+      const updatedAt = new Date(row?.updated_at || 0).getTime();
+      if (buildStatus !== 'processing') return false;
+      if (requirementCount > 0) return false;
+      if (!updatedAt) return true;
+      return (Date.now() - updatedAt) >= FRAMEWORK_BUILD_STALE_MS;
+    });
+
+    for (const row of stale) {
+      await patchFrameworkMeta(
+        (text, params) => pool.query(text, params),
+        row.id,
+        {
+          buildStatus: 'failed',
+          buildError: 'Framework build was interrupted. Please create it again.',
+          failedAt: new Date().toISOString()
+        }
+      );
+    }
+
+    return stale.length;
   }
 
   function processFrameworkBuildInBackground({
@@ -312,6 +359,7 @@ function registerPolicyAlignmentRoutes({
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
 
     try {
+      await failStaleFrameworkBuilds({ cycleId, institutionId: req.auth.institutionId });
       const alignmentService = createScopedService((text, params) => pool.query(text, params));
       const frameworks = await alignmentService.listFrameworksForCycle(cycleId, req.auth.institutionId);
       res.json({ cycleId, frameworks });
@@ -417,6 +465,7 @@ function registerPolicyAlignmentRoutes({
     if (!frameworkId) return res.status(400).json({ error: 'frameworkId required' });
 
     try {
+      await failStaleFrameworkBuilds({ frameworkId, institutionId: req.auth.institutionId });
       const alignmentService = createScopedService((text, params) => pool.query(text, params));
       const framework = await alignmentService.getFrameworkById(frameworkId);
       if (!framework) {
