@@ -6371,9 +6371,6 @@ body.meta-admin-page .tag-slug {
   gap: 10px;
   min-width: 0;
 }
-.policy-alignment-subpage-tabs {
-  padding: 14px 16px;
-}
 .policy-alignment-top-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -6381,6 +6378,21 @@ body.meta-admin-page .tag-slug {
 }
 .policy-alignment-top-tabs .btn {
   min-width: 150px;
+}
+.policy-alignment-top-tabs-inline {
+  justify-content: flex-end;
+}
+.policy-alignment-top-tabs-inline .btn {
+  min-width: 132px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  border-width: 1px;
+}
+.policy-alignment-top-tabs-inline .btn-ghost {
+  background: #f7fbff;
+  border-color: #bcd0ea;
+  color: #17345d;
 }
 @media (max-width: 1100px) {
   .policy-alignment-layout,
@@ -6403,6 +6415,10 @@ body.meta-admin-page .tag-slug {
   .policy-alignment-top-tabs {
     display: grid;
     grid-template-columns: 1fr;
+  }
+  .policy-alignment-top-tabs-inline {
+    justify-content: stretch;
+    width: 100%;
   }
   .policy-alignment-analysis-row {
     grid-template-columns: 1fr;

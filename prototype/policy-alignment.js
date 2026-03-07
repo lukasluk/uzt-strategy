@@ -1482,7 +1482,11 @@ function renderPolicyAlignmentView() {
                   ${analysis.description ? `<p class="prompt" style="margin: 6px 0 0;">${escapeHtml(analysis.description)}</p>` : ''}
                 </div>
                 <div class="policy-alignment-analysis-header-side">
-                  <button type="button" class="btn policy-alignment-action-launch-btn" data-action="open-policy-action-panel">${escapeHtml(langText('Veiksmų panelė', 'Action panel'))}</button>
+                  <div class="policy-alignment-top-tabs policy-alignment-top-tabs-inline">
+                    <button type="button" class="btn ${analysisSubview === 'overview' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="overview">${escapeHtml(langText('Apžvalga', 'Overview'))}</button>
+                    <button type="button" class="btn ${analysisSubview === 'analysis' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="analysis">${escapeHtml(langText('Analizė', 'Analysis'))}</button>
+                    <button type="button" class="btn policy-alignment-action-launch-btn" data-action="open-policy-action-panel">${escapeHtml(langText('Veiksmų panelė', 'Action panel'))}</button>
+                  </div>
                   <div class="policy-alignment-chip-list">
                   <span class="tag">${escapeHtml(policyAlignmentAnalysisStatusLabel(analysis.status))}</span>
                   <span class="tag">${escapeHtml(policyAlignmentSourceModeLabel(analysis.sourceMode))}</span>
@@ -1491,24 +1495,6 @@ function renderPolicyAlignmentView() {
         ? `<span class="tag">${escapeHtml(langText('Politikos karkasas', 'Policy framework'))}: ${escapeHtml(frameworkById.get(analysis.targetFrameworkId).title)}</span>`
         : ''}
                   </div>
-                </div>
-              </div>
-              <div class="policy-alignment-summary-grid">
-                <div class="policy-alignment-summary-card">
-                  <span>${escapeHtml(langText('Reikalavimų', 'Requirements'))}</span>
-                  <strong>${Number(analysis.summary?.total || analysis.targetSummary?.requirementCount || analysis.requirements?.length || 0)}</strong>
-                </div>
-                <div class="policy-alignment-summary-card">
-                  <span>${escapeHtml(langText('Padengta', 'Covered'))}</span>
-                  <strong>${Number(analysis.summary?.covered || 0)}</strong>
-                </div>
-                <div class="policy-alignment-summary-card">
-                  <span>${escapeHtml(langText('Trūksta / rizika', 'Missing / risk'))}</span>
-                  <strong>${Number((analysis.summary?.missing || 0) + (analysis.summary?.weak || 0) + (analysis.summary?.contradicted || 0))}</strong>
-                </div>
-                <div class="policy-alignment-summary-card">
-                  <span>${escapeHtml(langText('Siūlymų', 'Suggestions'))}</span>
-                  <strong>${Number(analysis.summary?.suggestionCount || analysis.suggestions?.length || 0)}</strong>
                 </div>
               </div>
               <div class="policy-alignment-chip-list" style="margin-top: 12px;">
@@ -1528,13 +1514,6 @@ function renderPolicyAlignmentView() {
                   <strong>${escapeHtml(langText('Analizė vykdoma fone. Puslapis atsinaujina automatiškai, kai rezultatai bus paruošti.', 'The analysis is running in the background. This page refreshes automatically when results are ready.'))}</strong>
                 </div>`
               : ''}
-            <section class="card policy-alignment-subpage-tabs" style="margin-bottom: 16px;">
-              <div class="policy-alignment-top-tabs">
-                <button type="button" class="btn ${analysisSubview === 'overview' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="overview">${escapeHtml(langText('Apžvalga', 'Overview'))}</button>
-                <button type="button" class="btn ${analysisSubview === 'analysis' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="analysis">${escapeHtml(langText('Analizė', 'Analysis'))}</button>
-                <button type="button" class="btn ${analysisSubview === 'actions' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="actions">${escapeHtml(langText('Veiksmų panelė', 'Action panel'))}</button>
-              </div>
-            </section>
             ${analysisSubview === 'overview'
               ? `
                   <section class="card" style="margin-bottom: 16px;">
