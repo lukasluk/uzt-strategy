@@ -203,6 +203,11 @@ async function requestPolicyAlignmentJson({
         }),
         signal: controller.signal
       });
+    } catch (error) {
+      if (String(error?.name || '').trim() === 'AbortError') {
+        throw new Error('ai request timed out');
+      }
+      throw error;
     } finally {
       clearTimeout(timer);
     }

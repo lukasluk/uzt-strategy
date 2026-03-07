@@ -351,6 +351,90 @@ function normalizeExtractedRequirements(parsed) {
   return Array.from(byKey.values());
 }
 
+function normalizeRequirementMergeKey(requirement, index = 0) {
+  const theme = trimText(requirement?.theme, 240).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const title = trimText(requirement?.title, 400).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const key = `${theme}:${title}`.replace(/^-+|-+$/g, '').replace(/:+/g, ':');
+  return key || `requirement-${index + 1}`;
+}
+
+function mergeExtractedRequirements(requirements) {
+  const merged = new Map();
+
+  (Array.isArray(requirements) ? requirements : []).forEach((item, index) => {
+    const title = trimText(item?.title, 400);
+    if (!title) return;
+    const mergeKey = normalizeRequirementMergeKey(item, index);
+    const current = merged.get(mergeKey);
+    const nextEvidence = (Array.isArray(item?.evidence) ? item.evidence : [])
+      .map((evidence) => ({
+        chunkOrdinal: Number.isFinite(Number(evidence?.chunkOrdinal)) ? Number(evidence.chunkOrdinal) : null,
+        quote: trimText(evidence?.quote, 800)
+      }))
+      .filter((evidence) => evidence.chunkOrdinal !== null || evidence.quote);
+
+    if (!current) {
+      merged.set(mergeKey, {
+        requirementKey: trimText(item?.requirementKey, 120) || mergeKey,
+        theme: trimText(item?.theme, 240) || 'General',
+        title,
+        description: trimText(item?.description, 4000) || null,
+        evidence: nextEvidence
+      });
+      return;
+    }
+
+    const dedupedEvidence = [];
+    const seenEvidence = new Set();
+    [...current.evidence, ...nextEvidence].forEach((evidence) => {
+      const token = `${evidence.chunkOrdinal ?? ''}:${String(evidence.quote || '').toLowerCase()}`;
+      if (seenEvidence.has(token)) return;
+      seenEvidence.add(token);
+      dedupedEvidence.push(evidence);
+    });
+
+    merged.set(mergeKey, {
+      requirementKey: current.requirementKey,
+      theme: current.theme || trimText(item?.theme, 240) || 'General',
+      title: current.title,
+      description: (current.description || '').length >= String(item?.description || '').trim().length
+        ? current.description
+        : trimText(item?.description, 4000) || current.description,
+      evidence: dedupedEvidence
+    });
+  });
+
+  return Array.from(merged.values());
+}
+
+function batchTargetChunksForExtraction(chunks, options = {}) {
+  const maxBatchChars = Math.max(4000, Number(options.maxBatchChars || process.env.POLICY_ALIGNMENT_EXTRACTION_BATCH_CHARS || 12000));
+  const maxBatchChunks = Math.max(3, Math.min(20, Number(options.maxBatchChunks || process.env.POLICY_ALIGNMENT_EXTRACTION_BATCH_CHUNKS || 10)));
+  const list = Array.isArray(chunks) ? chunks : [];
+  const batches = [];
+  let currentBatch = [];
+  let currentChars = 0;
+
+  const flush = () => {
+    if (!currentBatch.length) return;
+    batches.push(currentBatch);
+    currentBatch = [];
+    currentChars = 0;
+  };
+
+  list.forEach((chunk) => {
+    const chunkChars = String(chunk?.textExcerpt || '').length;
+    const wouldOverflowChars = currentBatch.length > 0 && (currentChars + chunkChars) > maxBatchChars;
+    const wouldOverflowCount = currentBatch.length >= maxBatchChunks;
+    if (wouldOverflowChars || wouldOverflowCount) flush();
+    currentBatch.push(chunk);
+    currentChars += chunkChars;
+  });
+
+  flush();
+  return batches.length ? batches : [[]];
+}
+
 function buildComparisonPrompt({ localeHint, requirements, candidateContext, sourceRefsById }) {
   const locale = normalizeLocaleHint(localeHint);
   const requirementText = (Array.isArray(requirements) ? requirements : [])
@@ -610,18 +694,29 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
 
   async function extractRequirementsFromTargetDocuments({ documents, localeHint = 'en' }) {
     const chunks = buildDocumentChunks(documents);
-    const { systemText, userText } = buildRequirementExtractionPrompt({ localeHint, targetChunks: chunks });
     const aiConfig = getPolicyAlignmentAiConfig();
-    const response = await requestPolicyAlignmentJson({
-      ...aiConfig,
-      systemText,
-      userText,
-      operationName: 'policy-alignment-extract-requirements'
-    });
-    const requirements = normalizeExtractedRequirements(response.parsed);
+    const chunkBatches = batchTargetChunksForExtraction(chunks);
+    const allRequirements = [];
+    const modelSet = new Set();
+
+    for (let index = 0; index < chunkBatches.length; index += 1) {
+      const batch = chunkBatches[index];
+      const { systemText, userText } = buildRequirementExtractionPrompt({ localeHint, targetChunks: batch });
+      const response = await requestPolicyAlignmentJson({
+        ...aiConfig,
+        systemText,
+        userText,
+        operationName: `policy-alignment-extract-requirements-batch-${index + 1}`
+      });
+      if (response.model) modelSet.add(response.model);
+      allRequirements.push(...normalizeExtractedRequirements(response.parsed));
+    }
+
+    const requirements = mergeExtractedRequirements(allRequirements);
     return {
-      model: response.model,
+      model: modelSet.size ? Array.from(modelSet).join(', ') : null,
       chunks,
+      chunkBatchCount: chunkBatches.length,
       requirements
     };
   }
@@ -717,6 +812,7 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
 
   return {
     buildDocumentChunks,
+    batchTargetChunksForExtraction,
     buildSourceReferences,
     extractRequirementsFromTargetDocuments,
     compareRequirementsToSource,
@@ -727,6 +823,7 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
 
 module.exports = {
   createPolicyAlignmentPipelineService,
+  batchTargetChunksForExtraction,
   buildDocumentChunks,
   buildSummaryFromFindings,
   normalizeLocaleHint
