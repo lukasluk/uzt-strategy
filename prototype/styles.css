@@ -6436,10 +6436,6 @@ body.meta-admin-page .tag-slug {
   padding: 12px;
   align-content: start;
 }
-.policy-alignment-actions-header {
-  border-color: #cfe9d9;
-  background: linear-gradient(180deg, #fbfffd 0%, #f3fbf6 100%);
-}
 @keyframes policyAlignmentSpin {
   from {
     transform: rotate(0deg);
