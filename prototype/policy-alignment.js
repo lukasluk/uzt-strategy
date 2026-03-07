@@ -374,6 +374,88 @@ function buildPolicyAlignmentFindingsModel(analysis) {
   };
 }
 
+function buildPolicyAlignmentOverviewData(analysis, frameworkById) {
+  if (!analysis || typeof analysis !== 'object') return null;
+  const total = Number(analysis.summary?.total || analysis.targetSummary?.requirementCount || analysis.requirements?.length || 0);
+  const covered = Number(analysis.summary?.covered || 0);
+  const partial = Number(analysis.summary?.partial || 0);
+  const weak = Number(analysis.summary?.weak || 0);
+  const missing = Number(analysis.summary?.missing || 0);
+  const contradicted = Number(analysis.summary?.contradicted || 0);
+  const unclear = Number(analysis.summary?.unclear || 0);
+  const suggestionCount = Number(analysis.summary?.suggestionCount || analysis.suggestions?.length || 0);
+  const riskCount = missing + weak + contradicted;
+  const docs = Array.isArray(analysis.documents) ? analysis.documents : [];
+  const sourceDocs = docs.filter((item) => String(item?.role || '').trim().toLowerCase() === 'source');
+  const targetDocs = docs.filter((item) => String(item?.role || '').trim().toLowerCase() === 'target');
+  const topThemes = Array.from(new Set(
+    (Array.isArray(analysis.findings) ? analysis.findings : [])
+      .map((item) => String(item?.theme || '').trim())
+      .filter(Boolean)
+  )).slice(0, 4);
+  const frameworkTitle = analysis.targetFrameworkId && frameworkById.get(analysis.targetFrameworkId)
+    ? String(frameworkById.get(analysis.targetFrameworkId).title || '').trim()
+    : '';
+  const sourceModeLabel = policyAlignmentSourceModeLabel(analysis.sourceMode);
+  const narrativeParts = [
+    total
+      ? langText(
+        `AI įvertino ${total} politikos karkaso reikalavimų pagal pasirinktus analizės šaltinius.`,
+        `AI assessed ${total} policy framework requirements against the selected analysis sources.`
+      )
+      : langText(
+        'Reikalavimų vertinimas dar nebaigtas arba nebuvo pakankamai duomenų pilnam įvertinimui.',
+        'Requirement assessment is not finished yet or there was not enough data for a full evaluation.'
+      ),
+    frameworkTitle
+      ? langText(
+        `Analizė atlikta naudojant politikos karkasą „${frameworkTitle}“.`,
+        `The analysis was run against the policy framework "${frameworkTitle}".`
+      )
+      : '',
+    total
+      ? langText(
+        `Pilnai padengta ${covered}, dalinai padengta ${partial}, rizikos ar trūkumo būsenoje ${riskCount}, neaišku ${unclear}.`,
+        `${covered} were fully covered, ${partial} partially covered, ${riskCount} were in risk or missing status, and ${unclear} remained unclear.`
+      )
+      : '',
+    suggestionCount
+      ? langText(
+        `Sukurta ${suggestionCount} veiksmų juodraščių tolimesniam moderavimui.`,
+        `${suggestionCount} draft actions were prepared for follow-up moderation.`
+      )
+      : langText(
+        'Naujų veiksmų juodraščių šiame etape nesugeneruota.',
+        'No new draft actions were generated at this stage.'
+      ),
+    topThemes.length
+      ? langText(
+        `Dažniausiai pasikartojančios temos: ${topThemes.join(', ')}.`,
+        `Most visible themes: ${topThemes.join(', ')}.`
+      )
+      : ''
+  ].filter(Boolean);
+
+  return {
+    total,
+    covered,
+    partial,
+    weak,
+    missing,
+    contradicted,
+    unclear,
+    suggestionCount,
+    riskCount,
+    docs,
+    sourceDocs,
+    targetDocs,
+    topThemes,
+    frameworkTitle,
+    sourceModeLabel,
+    narrative: narrativeParts.join(' ')
+  };
+}
+
 function renderPolicyAlignmentMatchedRefs(finding) {
   const refs = Array.isArray(finding?.matchedSourceRefs) ? finding.matchedSourceRefs : [];
   if (!refs.length) return `<span class="tag">${escapeHtml(langText('Atitikmenų nerasta', 'No matched source items'))}</span>`;
@@ -1142,7 +1224,8 @@ function renderPolicyAlignmentView() {
   const gapFindings = filteredFindings.filter((item) => policyAlignmentFindingRisky(item?.coverageStatus));
   const overlapFindings = filteredFindings.filter((item) => Array.isArray(item?.matchedSourceRefs) && item.matchedSourceRefs.length);
   const activeTab = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase() === 'analyses' ? 'analyses' : 'frameworks';
-  const analysisSubview = String(state.policyAlignmentAnalysisSubview || 'review').trim().toLowerCase() === 'actions' ? 'actions' : 'review';
+  const analysisSubviewRaw = String(state.policyAlignmentAnalysisSubview || 'overview').trim().toLowerCase();
+  const analysisSubview = ['overview', 'analysis', 'actions'].includes(analysisSubviewRaw) ? analysisSubviewRaw : 'overview';
   const sidebarCollapsed = !!state.policyAlignmentSidebarCollapsed;
   const frameworkDocuments = Array.isArray(framework?.documents) ? framework.documents : [];
   const frameworkRequirements = Array.isArray(framework?.requirements) ? framework.requirements : [];
@@ -1150,6 +1233,7 @@ function renderPolicyAlignmentView() {
   const selectedFrameworkDocumentNames = frameworkDocuments
     .map((item) => String(item?.filename || '').trim())
     .filter(Boolean);
+  const overview = buildPolicyAlignmentOverviewData(analysis, frameworkById);
 
   if (activeTab === 'analyses' && analysis?.id && analysisProcessing && !state.policyAlignmentAnalysisPollTimerId) {
     schedulePolicyAlignmentAnalysisPoll(analysis.id, 2500);
@@ -1375,20 +1459,38 @@ function renderPolicyAlignmentView() {
             : `<div class="card"><strong>${escapeHtml(langText('Pasirinkite politikos karkasą arba sukurkite naują iš įkeltų politikos dokumentų.', 'Select a policy framework or build a new one from uploaded policy documents.'))}</strong></div>`)
           : (analysis
     ? `
+            ${analysisSubview === 'actions'
+              ? `
+                  <section class="card policy-alignment-actions-header" style="margin-bottom: 16px;">
+                    <div class="guideline-group-header">
+                      <div>
+                        <strong>${escapeHtml(langText('Veiksmų panelė', 'Action panel'))}</strong>
+                        <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Peržiūrėkite ir konvertuokite AI sugeneruotus gairių bei iniciatyvų juodraščius į moderuojamus pasiūlymus.', 'Review and convert AI-generated guideline and initiative drafts into moderated proposals.'))}</p>
+                      </div>
+                      <div class="policy-alignment-chip-list">
+                        <span class="tag">${suggestions.length}</span>
+                        <button type="button" class="btn btn-ghost" data-action="open-policy-analysis-review">${escapeHtml(langText('Back to analysis', 'Back to analysis'))}</button>
+                      </div>
+                    </div>
+                  </section>
+                `
+              : ''}
             <section class="card" style="margin-bottom: 16px;">
-              <div class="guideline-group-header">
-                <div>
+              <div class="policy-alignment-analysis-header">
+                <div class="policy-alignment-analysis-header-main">
                   <strong>${escapeHtml(analysis.title || analysis.id)}</strong>
                   ${analysis.description ? `<p class="prompt" style="margin: 6px 0 0;">${escapeHtml(analysis.description)}</p>` : ''}
                 </div>
-                <div class="policy-alignment-chip-list">
+                <div class="policy-alignment-analysis-header-side">
                   <button type="button" class="btn policy-alignment-action-launch-btn" data-action="open-policy-action-panel">${escapeHtml(langText('Veiksmų panelė', 'Action panel'))}</button>
+                  <div class="policy-alignment-chip-list">
                   <span class="tag">${escapeHtml(policyAlignmentAnalysisStatusLabel(analysis.status))}</span>
                   <span class="tag">${escapeHtml(policyAlignmentSourceModeLabel(analysis.sourceMode))}</span>
                   <span class="tag">${escapeHtml(langText('Sukurta', 'Created'))}: ${escapeHtml(formatCommentDateTime(analysis.createdAt))}</span>
                   ${analysis.targetFrameworkId && frameworkById.get(analysis.targetFrameworkId)
         ? `<span class="tag">${escapeHtml(langText('Politikos karkasas', 'Policy framework'))}: ${escapeHtml(frameworkById.get(analysis.targetFrameworkId).title)}</span>`
         : ''}
+                  </div>
                 </div>
               </div>
               <div class="policy-alignment-summary-grid">
@@ -1426,20 +1528,72 @@ function renderPolicyAlignmentView() {
                   <strong>${escapeHtml(langText('Analizė vykdoma fone. Puslapis atsinaujina automatiškai, kai rezultatai bus paruošti.', 'The analysis is running in the background. This page refreshes automatically when results are ready.'))}</strong>
                 </div>`
               : ''}
-            ${analysisSubview === 'actions'
+            <section class="card policy-alignment-subpage-tabs" style="margin-bottom: 16px;">
+              <div class="policy-alignment-top-tabs">
+                <button type="button" class="btn ${analysisSubview === 'overview' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="overview">${escapeHtml(langText('Apžvalga', 'Overview'))}</button>
+                <button type="button" class="btn ${analysisSubview === 'analysis' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="analysis">${escapeHtml(langText('Analizė', 'Analysis'))}</button>
+                <button type="button" class="btn ${analysisSubview === 'actions' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="actions">${escapeHtml(langText('Veiksmų panelė', 'Action panel'))}</button>
+              </div>
+            </section>
+            ${analysisSubview === 'overview'
               ? `
-                  <section class="card policy-alignment-actions-header" style="margin-bottom: 16px;">
+                  <section class="card" style="margin-bottom: 16px;">
                     <div class="guideline-group-header">
-                      <div>
-                        <strong>${escapeHtml(langText('Veiksmų panelė', 'Action panel'))}</strong>
-                        <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Peržiūrėkite ir konvertuokite AI sugeneruotus gairių bei iniciatyvų juodraščius į moderuojamus pasiūlymus.', 'Review and convert AI-generated guideline and initiative drafts into moderated proposals.'))}</p>
+                      <strong>${escapeHtml(langText('Apžvalga', 'Overview'))}</strong>
+                      <span class="tag">${escapeHtml(policyAlignmentAnalysisStatusLabel(analysis.status))}</span>
+                    </div>
+                    <div class="policy-alignment-summary-grid">
+                      <div class="policy-alignment-summary-card">
+                        <span>${escapeHtml(langText('Reikalavimų', 'Requirements'))}</span>
+                        <strong>${Number(overview?.total || 0)}</strong>
                       </div>
-                      <div class="policy-alignment-chip-list">
-                        <span class="tag">${suggestions.length}</span>
-                        <button type="button" class="btn btn-ghost" data-action="open-policy-analysis-review">${escapeHtml(langText('Back to analysis', 'Back to analysis'))}</button>
+                      <div class="policy-alignment-summary-card">
+                        <span>${escapeHtml(langText('Padengta', 'Covered'))}</span>
+                        <strong>${Number(overview?.covered || 0)}</strong>
+                      </div>
+                      <div class="policy-alignment-summary-card">
+                        <span>${escapeHtml(langText('Trūksta / rizika', 'Missing / risk'))}</span>
+                        <strong>${Number(overview?.riskCount || 0)}</strong>
+                      </div>
+                      <div class="policy-alignment-summary-card">
+                        <span>${escapeHtml(langText('Siūlymų', 'Suggestions'))}</span>
+                        <strong>${Number(overview?.suggestionCount || 0)}</strong>
                       </div>
                     </div>
                   </section>
+
+                  <section class="policy-alignment-subgrid">
+                    <div class="card">
+                      <div class="guideline-group-header">
+                        <strong>${escapeHtml(langText('AI sugeneruota apžvalga', 'AI-generated overview'))}</strong>
+                      </div>
+                      <p>${escapeHtml(overview?.narrative || langText('AI apžvalga bus parodyta, kai analizės rezultatai bus paruošti.', 'The AI overview will appear when the analysis results are ready.'))}</p>
+                      ${analysis.description ? `<p class="prompt">${escapeHtml(analysis.description)}</p>` : ''}
+                    </div>
+                    <div class="card">
+                      <div class="guideline-group-header">
+                        <strong>${escapeHtml(langText('Analizės informacija', 'Analysis details'))}</strong>
+                      </div>
+                      <div class="policy-alignment-chip-list">
+                        <span class="tag">${escapeHtml(langText('Sukurta', 'Created'))}: ${escapeHtml(formatCommentDateTime(analysis.createdAt))}</span>
+                        ${analysis.updatedAt ? `<span class="tag">${escapeHtml(langText('Atnaujinta', 'Updated'))}: ${escapeHtml(formatCommentDateTime(analysis.updatedAt))}</span>` : ''}
+                        <span class="tag">${escapeHtml(langText('Šaltinio tipas', 'Source mode'))}: ${escapeHtml(overview?.sourceModeLabel || policyAlignmentSourceModeLabel(analysis.sourceMode))}</span>
+                        ${overview?.frameworkTitle ? `<span class="tag">${escapeHtml(langText('Policy framework', 'Policy framework'))}: ${escapeHtml(overview.frameworkTitle)}</span>` : ''}
+                      </div>
+                      <div class="policy-alignment-chip-list" style="margin-top: 10px;">
+                        ${Array.isArray(overview?.sourceDocs) && overview.sourceDocs.length ? overview.sourceDocs.map((doc) => `<span class="tag">${escapeHtml(langText('Šaltinis', 'Source'))}: ${escapeHtml(doc.filename || '-')}</span>`).join('') : `<span class="tag">${escapeHtml(langText('Naudojamas Digistrategy turinys', 'Uses Digistrategy content'))}</span>`}
+                        ${Array.isArray(overview?.targetDocs) ? overview.targetDocs.map((doc) => `<span class="tag">${escapeHtml(langText('Tikslas', 'Target'))}: ${escapeHtml(doc.filename || '-')}</span>`).join('') : ''}
+                      </div>
+                      ${Array.isArray(overview?.topThemes) && overview.topThemes.length
+                        ? `<div class="policy-alignment-chip-list" style="margin-top: 10px;">
+                            ${overview.topThemes.map((theme) => `<span class="tag">${escapeHtml(theme)}</span>`).join('')}
+                          </div>`
+                        : ''}
+                    </div>
+                  </section>
+                `
+              : analysisSubview === 'actions'
+              ? `
                   <section class="card">
                     ${suggestions.length
                       ? `<div class="policy-alignment-suggestion-list">
@@ -1612,9 +1766,17 @@ function renderPolicyAlignmentView() {
   elements.stepView.querySelectorAll('[data-action="open-analysis-create-from-framework"]').forEach((button) => {
     button.addEventListener('click', () => {
       state.policyAlignmentWorkspaceTab = 'analyses';
-      state.policyAlignmentAnalysisSubview = 'review';
+      state.policyAlignmentAnalysisSubview = 'overview';
       renderPolicyAlignmentView();
       openPolicyAlignmentCreateModal();
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="switch-policy-analysis-subview"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const subview = String(button.dataset.subview || 'overview').trim().toLowerCase();
+      state.policyAlignmentAnalysisSubview = ['overview', 'analysis', 'actions'].includes(subview) ? subview : 'overview';
+      renderPolicyAlignmentView();
     });
   });
 
@@ -1646,7 +1808,7 @@ function renderPolicyAlignmentView() {
       if (!analysisId) return;
       const cached = analyses.find((item) => item.id === analysisId) || null;
       state.policyAlignmentSelectedId = analysisId;
-      state.policyAlignmentAnalysisSubview = 'review';
+      state.policyAlignmentAnalysisSubview = 'overview';
       if (cached) {
         state.policyAlignmentCurrent = cached;
       }
@@ -1669,7 +1831,7 @@ function renderPolicyAlignmentView() {
 
   elements.stepView.querySelectorAll('[data-action="open-policy-analysis-review"]').forEach((button) => {
     button.addEventListener('click', () => {
-      state.policyAlignmentAnalysisSubview = 'review';
+      state.policyAlignmentAnalysisSubview = 'analysis';
       renderPolicyAlignmentView();
     });
   });

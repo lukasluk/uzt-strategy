@@ -296,6 +296,7 @@ body.embed-map-page .app {
   border-color: #138748;
   color: #fff;
   box-shadow: 0 8px 18px rgba(24, 158, 85, 0.2);
+  justify-self: end;
 }
 .policy-alignment-action-launch-btn:hover {
   box-shadow: 0 10px 20px rgba(24, 158, 85, 0.28);
@@ -6355,6 +6356,32 @@ body.meta-admin-page .tag-slug {
 .policy-alignment-inline-btn {
   justify-self: start;
 }
+.policy-alignment-analysis-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+.policy-alignment-analysis-header-main {
+  min-width: 0;
+}
+.policy-alignment-analysis-header-side {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  min-width: 0;
+}
+.policy-alignment-subpage-tabs {
+  padding: 14px 16px;
+}
+.policy-alignment-top-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.policy-alignment-top-tabs .btn {
+  min-width: 150px;
+}
 @media (max-width: 1100px) {
   .policy-alignment-layout,
   .policy-alignment-subgrid,
@@ -6365,6 +6392,16 @@ body.meta-admin-page .tag-slug {
   .policy-alignment-create-grid,
   .policy-alignment-filter-grid,
   .policy-alignment-upload-grid {
+    grid-template-columns: 1fr;
+  }
+  .policy-alignment-analysis-header {
+    grid-template-columns: 1fr;
+  }
+  .policy-alignment-analysis-header-side {
+    justify-items: start;
+  }
+  .policy-alignment-top-tabs {
+    display: grid;
     grid-template-columns: 1fr;
   }
   .policy-alignment-analysis-row {
