@@ -2825,6 +2825,11 @@ function renderSteps() {
           ? 'analyses'
           : 'frameworks';
         state.expandedStepId = '';
+        if (state.activeView === 'policy-alignment') {
+          syncRouteState();
+          render();
+          return;
+        }
         setActiveView('policy-alignment');
       });
     });
