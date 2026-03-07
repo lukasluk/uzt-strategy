@@ -291,6 +291,15 @@ body.embed-map-page .app {
 .btn-danger:hover {
   box-shadow: 0 6px 16px rgba(212, 79, 59, 0.26);
 }
+.policy-alignment-action-launch-btn {
+  background: linear-gradient(180deg, #2fbf71 0%, #189e55 100%);
+  border-color: #138748;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(24, 158, 85, 0.2);
+}
+.policy-alignment-action-launch-btn:hover {
+  box-shadow: 0 10px 20px rgba(24, 158, 85, 0.28);
+}
 
 .layout {
   display: grid;
@@ -6167,6 +6176,21 @@ body.meta-admin-page .tag-slug {
   width: min(880px, 96vw);
   position: relative;
 }
+.policy-alignment-create-topline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 12px;
+  align-items: end;
+}
+.policy-alignment-inline-field {
+  display: grid;
+  gap: 6px;
+}
+.policy-alignment-inline-field span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #23456f;
+}
 .policy-alignment-modal-close {
   position: absolute;
   top: 14px;
@@ -6186,21 +6210,22 @@ body.meta-admin-page .tag-slug {
 }
 .policy-alignment-choice-panel {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid #d7e4f6;
   border-radius: 16px;
   background: #fbfdff;
-  padding: 16px;
+  padding: 14px;
+  align-content: start;
 }
 .policy-alignment-source-option {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: start;
   border: 1px solid #d6e2f2;
   border-radius: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%);
-  padding: 12px;
+  padding: 10px 12px;
 }
 .policy-alignment-source-option input {
   margin-top: 3px;
@@ -6212,6 +6237,26 @@ body.meta-admin-page .tag-slug {
 .policy-alignment-source-option small {
   color: #61799a;
   line-height: 1.45;
+}
+.policy-alignment-selected-strategy {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #d5e4f6;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fefefe 0%, #f3f8ff 100%);
+  padding: 10px 12px;
+}
+.policy-alignment-selected-strategy-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+.policy-alignment-selected-strategy-title {
+  font-weight: 700;
+  color: #17345d;
+  line-height: 1.35;
 }
 .policy-alignment-framework-choice-meta {
   min-height: 22px;
@@ -6241,7 +6286,7 @@ body.meta-admin-page .tag-slug {
   color: #22395d;
 }
 .policy-alignment-create-form textarea {
-  min-height: 110px;
+  min-height: 82px;
 }
 .policy-alignment-table {
   min-width: 1260px;
@@ -6316,6 +6361,7 @@ body.meta-admin-page .tag-slug {
   .policy-alignment-section-grid,
   .policy-alignment-summary-grid,
   .policy-alignment-framework-subgrid,
+  .policy-alignment-create-topline,
   .policy-alignment-create-grid,
   .policy-alignment-filter-grid,
   .policy-alignment-upload-grid {
@@ -6336,6 +6382,10 @@ body.meta-admin-page .tag-slug {
   background: #f8fbff;
   padding: 12px;
   align-content: start;
+}
+.policy-alignment-actions-header {
+  border-color: #cfe9d9;
+  background: linear-gradient(180deg, #fbfffd 0%, #f3fbf6 100%);
 }
 @keyframes policyAlignmentSpin {
   from {

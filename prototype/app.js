@@ -222,6 +222,7 @@ const state = {
   policyAlignmentCurrent: null,
   policyAlignmentDetailLoading: false,
   policyAlignmentWorkspaceTab: 'frameworks',
+  policyAlignmentAnalysisSubview: 'review',
   policyAlignmentSidebarCollapsed: false,
   policyAlignmentFilterStatus: 'all',
   policyAlignmentFilterTheme: 'all',
@@ -1445,6 +1446,7 @@ function resetPolicyAlignmentState() {
   state.policyAlignmentCurrent = null;
   state.policyAlignmentDetailLoading = false;
   state.policyAlignmentWorkspaceTab = 'frameworks';
+  state.policyAlignmentAnalysisSubview = 'review';
   state.policyAlignmentSidebarCollapsed = false;
   state.policyAlignmentFilterStatus = 'all';
   state.policyAlignmentFilterTheme = 'all';
@@ -2829,6 +2831,7 @@ function renderSteps() {
         state.policyAlignmentWorkspaceTab = String(button.getAttribute('data-policy-alignment-nav') || 'frameworks').trim().toLowerCase() === 'analyses'
           ? 'analyses'
           : 'frameworks';
+        state.policyAlignmentAnalysisSubview = 'review';
         state.expandedStepId = '';
         if (state.activeView === 'policy-alignment') {
           syncRouteState();
