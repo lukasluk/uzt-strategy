@@ -93,6 +93,89 @@ function registerPolicyAlignmentRoutes({
     }
   }
 
+  async function patchFrameworkMeta(queryFn, frameworkId, metaPatch = {}, { sourceHash = undefined } = {}) {
+    const currentRes = await queryFn(
+      `select meta_json, source_hash
+       from policy_alignment_frameworks
+       where id = $1
+       limit 1`,
+      [frameworkId]
+    );
+    if (!currentRes.rowCount) return null;
+    const current = currentRes.rows[0];
+    const nextMeta = {
+      ...(current?.meta_json && typeof current.meta_json === 'object' ? current.meta_json : {}),
+      ...(metaPatch && typeof metaPatch === 'object' ? metaPatch : {})
+    };
+    const nextSourceHash = sourceHash === undefined ? (current?.source_hash || null) : (sourceHash || null);
+    const updated = await queryFn(
+      `update policy_alignment_frameworks
+       set source_hash = $2,
+           meta_json = $3::jsonb,
+           updated_at = now()
+       where id = $1
+       returning *`,
+      [frameworkId, nextSourceHash, JSON.stringify(nextMeta)]
+    );
+    return updated.rowCount ? updated.rows[0] : null;
+  }
+
+  function processFrameworkBuildInBackground({
+    frameworkId,
+    docs,
+    localeHint,
+    institutionId,
+    sourceHash
+  }) {
+    Promise.resolve().then(async () => {
+      try {
+        await withTransaction(async ({ query, alignmentService, pipelineService }) => {
+          const framework = await alignmentService.getFrameworkById(frameworkId);
+          if (!framework) throw new Error('framework not found');
+          const createdDocuments = Array.isArray(framework.documents) ? framework.documents : [];
+          const extractedRequirements = await pipelineService.extractRequirementsFromTargetDocuments({
+            documents: createdDocuments,
+            localeHint
+          });
+
+          await alignmentService.replaceRequirements({
+            frameworkId,
+            requirements: extractedRequirements.requirements
+          });
+
+          await patchFrameworkMeta(query, frameworkId, {
+            localeHint,
+            buildStatus: 'completed',
+            buildError: null,
+            model: extractedRequirements.model || null,
+            sourceDocuments: docs.map((item) => item.filename),
+            completedAt: new Date().toISOString()
+          }, { sourceHash });
+        });
+      } catch (error) {
+        try {
+          await pool.query(
+            `update policy_alignment_frameworks
+             set meta_json = coalesce(meta_json, '{}'::jsonb) || $2::jsonb,
+                 updated_at = now()
+             where id = $1`,
+            [
+              frameworkId,
+              JSON.stringify({
+                buildStatus: 'failed',
+                buildError: String(error?.message || 'framework build failed'),
+                failedAt: new Date().toISOString()
+              })
+            ]
+          );
+        } catch {
+          // ignore secondary update errors
+        }
+        console.error('[policy-alignment-framework-build]', frameworkId, error);
+      }
+    });
+  }
+
   function normalizeBoolean(value) {
     return String(value || '').trim().toLowerCase() === 'true';
   }
@@ -259,6 +342,7 @@ function registerPolicyAlignmentRoutes({
 
       const docs = await extractPdfTexts(files, { maxCombinedChars: MAX_COMBINED_TEXT_CHARS });
       const effectiveTitle = title || String(docs[0]?.filename || '').replace(/\.pdf$/i, '').trim() || buildDefaultAnalysisTitle(cycleId);
+      const frameworkSourceHash = sha256(docs.map((item) => item.filename).join('|'));
 
       const framework = await withTransaction(async ({ query, alignmentService, pipelineService }) => {
         const createdFramework = await alignmentService.createFramework({
@@ -267,11 +351,14 @@ function registerPolicyAlignmentRoutes({
           cycleId,
           title: effectiveTitle,
           description,
-          sourceHash: null,
+          sourceHash: frameworkSourceHash,
           meta: {
             localeHint,
             sourceDocuments: docs.map((item) => item.filename),
-            createdFrom: 'policy_alignment_framework_upload'
+            createdFrom: 'policy_alignment_framework_upload',
+            buildStatus: 'processing',
+            buildError: null,
+            queuedAt: new Date().toISOString()
           },
           createdBy: req.auth.sub
         });
@@ -308,37 +395,18 @@ function registerPolicyAlignmentRoutes({
           createdDocuments.push(createdDocument);
         }
 
-        const extractedRequirements = await pipelineService.extractRequirementsFromTargetDocuments({
-          documents: createdDocuments,
-          localeHint
-        });
-
-        await alignmentService.replaceRequirements({
-          frameworkId: createdFramework.id,
-          requirements: extractedRequirements.requirements
-        });
-
-        await query(
-          `update policy_alignment_frameworks
-           set source_hash = $2,
-               meta_json = coalesce(meta_json, '{}'::jsonb) || $3::jsonb,
-               updated_at = now()
-           where id = $1`,
-          [
-            createdFramework.id,
-            sha256(createdDocuments.map((item) => item.sha256Hash || item.filename).join('|')),
-            JSON.stringify({
-              localeHint,
-              model: extractedRequirements.model || null,
-              sourceDocuments: createdDocuments.map((item) => item.filename)
-            })
-          ]
-        );
-
         return alignmentService.getFrameworkById(createdFramework.id);
       });
 
-      res.status(201).json({ ok: true, framework });
+      processFrameworkBuildInBackground({
+        frameworkId: framework.id,
+        docs,
+        localeHint,
+        institutionId: req.auth.institutionId,
+        sourceHash: frameworkSourceHash
+      });
+
+      res.status(202).json({ ok: true, framework });
     } catch (error) {
       res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
     }

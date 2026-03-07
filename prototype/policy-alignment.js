@@ -9,6 +9,51 @@ function policyAlignmentAnalysisStatusLabel(status) {
   return key || '-';
 }
 
+function policyAlignmentFrameworkBuildState(framework) {
+  const meta = framework?.meta && typeof framework.meta === 'object' ? framework.meta : {};
+  const value = String(meta.buildStatus || '').trim().toLowerCase();
+  if (value === 'processing' || value === 'completed' || value === 'failed') return value;
+  if (Number(framework?.requirementCount || 0) > 0) return 'completed';
+  return 'processing';
+}
+
+function policyAlignmentFrameworkBuildStatusLabel(framework) {
+  const status = policyAlignmentFrameworkBuildState(framework);
+  if (status === 'processing') return langText('Kuriama', 'Building');
+  if (status === 'failed') return langText('Nepavyko', 'Failed');
+  return langText('Paruošta', 'Ready');
+}
+
+function policyAlignmentFrameworkReady(framework) {
+  return policyAlignmentFrameworkBuildState(framework) === 'completed';
+}
+
+function clearPolicyAlignmentFrameworkPoll() {
+  if (state.policyAlignmentFrameworkPollTimerId) {
+    window.clearTimeout(state.policyAlignmentFrameworkPollTimerId);
+    state.policyAlignmentFrameworkPollTimerId = 0;
+  }
+}
+
+function schedulePolicyAlignmentFrameworkPoll(frameworkId, delayMs = 4000) {
+  const nextId = String(frameworkId || '').trim();
+  clearPolicyAlignmentFrameworkPoll();
+  if (!nextId || !isLoggedIn() || !state.cycle?.id) return;
+  state.policyAlignmentFrameworkPollTimerId = window.setTimeout(async () => {
+    state.policyAlignmentFrameworkPollTimerId = 0;
+    try {
+      await refreshPolicyAlignmentFrameworks({ silent: true });
+      const framework = await loadPolicyAlignmentFrameworkDetail(nextId, { silent: true });
+      render();
+      if (framework && !policyAlignmentFrameworkReady(framework) && policyAlignmentFrameworkBuildState(framework) !== 'failed') {
+        schedulePolicyAlignmentFrameworkPoll(nextId, 4000);
+      }
+    } catch {
+      // keep silent; manual refresh remains available
+    }
+  }, Math.max(1000, Number(delayMs) || 4000));
+}
+
 function policyAlignmentCoverageLabel(status) {
   const key = String(status || '').trim().toLowerCase();
   if (key === 'covered') return langText('Padengta', 'Covered');
@@ -45,6 +90,7 @@ function normalizePolicyAlignmentFramework(value) {
     title: String(value.title || '').trim(),
     description: String(value.description || '').trim(),
     status: String(value.status || 'active').trim().toLowerCase(),
+    meta: value.meta && typeof value.meta === 'object' ? value.meta : {},
     requirementCount: Number(value.requirementCount || value.requirement_count || 0) || 0,
     documentCount: Number(value.documentCount || value.document_count || 0) || 0,
     createdAt: value.createdAt || value.created_at || null,
@@ -379,6 +425,11 @@ async function loadPolicyAlignmentFrameworkDetail(frameworkId, { silent = false 
         ? state.policyAlignmentFrameworks.map((item) => (item.id === framework.id ? { ...item, ...framework } : item))
         : [...state.policyAlignmentFrameworks, framework]
     );
+    if (!policyAlignmentFrameworkReady(framework) && policyAlignmentFrameworkBuildState(framework) !== 'failed') {
+      schedulePolicyAlignmentFrameworkPoll(framework.id, 4000);
+    } else {
+      clearPolicyAlignmentFrameworkPoll();
+    }
     return framework;
   } catch (error) {
     state.policyAlignmentFrameworkError = toUserMessage(error);
@@ -412,7 +463,7 @@ function openPolicyAlignmentFrameworkDocumentModal(framework, documentRecord) {
         <button type="button" class="btn btn-ghost" id="closePolicyAlignmentFrameworkDocModal">${escapeHtml(langText('Close', 'Close'))}</button>
       </div>
       <div class="policy-alignment-document-meta">
-        <span class="tag">${escapeHtml(langText('Built into framework', 'Built into framework'))}</span>
+        <span class="tag">${escapeHtml(langText('Built into policy framework', 'Built into policy framework'))}</span>
         <span class="tag">${escapeHtml(langText('Uploaded', 'Uploaded'))}: ${escapeHtml(formatCommentDateTime(documentItem.createdAt))}</span>
         <span class="tag">${escapeHtml(langText('Chars', 'Chars'))}: ${Number(documentItem.meta?.chars || String(documentItem.extractedText || '').length || 0)}</span>
       </div>
@@ -444,27 +495,27 @@ function openPolicyAlignmentFrameworkCreateModal() {
       <div class="auth-modal-header">
         <div>
           <h3 id="policyAlignmentFrameworkCreateTitle">${escapeHtml(langText('Create policy framework', 'Create policy framework'))}</h3>
-          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Upload one or more target policy documents. The framework library will be built from those documents first.', 'Upload one or more target policy documents. The framework library will be built from those documents first.'))}</p>
+          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Upload one or more target policy documents. The policy framework library will be built from those documents first.', 'Upload one or more target policy documents. The policy framework library will be built from those documents first.'))}</p>
         </div>
         <button type="button" class="btn btn-ghost" id="closePolicyAlignmentFrameworkCreateModal">${escapeHtml(langText('Close', 'Close'))}</button>
       </div>
       <form id="policyAlignmentFrameworkCreateForm" class="policy-alignment-create-form">
         <div class="inline-form-grid">
-          <input type="text" name="title" placeholder="${escapeHtml(langText('Framework title', 'Framework title'))}" required />
+          <input type="text" name="title" placeholder="${escapeHtml(langText('Politikos karkaso pavadinimas', 'Policy framework title'))}" required />
           <select name="localeHint">
             <option value="en">${escapeHtml(langText('Extract requirements in EN', 'Extract requirements in EN'))}</option>
             <option value="lt">${escapeHtml(langText('Extract requirements in LT', 'Extract requirements in LT'))}</option>
           </select>
         </div>
-        <textarea name="description" placeholder="${escapeHtml(langText('What policy or framework is this document set representing?', 'What policy or framework is this document set representing?'))}"></textarea>
+        <textarea name="description" placeholder="${escapeHtml(langText('Kokią politiką ar politikos karkasą atspindi šis dokumentų rinkinys?', 'What policy or policy framework is this document set representing?'))}"></textarea>
         <label class="policy-alignment-upload-card">
-          <strong>${escapeHtml(langText('Framework source documents', 'Framework source documents'))}</strong>
-          <span class="prompt">${escapeHtml(langText('Upload the target policy PDF files used to build the reusable framework.', 'Upload the target policy PDF files used to build the reusable framework.'))}</span>
+          <strong>${escapeHtml(langText('Politikos karkaso šaltinio dokumentai', 'Policy framework source documents'))}</strong>
+          <span class="prompt">${escapeHtml(langText('Įkelkite tikslinės politikos PDF failus, naudojamus pakartotinai naudojamam politikos karkasui sukurti.', 'Upload the target policy PDF files used to build the reusable policy framework.'))}</span>
           <input type="file" id="policyAlignmentFrameworkFiles" accept="application/pdf,.pdf" multiple required />
         </label>
         <div id="policyAlignmentFrameworkCreateError" class="auth-error" style="display:none;"></div>
         <div class="form-actions">
-          <button type="submit" id="policyAlignmentFrameworkCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Build framework', 'Build framework'))}</button>
+          <button type="submit" id="policyAlignmentFrameworkCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Kurti politikos karkasą', 'Build policy framework'))}</button>
         </div>
       </form>
     </div>
@@ -504,7 +555,7 @@ function openPolicyAlignmentFrameworkCreateModal() {
     const files = Array.from(fileInput?.files || []);
 
     if (!title) {
-      showError(toUserMessage(new Error('framework title required')));
+      showError(toUserMessage(new Error('policy framework title required')));
       return;
     }
     if (!files.length) {
@@ -514,7 +565,7 @@ function openPolicyAlignmentFrameworkCreateModal() {
 
     submitButton.disabled = true;
     const initialLabel = submitButton.textContent;
-    submitButton.textContent = langText('Building...', 'Building...');
+    submitButton.textContent = langText('Kuriama...', 'Building...');
     try {
       const formData = new FormData();
       formData.append('title', title);
@@ -535,9 +586,12 @@ function openPolicyAlignmentFrameworkCreateModal() {
       await refreshPolicyAlignmentFrameworks({ silent: true });
       if (framework?.id) {
         await loadPolicyAlignmentFrameworkDetail(framework.id, { silent: true });
+        if (!policyAlignmentFrameworkReady(framework)) {
+          schedulePolicyAlignmentFrameworkPoll(framework.id, 2500);
+        }
       }
       closeModal();
-      notifySuccess(langText('Framework created from uploaded policy documents.', 'Framework created from uploaded policy documents.'));
+      notifySuccess(langText('Politikos karkaso kūrimas pradėtas. Dokumentai apdorojami fone.', 'Policy framework build started. Documents are being processed in the background.'));
       render();
     } catch (error) {
       showError(toUserMessage(error));
@@ -551,9 +605,10 @@ function openPolicyAlignmentFrameworkCreateModal() {
 function openPolicyAlignmentCreateModal() {
   if (!state.cycle?.id) return;
   const frameworks = sortedPolicyAlignmentFrameworks(state.policyAlignmentFrameworks);
-  const selectedFrameworkId = String(state.policyAlignmentFrameworkSelectedId || frameworks[0]?.id || '').trim();
+  const readyFrameworks = frameworks.filter((item) => policyAlignmentFrameworkReady(item));
+  const selectedFrameworkId = String(state.policyAlignmentFrameworkSelectedId || readyFrameworks[0]?.id || '').trim();
   if (!selectedFrameworkId) {
-    notifyError(langText('Create a framework first, then run an analysis from it.', 'Create a framework first, then run an analysis from it.'));
+    notifyError(langText('Pirmiausia paruoškite politikos karkasą, tada paleiskite analizę iš jo.', 'Build a ready policy framework first, then run an analysis from it.'));
     return;
   }
 
@@ -566,8 +621,8 @@ function openPolicyAlignmentCreateModal() {
     <div class="modal-card policy-alignment-modal-card" role="dialog" aria-modal="true" aria-labelledby="policyAlignmentCreateTitle">
       <div class="auth-modal-header">
         <div>
-          <h3 id="policyAlignmentCreateTitle">${escapeHtml(langText('Create analysis from framework', 'Create analysis from framework'))}</h3>
-          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Second step: choose the framework and compare your current strategy against it.', 'Second step: choose the framework and compare your current strategy against it.'))}</p>
+          <h3 id="policyAlignmentCreateTitle">${escapeHtml(langText('Create analysis from policy framework', 'Create analysis from policy framework'))}</h3>
+          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(langText('Antras žingsnis: pasirinkite politikos karkasą ir palyginkite su juo savo dabartinę strategiją.', 'Second step: choose the policy framework and compare your current strategy against it.'))}</p>
         </div>
         <button type="button" class="btn btn-ghost" id="closePolicyAlignmentCreateModal">${escapeHtml(langText('Close', 'Close'))}</button>
       </div>
@@ -575,7 +630,7 @@ function openPolicyAlignmentCreateModal() {
         <div class="inline-form-grid">
           <input type="text" name="title" placeholder="${escapeHtml(langText('Analysis title', 'Analysis title'))}" required />
           <select name="targetFrameworkId" id="policyAlignmentFrameworkSelect">
-            ${frameworks.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === selectedFrameworkId ? 'selected' : ''}>${escapeHtml(item.title)} (${item.requirementCount})</option>`).join('')}
+            ${readyFrameworks.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === selectedFrameworkId ? 'selected' : ''}>${escapeHtml(item.title)} (${item.requirementCount})</option>`).join('')}
           </select>
         </div>
         <div class="inline-form-grid">
@@ -808,23 +863,23 @@ function renderPolicyAlignmentView() {
     <div class="step-header">
       <div class="header-stack step-header-actions">
         ${activeTab === 'frameworks'
-          ? `<button id="openPolicyAlignmentFrameworkCreateBtn" class="btn btn-primary" ${state.role === 'institution_admin' ? '' : 'disabled'}>${escapeHtml(langText('Naujas karkasas', 'New framework'))}</button>`
-          : `<button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${frameworks.length ? '' : 'disabled'}>${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>`}
+          ? `<button id="openPolicyAlignmentFrameworkCreateBtn" class="btn btn-primary" ${state.role === 'institution_admin' ? '' : 'disabled'}>${escapeHtml(langText('Naujas politikos karkasas', 'New policy framework'))}</button>`
+          : `<button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${frameworks.some((item) => policyAlignmentFrameworkReady(item)) ? '' : 'disabled'}>${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>`}
         <button id="refreshPolicyAlignmentBtn" class="btn btn-ghost">${escapeHtml(langText('Atnaujinti', 'Refresh'))}</button>
         <button id="togglePolicyAlignmentSidebarBtn" class="btn btn-ghost">${escapeHtml(sidebarCollapsed ? langText('Rodyti skydelį', 'Show panel') : langText('Slėpti skydelį', 'Hide panel'))}</button>
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">${langText('Karkasų', 'Frameworks')}: ${frameworks.length}</span>
+        <span class="tag">${langText('Politikos karkasų', 'Policy frameworks')}: ${frameworks.length}</span>
         <span class="tag">${langText('Analizių', 'Analyses')}: ${analyses.length}</span>
       </div>
       <p class="prompt" style="margin-top:12px;">${escapeHtml(activeTab === 'frameworks'
-        ? langText('Pirma sukurkite karkasą iš įkeltų politikos dokumentų. Tada jį naudokite kaip pakartotinai naudojamą atskaitos tašką analizėms.', 'First build a framework from uploaded policy documents. Then use it as a reusable reference point for analyses.')
-        : langText('Antrame etape palyginkite dabartinę strategiją su pasirinktu karkasu ir peržiūrėkite padengimo lentelę pilname darbiniame plote.', 'In the second phase, compare the current strategy against the selected framework and review the coverage table in a wider workspace.'))}</p>
+        ? langText('Pirma sukurkite politikos karkasą iš įkeltų politikos dokumentų. Tada jį naudokite kaip pakartotinai naudojamą atskaitos tašką analizėms.', 'First build a policy framework from uploaded policy documents. Then use it as a reusable reference point for analyses.')
+        : langText('Antrame etape palyginkite dabartinę strategiją su pasirinktu politikos karkasu ir peržiūrėkite padengimo lentelę pilname darbiniame plote.', 'In the second phase, compare the current strategy against the selected policy framework and review the coverage table in a wider workspace.'))}</p>
     </div>
 
     <div class="card policy-alignment-stage-card" style="margin-bottom: 16px;">
       <div class="policy-alignment-stage-tabs">
-        <button type="button" class="btn ${activeTab === 'frameworks' ? 'btn-primary' : 'btn-ghost'}" data-action="policy-alignment-tab" data-tab="frameworks">${escapeHtml(langText('1. Karkasai', '1. Frameworks'))}</button>
+        <button type="button" class="btn ${activeTab === 'frameworks' ? 'btn-primary' : 'btn-ghost'}" data-action="policy-alignment-tab" data-tab="frameworks">${escapeHtml(langText('1. Politikos karkasai', '1. Policy frameworks'))}</button>
         <button type="button" class="btn ${activeTab === 'analyses' ? 'btn-primary' : 'btn-ghost'}" data-action="policy-alignment-tab" data-tab="analyses">${escapeHtml(langText('2. Analizės', '2. Analyses'))}</button>
       </div>
     </div>
@@ -840,7 +895,7 @@ function renderPolicyAlignmentView() {
           ? `
               <div class="card">
                 <div class="guideline-group-header">
-                  <strong>${escapeHtml(langText('Karkasų biblioteka', 'Framework library'))}</strong>
+                  <strong>${escapeHtml(langText('Politikos karkasų biblioteka', 'Policy framework library'))}</strong>
                   <span class="tag">${frameworks.length}</span>
                 </div>
                 ${state.policyAlignmentFrameworkError ? `<p class="prompt">${escapeHtml(state.policyAlignmentFrameworkError)}</p>` : ''}
@@ -858,11 +913,12 @@ function renderPolicyAlignmentView() {
                           <div class="policy-alignment-chip-list">
                             <span class="tag">${escapeHtml(langText('Requirements', 'Requirements'))}: ${Number(item.requirementCount || 0)}</span>
                             <span class="tag">${escapeHtml(langText('Documents', 'Documents'))}: ${Number(item.documentCount || 0)}</span>
+                            <span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(item))}</span>
                           </div>
                         </button>
                       `).join('')}
                     </div>`
-                  : `<p class="prompt">${escapeHtml(langText('No frameworks yet. Build the first reusable framework from uploaded policy documents.', 'No frameworks yet. Build the first reusable framework from uploaded policy documents.'))}</p>`}
+                  : `<p class="prompt">${escapeHtml(langText('Politikos karkasų dar nėra. Sukurkite pirmą pakartotinai naudojamą politikos karkasą iš įkeltų dokumentų.', 'No policy frameworks yet. Build the first reusable policy framework from uploaded documents.'))}</p>`}
               </div>
             `
           : `
@@ -872,8 +928,8 @@ function renderPolicyAlignmentView() {
                   <span class="tag">${analyses.length}</span>
                 </div>
                 ${frameworks.length
-                  ? `<p class="prompt">${escapeHtml(langText('Analizės turi būti kuriamos iš pasirinkto karkaso. Jei reikia, grįžkite į pirmą žingsnį ir pasirinkite ar sukurkite karkasą.', 'Analyses should be created from a selected framework. If needed, go back to step one and choose or build a framework.'))}</p>`
-                  : `<p class="prompt">${escapeHtml(langText('Pirma sukurkite karkasą iš įkeltų politikos dokumentų. Be karkaso analizės paleisti nereikėtų.', 'Build a framework from uploaded policy documents first. Analyses should not start without a framework.'))}</p>`}
+                  ? `<p class="prompt">${escapeHtml(langText('Analizės turi būti kuriamos iš pasirinkto politikos karkaso. Jei reikia, grįžkite į pirmą žingsnį ir pasirinkite ar sukurkite karkasą.', 'Analyses should be created from a selected policy framework. If needed, go back to step one and choose or build a framework.'))}</p>`
+                  : `<p class="prompt">${escapeHtml(langText('Pirma sukurkite politikos karkasą iš įkeltų politikos dokumentų. Be karkaso analizės paleisti nereikėtų.', 'Build a policy framework from uploaded policy documents first. Analyses should not start without a framework.'))}</p>`}
                 ${analyses.length
                   ? `<div class="policy-alignment-analysis-list">
                       ${analyses.map((item) => `
@@ -903,7 +959,7 @@ function renderPolicyAlignmentView() {
                         </div>
                       `).join('')}
                     </div>`
-                  : `<p class="prompt">${escapeHtml(langText('No analyses yet. Create the first analysis from the selected framework.', 'No analyses yet. Create the first analysis from the selected framework.'))}</p>`}
+                  : `<p class="prompt">${escapeHtml(langText('No analyses yet. Create the first analysis from the selected policy framework.', 'No analyses yet. Create the first analysis from the selected policy framework.'))}</p>`}
               </div>
             `}
       </div>
@@ -919,7 +975,8 @@ function renderPolicyAlignmentView() {
                       ${framework.description ? `<p class="prompt" style="margin: 6px 0 0;">${escapeHtml(framework.description)}</p>` : ''}
                     </div>
                     <div class="policy-alignment-chip-list">
-                      <span class="tag">${escapeHtml(langText('Reusable framework', 'Reusable framework'))}</span>
+                      <span class="tag">${escapeHtml(langText('Pakartotinai naudojamas politikos karkasas', 'Reusable policy framework'))}</span>
+                      <span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(framework))}</span>
                       <span class="tag">${escapeHtml(langText('Built', 'Built'))}: ${escapeHtml(formatCommentDateTime(framework.updatedAt || framework.createdAt))}</span>
                     </div>
                   </div>
@@ -938,7 +995,7 @@ function renderPolicyAlignmentView() {
                     </div>
                     <div class="policy-alignment-summary-card">
                       <span>${escapeHtml(langText('Next step', 'Next step'))}</span>
-                      <button type="button" class="btn btn-primary policy-alignment-inline-btn" data-action="open-analysis-create-from-framework">${escapeHtml(langText('Create analysis', 'Create analysis'))}</button>
+                      <button type="button" class="btn btn-primary policy-alignment-inline-btn" data-action="open-analysis-create-from-framework" ${policyAlignmentFrameworkReady(framework) ? '' : 'disabled'}>${escapeHtml(langText('Create analysis', 'Create analysis'))}</button>
                     </div>
                   </div>
                 </section>
@@ -949,6 +1006,12 @@ function renderPolicyAlignmentView() {
                       <strong>${escapeHtml(langText('Built from uploaded documents', 'Built from uploaded documents'))}</strong>
                       <span class="tag">${frameworkDocuments.length}</span>
                     </div>
+                    ${policyAlignmentFrameworkBuildState(framework) === 'processing'
+                      ? `<p class="prompt" style="margin-bottom:12px;">${escapeHtml(langText('Politikos karkasas dar kuriamas. Reikalavimai bus parodyti, kai apdorojimas baigsis.', 'The policy framework is still building. Requirements will appear when processing finishes.'))}</p>`
+                      : ''}
+                    ${policyAlignmentFrameworkBuildState(framework) === 'failed'
+                      ? `<p class="prompt" style="margin-bottom:12px; color:#a23333;">${escapeHtml(String(framework?.meta?.buildError || langText('Politikos karkaso kūrimas nepavyko.', 'Policy framework build failed.')))}</p>`
+                      : ''}
                     ${frameworkDocuments.length
                       ? `<div class="policy-alignment-analysis-list">
                           ${frameworkDocuments.map((documentItem) => `
@@ -967,7 +1030,7 @@ function renderPolicyAlignmentView() {
 
                   <div class="card">
                     <div class="guideline-group-header">
-                      <strong>${escapeHtml(langText('Extracted requirements preview', 'Extracted requirements preview'))}</strong>
+                      <strong>${escapeHtml(langText('Extracted policy requirements preview', 'Extracted policy requirements preview'))}</strong>
                       <span class="tag">${frameworkRequirements.length}</span>
                     </div>
                     ${frameworkRequirements.length
@@ -991,11 +1054,11 @@ function renderPolicyAlignmentView() {
                             </tbody>
                           </table>
                         </div>`
-                      : `<p class="prompt">${escapeHtml(langText('No extracted requirements stored for this framework yet.', 'No extracted requirements stored for this framework yet.'))}</p>`}
+                      : `<p class="prompt">${escapeHtml(langText('No extracted policy requirements stored for this framework yet.', 'No extracted policy requirements stored for this framework yet.'))}</p>`}
                   </div>
                 </section>
               `
-            : `<div class="card"><strong>${escapeHtml(langText('Select a framework or build a new one from uploaded policy documents.', 'Select a framework or build a new one from uploaded policy documents.'))}</strong></div>`)
+            : `<div class="card"><strong>${escapeHtml(langText('Pasirinkite politikos karkasą arba sukurkite naują iš įkeltų politikos dokumentų.', 'Select a policy framework or build a new one from uploaded policy documents.'))}</strong></div>`)
           : (analysis
     ? `
             <section class="card" style="margin-bottom: 16px;">
@@ -1009,7 +1072,7 @@ function renderPolicyAlignmentView() {
                   <span class="tag">${escapeHtml(policyAlignmentSourceModeLabel(analysis.sourceMode))}</span>
                   <span class="tag">${escapeHtml(langText('Sukurta', 'Created'))}: ${escapeHtml(formatCommentDateTime(analysis.createdAt))}</span>
                   ${analysis.targetFrameworkId && frameworkById.get(analysis.targetFrameworkId)
-        ? `<span class="tag">${escapeHtml(langText('Karkasas', 'Framework'))}: ${escapeHtml(frameworkById.get(analysis.targetFrameworkId).title)}</span>`
+        ? `<span class="tag">${escapeHtml(langText('Politikos karkasas', 'Policy framework'))}: ${escapeHtml(frameworkById.get(analysis.targetFrameworkId).title)}</span>`
         : ''}
                 </div>
               </div>
@@ -1036,7 +1099,7 @@ function renderPolicyAlignmentView() {
                   <span class="tag">${escapeHtml(document.role === 'target' ? langText('Tikslas', 'Target') : langText('Šaltinis', 'Source'))}: ${escapeHtml(document.filename || '-')}</span>
                 `).join('')}
                 ${analysis.targetFrameworkId && frameworkById.get(analysis.targetFrameworkId)
-                  ? `<span class="tag">${escapeHtml(langText('Framework', 'Framework'))}: ${escapeHtml(frameworkById.get(analysis.targetFrameworkId).title)}</span>`
+                  ? `<span class="tag">${escapeHtml(langText('Policy framework', 'Policy framework'))}: ${escapeHtml(frameworkById.get(analysis.targetFrameworkId).title)}</span>`
                   : ''}
               </div>
               ${analysis.errorMessage ? `<div class="prompt" style="margin-top: 12px; color: #a23333;">${escapeHtml(analysis.errorMessage)}</div>` : ''}
@@ -1186,7 +1249,7 @@ function renderPolicyAlignmentView() {
     : `<p class="prompt">${escapeHtml(langText('AI kol kas nepasiūlė naujų gairių ar iniciatyvų juodraščių.', 'AI has not suggested any new guideline or initiative drafts yet.'))}</p>`}
             </section>
           `
-    : `<div class="card"><strong>${escapeHtml(langText('Select an analysis from the list or create one from the selected framework.', 'Select an analysis from the list or create one from the selected framework.'))}</strong></div>`)}
+    : `<div class="card"><strong>${escapeHtml(langText('Pasirinkite analizę iš sąrašo arba sukurkite ją iš pasirinkto politikos karkaso.', 'Select an analysis from the list or create one from the selected policy framework.'))}</strong></div>`)}
       </div>
     </section>
   `;
