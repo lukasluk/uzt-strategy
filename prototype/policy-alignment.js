@@ -28,6 +28,15 @@ function policyAlignmentFrameworkReady(framework) {
   return policyAlignmentFrameworkBuildState(framework) === 'completed';
 }
 
+function renderPolicyAlignmentProcessingIndicator(label) {
+  return `
+    <span class="policy-alignment-status-chip is-processing">
+      <span class="policy-alignment-spinner" aria-hidden="true"></span>
+      <span>${escapeHtml(label)}</span>
+    </span>
+  `;
+}
+
 function clearPolicyAlignmentFrameworkPoll() {
   if (state.policyAlignmentFrameworkPollTimerId) {
     window.clearTimeout(state.policyAlignmentFrameworkPollTimerId);
@@ -876,6 +885,7 @@ function renderPolicyAlignmentView() {
   const framework = selectedPolicyAlignmentFrameworkFromState();
   const analyses = sortedPolicyAlignments(state.policyAlignments);
   const frameworks = sortedPolicyAlignmentFrameworks(state.policyAlignmentFrameworks);
+  const processingFrameworks = frameworks.filter((item) => policyAlignmentFrameworkBuildState(item) === 'processing');
   const frameworkById = new Map(frameworks.map((item) => [item.id, item]));
   const {
     filteredFindings,
@@ -917,6 +927,13 @@ function renderPolicyAlignmentView() {
       </div>
     </div>
 
+    ${processingFrameworks.length
+      ? `<div class="card policy-alignment-processing-banner" style="margin-bottom: 12px;">
+          ${renderPolicyAlignmentProcessingIndicator(langText('Fone apdorojamas politikos karkasas', 'Policy framework is processing in the background'))}
+          <strong>${escapeHtml(langText('Apdorojimas vyksta fone. Puslapis atsinaujina automatiškai, kai ištraukti reikalavimai bus paruošti.', 'Background processing is in progress. This page refreshes automatically when extracted requirements are ready.'))}</strong>
+        </div>`
+      : ''}
+
     ${state.policyAlignmentError ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(state.policyAlignmentError)}</strong></div>` : ''}
     ${(state.policyAlignmentLoading || state.policyAlignmentFrameworkLoading || state.policyAlignmentFrameworkDetailLoading)
       ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(langText('Atnaujinami Policy Alignment duomenys...', 'Refreshing Policy Alignment data...'))}</strong></div>`
@@ -947,7 +964,9 @@ function renderPolicyAlignmentView() {
                             <div class="policy-alignment-chip-list">
                               <span class="tag">${escapeHtml(langText('Requirements', 'Requirements'))}: ${Number(item.requirementCount || 0)}</span>
                               <span class="tag">${escapeHtml(langText('Documents', 'Documents'))}: ${Number(item.documentCount || 0)}</span>
-                              <span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(item))}</span>
+                              ${policyAlignmentFrameworkBuildState(item) === 'processing'
+                                ? renderPolicyAlignmentProcessingIndicator(policyAlignmentFrameworkBuildStatusLabel(item))
+                                : `<span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(item))}</span>`}
                             </div>
                           </button>
                           ${state.role === 'institution_admin'
@@ -1019,7 +1038,9 @@ function renderPolicyAlignmentView() {
                     </div>
                     <div class="policy-alignment-chip-list">
                       <span class="tag">${escapeHtml(langText('Pakartotinai naudojamas politikos karkasas', 'Reusable policy framework'))}</span>
-                      <span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(framework))}</span>
+                      ${policyAlignmentFrameworkBuildState(framework) === 'processing'
+                        ? renderPolicyAlignmentProcessingIndicator(policyAlignmentFrameworkBuildStatusLabel(framework))
+                        : `<span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(framework))}</span>`}
                       <span class="tag">${escapeHtml(langText('Built', 'Built'))}: ${escapeHtml(formatCommentDateTime(framework.updatedAt || framework.createdAt))}</span>
                     </div>
                   </div>
@@ -1050,7 +1071,10 @@ function renderPolicyAlignmentView() {
                       <span class="tag">${frameworkDocuments.length}</span>
                     </div>
                     ${policyAlignmentFrameworkBuildState(framework) === 'processing'
-                      ? `<p class="prompt" style="margin-bottom:12px;">${escapeHtml(langText('Politikos karkasas dar kuriamas. Reikalavimai bus parodyti, kai apdorojimas baigsis.', 'The policy framework is still building. Requirements will appear when processing finishes.'))}</p>`
+                      ? `<div class="policy-alignment-processing-banner">
+                          ${renderPolicyAlignmentProcessingIndicator(langText('Kuriama', 'Building'))}
+                          <strong>${escapeHtml(langText('Politikos karkasas dar kuriamas. Reikalavimai bus parodyti, kai apdorojimas baigsis.', 'The policy framework is still building. Requirements will appear when processing finishes.'))}</strong>
+                        </div>`
                       : ''}
                     ${policyAlignmentFrameworkBuildState(framework) === 'failed'
                       ? `<p class="prompt" style="margin-bottom:12px; color:#a23333;">${escapeHtml(String(framework?.meta?.buildError || langText('Politikos karkaso kūrimas nepavyko.', 'Policy framework build failed.')))}</p>`

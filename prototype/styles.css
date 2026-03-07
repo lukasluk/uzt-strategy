@@ -358,6 +358,28 @@ body.embed-map-page .stage {
   background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
   padding: 8px;
 }
+.policy-alignment-nav-card {
+  display: grid;
+  gap: 10px;
+}
+.policy-alignment-nav-card.active {
+  border-color: #94b8e7;
+  box-shadow: 0 8px 18px rgba(36, 90, 160, 0.12);
+}
+.policy-alignment-nav-card.locked {
+  opacity: 0.82;
+}
+.policy-alignment-nav-header .step-pill-head {
+  justify-content: flex-start;
+}
+.policy-alignment-nav-actions {
+  display: grid;
+  gap: 8px;
+}
+.policy-alignment-nav-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
 
 .step-utility-card .institution-switcher {
   width: 100%;
@@ -6021,6 +6043,43 @@ body.meta-admin-page .tag-slug {
   flex-wrap: wrap;
   gap: 8px;
 }
+.policy-alignment-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.policy-alignment-status-chip.is-processing {
+  border: 1px solid #7ba7df;
+  background: linear-gradient(180deg, #eef5ff 0%, #dceaff 100%);
+  color: #1f4f86;
+  box-shadow: 0 0 0 1px rgba(123, 167, 223, 0.1), 0 6px 16px rgba(54, 102, 170, 0.16);
+}
+.policy-alignment-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(31, 79, 134, 0.22);
+  border-top-color: #2e73c5;
+  animation: policyAlignmentSpin 0.85s linear infinite;
+  flex: 0 0 auto;
+}
+.policy-alignment-processing-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #bfd4f2;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f5f9ff 0%, #e8f1ff 100%);
+  padding: 14px 16px;
+}
+.policy-alignment-processing-banner strong {
+  color: #2a4d78;
+}
 .policy-alignment-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -6197,4 +6256,12 @@ body.meta-admin-page .tag-slug {
   background: #f8fbff;
   padding: 12px;
   align-content: start;
+}
+@keyframes policyAlignmentSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

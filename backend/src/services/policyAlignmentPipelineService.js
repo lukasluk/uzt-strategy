@@ -435,6 +435,11 @@ function batchTargetChunksForExtraction(chunks, options = {}) {
   return batches.length ? batches : [[]];
 }
 
+function canSplitTimedOutExtraction(error) {
+  const message = String(error?.message || '').trim().toLowerCase();
+  return message === 'ai request timed out' || message === 'ai response invalid';
+}
+
 function buildComparisonPrompt({ localeHint, requirements, candidateContext, sourceRefsById }) {
   const locale = normalizeLocaleHint(localeHint);
   const requirementText = (Array.isArray(requirements) ? requirements : [])
@@ -692,6 +697,49 @@ async function compareRequirementBatch({ requirements, sourceRefsById, localeHin
 function createPolicyAlignmentPipelineService({ query, uuid }) {
   const nextId = () => (typeof uuid === 'function' ? uuid() : '');
 
+  async function extractRequirementBatchWithRetry({ chunks, localeHint, aiConfig, batchLabel = '1' }) {
+    const batchChunks = Array.isArray(chunks) ? chunks.filter(Boolean) : [];
+    if (!batchChunks.length) {
+      return { requirements: [], models: [] };
+    }
+
+    try {
+      const { systemText, userText } = buildRequirementExtractionPrompt({ localeHint, targetChunks: batchChunks });
+      const response = await requestPolicyAlignmentJson({
+        ...aiConfig,
+        systemText,
+        userText,
+        operationName: `policy-alignment-extract-requirements-batch-${batchLabel}`
+      });
+      return {
+        requirements: normalizeExtractedRequirements(response.parsed),
+        models: response.model ? [response.model] : []
+      };
+    } catch (error) {
+      if (!canSplitTimedOutExtraction(error) || batchChunks.length <= 1) {
+        throw error;
+      }
+
+      const midpoint = Math.ceil(batchChunks.length / 2);
+      const left = await extractRequirementBatchWithRetry({
+        chunks: batchChunks.slice(0, midpoint),
+        localeHint,
+        aiConfig,
+        batchLabel: `${batchLabel}.1`
+      });
+      const right = await extractRequirementBatchWithRetry({
+        chunks: batchChunks.slice(midpoint),
+        localeHint,
+        aiConfig,
+        batchLabel: `${batchLabel}.2`
+      });
+      return {
+        requirements: [...left.requirements, ...right.requirements],
+        models: [...left.models, ...right.models]
+      };
+    }
+  }
+
   async function extractRequirementsFromTargetDocuments({ documents, localeHint = 'en' }) {
     const chunks = buildDocumentChunks(documents);
     const aiConfig = getPolicyAlignmentAiConfig();
@@ -700,16 +748,16 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
     const modelSet = new Set();
 
     for (let index = 0; index < chunkBatches.length; index += 1) {
-      const batch = chunkBatches[index];
-      const { systemText, userText } = buildRequirementExtractionPrompt({ localeHint, targetChunks: batch });
-      const response = await requestPolicyAlignmentJson({
-        ...aiConfig,
-        systemText,
-        userText,
-        operationName: `policy-alignment-extract-requirements-batch-${index + 1}`
+      const batchResult = await extractRequirementBatchWithRetry({
+        chunks: chunkBatches[index],
+        localeHint,
+        aiConfig,
+        batchLabel: String(index + 1)
       });
-      if (response.model) modelSet.add(response.model);
-      allRequirements.push(...normalizeExtractedRequirements(response.parsed));
+      batchResult.models.forEach((model) => {
+        if (model) modelSet.add(model);
+      });
+      allRequirements.push(...batchResult.requirements);
     }
 
     const requirements = mergeExtractedRequirements(allRequirements);

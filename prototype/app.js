@@ -2668,7 +2668,6 @@ function renderSteps() {
   const items = [
     { id: 'guidelines', title: langText('GairÄ—s', 'Guidelines'), locked: false },
     { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
-    { id: 'policy-alignment', title: langText('Politikos atitiktis', 'Policy Alignment'), locked: !canOpenPolicyAlignment },
     { id: 'history', title: langText('Istorija', 'History'), locked: !canOpenHistory },
     { id: 'admin', title: 'Admin', locked: !canOpenAdmin, alert: openPendingProposalCount > 0 },
     { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false }
@@ -2688,7 +2687,7 @@ function renderSteps() {
     clearRouteEntityForView('guidelines');
     state.activeView = 'guidelines';
   }
-  if (state.activeView === 'policy-alignment' && !visibleItems.some((item) => item.id === 'policy-alignment')) {
+  if (state.activeView === 'policy-alignment' && !canOpenPolicyAlignment) {
     clearRouteEntityForView('guidelines');
     state.activeView = 'guidelines';
   }
@@ -2714,7 +2713,7 @@ function renderSteps() {
       </div>
     `;
     if (item.locked) {
-      button.title = item.id === 'history' || item.id === 'policy-alignment'
+      button.title = item.id === 'history'
         ? langText('Sis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only')
         : 'Administravimas galimas tik savo institucijos administratoriui';
     }
@@ -2770,6 +2769,49 @@ function renderSteps() {
 
     elements.steps.appendChild(shell);
   });
+
+  if (!state.embedMapMode) {
+    const alignmentShell = document.createElement('div');
+    alignmentShell.className = 'step-utility-shell';
+
+    const alignmentCard = document.createElement('div');
+    alignmentCard.className = `step-utility-card policy-alignment-nav-card${state.activeView === 'policy-alignment' ? ' active' : ''}${canOpenPolicyAlignment ? '' : ' locked'}`;
+
+    const currentPolicyAlignmentTab = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase() === 'analyses'
+      ? 'analyses'
+      : 'frameworks';
+    const disabledAttr = canOpenPolicyAlignment ? '' : 'disabled';
+    const lockHint = canOpenPolicyAlignment
+      ? ''
+      : ` title="${escapeHtml(langText('Sis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only'))}"`;
+
+    alignmentCard.innerHTML = `
+      <div class="policy-alignment-nav-header">
+        <div class="step-pill-head">
+          <span class="step-icon" aria-hidden="true">${stepIconMarkup('policy-alignment')}</span>
+          <h4>${escapeHtml(langText('Politikos atitiktis', 'Policy Alignment'))}</h4>
+        </div>
+      </div>
+      <div class="policy-alignment-nav-actions">
+        <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'frameworks' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="frameworks"${disabledAttr}${lockHint}>${escapeHtml(langText('Politikos karkasas', 'Policy framework'))}</button>
+        <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'analyses' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="analyses"${disabledAttr}${lockHint}>${escapeHtml(langText('Analizė', 'Analysis'))}</button>
+      </div>
+    `;
+
+    alignmentShell.appendChild(alignmentCard);
+    elements.steps.appendChild(alignmentShell);
+
+    alignmentCard.querySelectorAll('[data-policy-alignment-nav]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (!canOpenPolicyAlignment) return;
+        state.policyAlignmentWorkspaceTab = String(button.getAttribute('data-policy-alignment-nav') || 'frameworks').trim().toLowerCase() === 'analyses'
+          ? 'analyses'
+          : 'frameworks';
+        state.expandedStepId = '';
+        setActiveView('policy-alignment');
+      });
+    });
+  }
 
 }
 
