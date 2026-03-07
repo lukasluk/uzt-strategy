@@ -1501,9 +1501,6 @@ function renderPolicyAlignmentView() {
                 ${(Array.isArray(analysis.documents) ? analysis.documents : []).map((document) => `
                   <span class="tag">${escapeHtml(document.role === 'target' ? langText('Tikslas', 'Target') : langText('Šaltinis', 'Source'))}: ${escapeHtml(document.filename || '-')}</span>
                 `).join('')}
-                ${analysis.targetFrameworkId && frameworkById.get(analysis.targetFrameworkId)
-                  ? `<span class="tag">${escapeHtml(langText('Policy framework', 'Policy framework'))}: ${escapeHtml(frameworkById.get(analysis.targetFrameworkId).title)}</span>`
-                  : ''}
               </div>
               ${analysis.errorMessage ? `<div class="prompt" style="margin-top: 12px; color: #a23333;">${escapeHtml(analysis.errorMessage)}</div>` : ''}
             </section>
