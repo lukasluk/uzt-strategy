@@ -1019,6 +1019,18 @@ function createPolicyAlignmentService({ query, uuid }) {
     return !!result.rowCount;
   }
 
+  async function deleteFramework(frameworkId) {
+    const finalFrameworkId = String(frameworkId || '').trim();
+    if (!finalFrameworkId) throw new Error('frameworkId required');
+    const result = await query(
+      `delete from policy_alignment_frameworks
+       where id = $1
+       returning id`,
+      [finalFrameworkId]
+    );
+    return !!result.rowCount;
+  }
+
   return {
     ALIGNMENT_ANALYSIS_STATUSES,
     ALIGNMENT_COVERAGE_STATUSES,
@@ -1056,7 +1068,8 @@ function createPolicyAlignmentService({ query, uuid }) {
     replaceSuggestions,
     listAnalysesForCycle,
     getAnalysisById,
-    deleteAnalysis
+    deleteAnalysis,
+    deleteFramework
   };
 }
 

@@ -604,6 +604,10 @@ function openPolicyAlignmentFrameworkCreateModal() {
 
 function openPolicyAlignmentCreateModal() {
   if (!state.cycle?.id) return;
+  if (state.role !== 'institution_admin') {
+    notifyError(langText('Tik administratoriai gali kurti Policy Alignment analizes.', 'Only administrators can create Policy Alignment analyses.'));
+    return;
+  }
   const frameworks = sortedPolicyAlignmentFrameworks(state.policyAlignmentFrameworks);
   const readyFrameworks = frameworks.filter((item) => policyAlignmentFrameworkReady(item));
   const selectedFrameworkId = String(state.policyAlignmentFrameworkSelectedId || readyFrameworks[0]?.id || '').trim();
@@ -786,6 +790,35 @@ async function deletePolicyAlignmentAnalysis(analysisId) {
     notifyError(toUserMessage(error));
   }
 }
+
+async function deletePolicyAlignmentFramework(frameworkId) {
+  const finalFrameworkId = String(frameworkId || '').trim();
+  if (!finalFrameworkId || state.role !== 'institution_admin') return;
+
+  const confirmed = window.confirm(
+    langText(
+      'Ar tikrai norite pašalinti šį politikos karkasą? Su juo susieti dokumentai ir ištraukti reikalavimai bus ištrinti.',
+      'Do you want to remove this policy framework? Its documents and extracted requirements will be deleted.'
+    )
+  );
+  if (!confirmed) return;
+
+  try {
+    await api(`/api/v1/policy-alignment-frameworks/${encodeURIComponent(finalFrameworkId)}/delete`, {
+      method: 'POST',
+      body: {}
+    });
+    if (String(state.policyAlignmentFrameworkSelectedId || '').trim() === finalFrameworkId) {
+      state.policyAlignmentFrameworkSelectedId = '';
+      state.policyAlignmentFrameworkCurrent = null;
+    }
+    await refreshPolicyAlignmentFrameworks({ silent: true });
+    notifySuccess(langText('Politikos karkasas pašalintas.', 'Policy framework removed.'));
+    render();
+  } catch (error) {
+    notifyError(toUserMessage(error));
+  }
+}
 function renderPolicyAlignmentView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
@@ -864,7 +897,7 @@ function renderPolicyAlignmentView() {
       <div class="header-stack step-header-actions">
         ${activeTab === 'frameworks'
           ? `<button id="openPolicyAlignmentFrameworkCreateBtn" class="btn btn-primary" ${state.role === 'institution_admin' ? '' : 'disabled'}>${escapeHtml(langText('Naujas politikos karkasas', 'New policy framework'))}</button>`
-          : `<button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${frameworks.some((item) => policyAlignmentFrameworkReady(item)) ? '' : 'disabled'}>${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>`}
+          : `<button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${(state.role === 'institution_admin' && frameworks.some((item) => policyAlignmentFrameworkReady(item))) ? '' : 'disabled'}>${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>`}
         <button id="refreshPolicyAlignmentBtn" class="btn btn-ghost">${escapeHtml(langText('Atnaujinti', 'Refresh'))}</button>
         <button id="togglePolicyAlignmentSidebarBtn" class="btn btn-ghost">${escapeHtml(sidebarCollapsed ? langText('Rodyti skydelį', 'Show panel') : langText('Slėpti skydelį', 'Hide panel'))}</button>
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
@@ -902,20 +935,30 @@ function renderPolicyAlignmentView() {
                 ${frameworks.length
                   ? `<div class="policy-alignment-analysis-list">
                       ${frameworks.map((item) => `
-                        <button
-                          type="button"
-                          class="policy-alignment-analysis-item${framework?.id === item.id ? ' active' : ''}"
-                          data-action="select-policy-framework"
-                          data-framework-id="${escapeHtml(item.id)}"
-                        >
-                          <strong>${escapeHtml(item.title || item.id)}</strong>
-                          <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
-                          <div class="policy-alignment-chip-list">
-                            <span class="tag">${escapeHtml(langText('Requirements', 'Requirements'))}: ${Number(item.requirementCount || 0)}</span>
-                            <span class="tag">${escapeHtml(langText('Documents', 'Documents'))}: ${Number(item.documentCount || 0)}</span>
-                            <span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(item))}</span>
-                          </div>
-                        </button>
+                        <div class="policy-alignment-analysis-row${framework?.id === item.id ? ' active' : ''}">
+                          <button
+                            type="button"
+                            class="policy-alignment-analysis-item${framework?.id === item.id ? ' active' : ''}"
+                            data-action="select-policy-framework"
+                            data-framework-id="${escapeHtml(item.id)}"
+                          >
+                            <strong>${escapeHtml(item.title || item.id)}</strong>
+                            <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
+                            <div class="policy-alignment-chip-list">
+                              <span class="tag">${escapeHtml(langText('Requirements', 'Requirements'))}: ${Number(item.requirementCount || 0)}</span>
+                              <span class="tag">${escapeHtml(langText('Documents', 'Documents'))}: ${Number(item.documentCount || 0)}</span>
+                              <span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(item))}</span>
+                            </div>
+                          </button>
+                          ${state.role === 'institution_admin'
+                            ? `<button
+                                type="button"
+                                class="btn btn-danger policy-alignment-delete-btn"
+                                data-action="delete-policy-framework"
+                                data-framework-id="${escapeHtml(item.id)}"
+                              >${escapeHtml(langText('Remove', 'Remove'))}</button>`
+                            : ''}
+                        </div>
                       `).join('')}
                     </div>`
                   : `<p class="prompt">${escapeHtml(langText('Politikos karkasų dar nėra. Sukurkite pirmą pakartotinai naudojamą politikos karkasą iš įkeltų dokumentų.', 'No policy frameworks yet. Build the first reusable policy framework from uploaded documents.'))}</p>`}
@@ -928,7 +971,7 @@ function renderPolicyAlignmentView() {
                   <span class="tag">${analyses.length}</span>
                 </div>
                 ${frameworks.length
-                  ? `<p class="prompt">${escapeHtml(langText('Analizės turi būti kuriamos iš pasirinkto politikos karkaso. Jei reikia, grįžkite į pirmą žingsnį ir pasirinkite ar sukurkite karkasą.', 'Analyses should be created from a selected policy framework. If needed, go back to step one and choose or build a framework.'))}</p>`
+                  ? `<p class="prompt">${escapeHtml(langText('Analizes iš pasirinkto politikos karkaso gali kurti tik administratoriai. Jei reikia, grįžkite į pirmą žingsnį ir pasirinkite ar sukurkite karkasą.', 'Only administrators can create analyses from a selected policy framework. If needed, go back to step one and choose or build a framework.'))}</p>`
                   : `<p class="prompt">${escapeHtml(langText('Pirma sukurkite politikos karkasą iš įkeltų politikos dokumentų. Be karkaso analizės paleisti nereikėtų.', 'Build a policy framework from uploaded policy documents first. Analyses should not start without a framework.'))}</p>`}
                 ${analyses.length
                   ? `<div class="policy-alignment-analysis-list">
@@ -995,7 +1038,7 @@ function renderPolicyAlignmentView() {
                     </div>
                     <div class="policy-alignment-summary-card">
                       <span>${escapeHtml(langText('Next step', 'Next step'))}</span>
-                      <button type="button" class="btn btn-primary policy-alignment-inline-btn" data-action="open-analysis-create-from-framework" ${policyAlignmentFrameworkReady(framework) ? '' : 'disabled'}>${escapeHtml(langText('Create analysis', 'Create analysis'))}</button>
+                      <button type="button" class="btn btn-primary policy-alignment-inline-btn" data-action="open-analysis-create-from-framework" ${(state.role === 'institution_admin' && policyAlignmentFrameworkReady(framework)) ? '' : 'disabled'}>${escapeHtml(langText('Create analysis', 'Create analysis'))}</button>
                     </div>
                   </div>
                 </section>
@@ -1328,6 +1371,16 @@ function renderPolicyAlignmentView() {
       const analysisId = String(button.dataset.analysisId || '').trim();
       if (!analysisId) return;
       void deletePolicyAlignmentAnalysis(analysisId);
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="delete-policy-framework"]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const frameworkId = String(button.dataset.frameworkId || '').trim();
+      if (!frameworkId) return;
+      void deletePolicyAlignmentFramework(frameworkId);
     });
   });
 

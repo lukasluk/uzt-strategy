@@ -438,6 +438,9 @@ function registerPolicyAlignmentRoutes({
   app.post('/api/v1/cycles/:cycleId/policy-alignments', requireAuth, memberWriteGuard, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+    if (req.auth.role !== 'institution_admin') {
+      return res.status(403).json({ error: 'admin role required' });
+    }
 
     const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
@@ -472,6 +475,36 @@ function registerPolicyAlignmentRoutes({
       });
 
       res.status(201).json({ ok: true, analysis });
+    } catch (error) {
+      res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
+    }
+  });
+
+  app.post('/api/v1/policy-alignment-frameworks/:frameworkId/delete', requireAuth, memberWriteGuard, async (req, res) => {
+    const frameworkId = String(req.params.frameworkId || '').trim();
+    if (!frameworkId) return res.status(400).json({ error: 'frameworkId required' });
+    if (req.auth.role !== 'institution_admin') {
+      return res.status(403).json({ error: 'admin role required' });
+    }
+
+    try {
+      const framework = await withTransaction(async ({ alignmentService }) => alignmentService.getFrameworkById(frameworkId));
+      if (!framework) {
+        return res.status(404).json({ error: 'framework not found' });
+      }
+      if (String(framework.institutionId || '').trim() !== String(req.auth.institutionId || '').trim()) {
+        return res.status(403).json({ error: 'analysis access forbidden' });
+      }
+      if (framework.cycleId) {
+        const cycleAccess = await verifyCycleAccess(framework.cycleId, req.auth.institutionId);
+        if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+      }
+
+      const deleted = await withTransaction(async ({ alignmentService }) => alignmentService.deleteFramework(frameworkId));
+      if (!deleted) {
+        return res.status(404).json({ error: 'framework not found' });
+      }
+      res.json({ ok: true, frameworkId });
     } catch (error) {
       res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
     }
