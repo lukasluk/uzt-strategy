@@ -492,10 +492,24 @@ function renderPolicyAlignmentEvidence(finding, sourceRefById) {
   `;
 }
 
+function renderPolicyAlignmentOverlap(finding) {
+  const refs = Array.isArray(finding?.matchedSourceRefs) ? finding.matchedSourceRefs : [];
+  const summary = String(finding?.overlapSummary || '').trim() || String(finding?.explanation || '').trim();
+  if (!refs.length && !summary) {
+    return `<span class="prompt">${escapeHtml(langText('Persidengimo nenustatyta.', 'No overlap identified.'))}</span>`;
+  }
+  return `
+    <div class="policy-alignment-overlap-cell">
+      ${refs.length ? `<div class="policy-alignment-chip-list">${renderPolicyAlignmentMatchedRefs(finding)}</div>` : ''}
+      ${summary ? `<div class="prompt">${escapeHtml(summary)}</div>` : ''}
+    </div>
+  `;
+}
+
 function renderPolicyAlignmentCoverageRows(grouped, suggestionByFindingId, sourceRefById) {
   return grouped.map((group) => `
     ${group.theme
-    ? `<tr class="policy-alignment-theme-row"><td colspan="7">${escapeHtml(group.theme)}</td></tr>`
+    ? `<tr class="policy-alignment-theme-row"><td colspan="8">${escapeHtml(group.theme)}</td></tr>`
     : ''}
     ${group.items.map((finding) => {
     const suggestion = suggestionByFindingId.get(String(finding?.id || '').trim()) || null;
@@ -525,6 +539,7 @@ function renderPolicyAlignmentCoverageRows(grouped, suggestionByFindingId, sourc
             <td><span class="tag">${escapeHtml(policyAlignmentCoverageLabel(finding?.coverageStatus))}</span></td>
             <td>${escapeHtml(confidence)}</td>
             <td><div class="policy-alignment-chip-list">${renderPolicyAlignmentMatchedRefs(finding)}</div></td>
+            <td>${renderPolicyAlignmentOverlap(finding)}</td>
             <td>${renderPolicyAlignmentEvidence(finding, sourceRefById)}</td>
             <td>${escapeHtml(finding?.explanation || '-')}</td>
             <td>${actionCell}</td>
@@ -1222,10 +1237,9 @@ function renderPolicyAlignmentView() {
     themeOptions
   } = buildPolicyAlignmentFindingsModel(analysis);
   const gapFindings = filteredFindings.filter((item) => policyAlignmentFindingRisky(item?.coverageStatus));
-  const overlapFindings = filteredFindings.filter((item) => Array.isArray(item?.matchedSourceRefs) && item.matchedSourceRefs.length);
   const activeTab = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase() === 'analyses' ? 'analyses' : 'frameworks';
   const analysisSubviewRaw = String(state.policyAlignmentAnalysisSubview || 'overview').trim().toLowerCase();
-  const analysisSubview = ['overview', 'overlap', 'gap', 'actions'].includes(analysisSubviewRaw) ? analysisSubviewRaw : 'overview';
+  const analysisSubview = ['overview', 'analysis', 'actions'].includes(analysisSubviewRaw) ? analysisSubviewRaw : 'overview';
   const sidebarCollapsed = !!state.policyAlignmentSidebarCollapsed;
   const frameworkDocuments = Array.isArray(framework?.documents) ? framework.documents : [];
   const frameworkRequirements = Array.isArray(framework?.requirements) ? framework.requirements : [];
@@ -1480,8 +1494,7 @@ function renderPolicyAlignmentView() {
                 <div class="policy-alignment-analysis-header-side">
                   <div class="policy-alignment-top-tabs policy-alignment-top-tabs-inline">
                     <button type="button" class="btn ${analysisSubview === 'overview' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="overview">${escapeHtml(langText('Apžvalga', 'Overview'))}</button>
-                    <button type="button" class="btn ${analysisSubview === 'overlap' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="overlap">${escapeHtml(langText('Persidengimų analizė', 'Overlap analysis'))}</button>
-                    <button type="button" class="btn ${analysisSubview === 'gap' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="gap">${escapeHtml(langText('Trūkumų analizė', 'Gap analysis'))}</button>
+                    <button type="button" class="btn ${analysisSubview === 'analysis' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-policy-analysis-subview" data-subview="analysis">${escapeHtml(langText('Persidengimų ir trūkumų analizė', 'Overlap and gap analysis'))}</button>
                     <button type="button" class="btn policy-alignment-action-launch-btn ${analysisSubview === 'actions' ? 'btn-primary' : ''}" data-action="switch-policy-analysis-subview" data-subview="actions">${escapeHtml(langText('Veiksmų panelė', 'Action panel'))}</button>
                   </div>
                   <div class="policy-alignment-chip-list">
@@ -1545,8 +1558,8 @@ function renderPolicyAlignmentView() {
                       <div class="policy-alignment-howto">
                         <strong>${escapeHtml(langText('Kaip naudoti šį puslapį', 'How to use this page'))}</strong>
                         <ol>
-                          <li>${escapeHtml(langText('Pirmiausia atsidarykite Persidengimų analizę ir patikrinkite, kas jau yra padengta arba padengta iš dalies.', 'Check Overlap analysis first to see what is already covered or partly covered.'))}</li>
-                          <li>${escapeHtml(langText('Tada atsidarykite Trūkumų analizę ir peržiūrėkite likusias silpnas arba trūkstamas sritis.', 'Then check Gap analysis for the remaining weak or missing areas.'))}</li>
+                          <li>${escapeHtml(langText('Atidarykite Persidengimų ir trūkumų analizę, kad vienoje vietoje matytumėte padengimą, persidengimus ir likusias spragas.', 'Open Overlap and gap analysis to review coverage, overlaps, and remaining gaps in one place.'))}</li>
+                          <li>${escapeHtml(langText('Pirmiausia peržiūrėkite persidengimo stulpelį ir įsitikinkite, kas jau yra padengta arba padengta iš dalies.', 'Check the overlap column first to confirm what is already covered or partly covered.'))}</li>
                           <li>${escapeHtml(langText('Jei trūkumas yra realus, eikite į Veiksmų panelę ir kurkite arba konvertuokite pasiūlymus.', 'If a gap is real, move to Action panel and create or convert proposals.'))}</li>
                         </ol>
                       </div>
@@ -1602,35 +1615,13 @@ function renderPolicyAlignmentView() {
                       : `<p class="prompt">${escapeHtml(langText('AI kol kas nepasiūlė naujų gairių ar iniciatyvų juodraščių.', 'AI has not suggested any new guideline or initiative drafts yet.'))}</p>`}
                   </section>
                 `
-              : analysisSubview === 'gap'
-              ? `
-                  <section class="card" style="margin-bottom: 16px;">
-                    <div class="guideline-group-header">
-                      <strong>${escapeHtml(langText('Trūkumų analizė', 'Gap analysis'))}</strong>
-                      <span class="tag">${gapFindings.length}</span>
-                    </div>
-                    ${gapFindings.length
-                      ? `<div class="policy-alignment-gap-list">
-                          ${gapFindings.map((finding) => `
-                            <article class="policy-alignment-gap-item status-${escapeHtml(String(finding.coverageStatus || 'unclear').trim().toLowerCase())}">
-                              <strong>${escapeHtml(finding.requirementTitle || '-')}</strong>
-                              <div class="policy-alignment-chip-list">
-                                <span class="tag">${escapeHtml(policyAlignmentCoverageLabel(finding.coverageStatus))}</span>
-                                ${finding.theme ? `<span class="tag">${escapeHtml(finding.theme)}</span>` : ''}
-                              </div>
-                              <p>${escapeHtml(finding.explanation || finding.requirementDescription || '-')}</p>
-                            </article>
-                          `).join('')}
-                        </div>`
-                      : `<p class="prompt">${escapeHtml(langText('Šiuo filtruose trūkumų nerasta.', 'No gaps in the current filter set.'))}</p>`}
-                  </section>
-                `
               : `
                   <section class="card" style="margin-bottom: 16px;">
                     <div class="guideline-group-header">
-                      <strong>${escapeHtml(langText('Filtrai', 'Filters'))}</strong>
+                      <strong>${escapeHtml(langText('Persidengimų ir trūkumų analizė', 'Overlap and gap analysis'))}</strong>
                       <span class="tag">${filteredFindings.length}</span>
                     </div>
+                    <p class="prompt">${escapeHtml(langText('Vienoje vietoje peržiūrėkite visus reikalavimus, jų padengimą, persidengimus su esamomis kortelėmis ir likusias spragas.', 'Review all requirements, their coverage, overlaps with existing cards, and remaining gaps in one place.'))}</p>
                     <div class="policy-alignment-filter-grid">
                       <label>
                         <span>${escapeHtml(langText('Būsena', 'Status'))}</span>
@@ -1673,6 +1664,7 @@ function renderPolicyAlignmentView() {
                             <th>${escapeHtml(langText('Būsena', 'Status'))}</th>
                             <th>${escapeHtml(langText('Pasitikėjimas', 'Confidence'))}</th>
                             <th>${escapeHtml(langText('Atitikę šaltiniai', 'Matched source items'))}</th>
+                            <th>${escapeHtml(langText('Persidengimas', 'Overlap'))}</th>
                             <th>${escapeHtml(langText('Įrodymai', 'Evidence'))}</th>
                             <th>${escapeHtml(langText('Paaiškinimas', 'Explanation'))}</th>
                             <th>${escapeHtml(langText('Veiksmas', 'Action'))}</th>
@@ -1681,41 +1673,31 @@ function renderPolicyAlignmentView() {
                         <tbody>
                           ${filteredFindings.length
                             ? renderPolicyAlignmentCoverageRows(grouped, suggestionByFindingId, sourceRefById)
-                            : `<tr><td colspan="7">${escapeHtml(langText('Pagal pasirinktus filtrus įrašų nerasta.', 'No findings match the selected filters.'))}</td></tr>`}
+                            : `<tr><td colspan="8">${escapeHtml(langText('Pagal pasirinktus filtrus įrašų nerasta.', 'No findings match the selected filters.'))}</td></tr>`}
                         </tbody>
                       </table>
                     </div>
                   </section>
 
-                  <section>
-                    <div class="card">
-                      <div class="guideline-group-header">
-                        <strong>${escapeHtml(langText('Persidengimų ir ryšių vaizdas', 'Overlap and mapping view'))}</strong>
-                        <span class="tag">${overlapFindings.length}</span>
-                      </div>
-                      ${overlapFindings.length
-                        ? `<div class="history-table-wrap">
-                            <table class="history-table policy-alignment-table">
-                              <thead>
-                                <tr>
-                                  <th>${escapeHtml(langText('Reikalavimas', 'Requirement'))}</th>
-                                  <th>${escapeHtml(langText('Susieti šaltiniai', 'Mapped sources'))}</th>
-                                  <th>${escapeHtml(langText('Persidengimas', 'Overlap'))}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                ${overlapFindings.map((finding) => `
-                                  <tr>
-                                    <td>${escapeHtml(finding.requirementTitle || '-')}</td>
-                                    <td><div class="policy-alignment-chip-list">${renderPolicyAlignmentMatchedRefs(finding)}</div></td>
-                                    <td>${escapeHtml(finding.overlapSummary || finding.explanation || '-')}</td>
-                                  </tr>
-                                `).join('')}
-                              </tbody>
-                            </table>
-                          </div>`
-                        : `<p class="prompt">${escapeHtml(langText('Persidengimų šiame filtre nėra.', 'No overlaps in the current filter set.'))}</p>`}
+                  <section class="card" style="margin-bottom: 16px;">
+                    <div class="guideline-group-header">
+                      <strong>${escapeHtml(langText('Trūkumų analizė', 'Gap analysis'))}</strong>
+                      <span class="tag">${gapFindings.length}</span>
                     </div>
+                    ${gapFindings.length
+                      ? `<div class="policy-alignment-gap-list">
+                          ${gapFindings.map((finding) => `
+                            <article class="policy-alignment-gap-item status-${escapeHtml(String(finding.coverageStatus || 'unclear').trim().toLowerCase())}">
+                              <strong>${escapeHtml(finding.requirementTitle || '-')}</strong>
+                              <div class="policy-alignment-chip-list">
+                                <span class="tag">${escapeHtml(policyAlignmentCoverageLabel(finding.coverageStatus))}</span>
+                                ${finding.theme ? `<span class="tag">${escapeHtml(finding.theme)}</span>` : ''}
+                              </div>
+                              <p>${escapeHtml(finding.explanation || finding.requirementDescription || '-')}</p>
+                            </article>
+                          `).join('')}
+                        </div>`
+                      : `<p class="prompt">${escapeHtml(langText('Šiuo filtruose trūkumų nerasta.', 'No gaps in the current filter set.'))}</p>`}
                   </section>
                 `}
           `
@@ -1758,7 +1740,7 @@ function renderPolicyAlignmentView() {
   elements.stepView.querySelectorAll('[data-action="switch-policy-analysis-subview"]').forEach((button) => {
     button.addEventListener('click', () => {
       const subview = String(button.dataset.subview || 'overview').trim().toLowerCase();
-      state.policyAlignmentAnalysisSubview = ['overview', 'overlap', 'gap', 'actions'].includes(subview) ? subview : 'overview';
+      state.policyAlignmentAnalysisSubview = ['overview', 'analysis', 'actions'].includes(subview) ? subview : 'overview';
       renderPolicyAlignmentView();
     });
   });
@@ -1802,13 +1784,6 @@ function renderPolicyAlignmentView() {
           state.policyAlignmentDetailLoading = false;
           renderPolicyAlignmentView();
         });
-    });
-  });
-
-  elements.stepView.querySelectorAll('[data-action="open-policy-action-panel"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.policyAlignmentAnalysisSubview = 'actions';
-      renderPolicyAlignmentView();
     });
   });
 
