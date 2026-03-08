@@ -6433,6 +6433,50 @@ body.meta-admin-page .tag-slug {
   font: 13px/1.6 Consolas, Monaco, monospace;
   color: #22395d;
 }
+.policy-alignment-requirement-heading {
+  display: grid;
+  gap: 8px;
+}
+.policy-alignment-reference-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.policy-alignment-reference-tag {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid #bfd1eb;
+  background: #f6faff;
+  color: #214b77;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.policy-alignment-reference-tag:hover {
+  transform: translateY(-1px);
+  border-color: #8fb3e4;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(34, 75, 119, 0.12);
+}
+.policy-alignment-reference-tag:focus-visible {
+  outline: 2px solid #2b5bff;
+  outline-offset: 2px;
+}
+.policy-alignment-evidence-focus {
+  display: grid;
+  gap: 12px;
+}
+.policy-alignment-highlight {
+  background: #fff1a8;
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 2px;
+}
 .policy-alignment-create-form textarea {
   min-height: 82px;
 }

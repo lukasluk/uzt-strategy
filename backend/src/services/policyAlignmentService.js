@@ -409,7 +409,7 @@ function createPolicyAlignmentService({ query, uuid }) {
     const framework = await loadFrameworkById(frameworkId);
     if (!framework) return null;
 
-    const [documentsRes, requirementsRes] = await Promise.all([
+    const [documentsRes, requirementsRes, chunksRes] = await Promise.all([
       query(
         `select *
          from policy_alignment_documents
@@ -423,12 +423,22 @@ function createPolicyAlignmentService({ query, uuid }) {
          where framework_id = $1
          order by ordinal asc, created_at asc`,
         [frameworkId]
+      ),
+      query(
+        `select chunk.*
+         from policy_alignment_chunks chunk
+         inner join policy_alignment_documents document
+           on document.id = chunk.document_id
+         where document.framework_id = $1
+         order by chunk.ordinal asc, chunk.created_at asc`,
+        [frameworkId]
       )
     ]);
 
     return {
       ...framework,
       documents: documentsRes.rows.map(mapDocumentRow),
+      chunks: chunksRes.rows.map(mapChunkRow),
       requirements: requirementsRes.rows.map(mapRequirementRow),
       requirementCount: requirementsRes.rowCount || 0,
       documentCount: documentsRes.rowCount || 0

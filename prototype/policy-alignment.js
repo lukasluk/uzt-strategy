@@ -143,6 +143,7 @@ function normalizePolicyAlignmentFramework(value) {
     createdAt: value.createdAt || value.created_at || null,
     updatedAt: value.updatedAt || value.updated_at || null,
     documents: Array.isArray(value.documents) ? value.documents : [],
+    chunks: Array.isArray(value.chunks) ? value.chunks : [],
     requirements: Array.isArray(value.requirements) ? value.requirements : []
   };
 }
@@ -725,9 +726,58 @@ async function loadPolicyAlignmentFrameworkDetail(frameworkId, { silent = false 
 }
 
 function openPolicyAlignmentFrameworkDocumentModal(framework, documentRecord) {
+  return openPolicyAlignmentFrameworkEvidenceModal(framework, {
+    documentId: documentRecord?.id || null
+  });
+}
+
+function highlightPolicyAlignmentQuote(text, quote) {
+  const sourceText = String(text || '');
+  const sourceQuote = String(quote || '').trim();
+  const escapedText = escapeHtml(sourceText);
+  if (!sourceQuote) return escapedText;
+
+  const lowerText = sourceText.toLowerCase();
+  const lowerQuote = sourceQuote.toLowerCase();
+  const start = lowerText.indexOf(lowerQuote);
+  if (start < 0) return escapedText;
+
+  const before = sourceText.slice(0, start);
+  const matched = sourceText.slice(start, start + sourceQuote.length);
+  const after = sourceText.slice(start + sourceQuote.length);
+  return `${escapeHtml(before)}<mark class="policy-alignment-highlight">${escapeHtml(matched)}</mark>${escapeHtml(after)}`;
+}
+
+function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
   const currentFramework = framework && typeof framework === 'object' ? framework : null;
-  const documentItem = documentRecord && typeof documentRecord === 'object' ? documentRecord : null;
+  const targetDocumentId = String(options?.documentId || '').trim();
+  const targetChunkOrdinal = Number.isFinite(Number(options?.chunkOrdinal)) ? Number(options.chunkOrdinal) : null;
+  const highlightQuote = String(options?.quote || '').trim();
+  const requirementTitle = String(options?.requirementTitle || '').trim();
+  const documentItem = (Array.isArray(currentFramework?.documents) ? currentFramework.documents : [])
+    .find((item) => String(item?.id || '').trim() === targetDocumentId)
+    || (Array.isArray(currentFramework?.documents) ? currentFramework.documents[0] : null);
   if (!currentFramework?.id || !documentItem?.id) return;
+
+  const frameworkChunks = Array.isArray(currentFramework?.chunks) ? currentFramework.chunks : [];
+  const relevantChunk = targetChunkOrdinal === null
+    ? null
+    : frameworkChunks.find((item) => Number(item?.ordinal) === targetChunkOrdinal && String(item?.documentId || '').trim() === String(documentItem.id || '').trim())
+      || frameworkChunks.find((item) => Number(item?.ordinal) === targetChunkOrdinal)
+      || null;
+  const bodyHtml = relevantChunk
+    ? `
+      <div class="policy-alignment-evidence-focus">
+        <div class="policy-alignment-document-meta">
+          <span class="tag">${escapeHtml(langText('Reference', 'Reference'))}: ${escapeHtml(String(targetChunkOrdinal))}</span>
+          ${relevantChunk.sectionPath ? `<span class="tag">${escapeHtml(relevantChunk.sectionPath)}</span>` : ''}
+          ${relevantChunk.heading ? `<span class="tag">${escapeHtml(relevantChunk.heading)}</span>` : ''}
+        </div>
+        ${requirementTitle ? `<p class="prompt" style="margin: 0 0 10px;"><strong>${escapeHtml(langText('Requirement', 'Requirement'))}:</strong> ${escapeHtml(requirementTitle)}</p>` : ''}
+        <div class="policy-alignment-document-body"><pre>${highlightPolicyAlignmentQuote(String(relevantChunk.textExcerpt || '').trim(), highlightQuote)}</pre></div>
+      </div>
+    `
+    : `<div class="policy-alignment-document-body"><pre>${escapeHtml(String(documentItem.extractedText || '').trim() || langText('No extracted text available.', 'No extracted text available.'))}</pre></div>`;
 
   const existing = document.getElementById('policyAlignmentFrameworkDocOverlay');
   if (existing) existing.remove();
@@ -749,7 +799,7 @@ function openPolicyAlignmentFrameworkDocumentModal(framework, documentRecord) {
         <span class="tag">${escapeHtml(langText('Uploaded', 'Uploaded'))}: ${escapeHtml(formatCommentDateTime(documentItem.createdAt))}</span>
         <span class="tag">${escapeHtml(langText('Chars', 'Chars'))}: ${Number(documentItem.meta?.chars || String(documentItem.extractedText || '').length || 0)}</span>
       </div>
-      <div class="policy-alignment-document-body"><pre>${escapeHtml(String(documentItem.extractedText || '').trim() || langText('No extracted text available.', 'No extracted text available.'))}</pre></div>
+      ${bodyHtml}
     </div>
   `;
   document.body.appendChild(overlay);
@@ -762,6 +812,49 @@ function openPolicyAlignmentFrameworkDocumentModal(framework, documentRecord) {
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) closeModal();
   });
+}
+
+function buildPolicyAlignmentRequirementReferences(requirement, framework) {
+  const chunks = Array.isArray(framework?.chunks) ? framework.chunks : [];
+  const documents = Array.isArray(framework?.documents) ? framework.documents : [];
+  const byDocumentId = new Map(documents.map((item) => [String(item?.id || '').trim(), item]));
+  const seen = new Set();
+  const sourceDocumentId = String(requirement?.sourceDocumentId || '').trim();
+
+  return (Array.isArray(requirement?.evidence) ? requirement.evidence : [])
+    .map((entry) => {
+      const chunkOrdinal = Number.isFinite(Number(entry?.chunkOrdinal)) ? Number(entry.chunkOrdinal) : null;
+      if (chunkOrdinal === null) return null;
+      const token = `${chunkOrdinal}:${String(entry?.quote || '').trim().toLowerCase()}`;
+      if (seen.has(token)) return null;
+      seen.add(token);
+      const quote = String(entry?.quote || '').trim();
+      const normalizedQuote = quote.toLowerCase();
+      const chunk = chunks.find((item) => (
+        Number(item?.ordinal) === chunkOrdinal
+        && (!sourceDocumentId || String(item?.documentId || '').trim() === sourceDocumentId)
+      ))
+        || chunks.find((item) => (
+          Number(item?.ordinal) === chunkOrdinal
+          && normalizedQuote
+          && String(item?.textExcerpt || '').toLowerCase().includes(normalizedQuote)
+        ))
+        || chunks.find((item) => (
+          normalizedQuote
+          && String(item?.textExcerpt || '').toLowerCase().includes(normalizedQuote)
+          && (!sourceDocumentId || String(item?.documentId || '').trim() === sourceDocumentId)
+        ))
+        || chunks.find((item) => Number(item?.ordinal) === chunkOrdinal)
+        || null;
+      const documentId = String(chunk?.documentId || sourceDocumentId || '').trim();
+      return {
+        chunkOrdinal,
+        quote,
+        chunk,
+        document: byDocumentId.get(documentId) || null
+      };
+    })
+    .filter(Boolean);
 }
 
 function openPolicyAlignmentFrameworkCreateModal() {
@@ -1950,7 +2043,30 @@ function renderPolicyAlignmentView() {
                             ${frameworkRequirements.slice(0, 80).map((requirement) => `
                               <tr>
                                 <td>${escapeHtml(requirement.theme || '-')}</td>
-                                <td><strong>${escapeHtml(requirement.title || '-')}</strong></td>
+                                <td>
+                                  <div class="policy-alignment-requirement-heading">
+                                    <strong>${escapeHtml(requirement.title || '-')}</strong>
+                                    ${(() => {
+                                      const refs = buildPolicyAlignmentRequirementReferences(requirement, framework);
+                                      return refs.length
+                                        ? `<div class="policy-alignment-reference-tags">
+                                            ${refs.map((ref) => `
+                                              <button
+                                                type="button"
+                                                class="policy-alignment-reference-tag"
+                                                data-action="open-policy-framework-reference"
+                                                data-document-id="${escapeHtml(String(ref.document?.id || ''))}"
+                                                data-chunk-ordinal="${escapeHtml(String(ref.chunkOrdinal))}"
+                                                data-quote="${escapeHtml(ref.quote || '')}"
+                                                data-requirement-title="${escapeHtml(requirement.title || '')}"
+                                                title="${escapeHtml(ref.document?.filename || langText('Source reference', 'Source reference'))}"
+                                              >${escapeHtml(String(ref.chunkOrdinal))}</button>
+                                            `).join('')}
+                                          </div>`
+                                        : '';
+                                    })()}
+                                  </div>
+                                </td>
                                 <td>${escapeHtml(requirement.description || '-')}</td>
                               </tr>
                             `).join('')}
@@ -2299,6 +2415,19 @@ function renderPolicyAlignmentView() {
       const documentItem = (Array.isArray(currentFramework?.documents) ? currentFramework.documents : []).find((item) => String(item?.id || '').trim() === documentId);
       if (!currentFramework || !documentItem) return;
       openPolicyAlignmentFrameworkDocumentModal(currentFramework, documentItem);
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="open-policy-framework-reference"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const currentFramework = selectedPolicyAlignmentFrameworkFromState();
+      if (!currentFramework) return;
+      openPolicyAlignmentFrameworkEvidenceModal(currentFramework, {
+        documentId: String(button.dataset.documentId || '').trim(),
+        chunkOrdinal: Number(button.dataset.chunkOrdinal),
+        quote: String(button.dataset.quote || '').trim(),
+        requirementTitle: String(button.dataset.requirementTitle || '').trim()
+      });
     });
   });
 
