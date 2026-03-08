@@ -2801,8 +2801,9 @@ function renderSteps() {
     const alignmentCard = document.createElement('div');
     alignmentCard.className = `step-utility-card policy-alignment-nav-card${state.activeView === 'policy-alignment' ? ' active' : ''}${canOpenPolicyAlignment ? '' : ' locked'}`;
 
-    const currentPolicyAlignmentTab = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase() === 'analyses'
-      ? 'analyses'
+    const currentPolicyAlignmentTabRaw = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase();
+    const currentPolicyAlignmentTab = ['frameworks', 'strategy-analysis', 'external-analysis'].includes(currentPolicyAlignmentTabRaw)
+      ? currentPolicyAlignmentTabRaw
       : 'frameworks';
     const disabledAttr = canOpenPolicyAlignment ? '' : 'disabled';
     const lockHint = canOpenPolicyAlignment
@@ -2818,7 +2819,8 @@ function renderSteps() {
       </div>
       <div class="policy-alignment-nav-actions">
         <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'frameworks' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="frameworks"${disabledAttr}${lockHint}>${escapeHtml(langText('Politikos karkasas', 'Policy framework'))}</button>
-        <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'analyses' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="analyses"${disabledAttr}${lockHint}>${escapeHtml(langText('Analizė', 'Analysis'))}</button>
+        <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'strategy-analysis' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="strategy-analysis"${disabledAttr}${lockHint}>${escapeHtml(langText('Strategijos analizė', 'Strategy analysis'))}</button>
+        <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'external-analysis' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="external-analysis"${disabledAttr}${lockHint}>${escapeHtml(langText('Išorinė analizė', 'External analysis'))}</button>
       </div>
     `;
 
@@ -2828,10 +2830,13 @@ function renderSteps() {
     alignmentCard.querySelectorAll('[data-policy-alignment-nav]').forEach((button) => {
       button.addEventListener('click', () => {
         if (!canOpenPolicyAlignment) return;
-        state.policyAlignmentWorkspaceTab = String(button.getAttribute('data-policy-alignment-nav') || 'frameworks').trim().toLowerCase() === 'analyses'
-          ? 'analyses'
+        const nextTab = String(button.getAttribute('data-policy-alignment-nav') || 'frameworks').trim().toLowerCase();
+        state.policyAlignmentWorkspaceTab = ['frameworks', 'strategy-analysis', 'external-analysis'].includes(nextTab)
+          ? nextTab
           : 'frameworks';
         state.policyAlignmentAnalysisSubview = 'overview';
+        state.policyAlignmentSelectedId = '';
+        state.policyAlignmentCurrent = null;
         state.expandedStepId = '';
         if (state.activeView === 'policy-alignment') {
           syncRouteState();
