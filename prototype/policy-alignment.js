@@ -745,7 +745,7 @@ function highlightPolicyAlignmentQuote(text, quote) {
   const before = sourceText.slice(0, start);
   const matched = sourceText.slice(start, start + sourceQuote.length);
   const after = sourceText.slice(start + sourceQuote.length);
-  return `${escapeHtml(before)}<mark class="policy-alignment-highlight">${escapeHtml(matched)}</mark>${escapeHtml(after)}`;
+  return `${escapeHtml(before)}<mark class="policy-alignment-highlight" data-policy-alignment-highlight="true">${escapeHtml(matched)}</mark>${escapeHtml(after)}`;
 }
 
 function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
@@ -765,19 +765,28 @@ function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
     : frameworkChunks.find((item) => Number(item?.ordinal) === targetChunkOrdinal && String(item?.documentId || '').trim() === String(documentItem.id || '').trim())
       || frameworkChunks.find((item) => Number(item?.ordinal) === targetChunkOrdinal)
       || null;
-  const bodyHtml = relevantChunk
-    ? `
-      <div class="policy-alignment-evidence-focus">
+  const fullDocumentText = String(documentItem.extractedText || '').trim();
+  const bodyHtml = `
+    <div class="policy-alignment-evidence-focus">
+      ${relevantChunk ? `
         <div class="policy-alignment-document-meta">
           <span class="tag">${escapeHtml(langText('Reference', 'Reference'))}: ${escapeHtml(String(targetChunkOrdinal))}</span>
           ${relevantChunk.sectionPath ? `<span class="tag">${escapeHtml(relevantChunk.sectionPath)}</span>` : ''}
           ${relevantChunk.heading ? `<span class="tag">${escapeHtml(relevantChunk.heading)}</span>` : ''}
         </div>
-        ${requirementTitle ? `<p class="prompt" style="margin: 0 0 10px;"><strong>${escapeHtml(langText('Requirement', 'Requirement'))}:</strong> ${escapeHtml(requirementTitle)}</p>` : ''}
-        <div class="policy-alignment-document-body"><pre>${highlightPolicyAlignmentQuote(String(relevantChunk.textExcerpt || '').trim(), highlightQuote)}</pre></div>
+      ` : ''}
+      ${requirementTitle ? `<p class="prompt" style="margin: 0;"><strong>${escapeHtml(langText('Requirement', 'Requirement'))}:</strong> ${escapeHtml(requirementTitle)}</p>` : ''}
+      ${relevantChunk?.textExcerpt ? `
+        <div class="policy-alignment-evidence-context">
+          <strong>${escapeHtml(langText('Referenced excerpt', 'Referenced excerpt'))}</strong>
+          <p>${highlightPolicyAlignmentQuote(String(relevantChunk.textExcerpt || '').trim(), highlightQuote)}</p>
+        </div>
+      ` : ''}
+      <div class="policy-alignment-document-body" data-policy-alignment-document-body="true">
+        <pre>${highlightPolicyAlignmentQuote(fullDocumentText || langText('No extracted text available.', 'No extracted text available.'), highlightQuote)}</pre>
       </div>
-    `
-    : `<div class="policy-alignment-document-body"><pre>${escapeHtml(String(documentItem.extractedText || '').trim() || langText('No extracted text available.', 'No extracted text available.'))}</pre></div>`;
+    </div>
+  `;
 
   const existing = document.getElementById('policyAlignmentFrameworkDocOverlay');
   if (existing) existing.remove();
@@ -811,6 +820,12 @@ function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
   overlay.querySelector('#closePolicyAlignmentFrameworkDocModal')?.addEventListener('click', closeModal);
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) closeModal();
+  });
+  requestAnimationFrame(() => {
+    const body = overlay.querySelector('[data-policy-alignment-document-body="true"]');
+    const highlight = overlay.querySelector('[data-policy-alignment-highlight="true"]');
+    if (!body || !highlight || typeof highlight.scrollIntoView !== 'function') return;
+    highlight.scrollIntoView({ block: 'center', inline: 'nearest' });
   });
 }
 
