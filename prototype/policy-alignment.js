@@ -509,7 +509,7 @@ function renderPolicyAlignmentOverlap(finding) {
 function renderPolicyAlignmentCoverageRows(grouped, suggestionByFindingId, sourceRefById) {
   return grouped.map((group) => `
     ${group.theme
-    ? `<tr class="policy-alignment-theme-row"><td colspan="8">${escapeHtml(group.theme)}</td></tr>`
+    ? `<tr class="policy-alignment-theme-row"><td colspan="7">${escapeHtml(group.theme)}</td></tr>`
     : ''}
     ${group.items.map((finding) => {
     const suggestion = suggestionByFindingId.get(String(finding?.id || '').trim()) || null;
@@ -538,7 +538,6 @@ function renderPolicyAlignmentCoverageRows(grouped, suggestionByFindingId, sourc
             </td>
             <td><span class="tag">${escapeHtml(policyAlignmentCoverageLabel(finding?.coverageStatus))}</span></td>
             <td>${escapeHtml(confidence)}</td>
-            <td><div class="policy-alignment-chip-list">${renderPolicyAlignmentMatchedRefs(finding)}</div></td>
             <td>${renderPolicyAlignmentOverlap(finding)}</td>
             <td>${renderPolicyAlignmentEvidence(finding, sourceRefById)}</td>
             <td>${escapeHtml(finding?.explanation || '-')}</td>
@@ -1236,7 +1235,6 @@ function renderPolicyAlignmentView() {
     sourceRefById,
     themeOptions
   } = buildPolicyAlignmentFindingsModel(analysis);
-  const gapFindings = filteredFindings.filter((item) => policyAlignmentFindingRisky(item?.coverageStatus));
   const activeTab = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase() === 'analyses' ? 'analyses' : 'frameworks';
   const analysisSubviewRaw = String(state.policyAlignmentAnalysisSubview || 'overview').trim().toLowerCase();
   const analysisSubview = ['overview', 'analysis', 'actions'].includes(analysisSubviewRaw) ? analysisSubviewRaw : 'overview';
@@ -1645,7 +1643,6 @@ function renderPolicyAlignmentView() {
                             <th>${escapeHtml(langText('Tikslinis reikalavimas', 'Target requirement'))}</th>
                             <th>${escapeHtml(langText('Būsena', 'Status'))}</th>
                             <th>${escapeHtml(langText('Pasitikėjimas', 'Confidence'))}</th>
-                            <th>${escapeHtml(langText('Atitikę šaltiniai', 'Matched source items'))}</th>
                             <th>${escapeHtml(langText('Persidengimas', 'Overlap'))}</th>
                             <th>${escapeHtml(langText('Įrodymai', 'Evidence'))}</th>
                             <th>${escapeHtml(langText('Paaiškinimas', 'Explanation'))}</th>
@@ -1655,31 +1652,10 @@ function renderPolicyAlignmentView() {
                         <tbody>
                           ${filteredFindings.length
                             ? renderPolicyAlignmentCoverageRows(grouped, suggestionByFindingId, sourceRefById)
-                            : `<tr><td colspan="8">${escapeHtml(langText('Pagal pasirinktus filtrus įrašų nerasta.', 'No findings match the selected filters.'))}</td></tr>`}
+                            : `<tr><td colspan="7">${escapeHtml(langText('Pagal pasirinktus filtrus įrašų nerasta.', 'No findings match the selected filters.'))}</td></tr>`}
                         </tbody>
                       </table>
                     </div>
-                  </section>
-
-                  <section class="card" style="margin-bottom: 16px;">
-                    <div class="guideline-group-header">
-                      <strong>${escapeHtml(langText('Trūkumų analizė', 'Gap analysis'))}</strong>
-                      <span class="tag">${gapFindings.length}</span>
-                    </div>
-                    ${gapFindings.length
-                      ? `<div class="policy-alignment-gap-list">
-                          ${gapFindings.map((finding) => `
-                            <article class="policy-alignment-gap-item status-${escapeHtml(String(finding.coverageStatus || 'unclear').trim().toLowerCase())}">
-                              <strong>${escapeHtml(finding.requirementTitle || '-')}</strong>
-                              <div class="policy-alignment-chip-list">
-                                <span class="tag">${escapeHtml(policyAlignmentCoverageLabel(finding.coverageStatus))}</span>
-                                ${finding.theme ? `<span class="tag">${escapeHtml(finding.theme)}</span>` : ''}
-                              </div>
-                              <p>${escapeHtml(finding.explanation || finding.requirementDescription || '-')}</p>
-                            </article>
-                          `).join('')}
-                        </div>`
-                      : `<p class="prompt">${escapeHtml(langText('Šiuo filtruose trūkumų nerasta.', 'No gaps in the current filter set.'))}</p>`}
                   </section>
                 `}
           `
