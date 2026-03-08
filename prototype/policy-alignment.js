@@ -1240,7 +1240,8 @@ function renderPolicyAlignmentView() {
   const activeTab = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase() === 'analyses' ? 'analyses' : 'frameworks';
   const analysisSubviewRaw = String(state.policyAlignmentAnalysisSubview || 'overview').trim().toLowerCase();
   const analysisSubview = ['overview', 'analysis', 'actions'].includes(analysisSubviewRaw) ? analysisSubviewRaw : 'overview';
-  const sidebarCollapsed = !!state.policyAlignmentSidebarCollapsed;
+  state.policyAlignmentSidebarCollapsed = false;
+  const sidebarCollapsed = false;
   const frameworkDocuments = Array.isArray(framework?.documents) ? framework.documents : [];
   const frameworkRequirements = Array.isArray(framework?.requirements) ? framework.requirements : [];
   const analysisProcessing = ['draft', 'queued', 'processing'].includes(String(analysis?.status || '').trim().toLowerCase());
@@ -1266,18 +1267,6 @@ function renderPolicyAlignmentView() {
       ? `<div class="card" style="margin-bottom: 12px;"><strong>${escapeHtml(langText('Atnaujinami Policy Alignment duomenys...', 'Refreshing Policy Alignment data...'))}</strong></div>`
       : ''}
 
-    ${sidebarCollapsed
-      ? `<div class="card policy-alignment-collapsed-actions" style="margin-bottom: 16px;">
-          <div class="policy-alignment-sidebar-actions">
-            ${activeTab === 'frameworks'
-              ? `<button id="openPolicyAlignmentFrameworkCreateBtn" class="btn btn-primary" ${state.role === 'institution_admin' ? '' : 'disabled'}>${escapeHtml(langText('Naujas politikos karkasas', 'New policy framework'))}</button>`
-              : `<button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${(state.role === 'institution_admin' && frameworks.some((item) => policyAlignmentFrameworkReady(item))) ? '' : 'disabled'}>${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>`}
-            <button id="refreshPolicyAlignmentBtn" class="btn btn-ghost">${escapeHtml(langText('Atnaujinti', 'Refresh'))}</button>
-            <button id="togglePolicyAlignmentSidebarBtn" class="btn btn-ghost">${escapeHtml(langText('Rodyti skydelį', 'Show panel'))}</button>
-          </div>
-        </div>`
-      : ''}
-
     <section class="policy-alignment-layout${sidebarCollapsed ? ' sidebar-collapsed' : ''}">
       <div class="policy-alignment-column policy-alignment-sidebar">
         ${activeTab === 'frameworks'
@@ -1289,8 +1278,6 @@ function renderPolicyAlignmentView() {
                 </div>
                 <div class="policy-alignment-sidebar-actions">
                   <button id="openPolicyAlignmentFrameworkCreateBtn" class="btn btn-primary" ${state.role === 'institution_admin' ? '' : 'disabled'}>${escapeHtml(langText('Naujas politikos karkasas', 'New policy framework'))}</button>
-                  <button id="refreshPolicyAlignmentBtn" class="btn btn-ghost">${escapeHtml(langText('Atnaujinti', 'Refresh'))}</button>
-                  <button id="togglePolicyAlignmentSidebarBtn" class="btn btn-ghost">${escapeHtml(langText('Slėpti skydelį', 'Hide panel'))}</button>
                 </div>
                 ${state.policyAlignmentFrameworkError ? `<p class="prompt">${escapeHtml(state.policyAlignmentFrameworkError)}</p>` : ''}
                 ${frameworks.length
@@ -1343,12 +1330,7 @@ function renderPolicyAlignmentView() {
                 </div>
                 <div class="policy-alignment-sidebar-actions">
                   <button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${(state.role === 'institution_admin' && frameworks.some((item) => policyAlignmentFrameworkReady(item))) ? '' : 'disabled'}>${escapeHtml(langText('Nauja analizė', 'New analysis'))}</button>
-                  <button id="refreshPolicyAlignmentBtn" class="btn btn-ghost">${escapeHtml(langText('Atnaujinti', 'Refresh'))}</button>
-                  <button id="togglePolicyAlignmentSidebarBtn" class="btn btn-ghost">${escapeHtml(langText('Slėpti skydelį', 'Hide panel'))}</button>
                 </div>
-                ${frameworks.length
-                  ? `<p class="prompt">${escapeHtml(langText('Analizes iš pasirinkto politikos karkaso gali kurti tik administratoriai. Jei reikia, grįžkite į pirmą žingsnį ir pasirinkite ar sukurkite karkasą.', 'Only administrators can create analyses from a selected policy framework. If needed, go back to step one and choose or build a framework.'))}</p>`
-                  : `<p class="prompt">${escapeHtml(langText('Pirma sukurkite politikos karkasą iš įkeltų politikos dokumentų. Be karkaso analizės paleisti nereikėtų.', 'Build a policy framework from uploaded policy documents first. Analyses should not start without a framework.'))}</p>`}
                 ${analyses.length
                   ? `<div class="policy-alignment-analysis-list">
                       ${analyses.map((item) => `
