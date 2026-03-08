@@ -1703,9 +1703,9 @@ function renderPolicyAlignmentView() {
   const frameworkDocuments = Array.isArray(framework?.documents) ? framework.documents : [];
   const frameworkRequirements = Array.isArray(framework?.requirements) ? framework.requirements : [];
   const analysisProcessing = ['draft', 'queued', 'processing'].includes(String(analysis?.status || '').trim().toLowerCase());
-  const selectedFrameworkDocumentNames = frameworkDocuments
-    .map((item) => String(item?.filename || '').trim())
-    .filter(Boolean);
+  const frameworkAnalyses = framework
+    ? allAnalyses.filter((item) => String(item?.targetFrameworkId || '').trim() === String(framework.id || '').trim())
+    : [];
   const overview = buildPolicyAlignmentOverviewData(analysis, frameworkById);
 
   if (analysisTabActive && analysis?.id && analysisProcessing && !state.policyAlignmentAnalysisPollTimerId) {
@@ -1749,21 +1749,8 @@ function renderPolicyAlignmentView() {
                             data-framework-id="${escapeHtml(item.id)}"
                           >
                             <strong>${escapeHtml(item.title || item.id)}</strong>
-                            <span>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</span>
-                            <div class="policy-alignment-chip-list">
-                              <span class="tag">${escapeHtml(langText('Requirements', 'Requirements'))}: ${Number(item.requirementCount || 0)}</span>
-                              <span class="tag">${escapeHtml(langText('Documents', 'Documents'))}: ${Number(item.documentCount || 0)}</span>
-                              ${policyAlignmentFrameworkBuildState(item) === 'processing'
-                                ? renderPolicyAlignmentProcessingIndicator(policyAlignmentFrameworkBuildStatusLabel(item))
-                                : `<span class="tag">${escapeHtml(policyAlignmentFrameworkBuildStatusLabel(item))}</span>`}
-                            </div>
-                            ${framework?.id === item.id && selectedFrameworkDocumentNames.length
-                              ? `<div class="policy-alignment-item-docs">
-                                  <span class="policy-alignment-item-docs-label">${escapeHtml(langText('Used documents', 'Used documents'))}</span>
-                                  <div class="policy-alignment-chip-list">
-                                    ${selectedFrameworkDocumentNames.map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join('')}
-                                  </div>
-                                </div>`
+                            ${policyAlignmentFrameworkBuildState(item) === 'processing'
+                              ? `<span class="policy-alignment-library-state">${renderPolicyAlignmentProcessingIndicator(policyAlignmentFrameworkBuildStatusLabel(item))}</span>`
                               : ''}
                           </button>
                           ${state.role === 'institution_admin'
@@ -1861,6 +1848,10 @@ function renderPolicyAlignmentView() {
                       <strong style="font-size:18px;">${escapeHtml(state.institution?.name || state.institutionSlug || '-')}</strong>
                     </div>
                     <div class="policy-alignment-summary-card">
+                      <span>${escapeHtml(langText('Analyses', 'Analyses'))}</span>
+                      <strong>${Number(frameworkAnalyses.length || 0)}</strong>
+                    </div>
+                    <div class="policy-alignment-summary-card">
                       <span>${escapeHtml(langText('Next step', 'Next step'))}</span>
                       <button type="button" class="btn btn-primary policy-alignment-inline-btn" data-action="open-analysis-create-from-framework" ${(state.role === 'institution_admin' && policyAlignmentFrameworkReady(framework)) ? '' : 'disabled'}>${escapeHtml(langText('Create analysis', 'Create analysis'))}</button>
                     </div>
@@ -1900,31 +1891,73 @@ function renderPolicyAlignmentView() {
 
                   <div class="card">
                     <div class="guideline-group-header">
-                      <strong>${escapeHtml(langText('Extracted policy requirements preview', 'Extracted policy requirements preview'))}</strong>
-                      <span class="tag">${frameworkRequirements.length}</span>
+                      <strong>${escapeHtml(langText('Analyses using this policy framework', 'Analyses using this policy framework'))}</strong>
+                      <span class="tag">${frameworkAnalyses.length}</span>
                     </div>
-                    ${frameworkRequirements.length
-                      ? `<div class="history-table-wrap policy-alignment-preview-wrap">
-                          <table class="history-table policy-alignment-table policy-alignment-table-compact">
+                    ${frameworkAnalyses.length
+                      ? `<div class="history-table-wrap policy-alignment-related-table-wrap">
+                          <table class="history-table policy-alignment-related-table">
                             <thead>
                               <tr>
-                                <th>${escapeHtml(langText('Theme', 'Theme'))}</th>
-                                <th>${escapeHtml(langText('Requirement', 'Requirement'))}</th>
-                                <th>${escapeHtml(langText('Description', 'Description'))}</th>
+                                <th>${escapeHtml(langText('Analysis', 'Analysis'))}</th>
+                                <th>${escapeHtml(langText('Type', 'Type'))}</th>
+                                <th>${escapeHtml(langText('Status', 'Status'))}</th>
+                                <th>${escapeHtml(langText('Updated', 'Updated'))}</th>
+                                <th>${escapeHtml(langText('Open', 'Open'))}</th>
                               </tr>
                             </thead>
                             <tbody>
-                              ${frameworkRequirements.slice(0, 60).map((requirement) => `
+                              ${frameworkAnalyses.map((item) => `
                                 <tr>
-                                  <td>${escapeHtml(requirement.theme || '-')}</td>
-                                  <td><strong>${escapeHtml(requirement.title || '-')}</strong></td>
-                                  <td>${escapeHtml(requirement.description || '-')}</td>
+                                  <td><strong>${escapeHtml(item.title || item.id)}</strong></td>
+                                  <td>${escapeHtml(policyAlignmentSourceModeLabel(item.sourceMode))}</td>
+                                  <td>${escapeHtml(policyAlignmentAnalysisStatusLabel(item.status))}</td>
+                                  <td>${escapeHtml(formatCommentDateTime(item.updatedAt || item.createdAt))}</td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      class="btn btn-ghost policy-alignment-table-link-btn"
+                                      data-action="open-framework-linked-analysis"
+                                      data-analysis-id="${escapeHtml(item.id)}"
+                                      data-analysis-tab="${escapeHtml(policyAlignmentAnalysisBucketForMode(item.sourceMode))}"
+                                    >${escapeHtml(langText('Open', 'Open'))}</button>
+                                  </td>
                                 </tr>
                               `).join('')}
                             </tbody>
                           </table>
                         </div>`
-                      : `<p class="prompt">${escapeHtml(langText('No extracted policy requirements stored for this framework yet.', 'No extracted policy requirements stored for this framework yet.'))}</p>`}
+                      : `<p class="prompt">${escapeHtml(langText('No analyses have been run against this policy framework yet.', 'No analyses have been run against this policy framework yet.'))}</p>`}
+                  </div>
+                </section>
+
+                <section class="card">
+                  <div class="guideline-group-header">
+                    <strong>${escapeHtml(langText('Extracted policy requirements preview', 'Extracted policy requirements preview'))}</strong>
+                    <span class="tag">${frameworkRequirements.length}</span>
+                  </div>
+                  ${frameworkRequirements.length
+                    ? `<div class="history-table-wrap policy-alignment-preview-wrap policy-alignment-preview-wrap-wide">
+                        <table class="history-table policy-alignment-table policy-alignment-table-compact">
+                          <thead>
+                            <tr>
+                              <th>${escapeHtml(langText('Theme', 'Theme'))}</th>
+                              <th>${escapeHtml(langText('Requirement', 'Requirement'))}</th>
+                              <th>${escapeHtml(langText('Description', 'Description'))}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${frameworkRequirements.slice(0, 80).map((requirement) => `
+                              <tr>
+                                <td>${escapeHtml(requirement.theme || '-')}</td>
+                                <td><strong>${escapeHtml(requirement.title || '-')}</strong></td>
+                                <td>${escapeHtml(requirement.description || '-')}</td>
+                              </tr>
+                            `).join('')}
+                          </tbody>
+                        </table>
+                      </div>`
+                    : `<p class="prompt">${escapeHtml(langText('No extracted policy requirements stored for this framework yet.', 'No extracted policy requirements stored for this framework yet.'))}</p>`}
                   </div>
                 </section>
               `
@@ -2239,6 +2272,23 @@ function renderPolicyAlignmentView() {
       if (!frameworkId) return;
       state.policyAlignmentFrameworkSelectedId = frameworkId;
       void loadPolicyAlignmentFrameworkDetail(frameworkId, { silent: false });
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="open-framework-linked-analysis"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const analysisId = String(button.dataset.analysisId || '').trim();
+      const nextTab = String(button.dataset.analysisTab || '').trim().toLowerCase();
+      if (!analysisId) return;
+      state.policyAlignmentWorkspaceTab = nextTab === 'external-analysis' ? 'external-analysis' : 'strategy-analysis';
+      state.policyAlignmentSelectedId = analysisId;
+      state.policyAlignmentAnalysisSubview = 'overview';
+      const cached = state.policyAlignments.find((item) => item.id === analysisId) || null;
+      if (cached) {
+        state.policyAlignmentCurrent = cached;
+      }
+      renderPolicyAlignmentView();
+      void loadPolicyAlignmentDetail(analysisId, { silent: false });
     });
   });
 
