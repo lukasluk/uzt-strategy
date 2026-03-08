@@ -776,12 +776,6 @@ function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
         </div>
       ` : ''}
       ${requirementTitle ? `<p class="prompt" style="margin: 0;"><strong>${escapeHtml(langText('Requirement', 'Requirement'))}:</strong> ${escapeHtml(requirementTitle)}</p>` : ''}
-      ${relevantChunk?.textExcerpt ? `
-        <div class="policy-alignment-evidence-context">
-          <strong>${escapeHtml(langText('Referenced excerpt', 'Referenced excerpt'))}</strong>
-          <p>${highlightPolicyAlignmentQuote(String(relevantChunk.textExcerpt || '').trim(), highlightQuote)}</p>
-        </div>
-      ` : ''}
       <div class="policy-alignment-document-body" data-policy-alignment-document-body="true">
         <pre>${highlightPolicyAlignmentQuote(fullDocumentText || langText('No extracted text available.', 'No extracted text available.'), highlightQuote)}</pre>
       </div>

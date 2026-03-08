@@ -6471,26 +6471,6 @@ body.meta-admin-page .tag-slug {
   display: grid;
   gap: 12px;
 }
-.policy-alignment-evidence-context {
-  border: 1px solid #d8e3f3;
-  border-radius: 14px;
-  background: #f8fbff;
-  padding: 12px 14px;
-  display: grid;
-  gap: 8px;
-}
-.policy-alignment-evidence-context strong {
-  font-size: 13px;
-  color: #27466d;
-}
-.policy-alignment-evidence-context p {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 14px;
-  line-height: 1.65;
-  color: #22395d;
-}
 .policy-alignment-highlight {
   background: #fff1a8;
   color: inherit;
