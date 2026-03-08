@@ -74,6 +74,7 @@ body.embed-map-page .app {
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.68) 0%, rgba(245, 247, 251, 0.22) 100%);
   pointer-events: none;
 }
