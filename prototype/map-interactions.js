@@ -462,6 +462,10 @@ async function persistMapNodePosition(nodeElement) {
 }
 
 function bindMapInteractions(viewport, world, { editable }) {
+  if (state.mapZoomAnimationFrameId) {
+    window.cancelAnimationFrame(state.mapZoomAnimationFrameId);
+    state.mapZoomAnimationFrameId = 0;
+  }
   let dragActive = false;
   let dragStartX = 0;
   let dragStartY = 0;
@@ -472,6 +476,9 @@ function bindMapInteractions(viewport, world, { editable }) {
   let nodeOriginY = 0;
   let movedDuringDrag = false;
   let dragMode = '';
+  let zoomTargetScale = Number(state.mapTransform.scale || 1) || 1;
+  let zoomTargetX = Number(state.mapTransform.x || 0) || 0;
+  let zoomTargetY = Number(state.mapTransform.y || 0) || 0;
   const isNodeDraggableInCurrentLayer = (nodeElement) => {
     if (!editable || !(nodeElement instanceof HTMLElement)) return false;
     if (state.mapLayer === 'strategic-links') return false;
@@ -483,6 +490,44 @@ function bindMapInteractions(viewport, world, { editable }) {
     if (kind === 'initiative') return initiativesLayer;
     if (kind === 'guideline') return !initiativesLayer;
     return nodeElement.dataset.draggable === 'true';
+  };
+
+  const syncZoomTargetsToCurrent = () => {
+    zoomTargetScale = Number(state.mapTransform.scale || 1) || 1;
+    zoomTargetX = Number(state.mapTransform.x || 0) || 0;
+    zoomTargetY = Number(state.mapTransform.y || 0) || 0;
+  };
+
+  const stopZoomAnimation = () => {
+    if (state.mapZoomAnimationFrameId) {
+      window.cancelAnimationFrame(state.mapZoomAnimationFrameId);
+      state.mapZoomAnimationFrameId = 0;
+    }
+    syncZoomTargetsToCurrent();
+  };
+
+  const animateZoomToTarget = () => {
+    const scaleDelta = zoomTargetScale - state.mapTransform.scale;
+    const xDelta = zoomTargetX - state.mapTransform.x;
+    const yDelta = zoomTargetY - state.mapTransform.y;
+    if (Math.abs(scaleDelta) < 0.0008 && Math.abs(xDelta) < 0.5 && Math.abs(yDelta) < 0.5) {
+      state.mapTransform.scale = zoomTargetScale;
+      state.mapTransform.x = zoomTargetX;
+      state.mapTransform.y = zoomTargetY;
+      applyMapTransform(viewport, world);
+      state.mapZoomAnimationFrameId = 0;
+      return;
+    }
+    state.mapTransform.scale += scaleDelta * 0.22;
+    state.mapTransform.x += xDelta * 0.22;
+    state.mapTransform.y += yDelta * 0.22;
+    applyMapTransform(viewport, world);
+    state.mapZoomAnimationFrameId = window.requestAnimationFrame(animateZoomToTarget);
+  };
+
+  const ensureZoomAnimation = () => {
+    if (state.mapZoomAnimationFrameId) return;
+    state.mapZoomAnimationFrameId = window.requestAnimationFrame(animateZoomToTarget);
   };
 
   const onPointerMove = (event) => {
@@ -546,6 +591,7 @@ function bindMapInteractions(viewport, world, { editable }) {
   };
 
   viewport.addEventListener('pointerdown', (event) => {
+    stopZoomAnimation();
     const rawTarget = event.target;
     const target = rawTarget instanceof Element ? rawTarget : rawTarget?.parentElement;
     if (event.button !== 0) return;
@@ -586,25 +632,26 @@ function bindMapInteractions(viewport, world, { editable }) {
 
   viewport.addEventListener('wheel', (event) => {
     event.preventDefault();
+    if (!state.mapZoomAnimationFrameId) syncZoomTargetsToCurrent();
     let delta = Number(event.deltaY || 0);
     if (event.deltaMode === 1) delta *= 16;
     if (event.deltaMode === 2) delta *= Math.max(1, viewport.clientHeight);
     if (!Number.isFinite(delta) || delta === 0) return;
     const zoomFactor = Math.exp(-delta * 0.0015);
     const nextScale = clamp(
-      state.mapTransform.scale * zoomFactor,
+      zoomTargetScale * zoomFactor,
       0.2,
       1.8
     );
-    if (nextScale === state.mapTransform.scale) return;
+    if (nextScale === zoomTargetScale) return;
 
     const rect = viewport.getBoundingClientRect();
     const anchorX = event.clientX - rect.left;
     const anchorY = event.clientY - rect.top;
-    const ratio = nextScale / state.mapTransform.scale;
-    state.mapTransform.x = anchorX - (anchorX - state.mapTransform.x) * ratio;
-    state.mapTransform.y = anchorY - (anchorY - state.mapTransform.y) * ratio;
-    state.mapTransform.scale = nextScale;
-    applyMapTransform(viewport, world);
+    const ratio = nextScale / zoomTargetScale;
+    zoomTargetX = anchorX - (anchorX - zoomTargetX) * ratio;
+    zoomTargetY = anchorY - (anchorY - zoomTargetY) * ratio;
+    zoomTargetScale = nextScale;
+    ensureZoomAnimation();
   }, { passive: false });
 }

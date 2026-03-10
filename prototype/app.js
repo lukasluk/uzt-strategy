@@ -253,6 +253,7 @@ const state = {
   mapPlanProgress: 0,
   mapPlanPlaying: false,
   mapPlanAnimationFrameId: 0,
+  mapZoomAnimationFrameId: 0,
   mapPlanPlaybackStartedAt: 0,
   mapPlanPlaybackMs: MAP_PLAN_PLAYBACK_MS,
   mapSecretAnthracite: false,
