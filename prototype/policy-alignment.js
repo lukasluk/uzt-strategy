@@ -753,7 +753,6 @@ function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
   const targetDocumentId = String(options?.documentId || '').trim();
   const targetChunkOrdinal = Number.isFinite(Number(options?.chunkOrdinal)) ? Number(options.chunkOrdinal) : null;
   const highlightQuote = String(options?.quote || '').trim();
-  const requirementTitle = String(options?.requirementTitle || '').trim();
   const documentItem = (Array.isArray(currentFramework?.documents) ? currentFramework.documents : [])
     .find((item) => String(item?.id || '').trim() === targetDocumentId)
     || (Array.isArray(currentFramework?.documents) ? currentFramework.documents[0] : null);
@@ -768,14 +767,6 @@ function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
   const fullDocumentText = String(documentItem.extractedText || '').trim();
   const bodyHtml = `
     <div class="policy-alignment-evidence-focus">
-      ${relevantChunk ? `
-        <div class="policy-alignment-document-meta">
-          <span class="tag">${escapeHtml(langText('Reference', 'Reference'))}: ${escapeHtml(String(targetChunkOrdinal))}</span>
-          ${relevantChunk.sectionPath ? `<span class="tag">${escapeHtml(relevantChunk.sectionPath)}</span>` : ''}
-          ${relevantChunk.heading ? `<span class="tag">${escapeHtml(relevantChunk.heading)}</span>` : ''}
-        </div>
-      ` : ''}
-      ${requirementTitle ? `<p class="prompt" style="margin: 0;"><strong>${escapeHtml(langText('Requirement', 'Requirement'))}:</strong> ${escapeHtml(requirementTitle)}</p>` : ''}
       <div class="policy-alignment-document-body" data-policy-alignment-document-body="true">
         <pre>${highlightPolicyAlignmentQuote(fullDocumentText || langText('No extracted text available.', 'No extracted text available.'), highlightQuote)}</pre>
       </div>
@@ -801,6 +792,7 @@ function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
         <span class="tag">${escapeHtml(langText('Built into policy framework', 'Built into policy framework'))}</span>
         <span class="tag">${escapeHtml(langText('Uploaded', 'Uploaded'))}: ${escapeHtml(formatCommentDateTime(documentItem.createdAt))}</span>
         <span class="tag">${escapeHtml(langText('Chars', 'Chars'))}: ${Number(documentItem.meta?.chars || String(documentItem.extractedText || '').length || 0)}</span>
+        ${relevantChunk ? `<span class="tag">${escapeHtml(langText('Reference', 'Reference'))}: ${escapeHtml(String(targetChunkOrdinal))}</span>` : ''}
       </div>
       ${bodyHtml}
     </div>
