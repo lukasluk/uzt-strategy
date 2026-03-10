@@ -27,6 +27,20 @@ function parseGuidelineIdsJson(value) {
   }
 }
 
+function parseJsonObject(value) {
+  if (!value) return {};
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch {
+    // ignore invalid json
+  }
+  return {};
+}
+
 function mapProposalRow(row) {
   if (!row) return null;
   return {
@@ -42,6 +56,7 @@ function mapProposalRow(row) {
     parentGuidelineId: row.parent_guideline_id || null,
     lineSide: normalizeLineSide(row.line_side),
     guidelineIds: parseGuidelineIdsJson(row.guideline_ids_json),
+    sourceMeta: parseJsonObject(row.source_meta_json),
     reviewDecision: row.review_decision || null,
     reviewNote: row.review_note || null,
     requestedBy: row.requested_by || null,
@@ -124,6 +139,7 @@ function createProposalModerationService({ query, pool }) {
     description,
     relationType,
     parentGuidelineId,
+    sourceMeta,
     createdBy,
     uuid
   }) {
@@ -154,13 +170,14 @@ function createProposalModerationService({ query, pool }) {
            parent_guideline_id,
            line_side,
            guideline_ids_json,
+           source_meta_json,
            status,
            requested_by
          )
          values (
            $1, $2, $3, $4, 'guideline',
-           $5, $6, $7, $8, 'auto', '[]'::jsonb,
-           'pending', $9
+           $5, $6, $7, $8, 'auto', '[]'::jsonb, $9::jsonb,
+           'pending', $10
          )`,
         [
           proposalId,
@@ -171,6 +188,7 @@ function createProposalModerationService({ query, pool }) {
           String(description || '').trim() || null,
           relation,
           parentId,
+          JSON.stringify(parseJsonObject(sourceMeta)),
           createdBy
         ]
       );
@@ -196,7 +214,8 @@ function createProposalModerationService({ query, pool }) {
             entityKind: 'guideline',
             title: normalizedTitle,
             relationType: relation,
-            parentGuidelineId: parentId || null
+            parentGuidelineId: parentId || null,
+            sourceMeta: parseJsonObject(sourceMeta)
           })
         ]
       );
@@ -223,6 +242,7 @@ function createProposalModerationService({ query, pool }) {
     description,
     lineSide,
     guidelineIds,
+    sourceMeta,
     createdBy,
     uuid
   }) {
@@ -249,13 +269,14 @@ function createProposalModerationService({ query, pool }) {
            parent_guideline_id,
            line_side,
            guideline_ids_json,
+           source_meta_json,
            status,
            requested_by
          )
          values (
            $1, $2, $3, $4, 'initiative',
-           $5, $6, null, null, $7, $8::jsonb,
-           'pending', $9
+           $5, $6, null, null, $7, $8::jsonb, $9::jsonb,
+           'pending', $10
          )`,
         [
           proposalId,
@@ -266,6 +287,7 @@ function createProposalModerationService({ query, pool }) {
           String(description || '').trim() || null,
           normalizedLineSide,
           JSON.stringify(normalizedGuidelineIds),
+          JSON.stringify(parseJsonObject(sourceMeta)),
           createdBy
         ]
       );
@@ -291,7 +313,8 @@ function createProposalModerationService({ query, pool }) {
             entityKind: 'initiative',
             title: normalizedTitle,
             lineSide: normalizedLineSide,
-            guidelineIds: normalizedGuidelineIds
+            guidelineIds: normalizedGuidelineIds,
+            sourceMeta: parseJsonObject(sourceMeta)
           })
         ]
       );
@@ -772,6 +795,7 @@ function createProposalModerationService({ query, pool }) {
       let finalLineSide = null;
       let finalGuidelineIds = [];
       const finalEntityId = uuid();
+      const sourceMeta = parseJsonObject(proposal.source_meta_json);
 
       if (proposal.entity_kind === 'guideline') {
         finalRelationType = normalizeRelationType(
@@ -810,6 +834,22 @@ function createProposalModerationService({ query, pool }) {
             proposal.requested_by || actorId
           ]
         );
+
+        const sourceGuidelineId = String(sourceMeta?.sourceGuidelineId || '').trim();
+        const sourceRelationType = String(sourceMeta?.sourceRelationType || '').trim().toLowerCase();
+        if (finalRelationType === 'parent' && sourceRelationType === 'parent' && sourceGuidelineId && sourceGuidelineId !== finalEntityId) {
+          const [firstId, secondId] = sourceGuidelineId < finalEntityId
+            ? [sourceGuidelineId, finalEntityId]
+            : [finalEntityId, sourceGuidelineId];
+          await client.query(
+            `insert into strategy_guideline_links (id, source_guideline_id, target_guideline_id, created_by)
+             select $1, $2, $3, $4
+             where exists (select 1 from strategy_guidelines where id = $2)
+               and exists (select 1 from strategy_guidelines where id = $3)
+             on conflict (source_guideline_id, target_guideline_id) do nothing`,
+            [uuid(), firstId, secondId, actorId]
+          );
+        }
       } else {
         finalLineSide = 'auto';
         const sourceGuidelineIds = normalizedDecision === 'approved_with_changes' && Array.isArray(patch.guidelineIds)

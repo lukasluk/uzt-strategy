@@ -270,6 +270,7 @@ create table if not exists strategy_card_proposals (
   parent_guideline_id uuid references strategy_guidelines(id) on delete set null,
   line_side text check (line_side in ('auto', 'left', 'right', 'top', 'bottom')),
   guideline_ids_json jsonb not null default '[]'::jsonb,
+  source_meta_json jsonb not null default '{}'::jsonb,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'cancelled')),
   review_decision text check (review_decision in ('approved', 'rejected', 'approved_with_changes')),
   review_note text,
@@ -411,6 +412,9 @@ where line_side is distinct from 'auto';
 update strategy_card_proposals
 set line_side = 'auto'
 where line_side is distinct from 'auto';
+
+alter table if exists strategy_card_proposals
+  add column if not exists source_meta_json jsonb not null default '{}'::jsonb;
 
 update strategy_card_proposals
 set final_line_side = 'auto'

@@ -242,6 +242,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
 
   registerMemberRoutes({
     app,
+    query,
     broadcast,
     uuid,
     memberWriteRateLimit,

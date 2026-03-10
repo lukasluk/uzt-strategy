@@ -1,5 +1,6 @@
 function registerMemberRoutes({
   app,
+  query,
   broadcast,
   uuid,
   memberWriteRateLimit,
@@ -32,6 +33,116 @@ function registerMemberRoutes({
   const memberWriteGuard = typeof memberWriteRateLimit === 'function'
     ? memberWriteRateLimit
     : (_req, _res, next) => next();
+
+  async function loadSourceGuidelineForImport(guidelineId) {
+    const res = await query(
+      `select g.id,
+              g.title,
+              g.description,
+              g.status,
+              g.relation_type,
+              g.parent_guideline_id,
+              c.id as cycle_id,
+              c.institution_id,
+              c.strategy_id,
+              i.slug as institution_slug,
+              i.name as institution_name,
+              s.slug as strategy_slug,
+              s.title as strategy_title
+       from strategy_guidelines g
+       join strategy_cycles c on c.id = g.cycle_id
+       join institutions i on i.id = c.institution_id
+       left join institution_strategies s on s.id = c.strategy_id
+       where g.id = $1
+         and g.status in ('active', 'disabled', 'merged')
+       limit 1`,
+      [guidelineId]
+    );
+    return res.rows[0] || null;
+  }
+
+  async function loadSourceInitiativeForImport(initiativeId) {
+    const res = await query(
+      `select i.id,
+              i.title,
+              i.description,
+              i.status,
+              c.id as cycle_id,
+              c.institution_id,
+              c.strategy_id,
+              inst.slug as institution_slug,
+              inst.name as institution_name,
+              s.slug as strategy_slug,
+              s.title as strategy_title
+       from strategy_initiatives i
+       join strategy_cycles c on c.id = i.cycle_id
+       join institutions inst on inst.id = c.institution_id
+       left join institution_strategies s on s.id = c.strategy_id
+       where i.id = $1
+         and i.status in ('active', 'disabled', 'merged')
+       limit 1`,
+      [initiativeId]
+    );
+    const initiative = res.rows[0] || null;
+    if (!initiative) return null;
+
+    const linkRes = await query(
+      `select ig.guideline_id, g.title as guideline_title
+       from strategy_initiative_guidelines ig
+       join strategy_guidelines g on g.id = ig.guideline_id
+       where ig.initiative_id = $1
+       order by g.created_at asc`,
+      [initiativeId]
+    );
+
+    return {
+      ...initiative,
+      guidelineLinks: linkRes.rows.map((row) => ({
+        guidelineId: row.guideline_id,
+        guidelineTitle: row.guideline_title || row.guideline_id
+      }))
+    };
+  }
+
+  async function targetTitleExists({ cycleId, entityKind, title }) {
+    const normalizedTitle = String(title || '').trim();
+    if (!normalizedTitle) return false;
+    if (entityKind === 'guideline') {
+      const guidelineRes = await query(
+        `select id
+         from strategy_guidelines
+         where cycle_id = $1
+           and status in ('active', 'disabled', 'merged')
+           and lower(trim(title)) = lower(trim($2))
+         limit 1`,
+        [cycleId, normalizedTitle]
+      );
+      if (guidelineRes.rowCount) return true;
+    } else {
+      const initiativeRes = await query(
+        `select id
+         from strategy_initiatives
+         where cycle_id = $1
+           and status in ('active', 'disabled', 'merged')
+           and lower(trim(title)) = lower(trim($2))
+         limit 1`,
+        [cycleId, normalizedTitle]
+      );
+      if (initiativeRes.rowCount) return true;
+    }
+
+    const proposalRes = await query(
+      `select id
+       from strategy_card_proposals
+       where cycle_id = $1
+         and entity_kind = $2
+         and status = 'pending'
+         and lower(trim(title)) = lower(trim($3))
+       limit 1`,
+      [cycleId, entityKind, normalizedTitle]
+    );
+    return proposalRes.rowCount > 0;
+  }
 
   app.get('/api/v1/cycles/:cycleId/my-votes', requireAuth, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
@@ -121,6 +232,124 @@ function registerMemberRoutes({
 
     broadcast({ type: 'v1.initiative.proposed', institutionId: req.auth.institutionId, cycleId, initiativeId });
     res.status(201).json({ initiativeId, status: 'pending' });
+  });
+
+  app.post('/api/v1/cycles/:cycleId/import-guideline-proposals', requireAuth, memberWriteGuard, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    const sourceGuidelineId = String(req.body?.sourceGuidelineId || '').trim();
+    const title = String(req.body?.title || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const relationType = String(req.body?.relationType || 'orphan').trim().toLowerCase();
+    const parentGuidelineId = String(req.body?.parentGuidelineId || '').trim();
+    if (!cycleId || !sourceGuidelineId || !title) {
+      return res.status(400).json({ error: 'cycleId, sourceGuidelineId and title required' });
+    }
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
+    if (!isCycleWritable(cycle.state)) return res.status(409).json({ error: 'cycle not writable' });
+
+    const source = await loadSourceGuidelineForImport(sourceGuidelineId);
+    if (!source) return res.status(404).json({ error: 'source guideline not found' });
+    if (source.institution_id === req.auth.institutionId) {
+      return res.status(409).json({ error: 'source guideline must be external' });
+    }
+    if (await targetTitleExists({ cycleId, entityKind: 'guideline', title })) {
+      return res.status(409).json({ error: 'guideline title already exists in target cycle' });
+    }
+
+    try {
+      const proposalId = await createGuidelineProposal({
+        institutionId: req.auth.institutionId,
+        cycleId,
+        strategyId: cycle.strategy_id || null,
+        title,
+        description,
+        relationType,
+        parentGuidelineId: relationType === 'child' ? (parentGuidelineId || null) : null,
+        sourceMeta: {
+          importKind: 'external_guideline',
+          sourceGuidelineId: source.id,
+          sourceInstitutionId: source.institution_id,
+          sourceInstitutionSlug: source.institution_slug || null,
+          sourceInstitutionName: source.institution_name || null,
+          sourceStrategyId: source.strategy_id || null,
+          sourceStrategySlug: source.strategy_slug || null,
+          sourceStrategyTitle: source.strategy_title || null,
+          sourceCycleId: source.cycle_id,
+          sourceTitle: source.title || null,
+          sourceRelationType: source.relation_type || null
+        },
+        createdBy: req.auth.sub,
+        uuid
+      });
+
+      broadcast({ type: 'v1.guideline.proposed', institutionId: req.auth.institutionId, cycleId, guidelineId: proposalId });
+      return res.status(201).json({ proposalId, entityKind: 'guideline', status: 'pending' });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid guideline import proposal') });
+    }
+  });
+
+  app.post('/api/v1/cycles/:cycleId/import-initiative-proposals', requireAuth, memberWriteGuard, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    const sourceInitiativeId = String(req.body?.sourceInitiativeId || '').trim();
+    const title = String(req.body?.title || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const guidelineIds = Array.isArray(req.body?.guidelineIds)
+      ? req.body.guidelineIds.map((item) => String(item || '').trim()).filter(Boolean)
+      : [];
+    if (!cycleId || !sourceInitiativeId || !title) {
+      return res.status(400).json({ error: 'cycleId, sourceInitiativeId and title required' });
+    }
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
+    if (!isCycleWritable(cycle.state)) return res.status(409).json({ error: 'cycle not writable' });
+
+    const source = await loadSourceInitiativeForImport(sourceInitiativeId);
+    if (!source) return res.status(404).json({ error: 'source initiative not found' });
+    if (source.institution_id === req.auth.institutionId) {
+      return res.status(409).json({ error: 'source initiative must be external' });
+    }
+    if (await targetTitleExists({ cycleId, entityKind: 'initiative', title })) {
+      return res.status(409).json({ error: 'initiative title already exists in target cycle' });
+    }
+
+    try {
+      const proposalId = await createInitiativeProposal({
+        institutionId: req.auth.institutionId,
+        cycleId,
+        strategyId: cycle.strategy_id || null,
+        title,
+        description,
+        lineSide: 'auto',
+        guidelineIds,
+        sourceMeta: {
+          importKind: 'external_initiative',
+          sourceInitiativeId: source.id,
+          sourceInstitutionId: source.institution_id,
+          sourceInstitutionSlug: source.institution_slug || null,
+          sourceInstitutionName: source.institution_name || null,
+          sourceStrategyId: source.strategy_id || null,
+          sourceStrategySlug: source.strategy_slug || null,
+          sourceStrategyTitle: source.strategy_title || null,
+          sourceCycleId: source.cycle_id,
+          sourceTitle: source.title || null,
+          sourceGuidelineIds: (Array.isArray(source.guidelineLinks) ? source.guidelineLinks : []).map((item) => item.guidelineId),
+          sourceGuidelineTitles: (Array.isArray(source.guidelineLinks) ? source.guidelineLinks : []).map((item) => item.guidelineTitle)
+        },
+        createdBy: req.auth.sub,
+        uuid
+      });
+
+      broadcast({ type: 'v1.initiative.proposed', institutionId: req.auth.institutionId, cycleId, initiativeId: proposalId });
+      return res.status(201).json({ proposalId, entityKind: 'initiative', status: 'pending' });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid initiative import proposal') });
+    }
   });
 
 

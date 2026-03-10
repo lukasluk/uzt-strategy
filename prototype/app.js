@@ -934,6 +934,36 @@ function canManageSelectedInstitution() {
   return Boolean(homeSlug && currentSlug && homeSlug === currentSlug);
 }
 
+function isViewingExternalStrategy() {
+  if (state.embedMapMode) return false;
+  if (!isAuthenticated()) return false;
+  const homeSlug = normalizeSlug(state.accountContext?.institution?.slug);
+  const currentSlug = normalizeSlug(state.institutionSlug);
+  return Boolean(homeSlug && currentSlug && homeSlug !== currentSlug);
+}
+
+function getExternalImportTarget() {
+  if (!isViewingExternalStrategy()) return null;
+  const cycleId = String(state.accountContext?.cycle?.id || '').trim();
+  const cycleState = String(state.accountContext?.cycle?.state || '').trim().toLowerCase();
+  if (!cycleId || cycleState !== 'open') return null;
+  return {
+    cycleId,
+    cycleTitle: String(state.accountContext?.cycle?.title || '').trim(),
+    institutionSlug: normalizeSlug(state.accountContext?.institution?.slug),
+    institutionName: String(state.accountContext?.institution?.name || '').trim(),
+    strategySlug: normalizeSlug(state.accountContext?.strategy?.slug),
+    strategyTitle: String(state.accountContext?.strategy?.title || '').trim()
+  };
+}
+
+function canImportExternalItem(item) {
+  const source = item && typeof item === 'object' ? item : null;
+  if (!source) return false;
+  if (!getExternalImportTarget()) return false;
+  return !isPendingStatus(source.status);
+}
+
 function cycleIsWritable() {
   return WRITABLE_CYCLE_STATES.has(String(state.cycle?.state || '').toLowerCase());
 }
@@ -3918,6 +3948,30 @@ function findGuidelineById(guidelineId) {
   return (state.guidelines || []).find((guideline) => String(guideline?.id || '').trim() === targetId) || null;
 }
 
+function findInitiativeById(initiativeId) {
+  const targetId = String(initiativeId || '').trim();
+  if (!targetId) return null;
+  return (state.initiatives || []).find((initiative) => String(initiative?.id || '').trim() === targetId) || null;
+}
+
+function normalizeImportComparableText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function canImportExternalEntityByRef(kind, entityId) {
+  if (String(kind || '').trim().toLowerCase() === 'initiative') {
+    return canImportExternalItem(findInitiativeById(entityId));
+  }
+  return canImportExternalItem(findGuidelineById(entityId));
+}
+
 function resolveGuidelineParent(guideline) {
   const item = guideline && typeof guideline === 'object' ? guideline : null;
   if (!item) return null;
@@ -4168,11 +4222,13 @@ function renderGuidelineDetailView() {
   const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
   const relatedGuidelinesMarkup = renderGuidelineRelatedSection(guideline);
   const canManage = canManageSelectedInstitution();
+  const canImport = canImportExternalItem(guideline);
   elements.stepView.innerHTML = `
     <div class="step-header">
       <div></div>
       <div class="header-stack step-header-actions">
         ${canManage ? `<button id="editGuidelineBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
+        ${canImport ? `<button id="importGuidelineBtn" class="btn btn-primary">${langText('Naudoti mano strategijoje', 'Use in my strategy')}</button>` : ''}
         <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ gaires', 'Back to guidelines')}</button>
         <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
       </div>
@@ -4232,6 +4288,12 @@ function renderGuidelineDetailView() {
   if (editButton) {
     editButton.addEventListener('click', () => {
       openGuidelineAdminEditModal(guideline);
+    });
+  }
+  const importButton = elements.stepView.querySelector('#importGuidelineBtn');
+  if (importButton) {
+    importButton.addEventListener('click', () => {
+      openExternalItemImportModal('guideline', guideline.id);
     });
   }
 }
@@ -4353,11 +4415,13 @@ function renderInitiativeDetailView() {
   const breadcrumbMarkup = buildInitiativeDetailBreadcrumbs(initiative);
   const relatedGuidelinesMarkup = renderInitiativeRelatedGuidelinesSection(initiative);
   const canManage = canManageSelectedInstitution();
+  const canImport = canImportExternalItem(initiative);
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>${langText('Iniciatyvos kortele', 'Initiative card')}</h2>
       <div class="header-stack step-header-actions">
         ${canManage ? `<button id="editInitiativeBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
+        ${canImport ? `<button id="importInitiativeBtn" class="btn btn-primary">${langText('Naudoti mano strategijoje', 'Use in my strategy')}</button>` : ''}
         <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ iniciatyvas', 'Back to initiatives')}</button>
         <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
       </div>
@@ -4417,6 +4481,12 @@ function renderInitiativeDetailView() {
   if (editButton) {
     editButton.addEventListener('click', () => {
       openInitiativeAdminEditModal(initiative);
+    });
+  }
+  const importButton = elements.stepView.querySelector('#importInitiativeBtn');
+  if (importButton) {
+    importButton.addEventListener('click', () => {
+      openExternalItemImportModal('initiative', initiative.id);
     });
   }
   const list = elements.stepView.querySelector('#initiativeSection');
@@ -6160,12 +6230,309 @@ function startStrategyAiProgress(ui) {
   };
 }
 
+async function loadExternalImportTargetGuidelines(target) {
+  if (!target?.institutionSlug) return [];
+  const params = new URLSearchParams();
+  if (target.strategySlug) params.set('strategy', target.strategySlug);
+  const payload = await api(
+    `/api/v1/public/institutions/${encodeURIComponent(target.institutionSlug)}/cycles/current/guidelines${params.toString() ? `?${params.toString()}` : ''}`,
+    { auth: 'optional' }
+  );
+  return Array.isArray(payload?.guidelines) ? payload.guidelines : [];
+}
+
+function buildImportSourceLabel() {
+  const institutionName = String(state.institution?.name || state.institutionSlug || '-').trim() || '-';
+  const strategyTitle = String(state.strategy?.title || state.strategySlug || '-').trim() || '-';
+  return `${institutionName} / ${strategyTitle}`;
+}
+
+function buildImportTargetLabel(target) {
+  const institutionName = String(target?.institutionName || target?.institutionSlug || '-').trim() || '-';
+  const strategyTitle = String(target?.strategyTitle || target?.strategySlug || '-').trim() || '-';
+  return `${institutionName} / ${strategyTitle}`;
+}
+
+function buildParentGuidelineOptions(guidelines, selectedId = '') {
+  const selected = String(selectedId || '').trim();
+  const items = Array.isArray(guidelines) ? guidelines : [];
+  return [
+    `<option value="">${escapeHtml(langText('Pasirinkite tevine gaire', 'Select a parent guideline'))}</option>`,
+    ...items.map((guideline) => {
+      const id = String(guideline?.id || '').trim();
+      if (!id) return '';
+      return `<option value="${escapeHtml(id)}" ${selected === id ? 'selected' : ''}>${escapeHtml(guideline.title || id)}</option>`;
+    })
+  ].join('');
+}
+
+function matchImportGuidelineIdsByTitle(sourceTitles, targetGuidelines) {
+  const targetByTitle = new Map();
+  (Array.isArray(targetGuidelines) ? targetGuidelines : []).forEach((guideline) => {
+    const key = normalizeImportComparableText(guideline?.title);
+    if (!key || targetByTitle.has(key)) return;
+    targetByTitle.set(key, String(guideline?.id || '').trim());
+  });
+
+  return Array.from(new Set(
+    (Array.isArray(sourceTitles) ? sourceTitles : [])
+      .map((title) => targetByTitle.get(normalizeImportComparableText(title)))
+      .filter(Boolean)
+  ));
+}
+
+function closeExternalImportModal() {
+  const overlay = document.getElementById('externalImportOverlay');
+  if (overlay) overlay.remove();
+}
+
+function openExternalItemImportModal(kind, entityId) {
+  const normalizedKind = String(kind || '').trim().toLowerCase();
+  if (normalizedKind === 'initiative') {
+    const initiative = findInitiativeById(entityId);
+    if (!initiative) return;
+    void showInitiativeImportModal(initiative);
+    return;
+  }
+  const guideline = findGuidelineById(entityId);
+  if (!guideline) return;
+  void showGuidelineImportModal(guideline);
+}
+
+async function showGuidelineImportModal(sourceGuideline) {
+  const target = getExternalImportTarget();
+  if (!target) {
+    notifyError(langText('Importuoti galima tik i atvira jusu institucijos strategijos cikla.', 'Import is available only into an open cycle of your institution strategy.'));
+    return;
+  }
+  if (!canImportExternalItem(sourceGuideline)) return;
+
+  const allTargetGuidelines = await loadExternalImportTargetGuidelines(target);
+  const parentGuidelines = allTargetGuidelines.filter((guideline) =>
+    String(guideline?.status || '').trim().toLowerCase() === 'active'
+    && normalizeGuidelineRelation(guideline?.relationType) === 'parent'
+  );
+
+  closeExternalImportModal();
+  const overlay = document.createElement('div');
+  overlay.id = 'externalImportOverlay';
+  overlay.className = 'login-overlay strategy-create-overlay';
+  const defaultRelation = normalizeGuidelineRelation(sourceGuideline?.relationType) === 'child'
+    ? 'orphan'
+    : normalizeGuidelineRelation(sourceGuideline?.relationType);
+  overlay.innerHTML = `
+    <div class="login-card strategy-create-card">
+      <div class="header-row" style="margin-bottom: 8px;">
+        <h2>${escapeHtml(langText('Naudoti mano strategijoje', 'Use in my strategy'))}</h2>
+        <button id="closeExternalImportModal" class="btn btn-ghost" type="button">${escapeHtml(langText('Uzdaryti', 'Close'))}</button>
+      </div>
+      <p class="prompt auth-hint">${escapeHtml(langText('Sukursite moderuojama gaires pasiulyma savo institucijos strategijoje.', 'This creates a moderated guideline proposal in your institution strategy.'))}</p>
+      <div class="header-stack" style="margin-bottom: 12px;">
+        <span class="tag">${escapeHtml(langText('Saltinis', 'Source'))}: ${escapeHtml(buildImportSourceLabel())}</span>
+        <span class="tag">${escapeHtml(langText('Tikslas', 'Target'))}: ${escapeHtml(buildImportTargetLabel(target))}</span>
+      </div>
+      <div id="externalImportError" class="error" style="display:none;"></div>
+      <form id="externalGuidelineImportForm" class="login-form login-form-auth strategy-create-form">
+        <label class="auth-label" for="externalImportGuidelineTitle">${escapeHtml(langText('Pavadinimas', 'Title'))}</label>
+        <input id="externalImportGuidelineTitle" type="text" name="title" value="${escapeHtml(sourceGuideline.title || '')}" required />
+        <label class="auth-label" for="externalImportGuidelineDescription">${escapeHtml(langText('Aprasymas', 'Description'))}</label>
+        <textarea id="externalImportGuidelineDescription" name="description" rows="5">${escapeHtml(sourceGuideline.description || '')}</textarea>
+        <label class="auth-label" for="externalImportGuidelineRelation">${escapeHtml(langText('Rysio tipas', 'Relation type'))}</label>
+        <select id="externalImportGuidelineRelation" name="relationType">
+          <option value="orphan" ${defaultRelation === 'orphan' ? 'selected' : ''}>${escapeHtml(langText('Savarankiska', 'Standalone'))}</option>
+          <option value="parent" ${defaultRelation === 'parent' ? 'selected' : ''}>${escapeHtml(langText('Tevine', 'Parent'))}</option>
+          <option value="child" ${defaultRelation === 'child' ? 'selected' : ''}>${escapeHtml(langText('Vaikine', 'Child'))}</option>
+        </select>
+        <label class="auth-label" for="externalImportGuidelineParent">${escapeHtml(langText('Tiksline tevine gaire', 'Target parent guideline'))}</label>
+        <select id="externalImportGuidelineParent" name="parentGuidelineId">${buildParentGuidelineOptions(parentGuidelines)}</select>
+        <p class="prompt auth-hint">${escapeHtml(
+          normalizeGuidelineRelation(sourceGuideline?.relationType) === 'child'
+            ? langText('Saltinio vaikine gaire pagal nutylejima importuojama kaip savarankiska, kol nepasirinksite tevines gaires savo strategijoje.', 'A child guideline from the source defaults to standalone until you map it to a parent guideline in your strategy.')
+            : langText('Perziurekite ir, jei reikia, pakoreguokite aprasyma pries pateikdami pasiulyma.', 'Review and adjust the description if needed before submitting the proposal.')
+        )}</p>
+        <button id="submitExternalGuidelineImport" class="btn btn-primary" type="submit">${escapeHtml(langText('Sukurti pasiulyma', 'Create proposal'))}</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeButton = overlay.querySelector('#closeExternalImportModal');
+  const form = overlay.querySelector('#externalGuidelineImportForm');
+  const errorNode = overlay.querySelector('#externalImportError');
+  const relationSelect = overlay.querySelector('#externalImportGuidelineRelation');
+  const parentSelect = overlay.querySelector('#externalImportGuidelineParent');
+
+  const setError = (message) => {
+    if (!(errorNode instanceof HTMLElement)) return;
+    const text = String(message || '').trim();
+    errorNode.textContent = text;
+    errorNode.style.display = text ? 'block' : 'none';
+  };
+
+  const syncParentState = () => {
+    const isChild = String(relationSelect?.value || 'orphan').trim().toLowerCase() === 'child';
+    if (parentSelect instanceof HTMLSelectElement) {
+      parentSelect.disabled = !isChild;
+      if (!isChild) parentSelect.value = '';
+    }
+  };
+
+  closeButton?.addEventListener('click', closeExternalImportModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeExternalImportModal();
+  });
+  relationSelect?.addEventListener('change', syncParentState);
+  syncParentState();
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submitButton = overlay.querySelector('#submitExternalGuidelineImport');
+    if (!(submitButton instanceof HTMLButtonElement)) return;
+    submitButton.disabled = true;
+    setError('');
+    try {
+      const fd = new FormData(form);
+      const relationType = normalizeGuidelineRelation(fd.get('relationType'));
+      const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
+      if (relationType === 'child' && !parentGuidelineId) {
+        throw new Error(langText('Pasirinkite tevine gaire savo strategijoje.', 'Select a parent guideline in your strategy.'));
+      }
+      const payload = await api(`/api/v1/cycles/${encodeURIComponent(target.cycleId)}/import-guideline-proposals`, {
+        method: 'POST',
+        body: {
+          sourceGuidelineId: sourceGuideline.id,
+          title: String(fd.get('title') || '').trim(),
+          description: String(fd.get('description') || '').trim(),
+          relationType,
+          parentGuidelineId: relationType === 'child' ? parentGuidelineId : null
+        }
+      });
+      closeExternalImportModal();
+      notifySuccess(
+        langText(
+          `Gaires pasiulymas sukurtas strategijai "${target.strategyTitle || target.cycleTitle || '-'}".`,
+          `Guideline proposal created for "${target.strategyTitle || target.cycleTitle || '-'}".`
+        )
+      );
+      return payload;
+    } catch (error) {
+      setError(toUserMessage(error));
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+}
+
+async function showInitiativeImportModal(sourceInitiative) {
+  const target = getExternalImportTarget();
+  if (!target) {
+    notifyError(langText('Importuoti galima tik i atvira jusu institucijos strategijos cikla.', 'Import is available only into an open cycle of your institution strategy.'));
+    return;
+  }
+  if (!canImportExternalItem(sourceInitiative)) return;
+
+  const allTargetGuidelines = await loadExternalImportTargetGuidelines(target);
+  const activeTargetGuidelines = allTargetGuidelines.filter((guideline) =>
+    String(guideline?.status || '').trim().toLowerCase() === 'active'
+  );
+  const sourceGuidelineTitles = resolveInitiativeLinkedGuidelines(sourceInitiative).map((item) => item.title || item.id);
+  const defaultGuidelineIds = matchImportGuidelineIdsByTitle(sourceGuidelineTitles, activeTargetGuidelines);
+
+  closeExternalImportModal();
+  const overlay = document.createElement('div');
+  overlay.id = 'externalImportOverlay';
+  overlay.className = 'login-overlay strategy-create-overlay';
+  overlay.innerHTML = `
+    <div class="login-card strategy-create-card">
+      <div class="header-row" style="margin-bottom: 8px;">
+        <h2>${escapeHtml(langText('Naudoti mano strategijoje', 'Use in my strategy'))}</h2>
+        <button id="closeExternalImportModal" class="btn btn-ghost" type="button">${escapeHtml(langText('Uzdaryti', 'Close'))}</button>
+      </div>
+      <p class="prompt auth-hint">${escapeHtml(langText('Sukursite moderuojama iniciatyvos pasiulyma savo institucijos strategijoje.', 'This creates a moderated initiative proposal in your institution strategy.'))}</p>
+      <div class="header-stack" style="margin-bottom: 12px;">
+        <span class="tag">${escapeHtml(langText('Saltinis', 'Source'))}: ${escapeHtml(buildImportSourceLabel())}</span>
+        <span class="tag">${escapeHtml(langText('Tikslas', 'Target'))}: ${escapeHtml(buildImportTargetLabel(target))}</span>
+      </div>
+      <div class="header-stack" style="margin-bottom: 12px;">
+        ${(sourceGuidelineTitles.length
+          ? sourceGuidelineTitles.map((title) => `<span class="tag">${escapeHtml(title)}</span>`).join('')
+          : `<span class="tag">${escapeHtml(langText('Saltinyje nesusieta su gairėmis', 'No linked guidelines in source'))}</span>`)}
+      </div>
+      <div id="externalImportError" class="error" style="display:none;"></div>
+      <form id="externalInitiativeImportForm" class="login-form login-form-auth strategy-create-form">
+        <label class="auth-label" for="externalImportInitiativeTitle">${escapeHtml(langText('Pavadinimas', 'Title'))}</label>
+        <input id="externalImportInitiativeTitle" type="text" name="title" value="${escapeHtml(sourceInitiative.title || '')}" required />
+        <label class="auth-label" for="externalImportInitiativeDescription">${escapeHtml(langText('Aprasymas', 'Description'))}</label>
+        <textarea id="externalImportInitiativeDescription" name="description" rows="5">${escapeHtml(sourceInitiative.description || '')}</textarea>
+        <label class="auth-label">${escapeHtml(langText('Priskirti prie siu jusu strategijos gairiu', 'Link to these guidelines in your strategy'))}</label>
+        ${renderGuidelineCheckboxList(activeTargetGuidelines, { selectedIds: defaultGuidelineIds, disabled: false })}
+        <p class="prompt auth-hint">${escapeHtml(langText('Automatiskai pazymetos gairės, kuriu pavadinimai sutapo su saltinio iniciatyvos gairėmis.', 'Guidelines with titles matching the source initiative links were preselected automatically.'))}</p>
+        <button id="submitExternalInitiativeImport" class="btn btn-primary" type="submit" ${activeTargetGuidelines.length ? '' : 'disabled'}>${escapeHtml(langText('Sukurti pasiulyma', 'Create proposal'))}</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeButton = overlay.querySelector('#closeExternalImportModal');
+  const form = overlay.querySelector('#externalInitiativeImportForm');
+  const errorNode = overlay.querySelector('#externalImportError');
+
+  const setError = (message) => {
+    if (!(errorNode instanceof HTMLElement)) return;
+    const text = String(message || '').trim();
+    errorNode.textContent = text;
+    errorNode.style.display = text ? 'block' : 'none';
+  };
+
+  closeButton?.addEventListener('click', closeExternalImportModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeExternalImportModal();
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submitButton = overlay.querySelector('#submitExternalInitiativeImport');
+    if (!(submitButton instanceof HTMLButtonElement)) return;
+    submitButton.disabled = true;
+    setError('');
+    try {
+      const fd = new FormData(form);
+      const guidelineIds = fd.getAll('guidelineIds').map((item) => String(item || '').trim()).filter(Boolean);
+      if (!guidelineIds.length) {
+        throw new Error(langText('Pasirinkite bent viena tiksline gaire savo strategijoje.', 'Select at least one target guideline in your strategy.'));
+      }
+      const payload = await api(`/api/v1/cycles/${encodeURIComponent(target.cycleId)}/import-initiative-proposals`, {
+        method: 'POST',
+        body: {
+          sourceInitiativeId: sourceInitiative.id,
+          title: String(fd.get('title') || '').trim(),
+          description: String(fd.get('description') || '').trim(),
+          guidelineIds
+        }
+      });
+      closeExternalImportModal();
+      notifySuccess(
+        langText(
+          `Iniciatyvos pasiulymas sukurtas strategijai "${target.strategyTitle || target.cycleTitle || '-'}".`,
+          `Initiative proposal created for "${target.strategyTitle || target.cycleTitle || '-'}".`
+        )
+      );
+      return payload;
+    } catch (error) {
+      setError(toUserMessage(error));
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+}
+
 function closePlatformPopups() {
   [
     'strategyAiProgressOverlay',
     'strategyCreateOverlay',
     'loginOverlay',
-    'accessRequestOverlay'
+    'accessRequestOverlay',
+    'externalImportOverlay'
   ].forEach((id) => {
     const node = document.getElementById(id);
     if (node) node.remove();

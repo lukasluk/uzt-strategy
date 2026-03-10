@@ -323,6 +323,7 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
   const commentTitle = stepView.querySelector('#mapCommentTitle');
   const commentDescription = stepView.querySelector('#mapCommentDescription');
   const commentOpenCardBtn = stepView.querySelector('#mapCommentOpenCardBtn');
+  const commentImportBtn = stepView.querySelector('#mapCommentImportBtn');
   const commentList = stepView.querySelector('#mapCommentList');
   const mapCommentItems = buildMapCommentItems(graph);
 
@@ -342,6 +343,14 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
     if (commentOpenCardBtn) {
       commentOpenCardBtn.dataset.mapCommentKind = payload.kind || '';
       commentOpenCardBtn.dataset.mapCommentId = payload.id || '';
+    }
+    if (commentImportBtn) {
+      commentImportBtn.dataset.mapCommentKind = payload.kind || '';
+      commentImportBtn.dataset.mapCommentId = payload.id || '';
+      const canImport = typeof canImportExternalEntityByRef === 'function'
+        ? canImportExternalEntityByRef(payload.kind, payload.id)
+        : false;
+      commentImportBtn.hidden = !canImport;
     }
     commentList.innerHTML = comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
@@ -399,6 +408,16 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
   }
   if (commentOpenCardBtn) {
     commentOpenCardBtn.addEventListener('click', openCardFromMapComment);
+  }
+  if (commentImportBtn) {
+    commentImportBtn.addEventListener('click', () => {
+      const kind = String(commentImportBtn.dataset.mapCommentKind || '').trim();
+      const id = String(commentImportBtn.dataset.mapCommentId || '').trim();
+      if (!kind || !id) return;
+      if (typeof openExternalItemImportModal !== 'function') return;
+      closeMapCommentModal();
+      openExternalItemImportModal(kind, id);
+    });
   }
   stepView.querySelectorAll('[data-map-comment-id]').forEach((button) => {
     button.addEventListener('click', (event) => {
@@ -542,6 +561,7 @@ function buildMapViewShellMarkup({
         <p id="mapCommentDescription" class="prompt map-comment-description"></p>
         <div class="map-comment-actions">
           <button id="mapCommentOpenCardBtn" class="btn btn-primary" type="button">${escapeHtml(mapLang('Atidaryti kortelę', 'Open card'))}</button>
+          <button id="mapCommentImportBtn" class="btn btn-ghost" type="button" hidden>${escapeHtml(mapLang('Naudoti mano strategijoje', 'Use in my strategy'))}</button>
         </div>
         <strong>${escapeHtml(mapLang('Komentarai', 'Comments'))}</strong>
         <ul id="mapCommentList" class="mini-list"></ul>
