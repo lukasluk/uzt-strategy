@@ -586,8 +586,13 @@ function bindMapInteractions(viewport, world, { editable }) {
 
   viewport.addEventListener('wheel', (event) => {
     event.preventDefault();
+    let delta = Number(event.deltaY || 0);
+    if (event.deltaMode === 1) delta *= 16;
+    if (event.deltaMode === 2) delta *= Math.max(1, viewport.clientHeight);
+    if (!Number.isFinite(delta) || delta === 0) return;
+    const zoomFactor = Math.exp(-delta * 0.0015);
     const nextScale = clamp(
-      state.mapTransform.scale + (event.deltaY < 0 ? 0.08 : -0.08),
+      state.mapTransform.scale * zoomFactor,
       0.2,
       1.8
     );
