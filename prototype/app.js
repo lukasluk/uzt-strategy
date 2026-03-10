@@ -3866,36 +3866,65 @@ function openGuidelineAdminEditModal(guideline) {
       <div class="auth-modal-header">
         <div>
           <h3 id="guidelineEditTitle">${escapeHtml(langText('Redaguoti gaires', 'Edit guideline'))}</h3>
-          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(item.title || item.id)}</p>
+          <p class="prompt admin-edit-subtitle">${escapeHtml(item.title || item.id)}</p>
         </div>
         <button type="button" class="btn btn-ghost" id="closeInternalEntityEditModal">${escapeHtml(langText('Uzdaryti', 'Close'))}</button>
       </div>
       <form id="guidelineEditForm" class="admin-edit-form">
-        <input class="admin-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required />
-        <textarea class="admin-edit-description" name="description" placeholder="${escapeHtml(langText('Aprasymas', 'Description'))}">${escapeHtml(item.description || '')}</textarea>
-        <div class="admin-edit-grid">
-          <select name="status">
-            ${['active', 'disabled', 'merged', 'hidden'].map((status) => `
-              <option value="${status}" ${String(item.status || 'active').trim() === status ? 'selected' : ''}>${escapeHtml(status)}</option>
-            `).join('')}
-          </select>
-          <select name="relationType">
-            <option value="orphan" ${relation === 'orphan' ? 'selected' : ''}>${escapeHtml(langText('Naslaite', 'Orphan'))}</option>
-            <option value="parent" ${relation === 'parent' ? 'selected' : ''}>${escapeHtml(langText('Tevine', 'Parent'))}</option>
-            <option value="child" ${relation === 'child' ? 'selected' : ''}>${escapeHtml(langText('Vaikine', 'Child'))}</option>
-          </select>
-          <select name="parentGuidelineId" ${relation === 'child' ? '' : 'disabled'}>
-            <option value="">${escapeHtml(langText('Pasirinkite tevine gaire', 'Select parent guideline'))}</option>
-            ${parentOptions}
-          </select>
-        </div>
-        <div class="admin-edit-grid admin-edit-grid-initiative">
-          <input type="date" name="implementationDate" value="${escapeHtml(normalizeImplementationDateInputValue(item.implementationDate))}" />
-          <input type="text" name="implementationOwner" value="${escapeHtml(String(item.implementationOwner || '').trim())}" placeholder="${escapeHtml(langText('Atsakingas asmuo ar padalinys', 'Responsible person or unit'))}" />
-        </div>
-        <div class="admin-edit-actions">
-          <button class="btn btn-primary" type="submit">${escapeHtml(langText('Issaugoti', 'Save'))}</button>
+        <section class="admin-edit-section">
+          <h4 class="admin-edit-section-title">${escapeHtml(langText('Pagrindine informacija', 'Basic information'))}</h4>
+          <label class="admin-edit-field">
+            <span class="admin-edit-field-label">${escapeHtml(langText('Gaires pavadinimas', 'Guideline title'))}</span>
+            <input class="admin-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required />
+          </label>
+          <label class="admin-edit-field">
+            <span class="admin-edit-field-label">${escapeHtml(langText('Aprasymas', 'Description'))}</span>
+            <textarea class="admin-edit-description" name="description" placeholder="${escapeHtml(langText('Trumpas gaires aprasymas', 'Short guideline description'))}">${escapeHtml(item.description || '')}</textarea>
+          </label>
+        </section>
+        <section class="admin-edit-section">
+          <h4 class="admin-edit-section-title">${escapeHtml(langText('Struktura ir planavimas', 'Structure and planning'))}</h4>
+          <div class="admin-edit-grid admin-edit-grid-3">
+            <label class="admin-edit-field">
+              <span class="admin-edit-field-label">${escapeHtml(langText('Busena', 'Status'))}</span>
+              <select name="status">
+                ${['active', 'disabled', 'merged', 'hidden'].map((status) => `
+                  <option value="${status}" ${String(item.status || 'active').trim() === status ? 'selected' : ''}>${escapeHtml(status)}</option>
+                `).join('')}
+              </select>
+            </label>
+            <label class="admin-edit-field">
+              <span class="admin-edit-field-label">${escapeHtml(langText('Tipas', 'Type'))}</span>
+              <select name="relationType">
+                <option value="orphan" ${relation === 'orphan' ? 'selected' : ''}>${escapeHtml(langText('Naslaite', 'Orphan'))}</option>
+                <option value="parent" ${relation === 'parent' ? 'selected' : ''}>${escapeHtml(langText('Tevine', 'Parent'))}</option>
+                <option value="child" ${relation === 'child' ? 'selected' : ''}>${escapeHtml(langText('Vaikine', 'Child'))}</option>
+              </select>
+            </label>
+            <label class="admin-edit-field${relation === 'child' ? '' : ' is-hidden'}" data-admin-parent-field>
+              <span class="admin-edit-field-label">${escapeHtml(langText('Tevine gaire', 'Parent guideline'))}</span>
+              <select name="parentGuidelineId" ${relation === 'child' ? '' : 'disabled'}>
+                <option value="">${escapeHtml(langText('Pasirinkite tevine gaire', 'Select parent guideline'))}</option>
+                ${parentOptions}
+              </select>
+            </label>
+          </div>
+          <div class="admin-edit-grid admin-edit-grid-2">
+            <label class="admin-edit-field">
+              <span class="admin-edit-field-label">${escapeHtml(langText('Igyvendinimo data', 'Implementation date'))}</span>
+              <input type="date" name="implementationDate" value="${escapeHtml(normalizeImplementationDateInputValue(item.implementationDate))}" />
+            </label>
+            <label class="admin-edit-field">
+              <span class="admin-edit-field-label">${escapeHtml(langText('Atsakingas asmuo ar padalinys', 'Responsible person or unit'))}</span>
+              <input type="text" name="implementationOwner" value="${escapeHtml(String(item.implementationOwner || '').trim())}" placeholder="${escapeHtml(langText('Pvz. NPD skyrius', 'For example, Operations unit'))}" />
+            </label>
+          </div>
+        </section>
+        <div class="admin-edit-footer">
           <button class="btn btn-danger" type="button" id="deleteInternalGuidelineBtn">${escapeHtml(langText('Istrinti', 'Delete'))}</button>
+          <div class="admin-edit-actions">
+            <button class="btn btn-primary" type="submit">${escapeHtml(langText('Issaugoti', 'Save'))}</button>
+          </div>
         </div>
       </form>
     </div>
@@ -3906,11 +3935,13 @@ function openGuidelineAdminEditModal(guideline) {
   const form = overlay.querySelector('#guidelineEditForm');
   const relationSelect = form?.querySelector('[name="relationType"]');
   const parentSelect = form?.querySelector('[name="parentGuidelineId"]');
+  const parentField = form?.querySelector('[data-admin-parent-field]');
   const syncRelation = () => {
     if (!(relationSelect instanceof HTMLSelectElement) || !(parentSelect instanceof HTMLSelectElement)) return;
     const needsParent = String(relationSelect.value || 'orphan').trim() === 'child';
     parentSelect.disabled = !needsParent;
     if (!needsParent) parentSelect.value = '';
+    parentField?.classList.toggle('is-hidden', !needsParent);
   };
   relationSelect?.addEventListener('change', syncRelation);
   syncRelation();
@@ -3980,29 +4011,55 @@ function openInitiativeAdminEditModal(initiative) {
       <div class="auth-modal-header">
         <div>
           <h3 id="initiativeEditTitle">${escapeHtml(langText('Redaguoti iniciatyva', 'Edit initiative'))}</h3>
-          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(item.title || item.id)}</p>
+          <p class="prompt admin-edit-subtitle">${escapeHtml(item.title || item.id)}</p>
         </div>
         <button type="button" class="btn btn-ghost" id="closeInternalEntityEditModal">${escapeHtml(langText('Uzdaryti', 'Close'))}</button>
       </div>
       <form id="initiativeEditForm" class="admin-edit-form">
-        <input class="admin-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required />
-        <textarea class="admin-edit-description" name="description" placeholder="${escapeHtml(langText('Aprasymas', 'Description'))}">${escapeHtml(item.description || '')}</textarea>
-        <div class="admin-edit-grid admin-edit-grid-initiative">
-          <select name="status">
-            ${['active', 'disabled', 'merged', 'hidden'].map((status) => `
-              <option value="${status}" ${String(item.status || 'active').trim() === status ? 'selected' : ''}>${escapeHtml(status)}</option>
-            `).join('')}
-          </select>
-          <input type="date" name="implementationDate" value="${escapeHtml(normalizeImplementationDateInputValue(item.implementationDate))}" />
-          <input type="text" name="implementationOwner" value="${escapeHtml(String(item.implementationOwner || '').trim())}" placeholder="${escapeHtml(langText('Atsakingas asmuo ar padalinys', 'Responsible person or unit'))}" />
-        </div>
-        <label class="prompt admin-edit-label">${escapeHtml(langText('Priskirtos gaires', 'Linked guidelines'))}</label>
-        <div class="guideline-checkbox-panel">
-          ${renderGuidelineCheckboxList(state.guidelines, { selectedIds: selectedGuidelineIds, name: 'guidelineIds' })}
-        </div>
-        <div class="admin-edit-actions">
-          <button class="btn btn-primary" type="submit">${escapeHtml(langText('Issaugoti', 'Save'))}</button>
+        <section class="admin-edit-section">
+          <h4 class="admin-edit-section-title">${escapeHtml(langText('Pagrindine informacija', 'Basic information'))}</h4>
+          <label class="admin-edit-field">
+            <span class="admin-edit-field-label">${escapeHtml(langText('Iniciatyvos pavadinimas', 'Initiative title'))}</span>
+            <input class="admin-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required />
+          </label>
+          <label class="admin-edit-field">
+            <span class="admin-edit-field-label">${escapeHtml(langText('Aprasymas', 'Description'))}</span>
+            <textarea class="admin-edit-description" name="description" placeholder="${escapeHtml(langText('Trumpas iniciatyvos aprasymas', 'Short initiative description'))}">${escapeHtml(item.description || '')}</textarea>
+          </label>
+        </section>
+        <section class="admin-edit-section">
+          <h4 class="admin-edit-section-title">${escapeHtml(langText('Igyvendinimas', 'Implementation'))}</h4>
+          <div class="admin-edit-grid admin-edit-grid-3">
+            <label class="admin-edit-field">
+              <span class="admin-edit-field-label">${escapeHtml(langText('Busena', 'Status'))}</span>
+              <select name="status">
+                ${['active', 'disabled', 'merged', 'hidden'].map((status) => `
+                  <option value="${status}" ${String(item.status || 'active').trim() === status ? 'selected' : ''}>${escapeHtml(status)}</option>
+                `).join('')}
+              </select>
+            </label>
+            <label class="admin-edit-field">
+              <span class="admin-edit-field-label">${escapeHtml(langText('Igyvendinimo data', 'Implementation date'))}</span>
+              <input type="date" name="implementationDate" value="${escapeHtml(normalizeImplementationDateInputValue(item.implementationDate))}" />
+            </label>
+            <label class="admin-edit-field">
+              <span class="admin-edit-field-label">${escapeHtml(langText('Atsakingas asmuo ar padalinys', 'Responsible person or unit'))}</span>
+              <input type="text" name="implementationOwner" value="${escapeHtml(String(item.implementationOwner || '').trim())}" placeholder="${escapeHtml(langText('Pvz. Projekto komanda', 'For example, Project team'))}" />
+            </label>
+          </div>
+        </section>
+        <section class="admin-edit-section">
+          <h4 class="admin-edit-section-title">${escapeHtml(langText('Susietos gaires', 'Linked guidelines'))}</h4>
+          <p class="prompt admin-edit-section-hint">${escapeHtml(langText('Pasirinkite, kurias gaires si iniciatyva palaiko.', 'Choose which guidelines this initiative supports.'))}</p>
+          <div class="guideline-checkbox-panel">
+            ${renderGuidelineCheckboxList(state.guidelines, { selectedIds: selectedGuidelineIds, name: 'guidelineIds' })}
+          </div>
+        </section>
+        <div class="admin-edit-footer">
           <button class="btn btn-danger" type="button" id="deleteInternalInitiativeBtn">${escapeHtml(langText('Istrinti', 'Delete'))}</button>
+          <div class="admin-edit-actions">
+            <button class="btn btn-primary" type="submit">${escapeHtml(langText('Issaugoti', 'Save'))}</button>
+          </div>
         </div>
       </form>
     </div>
