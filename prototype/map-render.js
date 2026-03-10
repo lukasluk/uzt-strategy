@@ -626,6 +626,7 @@ function buildMapViewShellMarkup({
           <img src="assets/digistrategija-logo.svg?v=20260212c" alt="" />
         </div>
         ${planTimelineMarkup}
+        ${activeLayer === 'plan' ? '<div id="mapPlanFloatingCurrent" class="map-plan-floating-current" aria-live="polite"></div>' : ''}
         ${embedBranding}
       </section>
     </section>

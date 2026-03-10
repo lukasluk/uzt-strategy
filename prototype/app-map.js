@@ -139,6 +139,7 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
   const first = parseMapPlanDateValue(firstDate);
   const last = parseMapPlanDateValue(lastDate);
   const currentLabel = timelineRoot.querySelector('#mapPlanTimelineCurrent');
+  const floatingCurrentLabel = viewport.querySelector('#mapPlanFloatingCurrent');
   const range = timelineRoot.querySelector('#mapPlanTimelineRange');
   const playButton = timelineRoot.querySelector('[data-map-plan-play]');
 
@@ -147,6 +148,14 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
   }
   if (currentLabel) {
     currentLabel.textContent = mapPlanCurrentDateText(firstDate, lastDate, progress);
+  }
+  if (floatingCurrentLabel) {
+    const currentText = mapPlanCurrentDateText(firstDate, lastDate, progress);
+    floatingCurrentLabel.textContent = currentText;
+    const shouldShowFloating = Boolean(currentText)
+      && timelineRoot.classList.contains('is-idle-hidden')
+      && (state.mapPlanPlaying || progress > 0);
+    floatingCurrentLabel.classList.toggle('is-visible', shouldShowFloating);
   }
   if (playButton instanceof HTMLElement) {
     playButton.innerHTML = mapPlanPlaybackButtonIconMarkup(state.mapPlanPlaying);

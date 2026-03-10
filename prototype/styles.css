@@ -3207,6 +3207,34 @@ body.embed-map-page .map-fullscreen-watermark img {
   font-weight: 700;
   color: #244a79;
 }
+.map-plan-floating-current {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 16;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(186, 200, 221, 0.92);
+  box-shadow: 0 10px 22px rgba(26, 52, 84, 0.14);
+  backdrop-filter: blur(8px);
+  color: #111111;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.map-plan-floating-current.is-visible {
+  opacity: 1;
+}
+.strategy-map-viewport.map-secret-anthracite .map-plan-floating-current {
+  background: rgba(10, 12, 15, 0.7);
+  border-color: rgba(73, 85, 100, 0.8);
+  color: #ffffff;
+}
 .map-plan-duration {
   display: inline-flex;
   align-items: center;
@@ -3510,6 +3538,10 @@ body.embed-map-page .map-fullscreen-watermark img {
   .map-plan-timeline-boundary,
   .map-plan-timeline-current {
     text-align: left;
+  }
+  .map-plan-floating-current {
+    bottom: 12px;
+    font-size: 14px;
   }
 }
 .strategy-map-viewport.map-layer-strategic-links .initiative-lines,
