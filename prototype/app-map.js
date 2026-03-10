@@ -190,6 +190,17 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
     const revealed = progress > 0 && (progress >= 1 || span <= 0 || parsed.time <= currentTime);
     edge.classList.toggle('map-plan-visible', revealed);
   });
+  const timelineDots = Array.from(timelineRoot.querySelectorAll('[data-plan-dot-date]'));
+  timelineDots.forEach((dot) => {
+    if (!(dot instanceof HTMLElement)) return;
+    const parsed = parseMapPlanDateValue(dot.dataset.planDotDate);
+    if (!parsed) {
+      dot.classList.remove('is-reached');
+      return;
+    }
+    const reached = progress > 0 && (progress >= 1 || span <= 0 || parsed.time <= currentTime);
+    dot.classList.toggle('is-reached', reached);
+  });
 }
 
 function bindMapPlanTimeline(viewport, world, stepView) {

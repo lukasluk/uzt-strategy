@@ -1120,12 +1120,12 @@ const MAP_COMMENT_ICON_SVG = `
 `;
 const MAP_FULLSCREEN_ICON_ENTER = `
   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-    <path d="M7 14H5v5h5v-2H7v-3Zm0-4h2V7h3V5H5v5Zm10 7h-3v2h5v-5h-2v3Zm-3-12v2h3v3h2V5h-5Z" fill="currentColor"/>
+    <path d="M9 5H5v4M15 5h4v4M19 15v4h-4M9 19H5v-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
 `;
 const MAP_FULLSCREEN_ICON_EXIT = `
   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-    <path d="M5 16h3v3h2v-5H5v2Zm3-8H5v2h5V5H8v3Zm6 11h2v-3h3v-2h-5v5Zm2-11V5h-2v5h5V8h-3Z" fill="currentColor"/>
+    <path d="M9 9H5V5M15 9h4V5M19 15v4h-4M9 15H5v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
 `;
 

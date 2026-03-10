@@ -24,15 +24,28 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
   const formatDate = typeof formatInstitutionDate === 'function'
     ? formatInstitutionDate
     : (value) => String(value || '').trim();
-  const datedItems = graph.nodes
-    .filter((node) => node.kind === 'guideline' || node.kind === 'initiative')
-    .map((node) => normalizeDate(node.guideline?.implementationDate || node.initiative?.implementationDate))
-    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))
-    .sort();
-  const shiftDate = (rawDate, days) => {
+  const parseDateUtc = (rawDate) => {
     const match = String(rawDate || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return '';
-    const utc = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days);
+    if (!match) return null;
+    return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  };
+  const datedEvents = graph.nodes
+    .filter((node) => node.kind === 'guideline' || node.kind === 'initiative')
+    .map((node) => {
+      const implementationDate = normalizeDate(node.guideline?.implementationDate || node.initiative?.implementationDate);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(implementationDate)) return null;
+      const kind = node.kind === 'initiative'
+        ? 'initiative'
+        : (String(node.guideline?.relationType || '').toLowerCase() === 'child' ? 'child' : 'parent');
+      return { date: implementationDate, kind };
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.date.localeCompare(right.date));
+  const datedItems = datedEvents.map((event) => event.date);
+  const shiftDate = (rawDate, days) => {
+    const baseUtc = parseDateUtc(rawDate);
+    if (baseUtc === null) return '';
+    const utc = baseUtc + (days * 24 * 60 * 60 * 1000);
     const next = new Date(utc);
     const year = next.getUTCFullYear();
     const month = String(next.getUTCMonth() + 1).padStart(2, '0');
@@ -57,6 +70,35 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
     if (ms === 300000) return '5min';
     return `${Math.round(ms / 1000)}sec`;
   };
+  const firstUtc = parseDateUtc(firstDate);
+  const lastUtc = parseDateUtc(lastDate);
+  const totalSpan = firstUtc !== null && lastUtc !== null
+    ? Math.max(1, lastUtc - firstUtc)
+    : 1;
+  const dotGroups = Array.from(datedEvents.reduce((groups, event) => {
+    const existing = groups.get(event.date) || { date: event.date, count: 0, kinds: new Set() };
+    existing.count += 1;
+    existing.kinds.add(event.kind);
+    groups.set(event.date, existing);
+    return groups;
+  }, new Map()).values()).map((group) => {
+    const eventUtc = parseDateUtc(group.date);
+    const leftPercent = eventUtc === null || firstUtc === null
+      ? 0
+      : Math.max(0, Math.min(100, ((eventUtc - firstUtc) / totalSpan) * 100));
+    const toneClass = group.kinds.size === 1
+      ? (group.kinds.has('initiative')
+        ? ' is-initiative'
+        : (group.kinds.has('child') ? ' is-child' : ' is-parent'))
+      : ' is-mixed';
+    return {
+      date: group.date,
+      count: group.count,
+      leftPercent,
+      toneClass,
+      title: `${formatDate(group.date) || group.date} • ${group.count}`
+    };
+  });
 
   return `
     <section
@@ -75,16 +117,29 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
       >${buildMapPlanPlaybackIcon(state.mapPlanPlaying)}</button>
       <div class="map-plan-timeline-track">
         <span class="map-plan-timeline-boundary">${escapeHtml(firstDate ? formatDate(firstDate) || firstDate : mapLang('Nėra datų', 'No dates'))}</span>
-        <input
-          id="mapPlanTimelineRange"
-          class="map-plan-timeline-range"
-          type="range"
-          min="0"
-          max="1000"
-          step="1"
-          value="${Math.round(Math.max(0, Math.min(1, Number(state.mapPlanProgress || 0))) * 1000)}"
-          ${hasTimeline ? '' : 'disabled'}
-        />
+        <div class="map-plan-timeline-slider-wrap">
+          <div class="map-plan-timeline-dots" aria-hidden="true">
+            ${dotGroups.map((group) => `
+              <span
+                class="map-plan-timeline-dot${group.toneClass}"
+                data-plan-dot-date="${escapeHtml(group.date)}"
+                data-plan-dot-count="${group.count}"
+                style="left:${group.leftPercent.toFixed(3)}%;"
+                title="${escapeHtml(group.title)}"
+              ></span>
+            `).join('')}
+          </div>
+          <input
+            id="mapPlanTimelineRange"
+            class="map-plan-timeline-range"
+            type="range"
+            min="0"
+            max="1000"
+            step="1"
+            value="${Math.round(Math.max(0, Math.min(1, Number(state.mapPlanProgress || 0))) * 1000)}"
+            ${hasTimeline ? '' : 'disabled'}
+          />
+        </div>
         <span class="map-plan-timeline-boundary">${escapeHtml(lastDate ? formatDate(lastDate) || lastDate : mapLang('Nėra datų', 'No dates'))}</span>
       </div>
       <label class="map-plan-duration">
