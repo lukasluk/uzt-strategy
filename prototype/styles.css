@@ -2412,9 +2412,7 @@ textarea {
     auto
     minmax(210px, 1fr)
     auto
-    minmax(460px, 1.8fr)
-    auto
-    minmax(220px, 1fr);
+    minmax(700px, 2.8fr);
   gap: 10px;
   align-items: stretch;
 }
@@ -2456,6 +2454,7 @@ textarea {
 .structure-step-layer {
   border-color: #92c8c0;
   background: linear-gradient(180deg, #f9fffd 0%, #ecf8f5 100%);
+  min-height: 172px;
 }
 .structure-layer-group {
   border: 1px solid #9ec0e6;
@@ -2466,6 +2465,7 @@ textarea {
   display: grid;
   align-content: start;
   gap: 8px;
+  min-width: 0;
 }
 .structure-layer-group-head {
   display: flex;
@@ -2484,7 +2484,7 @@ textarea {
 }
 .structure-layer-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr) auto minmax(180px, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 8px;
   align-items: stretch;
 }
