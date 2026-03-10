@@ -3651,6 +3651,221 @@ function renderInitiativeCard(initiative, options) {
   `;
 }
 
+function checkedFormValues(form, name) {
+  if (!(form instanceof HTMLFormElement)) return [];
+  return Array.from(form.querySelectorAll(`input[name="${name}"]:checked`))
+    .map((input) => String(input.value || '').trim())
+    .filter(Boolean);
+}
+
+function closeInternalEditModal() {
+  const overlay = document.getElementById('internalEntityEditOverlay');
+  if (overlay) overlay.remove();
+}
+
+function openGuidelineAdminEditModal(guideline) {
+  if (!canManageSelectedInstitution()) return;
+  const item = guideline && typeof guideline === 'object' ? guideline : null;
+  if (!item?.id) return;
+  closeInternalEditModal();
+
+  const relation = normalizeGuidelineRelation(item.relationType);
+  const parentOptions = state.guidelines
+    .filter((candidate) => String(candidate?.id || '').trim() !== String(item.id || '').trim())
+    .filter((candidate) => normalizeGuidelineRelation(candidate.relationType) === 'parent')
+    .map((candidate) => `
+      <option value="${escapeHtml(candidate.id)}" ${String(candidate.id || '').trim() === String(item.parentGuidelineId || '').trim() ? 'selected' : ''}>
+        ${escapeHtml(candidate.title || candidate.id)}
+      </option>
+    `)
+    .join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'internalEntityEditOverlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card policy-alignment-modal-card" role="dialog" aria-modal="true" aria-labelledby="guidelineEditTitle">
+      <div class="auth-modal-header">
+        <div>
+          <h3 id="guidelineEditTitle">${escapeHtml(langText('Redaguoti gaires', 'Edit guideline'))}</h3>
+          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(item.title || item.id)}</p>
+        </div>
+        <button type="button" class="btn btn-ghost" id="closeInternalEntityEditModal">${escapeHtml(langText('Uzdaryti', 'Close'))}</button>
+      </div>
+      <form id="guidelineEditForm" class="admin-edit-form">
+        <input class="admin-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required />
+        <textarea class="admin-edit-description" name="description" placeholder="${escapeHtml(langText('Aprasymas', 'Description'))}">${escapeHtml(item.description || '')}</textarea>
+        <div class="admin-edit-grid">
+          <select name="status">
+            ${['active', 'disabled', 'merged', 'hidden'].map((status) => `
+              <option value="${status}" ${String(item.status || 'active').trim() === status ? 'selected' : ''}>${escapeHtml(status)}</option>
+            `).join('')}
+          </select>
+          <select name="relationType">
+            <option value="orphan" ${relation === 'orphan' ? 'selected' : ''}>${escapeHtml(langText('Naslaite', 'Orphan'))}</option>
+            <option value="parent" ${relation === 'parent' ? 'selected' : ''}>${escapeHtml(langText('Tevine', 'Parent'))}</option>
+            <option value="child" ${relation === 'child' ? 'selected' : ''}>${escapeHtml(langText('Vaikine', 'Child'))}</option>
+          </select>
+          <select name="parentGuidelineId" ${relation === 'child' ? '' : 'disabled'}>
+            <option value="">${escapeHtml(langText('Pasirinkite tevine gaire', 'Select parent guideline'))}</option>
+            ${parentOptions}
+          </select>
+        </div>
+        <div class="admin-edit-actions">
+          <button class="btn btn-primary" type="submit">${escapeHtml(langText('Issaugoti', 'Save'))}</button>
+          <button class="btn btn-danger" type="button" id="deleteInternalGuidelineBtn">${escapeHtml(langText('Istrinti', 'Delete'))}</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeButton = overlay.querySelector('#closeInternalEntityEditModal');
+  const form = overlay.querySelector('#guidelineEditForm');
+  const relationSelect = form?.querySelector('[name="relationType"]');
+  const parentSelect = form?.querySelector('[name="parentGuidelineId"]');
+  const syncRelation = () => {
+    if (!(relationSelect instanceof HTMLSelectElement) || !(parentSelect instanceof HTMLSelectElement)) return;
+    const needsParent = String(relationSelect.value || 'orphan').trim() === 'child';
+    parentSelect.disabled = !needsParent;
+    if (!needsParent) parentSelect.value = '';
+  };
+  relationSelect?.addEventListener('change', syncRelation);
+  syncRelation();
+
+  closeButton?.addEventListener('click', closeInternalEditModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeInternalEditModal();
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const fd = new FormData(form);
+    const title = String(fd.get('title') || '').trim();
+    const description = String(fd.get('description') || '').trim();
+    const status = String(fd.get('status') || 'active').trim();
+    const relationType = String(fd.get('relationType') || 'orphan').trim();
+    const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
+    if (!title) return;
+    await runBusy(async () => {
+      await api(`/api/v1/admin/guidelines/${encodeURIComponent(item.id)}`, {
+        method: 'PUT',
+        body: {
+          title,
+          description,
+          status,
+          relationType,
+          parentGuidelineId: relationType === 'child' ? parentGuidelineId : null,
+          lineSide: 'auto'
+        }
+      });
+      closeInternalEditModal();
+      state.notice = langText('Gaire atnaujinta.', 'Guideline updated.');
+      notifySuccess(state.notice);
+      await bootstrap();
+    });
+  });
+
+  overlay.querySelector('#deleteInternalGuidelineBtn')?.addEventListener('click', async () => {
+    if (!window.confirm(langText(`Ar tikrai norite istrinti gaire "${item.title || ''}"?`, `Delete guideline "${item.title || ''}"?`))) return;
+    await runBusy(async () => {
+      await api(`/api/v1/admin/guidelines/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+      closeInternalEditModal();
+      state.notice = langText('Gaire istrinta.', 'Guideline deleted.');
+      notifySuccess(state.notice);
+      setActiveView('guidelines');
+      await bootstrap();
+    });
+  });
+}
+
+function openInitiativeAdminEditModal(initiative) {
+  if (!canManageSelectedInstitution()) return;
+  const item = initiative && typeof initiative === 'object' ? initiative : null;
+  if (!item?.id) return;
+  closeInternalEditModal();
+
+  const selectedGuidelineIds = resolveInitiativeGuidelineIds(item);
+  const overlay = document.createElement('div');
+  overlay.id = 'internalEntityEditOverlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card policy-alignment-modal-card" role="dialog" aria-modal="true" aria-labelledby="initiativeEditTitle">
+      <div class="auth-modal-header">
+        <div>
+          <h3 id="initiativeEditTitle">${escapeHtml(langText('Redaguoti iniciatyva', 'Edit initiative'))}</h3>
+          <p class="prompt" style="margin: 6px 0 0;">${escapeHtml(item.title || item.id)}</p>
+        </div>
+        <button type="button" class="btn btn-ghost" id="closeInternalEntityEditModal">${escapeHtml(langText('Uzdaryti', 'Close'))}</button>
+      </div>
+      <form id="initiativeEditForm" class="admin-edit-form">
+        <input class="admin-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required />
+        <textarea class="admin-edit-description" name="description" placeholder="${escapeHtml(langText('Aprasymas', 'Description'))}">${escapeHtml(item.description || '')}</textarea>
+        <div class="admin-edit-grid admin-edit-grid-initiative">
+          <select name="status">
+            ${['active', 'disabled', 'merged', 'hidden'].map((status) => `
+              <option value="${status}" ${String(item.status || 'active').trim() === status ? 'selected' : ''}>${escapeHtml(status)}</option>
+            `).join('')}
+          </select>
+        </div>
+        <label class="prompt admin-edit-label">${escapeHtml(langText('Priskirtos gaires', 'Linked guidelines'))}</label>
+        <div class="guideline-checkbox-panel">
+          ${renderGuidelineCheckboxList(state.guidelines, { selectedIds: selectedGuidelineIds, name: 'guidelineIds' })}
+        </div>
+        <div class="admin-edit-actions">
+          <button class="btn btn-primary" type="submit">${escapeHtml(langText('Issaugoti', 'Save'))}</button>
+          <button class="btn btn-danger" type="button" id="deleteInternalInitiativeBtn">${escapeHtml(langText('Istrinti', 'Delete'))}</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#closeInternalEntityEditModal')?.addEventListener('click', closeInternalEditModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeInternalEditModal();
+  });
+
+  const form = overlay.querySelector('#initiativeEditForm');
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const fd = new FormData(form);
+    const title = String(fd.get('title') || '').trim();
+    const description = String(fd.get('description') || '').trim();
+    const status = String(fd.get('status') || 'active').trim();
+    const guidelineIds = checkedFormValues(form, 'guidelineIds');
+    if (!title) return;
+    await runBusy(async () => {
+      await api(`/api/v1/admin/initiatives/${encodeURIComponent(item.id)}`, {
+        method: 'PUT',
+        body: {
+          title,
+          description,
+          status,
+          guidelineIds,
+          lineSide: 'auto'
+        }
+      });
+      closeInternalEditModal();
+      state.notice = langText('Iniciatyva atnaujinta.', 'Initiative updated.');
+      notifySuccess(state.notice);
+      await bootstrap();
+    });
+  });
+
+  overlay.querySelector('#deleteInternalInitiativeBtn')?.addEventListener('click', async () => {
+    if (!window.confirm(langText(`Ar tikrai norite istrinti iniciatyva "${item.title || ''}"?`, `Delete initiative "${item.title || ''}"?`))) return;
+    await runBusy(async () => {
+      await api(`/api/v1/admin/initiatives/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+      closeInternalEditModal();
+      state.notice = langText('Iniciatyva istrinta.', 'Initiative deleted.');
+      notifySuccess(state.notice);
+      setActiveView('initiatives');
+      await bootstrap();
+    });
+  });
+}
+
 function findGuidelineByRouteEntity() {
   if (state.routeEntityKind !== 'guideline') return null;
   const targetId = String(state.routeEntityId || '').trim();
@@ -3947,10 +4162,12 @@ function renderGuidelineDetailView() {
   const cardUrl = guidelineShareUrl(guideline.id);
   const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
   const relatedGuidelinesMarkup = renderGuidelineRelatedSection(guideline);
+  const canManage = canManageSelectedInstitution();
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>${langText('Gaires kortele', 'Guideline card')}</h2>
       <div class="header-stack step-header-actions">
+        ${canManage ? `<button id="editGuidelineBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
         <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ gaires', 'Back to guidelines')}</button>
         <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
       </div>
@@ -4005,6 +4222,12 @@ function renderGuidelineDetailView() {
   if (openMapButton) {
     openMapButton.addEventListener('click', () => {
       openMapForCard('guideline', guideline.id);
+    });
+  }
+  const editButton = elements.stepView.querySelector('#editGuidelineBtn');
+  if (editButton) {
+    editButton.addEventListener('click', () => {
+      openGuidelineAdminEditModal(guideline);
     });
   }
 }
@@ -4125,10 +4348,12 @@ function renderInitiativeDetailView() {
   const cardUrl = initiativeShareUrl(initiative.id);
   const breadcrumbMarkup = buildInitiativeDetailBreadcrumbs(initiative);
   const relatedGuidelinesMarkup = renderInitiativeRelatedGuidelinesSection(initiative);
+  const canManage = canManageSelectedInstitution();
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>${langText('Iniciatyvos kortele', 'Initiative card')}</h2>
       <div class="header-stack step-header-actions">
+        ${canManage ? `<button id="editInitiativeBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
         <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ iniciatyvas', 'Back to initiatives')}</button>
         <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
       </div>
@@ -4182,6 +4407,12 @@ function renderInitiativeDetailView() {
   if (openMapButton) {
     openMapButton.addEventListener('click', () => {
       openMapForCard('initiative', initiative.id);
+    });
+  }
+  const editButton = elements.stepView.querySelector('#editInitiativeBtn');
+  if (editButton) {
+    editButton.addEventListener('click', () => {
+      openInitiativeAdminEditModal(initiative);
     });
   }
   const list = elements.stepView.querySelector('#initiativeSection');
