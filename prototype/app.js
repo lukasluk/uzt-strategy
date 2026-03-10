@@ -4544,14 +4544,11 @@ function renderInitiativesView() {
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
         ${member ? `<span class="tag">${langText('Tavo balsai', 'Your votes')}: ${remaining} / ${budget}</span>` : `<span class="tag">${langText('Viesas rezimas', 'Public mode')}</span>`}
+        ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
       </div>
     </div>
 
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
-
-    <div class="header-stack" style="margin-bottom: 14px;">
-      ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
-    </div>
 
     <section id="initiativeSection" class="guideline-group">
       ${initiatives.length
@@ -5113,25 +5110,17 @@ function renderStepView() {
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
         ${member ? `<span class="tag">${langText('Tavo balsai', 'Your votes')}: ${remaining} / ${budget}</span>` : `<span class="tag">${langText('Viesas rezimas', 'Public mode')}</span>`}
+        ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
       </div>
     </div>
 
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
-
-    <div class="header-stack" style="margin-bottom: 14px;">
-      ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
-    </div>
 
     <div id="guidelineGroups" class="guideline-groups">
       <section class="guideline-group">
         ${relationGroups.parentGroups.length
           ? relationGroups.parentGroups.map((group) => `
               <div class="relationship-cluster">
-                <div class="relationship-cluster-head">
-                  <span class="tag tag-main">${langText('Tevine', 'Parent')}</span>
-                  <strong>${escapeHtml(group.parent.title)}</strong>
-                  <span class="tag">${langText('Vaikiniu', 'Children')}: ${group.children.length}</span>
-                </div>
                 <div class="relationship-cluster-cards">
                   <div class="relationship-parent-slot">
                     ${renderGuidelineCard(group.parent, {
@@ -5142,7 +5131,10 @@ function renderStepView() {
                     })}
                   </div>
                   <div class="relationship-child-stack">
-                    <div class="relationship-child-label">${langText('Vaikines gaires', 'Child guidelines')}</div>
+                    <div class="relationship-child-label">
+                      <span>${langText('Vaikines gaires', 'Child guidelines')}</span>
+                      <span class="tag">${langText('Vaikiniu', 'Children')}: ${group.children.length}</span>
+                    </div>
                     ${group.children.length
                       ? `<div class="card-list relationship-child-grid">
                           ${group.children.map((child) => renderGuidelineCard(child, {
