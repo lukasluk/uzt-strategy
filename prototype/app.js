@@ -3304,13 +3304,7 @@ function renderCardShareRow({ url, entityId, copyAction }) {
   const safeEntityId = String(entityId || '').trim();
   const action = String(copyAction || '').trim();
   if (!absoluteUrl || !safeEntityId || !action) return '';
-  return `
-    <div class="card-share-row">
-      <span class="card-share-label">${escapeHtml(langText('Nuoroda', 'URL'))}</span>
-      <a class="card-share-url" href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(absoluteUrl)}</a>
-      <button type="button" class="btn btn-ghost card-share-copy-btn" data-action="${escapeHtml(action)}" data-id="${escapeHtml(safeEntityId)}" data-url="${escapeHtml(absoluteUrl)}">${escapeHtml(langText('Kopijuoti', 'Copy'))}</button>
-    </div>
-  `;
+  return '';
 }
 
 function buildGuidelineRelationshipGroups(guidelines) {
@@ -4549,12 +4543,10 @@ function renderInitiativesView() {
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">${langText('Ciklas', 'Cycle')}: ${escapeHtml(state.cycle?.title || '-')}</span>
         ${member ? `<span class="tag">${langText('Tavo balsai', 'Your votes')}: ${remaining} / ${budget}</span>` : `<span class="tag">${langText('Viesas rezimas', 'Public mode')}</span>`}
       </div>
     </div>
 
-    <p class="prompt">${escapeHtml(stepPrompt('initiatives'))}</p>
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
 
     <div class="header-stack" style="margin-bottom: 14px;">
@@ -5120,12 +5112,10 @@ function renderStepView() {
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
         <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
         <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">${langText('Ciklas', 'Cycle')}: ${escapeHtml(state.cycle?.title || '-')}</span>
         ${member ? `<span class="tag">${langText('Tavo balsai', 'Your votes')}: ${remaining} / ${budget}</span>` : `<span class="tag">${langText('Viesas rezimas', 'Public mode')}</span>`}
       </div>
     </div>
 
-    <p class="prompt">${escapeHtml(stepPrompt('guidelines'))}</p>
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
 
     <div class="header-stack" style="margin-bottom: 14px;">
@@ -5134,11 +5124,6 @@ function renderStepView() {
 
     <div id="guidelineGroups" class="guideline-groups">
       <section class="guideline-group">
-        <div class="guideline-group-header">
-          <h3>${langText('Susietos gaires', 'Linked guidelines')}</h3>
-          <span class="tag">${relationGroups.parentGroups.length}</span>
-        </div>
-        <p class="prompt">${langText('Tevines gaires rodomos kartu su joms priskirtomis vaikinemis gairemis.', 'Parent guidelines are shown together with their linked child guidelines.')}</p>
         ${relationGroups.parentGroups.length
           ? relationGroups.parentGroups.map((group) => `
               <div class="relationship-cluster">
