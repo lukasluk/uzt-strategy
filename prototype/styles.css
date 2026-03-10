@@ -3461,9 +3461,9 @@ body.embed-map-page .map-fullscreen-watermark img {
   font-size: 24px;
   line-height: 1.18;
 }
-.strategy-map-viewport.map-layer-plan .guideline-node .map-vote-row,
-.strategy-map-viewport.map-layer-plan .guideline-node .map-vote-squares,
-.strategy-map-viewport.map-layer-plan .guideline-node .map-vote-empty {
+.strategy-map-viewport.map-layer-plan .strategy-map-node .map-vote-row,
+.strategy-map-viewport.map-layer-plan .strategy-map-node .map-vote-squares,
+.strategy-map-viewport.map-layer-plan .strategy-map-node .map-vote-empty {
   display: none;
 }
 @media (max-width: 900px) {
