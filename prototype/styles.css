@@ -5002,6 +5002,13 @@ select:focus {
 .implementation-detail-meta {
   margin-bottom: 14px;
 }
+.guideline-groups[data-detail-view="1"] .guideline-card .card-top h4 {
+  font-size: 32px;
+  line-height: 1.08;
+}
+.guideline-groups[data-detail-view="1"] .guideline-card .card-top p {
+  color: #000000;
+}
 .modal-overlay {
   position: fixed;
   inset: 0;

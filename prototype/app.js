@@ -1125,7 +1125,7 @@ const MAP_FULLSCREEN_ICON_ENTER = `
 `;
 const MAP_FULLSCREEN_ICON_EXIT = `
   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-    <path d="M9 9H5V5M15 9h4V5M19 15v4h-4M9 15H5v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M9 5v4H5M15 5v4h4M19 15h-4v4M5 15h4v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
 `;
 
@@ -3821,6 +3821,10 @@ function renderInitiativeCard(initiative, options) {
 function renderImplementationMetaSummary(item) {
   const implementationDate = normalizeImplementationDateInputValue(item?.implementationDate);
   const implementationOwner = String(item?.implementationOwner || '').trim();
+  const dateDisplay = formatInstitutionDate(implementationDate) || langText('Nenurodyta', 'Not set');
+  const detailSummary = implementationOwner
+    ? `${dateDisplay} • ${implementationOwner}`
+    : dateDisplay;
   if (!implementationDate && !implementationOwner) {
     return `
       <div class="header-stack implementation-detail-meta">
@@ -3830,8 +3834,7 @@ function renderImplementationMetaSummary(item) {
   }
   return `
     <div class="header-stack implementation-detail-meta">
-      <span class="tag">${escapeHtml(langText('Įgyvendinimo data', 'Implementation date'))}: ${escapeHtml(formatInstitutionDate(implementationDate) || langText('Nenurodyta', 'Not set'))}</span>
-      ${implementationOwner ? `<span class="tag">${escapeHtml(langText('Atsakingas', 'Responsible'))}: ${escapeHtml(implementationOwner)}</span>` : ''}
+      <span class="tag">${escapeHtml(langText('Įgyvendinimo data', 'Implementation date'))}: ${escapeHtml(detailSummary)}</span>
     </div>
   `;
 }
