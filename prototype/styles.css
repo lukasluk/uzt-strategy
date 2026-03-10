@@ -3119,6 +3119,18 @@ body.embed-map-page .map-fullscreen-watermark img {
   padding: 0;
   justify-content: center;
 }
+.map-plan-sound-btn {
+  min-width: 42px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  justify-content: center;
+}
+.map-plan-sound-btn.is-muted {
+  color: #7b8ba3;
+  border-color: rgba(183, 196, 216, 0.95);
+  background: rgba(244, 247, 252, 0.92);
+}
 .map-plan-play-icon {
   width: 17px;
   height: 17px;

@@ -16,6 +16,24 @@ function buildMapPlanPlaybackIcon(isPlaying) {
     `;
 }
 
+function buildMapPlanSoundIcon(isEnabled) {
+  return isEnabled
+    ? `
+      <svg viewBox="0 0 24 24" class="map-plan-play-icon" aria-hidden="true">
+        <path d="M5 14h3.2l4.8 4.1V5.9L8.2 10H5z"></path>
+        <path d="M16.2 9.1a4.2 4.2 0 0 1 0 5.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+        <path d="M18.8 6.8a7.3 7.3 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+      </svg>
+    `
+    : `
+      <svg viewBox="0 0 24 24" class="map-plan-play-icon" aria-hidden="true">
+        <path d="M5 14h3.2l4.8 4.1V5.9L8.2 10H5z"></path>
+        <path d="M16.5 8.2l5 7.6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+        <path d="M21.5 8.2l-5 7.6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+      </svg>
+    `;
+}
+
 function buildMapPlanTimelineMarkup(graph, activeLayer) {
   if (activeLayer !== 'plan') return '';
   const normalizeDate = typeof normalizeImplementationDateInputValue === 'function'
@@ -142,6 +160,13 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
         </div>
         <span class="map-plan-timeline-boundary">${escapeHtml(lastDate ? formatDate(lastDate) || lastDate : mapLang('Nėra datų', 'No dates'))}</span>
       </div>
+      <button
+        type="button"
+        class="btn btn-ghost map-plan-sound-btn"
+        data-map-plan-sound
+        aria-label="${escapeHtml(state.mapPlanSoundEnabled ? mapLang('Išjungti garsą', 'Mute sound') : mapLang('Įjungti garsą', 'Enable sound'))}"
+        title="${escapeHtml(state.mapPlanSoundEnabled ? mapLang('Išjungti garsą', 'Mute sound') : mapLang('Įjungti garsą', 'Enable sound'))}"
+      >${buildMapPlanSoundIcon(state.mapPlanSoundEnabled)}</button>
       <label class="map-plan-duration">
         <select id="mapPlanDurationSelect" class="map-plan-duration-select" data-map-plan-duration>
           ${playbackOptions.map((ms) => `

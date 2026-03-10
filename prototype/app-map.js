@@ -113,7 +113,7 @@ function resolveMapPlanRevealKind(node) {
 }
 
 function playMapPlanRevealSound(kinds = []) {
-  if (!state.mapPlanPlaying) return;
+  if (!state.mapPlanPlaying || !state.mapPlanSoundEnabled) return;
   const audioContext = ensureMapPlanAudioContext();
   if (!audioContext) return;
   if (audioContext.state === 'suspended') {
@@ -125,44 +125,74 @@ function playMapPlanRevealSound(kinds = []) {
 
   const kindList = Array.isArray(kinds) ? kinds.filter(Boolean) : [];
   const uniqueKinds = new Set(kindList);
-  let baseFrequency = 480;
-  if (uniqueKinds.has('initiative')) baseFrequency = 560;
-  else if (uniqueKinds.has('child')) baseFrequency = 520;
-  else if (uniqueKinds.has('parent')) baseFrequency = 450;
-  else if (uniqueKinds.has('orphan')) baseFrequency = 500;
+  let baseFrequency = 420;
+  if (uniqueKinds.has('initiative')) baseFrequency = 520;
+  else if (uniqueKinds.has('child')) baseFrequency = 470;
+  else if (uniqueKinds.has('parent')) baseFrequency = 390;
+  else if (uniqueKinds.has('orphan')) baseFrequency = 445;
 
-  const layerCount = Math.max(1, Math.min(3, uniqueKinds.size || 1));
+  const layerCount = Math.max(1, Math.min(4, kindList.length || uniqueKinds.size || 1));
   const now = audioContext.currentTime + 0.01;
   const masterGain = audioContext.createGain();
   masterGain.gain.setValueAtTime(0.0001, now);
-  masterGain.gain.linearRampToValueAtTime(0.028 + (layerCount * 0.006), now + 0.018);
-  masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.19);
+  masterGain.gain.linearRampToValueAtTime(0.022 + (layerCount * 0.004), now + 0.012);
+  masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
   masterGain.connect(audioContext.destination);
 
-  const mainOsc = audioContext.createOscillator();
-  const mainGain = audioContext.createGain();
-  mainOsc.type = 'triangle';
-  mainOsc.frequency.setValueAtTime(baseFrequency * 1.18, now);
-  mainOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 0.82, now + 0.16);
-  mainGain.gain.setValueAtTime(1, now);
-  mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-  mainOsc.connect(mainGain);
-  mainGain.connect(masterGain);
+  const toneFilter = audioContext.createBiquadFilter();
+  toneFilter.type = 'lowpass';
+  toneFilter.frequency.setValueAtTime(1800 + (layerCount * 120), now);
+  toneFilter.Q.setValueAtTime(0.8, now);
+  toneFilter.connect(masterGain);
 
-  const shimmerOsc = audioContext.createOscillator();
-  const shimmerGain = audioContext.createGain();
-  shimmerOsc.type = 'sine';
-  shimmerOsc.frequency.setValueAtTime(baseFrequency * 1.95, now);
-  shimmerOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 1.32, now + 0.12);
-  shimmerGain.gain.setValueAtTime(0.28, now);
-  shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-  shimmerOsc.connect(shimmerGain);
-  shimmerGain.connect(masterGain);
+  const bodyOsc = audioContext.createOscillator();
+  const bodyGain = audioContext.createGain();
+  bodyOsc.type = 'triangle';
+  bodyOsc.frequency.setValueAtTime(baseFrequency * 1.1, now);
+  bodyOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 0.76, now + 0.22);
+  bodyGain.gain.setValueAtTime(0.0001, now);
+  bodyGain.gain.linearRampToValueAtTime(0.95, now + 0.01);
+  bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+  bodyOsc.connect(bodyGain);
+  bodyGain.connect(toneFilter);
 
-  mainOsc.start(now);
-  shimmerOsc.start(now);
-  mainOsc.stop(now + 0.2);
-  shimmerOsc.stop(now + 0.14);
+  const bellOsc = audioContext.createOscillator();
+  const bellGain = audioContext.createGain();
+  bellOsc.type = 'sine';
+  bellOsc.frequency.setValueAtTime(baseFrequency * 2.02, now);
+  bellOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 1.26, now + 0.17);
+  bellGain.gain.setValueAtTime(0.0001, now);
+  bellGain.gain.linearRampToValueAtTime(0.42, now + 0.008);
+  bellGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  bellOsc.connect(bellGain);
+  bellGain.connect(masterGain);
+
+  const transientBuffer = audioContext.createBuffer(1, Math.max(1, Math.floor(audioContext.sampleRate * 0.05)), audioContext.sampleRate);
+  const transientData = transientBuffer.getChannelData(0);
+  for (let index = 0; index < transientData.length; index += 1) {
+    const decay = 1 - (index / transientData.length);
+    transientData[index] = (Math.random() * 2 - 1) * Math.pow(decay, 2.6);
+  }
+  const transientSource = audioContext.createBufferSource();
+  transientSource.buffer = transientBuffer;
+  const transientFilter = audioContext.createBiquadFilter();
+  transientFilter.type = 'bandpass';
+  transientFilter.frequency.setValueAtTime(920 + (layerCount * 70), now);
+  transientFilter.Q.setValueAtTime(1.4, now);
+  const transientGain = audioContext.createGain();
+  transientGain.gain.setValueAtTime(0.0001, now);
+  transientGain.gain.linearRampToValueAtTime(0.16, now + 0.004);
+  transientGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+  transientSource.connect(transientFilter);
+  transientFilter.connect(transientGain);
+  transientGain.connect(masterGain);
+
+  bodyOsc.start(now);
+  bellOsc.start(now);
+  transientSource.start(now);
+  bodyOsc.stop(now + 0.24);
+  bellOsc.stop(now + 0.18);
+  transientSource.stop(now + 0.07);
 }
 
 function mapPlanPlaybackButtonIconMarkup(isPlaying) {
@@ -219,6 +249,7 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
   const floatingCurrentLabel = viewport.querySelector('#mapPlanFloatingCurrent');
   const range = timelineRoot.querySelector('#mapPlanTimelineRange');
   const playButton = timelineRoot.querySelector('[data-map-plan-play]');
+  const soundButton = timelineRoot.querySelector('[data-map-plan-sound]');
 
   if (range instanceof HTMLInputElement) {
     range.value = String(Math.round(progress * 1000));
@@ -243,6 +274,17 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
     playButton.setAttribute('title', nextLabel);
     playButton.classList.toggle('btn-primary', state.mapPlanPlaying);
     playButton.classList.toggle('btn-ghost', !state.mapPlanPlaying);
+  }
+  if (soundButton instanceof HTMLElement) {
+    if (typeof buildMapPlanSoundIcon === 'function') {
+      soundButton.innerHTML = buildMapPlanSoundIcon(Boolean(state.mapPlanSoundEnabled));
+    }
+    const soundLabel = state.mapPlanSoundEnabled
+      ? mapLang('Išjungti garsą', 'Mute sound')
+      : mapLang('Įjungti garsą', 'Enable sound');
+    soundButton.setAttribute('aria-label', soundLabel);
+    soundButton.setAttribute('title', soundLabel);
+    soundButton.classList.toggle('is-muted', !state.mapPlanSoundEnabled);
   }
 
   const span = first && last ? Math.max(0, last.time - first.time) : 0;
@@ -301,6 +343,7 @@ function bindMapPlanTimeline(viewport, world, stepView) {
   const range = timelineRoot.querySelector('#mapPlanTimelineRange');
   const playButton = timelineRoot.querySelector('[data-map-plan-play]');
   const durationSelect = timelineRoot.querySelector('[data-map-plan-duration]');
+  const soundButton = timelineRoot.querySelector('[data-map-plan-sound]');
   const hasTimeline = !timelineRoot.classList.contains('is-empty');
   let hideTimerId = 0;
 
@@ -371,6 +414,18 @@ function bindMapPlanTimeline(viewport, world, stepView) {
       return;
     }
     startPlayback();
+  });
+
+  soundButton?.addEventListener('click', () => {
+    registerActivity();
+    state.mapPlanSoundEnabled = !state.mapPlanSoundEnabled;
+    if (state.mapPlanSoundEnabled) {
+      const audioContext = ensureMapPlanAudioContext();
+      if (audioContext?.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+    }
+    sync();
   });
 
   ['mousemove', 'pointermove', 'pointerdown', 'wheel', 'touchstart'].forEach((eventName) => {

@@ -256,6 +256,7 @@ const state = {
   mapZoomAnimationFrameId: 0,
   mapPlanPlaybackStartedAt: 0,
   mapPlanPlaybackMs: MAP_PLAN_PLAYBACK_MS,
+  mapPlanSoundEnabled: true,
   mapSecretAnthracite: false,
   expandedStepId: '',
   strategySwitcherDialogOpen: false,
