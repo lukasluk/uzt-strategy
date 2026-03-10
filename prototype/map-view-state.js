@@ -67,7 +67,14 @@ function renderStrategicLinksPendingState() {
 
 function setMapLayerAndRender(nextLayer) {
   if (state.mapLayer === nextLayer) return;
+  if (state.mapPlanAnimationFrameId) {
+    window.cancelAnimationFrame(state.mapPlanAnimationFrameId);
+    state.mapPlanAnimationFrameId = 0;
+  }
+  state.mapPlanPlaying = false;
+  state.mapPlanPlaybackStartedAt = 0;
   state.mapLayer = nextLayer;
+  state.mapPlanProgress = 0;
   resetMapInitiativeFocusState();
   renderStepView();
 }
@@ -75,6 +82,13 @@ function setMapLayerAndRender(nextLayer) {
 function focusGuidelineInitiativesInMap(guidelineId) {
   const nextId = String(guidelineId || '').trim();
   if (!nextId) return;
+  if (state.mapPlanAnimationFrameId) {
+    window.cancelAnimationFrame(state.mapPlanAnimationFrameId);
+    state.mapPlanAnimationFrameId = 0;
+  }
+  state.mapPlanPlaying = false;
+  state.mapPlanPlaybackStartedAt = 0;
+  state.mapPlanProgress = 0;
   state.mapLayer = 'initiatives';
   resetMapInitiativeFocusState();
   state.pendingMapFocusKind = 'guideline';

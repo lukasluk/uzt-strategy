@@ -3062,6 +3062,57 @@ body.embed-map-page .map-fullscreen-watermark img {
   min-width: 112px;
   box-shadow: 0 10px 24px rgba(26, 52, 84, 0.18);
 }
+.strategy-map-viewport.map-layer-plan .map-plan-dock {
+  bottom: 110px;
+}
+.map-plan-timeline {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  z-index: 17;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(180, 199, 226, 0.92);
+  border-radius: 18px;
+  background: rgba(251, 253, 255, 0.92);
+  box-shadow: 0 18px 32px rgba(26, 52, 84, 0.16);
+  backdrop-filter: blur(10px);
+}
+.map-plan-timeline.is-empty {
+  grid-template-columns: 1fr;
+}
+.map-plan-play-btn {
+  min-width: 92px;
+  justify-content: center;
+}
+.map-plan-timeline-track {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.map-plan-timeline-boundary {
+  font-size: 13px;
+  color: #5d7290;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.map-plan-timeline-range {
+  width: 100%;
+  accent-color: #2d62b6;
+}
+.map-plan-timeline-current {
+  min-width: 112px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 700;
+  color: #244a79;
+}
 .strategy-map-viewport.map-layer-guidelines .initiative-lines,
 .strategy-map-viewport.map-layer-guidelines .initiative-node {
   opacity: 0;
@@ -3177,6 +3228,15 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategy-map-viewport.map-layer-plan .guideline-node {
   z-index: 9;
 }
+.strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-dated {
+  opacity: 0.1;
+  filter: saturate(0.3);
+  transition: opacity 0.24s ease, filter 0.24s ease, box-shadow 0.24s ease;
+}
+.strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-dated.map-plan-visible {
+  opacity: 1;
+  filter: none;
+}
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives, .map-layer-plan) .institution-node strong {
   font-size: clamp(18px, 1.55vw, 22px);
   line-height: 1.08;
@@ -3275,6 +3335,28 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategy-map-viewport.map-layer-plan .map-plan-meta-line.is-owner {
   font-size: 18px;
   line-height: 1.2;
+}
+@media (max-width: 900px) {
+  .map-plan-timeline {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .strategy-map-viewport.map-layer-plan .map-plan-dock {
+    bottom: 154px;
+  }
+
+  .map-plan-timeline-track {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .map-plan-timeline-boundary,
+  .map-plan-timeline-current {
+    text-align: left;
+  }
 }
 .strategy-map-viewport.map-layer-strategic-links .initiative-lines,
 .strategy-map-viewport.map-layer-strategic-links .initiative-node {

@@ -144,6 +144,7 @@ const APP_PATH_INITIATIVE_SEGMENT = 'initiative';
 const FOCUS_GUIDELINE_QUERY_KEY = 'focusGuideline';
 const FOCUS_INITIATIVE_QUERY_KEY = 'focusInitiative';
 const MAP_INSTITUTION_PULSE_MS = 10000;
+const MAP_PLAN_PLAYBACK_MS = 10000;
 const STEP_ADD_SECTION_IDS = Object.freeze({
   guidelines: 'guidelineAddSection',
   initiatives: 'initiativeAddSection'
@@ -248,6 +249,10 @@ const state = {
   mapGuidelineFocusId: '',
   mapGuidelineHoverId: '',
   mapTransform: { x: 120, y: 80, scale: 1 },
+  mapPlanProgress: 0,
+  mapPlanPlaying: false,
+  mapPlanAnimationFrameId: 0,
+  mapPlanPlaybackStartedAt: 0,
   expandedStepId: '',
   strategySwitcherDialogOpen: false,
   routeEntityKind: resolveRouteEntityKind(),

@@ -207,6 +207,13 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
   const mapCommentButtonLabel = mapLang('Rodyti aprašymą ir komentarus', 'Show description and comments');
 
   const planMetaMarkup = buildPlanMetaMarkup(node.guideline, activeLayer);
+  const normalizeDate = typeof normalizeImplementationDateInputValue === 'function'
+    ? normalizeImplementationDateInputValue
+    : (value) => String(value || '').trim();
+  const implementationDate = normalizeDate(node.guideline?.implementationDate);
+  const planDateAttr = activeLayer === 'plan' && implementationDate
+    ? ` data-plan-date="${escapeHtml(implementationDate)}"`
+    : '';
   const linkedInitiativesButtonLabel = linkedInitiativeCount === 1
     ? mapLang('Rodyti susietÄ… iniciatyvÄ…', 'Show linked initiative')
     : mapLang('Rodyti susietas iniciatyvas', 'Show linked initiatives');
@@ -235,6 +242,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
                  data-y="${node.y}"
                  data-w="${node.w}"
                  data-h="${node.h}"
+                 ${planDateAttr}
                  data-draggable="${editable ? 'true' : 'false'}"
                  style="${guidelineToneStyle}left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
           <div class="map-node-head">
@@ -282,6 +290,13 @@ function buildInitiativeNodeMarkup({ node, activeLayer, editable }) {
   const mapCommentButtonLabel = mapLang('Rodyti aprašymą ir komentarus', 'Show description and comments');
 
   const planMetaMarkup = buildPlanMetaMarkup(node.initiative, activeLayer);
+  const normalizeDate = typeof normalizeImplementationDateInputValue === 'function'
+    ? normalizeImplementationDateInputValue
+    : (value) => String(value || '').trim();
+  const implementationDate = normalizeDate(node.initiative?.implementationDate);
+  const planDateAttr = activeLayer === 'plan' && implementationDate
+    ? ` data-plan-date="${escapeHtml(implementationDate)}"`
+    : '';
   return `
       <article class="strategy-map-node initiative-node status-${escapeHtml(String(node.initiative.status || 'active').toLowerCase())}"
                data-layer="initiatives"
@@ -293,6 +308,7 @@ function buildInitiativeNodeMarkup({ node, activeLayer, editable }) {
                data-y="${node.y}"
                data-w="${node.w}"
                data-h="${node.h}"
+               ${planDateAttr}
                data-draggable="${editable ? 'true' : 'false'}"
                style="left:${node.x}px;top:${node.y}px;width:${node.w}px;min-height:${node.h}px;">
         <div class="map-node-head">
@@ -551,6 +567,7 @@ function buildMapViewShellMarkup({
   editable,
   mapToolbar,
   planButtonMarkup,
+  planTimelineMarkup,
   strategicNoLinksMarkup,
   graph,
   guidelineEdgeMarkup,
@@ -589,6 +606,7 @@ function buildMapViewShellMarkup({
         <div class="${mapWatermarkClass}" aria-hidden="true">
           <img src="assets/digistrategija-logo.svg?v=20260212c" alt="" />
         </div>
+        ${planTimelineMarkup}
         ${planButtonMarkup}
         ${embedBranding}
       </section>

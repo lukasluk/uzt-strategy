@@ -67,6 +67,141 @@ function notifyMapError(message) {
   }
 }
 
+function parseMapPlanDateValue(value) {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const time = Date.UTC(year, month - 1, day);
+  if (!Number.isFinite(time)) return null;
+  return { raw, time };
+}
+
+function stopMapPlanPlayback() {
+  if (state.mapPlanAnimationFrameId) {
+    window.cancelAnimationFrame(state.mapPlanAnimationFrameId);
+    state.mapPlanAnimationFrameId = 0;
+  }
+  state.mapPlanPlaying = false;
+  state.mapPlanPlaybackStartedAt = 0;
+}
+
+function mapPlanCurrentDateText(firstDate, lastDate, progress) {
+  const formatDate = typeof formatInstitutionDate === 'function'
+    ? formatInstitutionDate
+    : (value) => String(value || '').trim();
+  const first = parseMapPlanDateValue(firstDate);
+  const last = parseMapPlanDateValue(lastDate);
+  if (!first || !last) return '';
+  if (progress <= 0) return formatDate(first.raw) || first.raw;
+  const span = Math.max(0, last.time - first.time);
+  const currentTime = span > 0
+    ? first.time + Math.round(span * Math.max(0, Math.min(1, progress)))
+    : last.time;
+  const currentDate = new Date(currentTime);
+  const year = currentDate.getUTCFullYear();
+  const month = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(currentDate.getUTCDate()).padStart(2, '0');
+  const raw = `${year}-${month}-${day}`;
+  return formatDate(raw) || raw;
+}
+
+function applyMapPlanTimelineState(viewport, world, timelineRoot) {
+  if (!(viewport instanceof HTMLElement) || !(world instanceof HTMLElement) || !(timelineRoot instanceof HTMLElement)) return;
+  const progress = Math.max(0, Math.min(1, Number(state.mapPlanProgress || 0)));
+  const firstDate = String(timelineRoot.dataset.planFirstDate || '').trim();
+  const lastDate = String(timelineRoot.dataset.planLastDate || '').trim();
+  const first = parseMapPlanDateValue(firstDate);
+  const last = parseMapPlanDateValue(lastDate);
+  const currentLabel = timelineRoot.querySelector('#mapPlanTimelineCurrent');
+  const range = timelineRoot.querySelector('#mapPlanTimelineRange');
+  const playButton = timelineRoot.querySelector('[data-map-plan-play]');
+
+  if (range instanceof HTMLInputElement) {
+    range.value = String(Math.round(progress * 1000));
+  }
+  if (currentLabel) {
+    currentLabel.textContent = mapPlanCurrentDateText(firstDate, lastDate, progress);
+  }
+  if (playButton instanceof HTMLElement) {
+    playButton.textContent = state.mapPlanPlaying
+      ? mapLang('Pauzė', 'Pause')
+      : mapLang('Play', 'Play');
+    playButton.classList.toggle('btn-primary', state.mapPlanPlaying);
+    playButton.classList.toggle('btn-ghost', !state.mapPlanPlaying);
+  }
+
+  const span = first && last ? Math.max(0, last.time - first.time) : 0;
+  const currentTime = first && last
+    ? (span > 0 ? first.time + span * progress : last.time)
+    : 0;
+  const datedNodes = Array.from(world.querySelectorAll('.strategy-map-node[data-plan-date]'));
+  datedNodes.forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
+    const parsed = parseMapPlanDateValue(node.dataset.planDate);
+    if (!parsed) {
+      node.classList.remove('map-plan-dated', 'map-plan-visible');
+      return;
+    }
+    node.classList.add('map-plan-dated');
+    const revealed = progress > 0 && (progress >= 1 || span <= 0 || parsed.time <= currentTime);
+    node.classList.toggle('map-plan-visible', revealed);
+  });
+}
+
+function bindMapPlanTimeline(viewport, world, stepView) {
+  if (!(viewport instanceof HTMLElement) || !(world instanceof HTMLElement) || !(stepView instanceof HTMLElement)) return;
+  const timelineRoot = stepView.querySelector('#mapPlanTimeline');
+  if (!(timelineRoot instanceof HTMLElement)) return;
+  const range = timelineRoot.querySelector('#mapPlanTimelineRange');
+  const playButton = timelineRoot.querySelector('[data-map-plan-play]');
+  const hasTimeline = !timelineRoot.classList.contains('is-empty');
+
+  const sync = () => applyMapPlanTimelineState(viewport, world, timelineRoot);
+
+  const startPlayback = () => {
+    if (!hasTimeline) return;
+    if (state.mapPlanProgress >= 1) {
+      state.mapPlanProgress = 0;
+    }
+    stopMapPlanPlayback();
+    state.mapPlanPlaying = true;
+    state.mapPlanPlaybackStartedAt = performance.now() - (state.mapPlanProgress * MAP_PLAN_PLAYBACK_MS);
+    const tick = (timestamp) => {
+      const elapsed = Math.max(0, timestamp - Number(state.mapPlanPlaybackStartedAt || timestamp));
+      state.mapPlanProgress = Math.max(0, Math.min(1, elapsed / MAP_PLAN_PLAYBACK_MS));
+      sync();
+      if (state.mapPlanProgress >= 1) {
+        stopMapPlanPlayback();
+        sync();
+        return;
+      }
+      state.mapPlanAnimationFrameId = window.requestAnimationFrame(tick);
+    };
+    state.mapPlanAnimationFrameId = window.requestAnimationFrame(tick);
+    sync();
+  };
+
+  range?.addEventListener('input', () => {
+    stopMapPlanPlayback();
+    state.mapPlanProgress = Math.max(0, Math.min(1, Number(range.value || 0) / 1000));
+    sync();
+  });
+
+  playButton?.addEventListener('click', () => {
+    if (state.mapPlanPlaying) {
+      stopMapPlanPlayback();
+      sync();
+      return;
+    }
+    startPlayback();
+  });
+
+  sync();
+}
+
 
 function renderMapView() {
   document.body.classList.remove('map-comment-modal-open');
@@ -159,6 +294,11 @@ function renderMapView() {
       render();
     }
   });
+  if (activeLayer === 'plan') {
+    bindMapPlanTimeline(viewport, world, elements.stepView);
+  } else {
+    stopMapPlanPlayback();
+  }
 }
 
 
