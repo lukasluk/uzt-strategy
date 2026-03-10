@@ -93,3 +93,9 @@ function bindMapLayerButtons(layerGuidelinesButtons, layerInitiativesButtons, la
     button.addEventListener('click', () => setMapLayerAndRender('strategic-links'));
   });
 }
+
+function bindMapPlanButtons(planButtons) {
+  planButtons.forEach((button) => {
+    button.addEventListener('click', () => setMapLayerAndRender('plan'));
+  });
+}

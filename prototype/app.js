@@ -2791,11 +2791,11 @@ function renderSteps() {
     toggleButton.setAttribute('aria-pressed', sidebarCollapsed ? 'true' : 'false');
     toggleButton.innerHTML = `
       <span class="steps-toggle-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" class="step-icon-svg">
-          <path d="M5 5h4v14H5z"></path>
+        <svg viewBox="0 0 24 24" class="step-icon-svg steps-toggle-svg">
+          <rect x="4.5" y="4.5" width="4.5" height="15" rx="1.4"></rect>
           ${sidebarCollapsed
-        ? '<path d="M14 8l4 4-4 4"></path>'
-        : '<path d="M18 8l-4 4 4 4"></path>'}
+        ? '<path d="M13 7.5l4.5 4.5-4.5 4.5"></path>'
+        : '<path d="M17.5 7.5L13 12l4.5 4.5"></path>'}
         </svg>
       </span>
     `;

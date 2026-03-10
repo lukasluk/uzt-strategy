@@ -21,6 +21,23 @@ function buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes }) {
     `;
 }
 
+function buildPlanMetaMarkup(item, activeLayer) {
+  if (activeLayer !== 'plan' || !item || typeof item !== 'object') return '';
+  const normalizeDate = typeof normalizeImplementationDateInputValue === 'function'
+    ? normalizeImplementationDateInputValue
+    : (value) => String(value || '').trim();
+  const formatDate = typeof formatInstitutionDate === 'function'
+    ? formatInstitutionDate
+    : (value) => String(value || '').trim();
+  const implementationDate = normalizeDate(item.implementationDate);
+  const implementationOwner = String(item.implementationOwner || '').trim();
+  const metaParts = [];
+  if (implementationDate) metaParts.push(`<div class="map-plan-meta-line">${escapeHtml(formatDate(implementationDate) || implementationDate)}</div>`);
+  if (implementationOwner) metaParts.push(`<div class="map-plan-meta-line">${escapeHtml(implementationOwner)}</div>`);
+  if (!metaParts.length) return '';
+  return `<div class="map-plan-meta">${metaParts.join('')}</div>`;
+}
+
 function buildGuidelineEdgeMarkup({ graph, nodeById, activeLayer }) {
   return graph.guidelineEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
@@ -189,6 +206,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
     : '';
   const mapCommentButtonLabel = mapLang('Rodyti aprašymą ir komentarus', 'Show description and comments');
 
+  const planMetaMarkup = buildPlanMetaMarkup(node.guideline, activeLayer);
   const linkedInitiativesButtonLabel = linkedInitiativeCount === 1
     ? mapLang('Rodyti susietÄ… iniciatyvÄ…', 'Show linked initiative')
     : mapLang('Rodyti susietas iniciatyvas', 'Show linked initiatives');
@@ -223,6 +241,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
             <h4>${escapeHtml(node.guideline.title)}</h4>
           </div>
           <small>${escapeHtml(guidelineOwnerLabel)}</small>
+          ${planMetaMarkup}
           <div class="map-vote-row">
             <span class="map-vote-chip" title="${escapeHtml(mapLang('Bendras balas', 'Total score'))}">
               <strong>${score}</strong>
@@ -248,7 +267,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
       `;
 }
 
-function buildInitiativeNodeMarkup({ node, editable }) {
+function buildInitiativeNodeMarkup({ node, activeLayer, editable }) {
   const score = Number(node.initiative.totalScore || 0);
   const mapCommentCount = Math.max(
     0,
@@ -262,6 +281,7 @@ function buildInitiativeNodeMarkup({ node, editable }) {
     : '';
   const mapCommentButtonLabel = mapLang('Rodyti aprašymą ir komentarus', 'Show description and comments');
 
+  const planMetaMarkup = buildPlanMetaMarkup(node.initiative, activeLayer);
   return `
       <article class="strategy-map-node initiative-node status-${escapeHtml(String(node.initiative.status || 'active').toLowerCase())}"
                data-layer="initiatives"
@@ -278,6 +298,7 @@ function buildInitiativeNodeMarkup({ node, editable }) {
         <div class="map-node-head">
           <h4>${escapeHtml(node.initiative.title)}</h4>
         </div>
+        ${planMetaMarkup}
         <div class="map-vote-row">
           <span class="map-vote-chip" title="${escapeHtml(mapLang('Bendras balas', 'Total score'))}">
             <strong>${score}</strong>
@@ -308,7 +329,7 @@ function buildNodeMarkup({ graph, activeLayer, editable }) {
     if (node.kind === 'guideline') {
       return buildGuidelineNodeMarkup({ node, activeLayer, editable });
     }
-    return buildInitiativeNodeMarkup({ node, editable });
+    return buildInitiativeNodeMarkup({ node, activeLayer, editable });
   }).join('');
 }
 
@@ -529,6 +550,7 @@ function buildMapViewShellMarkup({
   activeLayer,
   editable,
   mapToolbar,
+  planButtonMarkup,
   strategicNoLinksMarkup,
   graph,
   guidelineEdgeMarkup,
@@ -567,6 +589,7 @@ function buildMapViewShellMarkup({
         <div class="${mapWatermarkClass}" aria-hidden="true">
           <img src="assets/digistrategija-logo.svg?v=20260212c" alt="" />
         </div>
+        ${planButtonMarkup}
         ${embedBranding}
       </section>
     </section>

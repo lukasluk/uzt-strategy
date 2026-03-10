@@ -478,6 +478,8 @@ function bindMapInteractions(viewport, world, { editable }) {
     const kind = String(nodeElement.dataset.kind || '').trim().toLowerCase();
     if (kind === 'institution') return true;
     const initiativesLayer = state.mapLayer === 'initiatives';
+    const planLayer = state.mapLayer === 'plan';
+    if (planLayer) return kind === 'initiative' || kind === 'guideline';
     if (kind === 'initiative') return initiativesLayer;
     if (kind === 'guideline') return !initiativesLayer;
     return nodeElement.dataset.draggable === 'true';

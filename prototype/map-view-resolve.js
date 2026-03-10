@@ -3,7 +3,7 @@
 
 function resolveActiveMapLayer(primaryGraph) {
   const hasInitiativeNodes = primaryGraph.nodes.some((node) => node.kind === 'initiative');
-  if (state.mapLayer !== 'guidelines' && state.mapLayer !== 'initiatives' && state.mapLayer !== 'strategic-links') {
+  if (state.mapLayer !== 'guidelines' && state.mapLayer !== 'initiatives' && state.mapLayer !== 'plan' && state.mapLayer !== 'strategic-links') {
     state.mapLayer = 'guidelines';
   }
   if (state.mapLayer === 'initiatives' && !hasInitiativeNodes) {

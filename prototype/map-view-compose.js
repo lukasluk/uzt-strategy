@@ -14,6 +14,13 @@ function buildMapViewRenderPayload({ graph, activeLayer, hasInitiativeNodes, edi
 
   const mapHeader = buildMapHeaderMarkup({ graph, activeLayer, editable });
   const mapToolbar = buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes });
+  const planButtonMarkup = `
+    <div class="map-plan-dock">
+      <button type="button" class="btn ${activeLayer === 'plan' ? 'btn-primary' : 'btn-ghost'}" data-map-layer-btn="plan">
+        ${escapeHtml(mapLang('Planas', 'Plan'))}
+      </button>
+    </div>
+  `;
   const strategicNoLinksMarkup = activeLayer === 'strategic-links' && !graph.hasStrategicLinks
     ? '<div class="map-strategic-empty-note">No strategic links</div>'
     : '';
@@ -30,6 +37,7 @@ function buildMapViewRenderPayload({ graph, activeLayer, hasInitiativeNodes, edi
     activeLayer,
     editable,
     mapToolbar,
+    planButtonMarkup,
     strategicNoLinksMarkup,
     graph,
     guidelineEdgeMarkup,

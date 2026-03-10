@@ -33,6 +33,7 @@ function ensureMapRuntimeDependencies() {
     'renderStrategicLinksPendingState',
     'setMapLayerAndRender',
     'bindMapLayerButtons',
+    'bindMapPlanButtons',
     'resolveActiveMapLayer',
     'resolveMapGraphForLayer',
     'buildMapViewRenderPayload',
@@ -112,7 +113,9 @@ function renderMapView() {
   const layerGuidelinesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="guidelines"]'));
   const layerInitiativesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="initiatives"]'));
   const layerStrategicButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="strategic-links"]'));
+  const planButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="plan"]'));
   bindMapLayerButtons(layerGuidelinesButtons, layerInitiativesButtons, layerStrategicButtons);
+  bindMapPlanButtons(planButtons);
   elements.stepView.querySelectorAll('[data-action="show-related-initiatives"]').forEach((button) => {
     button.addEventListener('click', (event) => {
       event.preventDefault();
