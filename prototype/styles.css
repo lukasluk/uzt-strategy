@@ -5388,7 +5388,7 @@ select:focus {
 }
 .strategy-map-edge.edge-root-parent {
   stroke: var(--guideline-parent-accent);
-  stroke-width: var(--map-parent-accent-thickness);
+  stroke-width: calc(var(--map-parent-accent-thickness) * 1.5);
   opacity: 0.98;
   filter: drop-shadow(0 0 2px rgba(72, 104, 168, 0.35));
 }
