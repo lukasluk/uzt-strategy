@@ -72,6 +72,16 @@ function setMapLayerAndRender(nextLayer) {
   renderStepView();
 }
 
+function focusGuidelineInitiativesInMap(guidelineId) {
+  const nextId = String(guidelineId || '').trim();
+  if (!nextId) return;
+  state.mapLayer = 'initiatives';
+  resetMapInitiativeFocusState();
+  state.pendingMapFocusKind = 'guideline';
+  state.pendingMapFocusId = nextId;
+  renderStepView();
+}
+
 function bindMapLayerButtons(layerGuidelinesButtons, layerInitiativesButtons, layerStrategicButtons) {
   layerGuidelinesButtons.forEach((button) => {
     button.addEventListener('click', () => setMapLayerAndRender('guidelines'));

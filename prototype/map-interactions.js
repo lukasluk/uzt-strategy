@@ -38,12 +38,23 @@ function flushPendingMapNodeFocus(viewport, world) {
   state.mapTransform.y = viewport.clientHeight / 2 - centerY * scale;
   applyMapTransform(viewport, world);
 
-  if (focusKind === 'initiative' && state.mapLayer === 'initiatives') {
-    state.mapInitiativeFocusId = focusId;
-    state.mapGuidelineFocusId = '';
-    state.mapInitiativeHoverId = '';
-    state.mapGuidelineHoverId = '';
-    applyInitiativeLayerFocusState(viewport, world);
+  if (state.mapLayer === 'initiatives') {
+    if (focusKind === 'initiative') {
+      state.mapInitiativeFocusId = focusId;
+      state.mapGuidelineFocusId = '';
+      state.mapInitiativeHoverId = '';
+      state.mapGuidelineHoverId = '';
+      applyInitiativeLayerFocusState(viewport, world);
+    } else if (focusKind === 'guideline') {
+      state.mapGuidelineFocusId = focusId;
+      state.mapInitiativeFocusId = '';
+      state.mapInitiativeHoverId = '';
+      state.mapGuidelineHoverId = '';
+      applyInitiativeLayerFocusState(viewport, world);
+    } else {
+      resetMapInitiativeFocusState();
+      applyInitiativeLayerFocusState(viewport, world);
+    }
   } else {
     resetMapInitiativeFocusState();
     applyInitiativeLayerFocusState(viewport, world);

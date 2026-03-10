@@ -129,6 +129,7 @@ function buildInstitutionNodeMarkup({ node, activeLayer, editable }) {
 function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
   const relation = String(node.guideline.relationType || 'orphan');
   const score = Number(node.guideline.totalScore || 0);
+  const linkedInitiativeCount = Math.max(0, Number(node.linkedInitiativeCount || 0));
   const mapCommentCount = Math.max(
     0,
     Array.isArray(node.guideline.comments)
@@ -188,6 +189,23 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
     : '';
   const mapCommentButtonLabel = mapLang('Rodyti aprašymą ir komentarus', 'Show description and comments');
 
+  const linkedInitiativesButtonLabel = linkedInitiativeCount === 1
+    ? mapLang('Rodyti susietÄ… iniciatyvÄ…', 'Show linked initiative')
+    : mapLang('Rodyti susietas iniciatyvas', 'Show linked initiatives');
+  const linkedInitiativesShortcutMarkup = activeLayer === 'guidelines' && linkedInitiativeCount > 0
+    ? `
+          <button
+            type="button"
+            class="map-related-initiatives-btn"
+            data-map-interactive="true"
+            data-action="show-related-initiatives"
+            data-guideline-id="${escapeHtml(node.guideline.id)}"
+            aria-label="${escapeHtml(linkedInitiativesButtonLabel)}"
+            title="${escapeHtml(`${linkedInitiativesButtonLabel} (${linkedInitiativeCount})`)}"
+          >+</button>
+        `
+    : '';
+
   return `
         <article class="strategy-map-node guideline-node relation-${escapeHtml(relation)} status-${escapeHtml(String(node.guideline.status || 'active').toLowerCase())}${strategicGuidelineClass}"
                  data-layer="guidelines"
@@ -225,6 +243,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
             <span class="map-comment-icon" aria-hidden="true">${MAP_COMMENT_ICON_SVG}</span>
             <span class="map-comment-count">${mapCommentCount}</span>
           </button>
+          ${linkedInitiativesShortcutMarkup}
         </article>
       `;
 }

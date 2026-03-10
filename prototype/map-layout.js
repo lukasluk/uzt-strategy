@@ -137,6 +137,16 @@ function layoutStrategyMap() {
 
   const guidelines = Array.isArray(institution.guidelines) ? institution.guidelines : [];
   const initiatives = Array.isArray(institution.initiatives) ? institution.initiatives : [];
+  const linkedInitiativeCountByGuidelineId = {};
+  initiatives.forEach((initiative) => {
+    const linkedGuidelineIds = Array.isArray(initiative.guidelineIds) ? initiative.guidelineIds : [];
+    linkedGuidelineIds.forEach((guidelineId) => {
+      const normalizedGuidelineId = String(guidelineId || '').trim();
+      if (!normalizedGuidelineId) return;
+      linkedInitiativeCountByGuidelineId[normalizedGuidelineId] =
+        (Number(linkedInitiativeCountByGuidelineId[normalizedGuidelineId] || 0) || 0) + 1;
+    });
+  });
 
   const guidelineNodeIdByEntity = {};
   const guidelineById = Object.fromEntries(guidelines.map((g) => [g.id, g]));
@@ -179,7 +189,8 @@ function layoutStrategyMap() {
         w: estimateGuidelineNodeWidth(guideline, institution, sizeScale, false),
         h: Math.round(estimateGuidelineNodeHeight(guideline.totalScore) * sizeScale),
         institution,
-        guideline
+        guideline,
+        linkedInitiativeCount: Math.max(0, Number(linkedInitiativeCountByGuidelineId[String(guideline.id || '').trim()] || 0))
       };
       nodes.push(node);
       guidelineNodeIdByEntity[guideline.id] = nodeId;

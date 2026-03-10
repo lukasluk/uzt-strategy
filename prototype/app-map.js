@@ -113,6 +113,14 @@ function renderMapView() {
   const layerInitiativesButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="initiatives"]'));
   const layerStrategicButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="strategic-links"]'));
   bindMapLayerButtons(layerGuidelinesButtons, layerInitiativesButtons, layerStrategicButtons);
+  elements.stepView.querySelectorAll('[data-action="show-related-initiatives"]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof focusGuidelineInitiativesInMap !== 'function') return;
+      focusGuidelineInitiativesInMap(button.dataset.guidelineId);
+    });
+  });
 
   if (viewport && world) {
     syncMapNodeBounds(world);
