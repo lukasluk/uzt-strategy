@@ -293,6 +293,38 @@ function bindMapPlanTimeline(viewport, world, stepView) {
   registerActivity();
 }
 
+function bindMapOverlayToolbarAutoHide(viewport, stepView) {
+  if (!(viewport instanceof HTMLElement) || !(stepView instanceof HTMLElement)) return;
+  const toolbar = stepView.querySelector('.map-overlay-toolbar');
+  if (!(toolbar instanceof HTMLElement)) return;
+  let hideTimerId = 0;
+
+  const showToolbar = () => {
+    toolbar.classList.remove('is-idle-hidden');
+  };
+
+  const scheduleHide = () => {
+    if (hideTimerId) window.clearTimeout(hideTimerId);
+    hideTimerId = window.setTimeout(() => {
+      toolbar.classList.add('is-idle-hidden');
+    }, 1000);
+  };
+
+  const registerActivity = () => {
+    showToolbar();
+    scheduleHide();
+  };
+
+  ['mousemove', 'pointermove', 'pointerdown', 'wheel', 'touchstart'].forEach((eventName) => {
+    viewport.addEventListener(eventName, registerActivity, { passive: true });
+  });
+
+  toolbar.addEventListener('mousemove', registerActivity, { passive: true });
+  toolbar.addEventListener('pointerdown', registerActivity, { passive: true });
+
+  registerActivity();
+}
+
 
 function renderMapView() {
   document.body.classList.remove('map-comment-modal-open');
@@ -385,6 +417,7 @@ function renderMapView() {
       render();
     }
   });
+  bindMapOverlayToolbarAutoHide(viewport, elements.stepView);
   if (activeLayer === 'plan') {
     bindMapPlanTimeline(viewport, world, elements.stepView);
   } else {
