@@ -4010,14 +4010,16 @@ function resolveGuidelineRelatedItems(guideline) {
   };
 }
 
-function renderRelatedGuidelineSectionMarkup({ heading, emptyLabel, items }) {
+function renderRelatedGuidelineSectionMarkup({ heading, emptyLabel, items, showHeading = true }) {
   const cards = Array.isArray(items) ? items : [];
   return `
     <section class="guideline-group detail-related-group">
-      <div class="guideline-group-header">
-        <h3>${escapeHtml(heading)}</h3>
-        <span class="tag">${cards.length}</span>
-      </div>
+      ${showHeading ? `
+        <div class="guideline-group-header">
+          <h3>${escapeHtml(heading)}</h3>
+          <span class="tag">${cards.length}</span>
+        </div>
+      ` : ''}
       ${cards.length
     ? `<div class="detail-related-links">
             ${cards.map((card) => `
@@ -4035,7 +4037,10 @@ function renderRelatedGuidelineSectionMarkup({ heading, emptyLabel, items }) {
 }
 
 function renderGuidelineRelatedSection(guideline) {
-  return renderRelatedGuidelineSectionMarkup(resolveGuidelineRelatedItems(guideline));
+  return renderRelatedGuidelineSectionMarkup({
+    ...resolveGuidelineRelatedItems(guideline),
+    showHeading: false
+  });
 }
 
 function renderInitiativeRelatedGuidelinesSection(initiative) {
@@ -4165,7 +4170,7 @@ function renderGuidelineDetailView() {
   const canManage = canManageSelectedInstitution();
   elements.stepView.innerHTML = `
     <div class="step-header">
-      <h2>${langText('Gaires kortele', 'Guideline card')}</h2>
+      <div></div>
       <div class="header-stack step-header-actions">
         ${canManage ? `<button id="editGuidelineBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
         <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ gaires', 'Back to guidelines')}</button>
@@ -4173,7 +4178,6 @@ function renderGuidelineDetailView() {
       </div>
     </div>
     ${breadcrumbMarkup}
-    <p class="prompt">${escapeHtml(langText('Atskiras gaires vidinis polapis su nuolatine nuoroda.', 'Dedicated internal sub-page for this guideline with a permanent URL.'))}</p>
     <div class="header-stack" style="margin-bottom: 14px;">
       <span class="tag">${escapeHtml(langText('Nuoroda', 'URL'))}: <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cardUrl)}</a></span>
     </div>
@@ -5084,14 +5088,20 @@ function renderStepView() {
                   </div>
                   <div class="relationship-child-stack">
                     <div class="relationship-child-label">${langText('Vaikines gaires', 'Child guidelines')}</div>
-                    <div class="card-list relationship-child-grid">
-                      ${group.children.map((child) => renderGuidelineCard(child, {
-                        member,
-                        writable,
-                        authenticated,
-                        commentsVisible: state.commentsVisible
-                      })).join('')}
-                    </div>
+                    ${group.children.length
+                      ? `<div class="card-list relationship-child-grid">
+                          ${group.children.map((child) => renderGuidelineCard(child, {
+                            member,
+                            writable,
+                            authenticated,
+                            commentsVisible: state.commentsVisible
+                          })).join('')}
+                        </div>`
+                      : `<div class="relationship-child-empty">
+                          <p class="prompt">${langText('Vaikiniu gairiu dar nera.', 'No child guidelines yet.')}</p>
+                          ${member && writable ? `<button type="button" class="btn btn-primary relationship-child-create-btn" data-action="create-child-guideline" data-parent-id="${escapeHtml(group.parent.id)}">${langText('Sukurti', 'Create')}</button>` : ''}
+                        </div>`
+                    }
                   </div>
                 </div>
               </div>
@@ -5208,6 +5218,7 @@ function bindStepEvents() {
   const guidelineParentRow = elements.stepView.querySelector('#guidelineParentRow');
   const guidelineParentSelect = elements.stepView.querySelector('#guidelineParentGuidelineId');
   const guidelineParentHint = elements.stepView.querySelector('#guidelineParentHint');
+  const guidelineTitleInput = elements.stepView.querySelector('#guidelineAddForm input[name="title"]');
   const list = elements.stepView.querySelector('#guidelineGroups');
 
   if (openAuthFromStep) {
@@ -5241,6 +5252,25 @@ function bindStepEvents() {
     guidelineRelationType.addEventListener('change', syncGuidelineParentField);
     syncGuidelineParentField();
   }
+
+  const openChildGuidelineCreate = (parentGuidelineId) => {
+    const parentId = String(parentGuidelineId || '').trim();
+    if (!parentId) return;
+    if (guidelineRelationType instanceof HTMLSelectElement) {
+      guidelineRelationType.value = 'child';
+      syncGuidelineParentField();
+    }
+    if (guidelineParentSelect instanceof HTMLSelectElement) {
+      guidelineParentSelect.value = parentId;
+    }
+    const addSection = document.getElementById('guidelineAddSection');
+    addSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => {
+      if (guidelineTitleInput instanceof HTMLElement && typeof guidelineTitleInput.focus === 'function') {
+        guidelineTitleInput.focus();
+      }
+    }, 180);
+  };
 
   if (guidelineForm) {
     guidelineForm.addEventListener('submit', async (event) => {
@@ -5296,6 +5326,11 @@ function bindStepEvents() {
           targetStrategySlug: actionElement.dataset.targetStrategy,
           targetGuidelineId: actionElement.dataset.targetGuideline
         });
+        return;
+      }
+
+      if (action === 'create-child-guideline') {
+        openChildGuidelineCreate(actionElement.dataset.parentId);
         return;
       }
 

@@ -1465,6 +1465,22 @@ textarea {
   border-color: #d9d3f7;
   box-shadow: 0 10px 20px rgba(90, 72, 157, 0.08);
 }
+.relationship-child-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px dashed #d3d6f6;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
+}
+.relationship-child-empty .prompt {
+  margin: 0;
+}
+.relationship-child-create-btn {
+  min-width: 120px;
+}
 
 .card {
   background: #fff;
