@@ -2581,8 +2581,8 @@ textarea {
 .strategy-map-viewport.map-secret-anthracite {
   background-color: #23272b;
   background-image:
-    linear-gradient(rgba(143, 153, 166, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(143, 153, 166, 0.15) 1px, transparent 1px),
+    linear-gradient(rgba(0, 0, 0, 0.9) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.9) 1px, transparent 1px),
     linear-gradient(180deg, #07080a 0%, #121519 34%, #23272b 100%);
   background-size:
     var(--grid-size) var(--grid-size),
