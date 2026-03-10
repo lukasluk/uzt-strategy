@@ -5722,7 +5722,7 @@ function showAuthModal(initialMode = 'login') {
     <div class="login-card">
       <div class="header-row" style="margin-bottom: 8px;">
         <h2>Prisijungimas</h2>
-        <button id="closeAuthModal" class="btn btn-ghost" type="button">UÅ¾daryti</button>
+        <button id="closeAuthModal" class="btn btn-ghost" type="button">Uždaryti</button>
       </div>
       <div id="authError" class="error" style="display:none;"></div>
       <p id="authHint" class="prompt auth-hint" style="display:none;"></p>
@@ -5730,18 +5730,18 @@ function showAuthModal(initialMode = 'login') {
       <form id="loginForm" class="login-form login-form-auth">
         <label class="auth-label" for="authInstitution">Institucija</label>
         ${authInstitutionSelect}
-        <label class="auth-label" for="authEmail">El. paÅ¡tas</label>
-        <input id="authEmail" type="email" name="email" placeholder="El. paÅ¡tas" autocomplete="email" required />
-        <label class="auth-label" for="authPassword">SlaptaÅ¾odis</label>
+        <label class="auth-label" for="authEmail">El. paštas</label>
+        <input id="authEmail" type="email" name="email" placeholder="El. paštas" autocomplete="email" required />
+        <label class="auth-label" for="authPassword">Slaptažodis</label>
         <div class="auth-password-field">
-          <input id="authPassword" type="password" name="password" placeholder="SlaptaÅ¾odis" autocomplete="current-password" required />
-          <button id="toggleAuthPassword" class="auth-password-toggle" type="button" aria-label="Rodyti slaptaÅ¾odÄ¯">Rodyti</button>
+          <input id="authPassword" type="password" name="password" placeholder="Slaptažodis" autocomplete="current-password" required />
+          <button id="toggleAuthPassword" class="auth-password-toggle" type="button" aria-label="Rodyti slaptažodį">Rodyti</button>
         </div>
         <button class="btn btn-primary" type="submit">Prisijungti</button>
       </form>
 
       <div class="auth-separator"></div>
-      <button id="forgotPasswordBtn" class="btn btn-ghost auth-forgot-btn" type="button">PamirÅ¡au slaptaÅ¾odÄ¯</button>
+      <button id="forgotPasswordBtn" class="btn btn-ghost auth-forgot-btn" type="button">Pamiršau slaptažodį</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -5790,11 +5790,11 @@ function showAuthModal(initialMode = 'login') {
   toggleAuthPassword.addEventListener('click', () => {
     const nextType = authPasswordInput.type === 'password' ? 'text' : 'password';
     authPasswordInput.type = nextType;
-    toggleAuthPassword.textContent = nextType === 'password' ? 'Rodyti' : 'SlÄ—pti';
-    toggleAuthPassword.setAttribute('aria-label', nextType === 'password' ? 'Rodyti slaptaÅ¾odÄ¯' : 'SlÄ—pti slaptaÅ¾odÄ¯');
+    toggleAuthPassword.textContent = nextType === 'password' ? 'Rodyti' : 'Slėpti';
+    toggleAuthPassword.setAttribute('aria-label', nextType === 'password' ? 'Rodyti slaptažodį' : 'Slėpti slaptažodį');
   });
   forgotPasswordBtn.addEventListener('click', () => {
-    showHint('Susisiekite su savo organizacijos administratoriumi dÄ—l vienkartinÄ—s slaptaÅ¾odÅ¾io keitimo nuorodos.');
+    showHint('Susisiekite su savo organizacijos administratoriumi dėl vienkartinės slaptažodžio keitimo nuorodos.');
   });
   authEmailInput?.focus();
 
