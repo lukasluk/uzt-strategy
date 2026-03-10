@@ -150,6 +150,8 @@ function registerPublicRoutes({
       id: proposal.id,
       title: proposal.title,
       description: proposal.description,
+      implementationDate: null,
+      implementationOwner: null,
       status: 'pending',
       relationType: proposal.relationType || 'orphan',
       parentGuidelineId: proposal.parentGuidelineId || null,
@@ -204,6 +206,8 @@ function registerPublicRoutes({
         id: proposal.id,
         title: proposal.title,
         description: proposal.description,
+        implementationDate: null,
+        implementationOwner: null,
         status: 'pending',
         lineSide: normalizeLineSide(proposal.lineSide) || 'auto',
         mapX: null,
@@ -679,7 +683,7 @@ function registerPublicRoutes({
     const strategyLinksByGuideline = {};
     if (cycleIds.length) {
       const guidelinesRes = await query(
-        `select id, cycle_id, title, description, status, relation_type, parent_guideline_id, line_side, map_x, map_y, created_at
+        `select id, cycle_id, title, description, implementation_target_date, implementation_owner, status, relation_type, parent_guideline_id, line_side, map_x, map_y, created_at
          from strategy_guidelines
          where cycle_id = any($1::uuid[])
            and status in ('active', 'disabled', 'merged')
@@ -734,7 +738,7 @@ function registerPublicRoutes({
       }
 
       const initiativesRes = await query(
-        `select id, cycle_id, title, description, status, line_side, map_x, map_y, created_at
+        `select id, cycle_id, title, description, implementation_target_date, implementation_owner, status, line_side, map_x, map_y, created_at
          from strategy_initiatives
          where cycle_id = any($1::uuid[])
            and status in ('active', 'disabled', 'merged', 'hidden')
@@ -814,6 +818,8 @@ function registerPublicRoutes({
           id: row.id,
           title: row.title,
           description: row.description,
+          implementationDate: row.implementation_target_date || null,
+          implementationOwner: row.implementation_owner || null,
           status: row.status,
           relationType: row.relation_type || 'orphan',
           parentGuidelineId: row.parent_guideline_id || null,
@@ -845,6 +851,8 @@ function registerPublicRoutes({
           id: row.id,
           title: row.title,
           description: row.description,
+          implementationDate: row.implementation_target_date || null,
+          implementationOwner: row.implementation_owner || null,
           status: row.status,
           lineSide: normalizeLineSide(row.line_side) || 'auto',
           mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
@@ -989,7 +997,7 @@ function registerPublicRoutes({
     if (!cycle) return res.status(404).json({ error: 'cycle not found' });
 
     const guidelines = await query(
-      `select id, title, description, status, relation_type, parent_guideline_id, line_side, created_at
+      `select id, title, description, implementation_target_date, implementation_owner, status, relation_type, parent_guideline_id, line_side, created_at
        from strategy_guidelines
        where cycle_id = $1 and status in ('active', 'disabled')
        order by created_at asc`,
@@ -1046,6 +1054,8 @@ function registerPublicRoutes({
       id: g.id,
       title: g.title,
       description: g.description,
+      implementationDate: g.implementation_target_date || null,
+      implementationOwner: g.implementation_owner || null,
       status: g.status,
       relationType: g.relation_type || 'orphan',
       parentGuidelineId: g.parent_guideline_id || null,
@@ -1090,7 +1100,7 @@ function registerPublicRoutes({
     if (!cycle) return res.status(404).json({ error: 'cycle not found' });
 
     const initiativesRes = await query(
-      `select id, title, description, status, line_side, map_x, map_y, created_at
+      `select id, title, description, implementation_target_date, implementation_owner, status, line_side, map_x, map_y, created_at
        from strategy_initiatives
        where cycle_id = $1 and status in ('active', 'disabled')
        order by created_at asc`,
@@ -1164,6 +1174,8 @@ function registerPublicRoutes({
       id: row.id,
       title: row.title,
       description: row.description,
+      implementationDate: row.implementation_target_date || null,
+      implementationOwner: row.implementation_owner || null,
       status: row.status,
       lineSide: normalizeLineSide(row.line_side) || 'auto',
       mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,

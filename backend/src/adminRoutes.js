@@ -147,6 +147,24 @@ function registerAdminRoutes({
     return String(value || '').trim().toLowerCase();
   }
 
+  function normalizeImplementationDate(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+      throw new Error('invalid implementation date');
+    }
+    const date = new Date(`${normalized}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) {
+      throw new Error('invalid implementation date');
+    }
+    return normalized;
+  }
+
+  function normalizeImplementationOwner(value) {
+    const normalized = String(value || '').trim();
+    return normalized || null;
+  }
+
   function layoutCollision(occupied, x, y, minDistanceX, minDistanceY) {
     return occupied.some((point) => (
       Math.abs(point.x - x) < minDistanceX && Math.abs(point.y - y) < minDistanceY
@@ -2021,6 +2039,19 @@ function registerAdminRoutes({
     const context = await loadGuidelineContext(guidelineId);
     if (!context) return res.status(404).json({ error: 'guideline not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
+    let implementationDate = context.implementation_target_date || null;
+    let implementationOwner = context.implementation_owner || null;
+
+    try {
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationDate')) {
+        implementationDate = normalizeImplementationDate(req.body?.implementationDate);
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationOwner')) {
+        implementationOwner = normalizeImplementationOwner(req.body?.implementationOwner);
+      }
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid implementation plan') });
+    }
 
     let parentGuidelineId = null;
     try {
@@ -2048,7 +2079,9 @@ function registerAdminRoutes({
       status,
       relationType,
       parentGuidelineId,
-      lineSide
+      lineSide,
+      implementationDate,
+      implementationOwner
     });
 
     broadcast({ type: 'v1.guideline.updated', institutionId: req.auth.institutionId, guidelineId });
@@ -2072,6 +2105,19 @@ function registerAdminRoutes({
     if (!context) return res.status(404).json({ error: 'initiative not found' });
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
 
+    let implementationDate = context.implementation_target_date || null;
+    let implementationOwner = context.implementation_owner || null;
+    try {
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationDate')) {
+        implementationDate = normalizeImplementationDate(req.body?.implementationDate);
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationOwner')) {
+        implementationOwner = normalizeImplementationOwner(req.body?.implementationOwner);
+      }
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid implementation plan') });
+    }
+
     let guidelineIds = [];
     try {
       guidelineIds = await validateInitiativeGuidelineAssignments({
@@ -2087,7 +2133,9 @@ function registerAdminRoutes({
       title,
       description,
       status,
-      lineSide
+      lineSide,
+      implementationDate,
+      implementationOwner
     });
 
     await replaceInitiativeGuidelineLinks({

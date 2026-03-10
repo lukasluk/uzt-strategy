@@ -125,6 +125,7 @@ const ALLOWED_VIEWS = new Set([
   'guideline-detail',
   'initiatives',
   'initiative-detail',
+  'implementation-plan',
   'policy-alignment',
   'history',
   'admin',
@@ -236,6 +237,7 @@ const state = {
   historyCycleId: '',
   historySortOrder: 'desc',
   mapLayer: 'guidelines',
+  implementationPlanLayer: 'guidelines',
   mapStrategicLinksData: null,
   mapStrategicLinksLoading: false,
   mapStrategicLinksError: '',
@@ -1168,6 +1170,7 @@ function toUserMessage(error) {
     'workEmail too long': 'El. paÅ¡tas per ilgas.',
     'phone too long': 'Telefono numeris per ilgas.',
     'notes too long': 'Papildoma informacija per ilga.',
+    'invalid implementation date': 'Neteisinga įgyvendinimo data.',
     'ai api key not configured': 'AI API raktas nesukonfigÅ«ruotas serveryje.',
     'clarification required': 'Nurodykite AI patikslinimÄ….',
     'at least one pdf file required': 'Ä®kelkite bent vienÄ… PDF failÄ….',
@@ -2671,6 +2674,17 @@ function stepIconMarkup(stepId) {
     `);
   }
 
+  if (id === 'implementation-plan') {
+    return wrap(`
+      <path d="M6.2 4.6h11.6"></path>
+      <path d="M6.2 9.4h11.6"></path>
+      <path d="M6.2 14.2h7.2"></path>
+      <path d="M6.2 19h5.2"></path>
+      <circle cx="16.8" cy="14.2" r="1.9"></circle>
+      <path d="M14.8 19l1.3 1.3 3.1-3.5"></path>
+    `);
+  }
+
   if (id === 'policy-alignment') {
     return wrap(`
       <path d="M5.4 5.2h6.8v13.6H5.4z"></path>
@@ -2740,7 +2754,8 @@ function renderSteps() {
     { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
     { id: 'history', title: langText('Istorija', 'History'), locked: !canOpenHistory },
     { id: 'admin', title: 'Admin', locked: !canOpenAdmin, alert: openPendingProposalCount > 0 },
-    { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false }
+    { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false },
+    { id: 'implementation-plan', title: langText('Įgyvendinimo planas', 'Implementation plan'), locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -3337,6 +3352,140 @@ function buildGuidelineRelationshipGroups(guidelines) {
   });
 
   return { parentGroups, orphanGuidelines, unassignedChildren };
+}
+
+function normalizeImplementationDateInputValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function buildImplementationPlanGuidelineRows(guidelines) {
+  const source = (Array.isArray(guidelines) ? guidelines : []).filter((guideline) => (
+    guideline
+    && !String(guideline.pendingProposalId || '').trim()
+    && String(guideline.status || '').trim().toLowerCase() !== 'hidden'
+  ));
+  const groups = buildGuidelineRelationshipGroups(source);
+  const rows = [];
+
+  groups.parentGroups.forEach((group) => {
+    rows.push({
+      kind: 'guideline',
+      item: group.parent,
+      level: 0,
+      relationKey: 'parent'
+    });
+    group.children.forEach((child) => {
+      rows.push({
+        kind: 'guideline',
+        item: child,
+        level: 1,
+        relationKey: 'child'
+      });
+    });
+  });
+
+  groups.orphanGuidelines.forEach((guideline) => {
+    rows.push({
+      kind: 'guideline',
+      item: guideline,
+      level: 0,
+      relationKey: 'orphan'
+    });
+  });
+
+  groups.unassignedChildren.forEach((guideline) => {
+    rows.push({
+      kind: 'guideline',
+      item: guideline,
+      level: 0,
+      relationKey: 'child'
+    });
+  });
+
+  return rows;
+}
+
+function buildImplementationPlanInitiativeRows(initiatives) {
+  return sortCardsByTitle((Array.isArray(initiatives) ? initiatives : []).filter((initiative) => (
+    initiative
+    && !String(initiative.pendingProposalId || '').trim()
+    && String(initiative.status || '').trim().toLowerCase() !== 'hidden'
+  ))).map((initiative) => ({
+    kind: 'initiative',
+    item: initiative,
+    level: 0,
+    relationKey: 'initiative'
+  }));
+}
+
+function renderImplementationPlanRow(row, { editable = false } = {}) {
+  const item = row?.item && typeof row.item === 'object' ? row.item : null;
+  if (!item) return '';
+  const rowKind = String(row.kind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+  const level = Number(row.level || 0);
+  const title = String(item.title || item.id || '-').trim() || '-';
+  const relationKey = String(row.relationKey || rowKind).trim().toLowerCase();
+  const relationLabelText = rowKind === 'initiative'
+    ? langText('Iniciatyva', 'Initiative')
+    : (
+      relationKey === 'parent'
+        ? langText('Tėvinė', 'Parent')
+        : (relationKey === 'child'
+          ? langText('Vaikinė', 'Child')
+          : langText('Savarankiška', 'Standalone'))
+    );
+  const linkedGuidelines = rowKind === 'initiative'
+    ? resolveInitiativeLinkedGuidelines(item)
+    : [];
+  const linkedGuidelineNames = linkedGuidelines.map((guideline) => String(guideline?.title || guideline?.id || '').trim()).filter(Boolean);
+  const implementationDateValue = normalizeImplementationDateInputValue(item.implementationDate);
+  const implementationOwnerValue = String(item.implementationOwner || '').trim();
+  const implementationDateDisplay = formatInstitutionDate(implementationDateValue) || langText('Nenurodyta', 'Not set');
+  const implementationOwnerDisplay = implementationOwnerValue || langText('Nenurodyta', 'Not set');
+
+  return `
+    <form class="implementation-plan-row implementation-plan-row-${escapeHtml(rowKind)} implementation-plan-level-${level}" data-plan-kind="${escapeHtml(rowKind)}" data-plan-id="${escapeHtml(item.id)}">
+      <div class="implementation-plan-cell implementation-plan-cell-main">
+        <div class="implementation-plan-title-wrap">
+          ${level > 0 ? '<span class="implementation-plan-branch" aria-hidden="true"></span>' : ''}
+          <div class="implementation-plan-title-stack">
+            <strong>${escapeHtml(title)}</strong>
+            <div class="header-stack">
+              <span class="tag">${escapeHtml(relationLabelText)}</span>
+              ${rowKind === 'initiative' && linkedGuidelineNames.length
+      ? `<span class="tag">${escapeHtml(langText('Gairės', 'Guidelines'))}: ${escapeHtml(linkedGuidelineNames.join(', '))}</span>`
+      : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="implementation-plan-cell implementation-plan-cell-date">
+        <span class="implementation-plan-cell-label">${escapeHtml(langText('Įgyvendinimo data', 'Implementation date'))}</span>
+        ${editable
+      ? `<input class="implementation-plan-input implementation-plan-date" type="date" name="implementationDate" value="${escapeHtml(implementationDateValue)}" ${state.busy ? 'disabled' : ''} />`
+      : `<span class="implementation-plan-read-value${implementationDateValue ? '' : ' is-empty'}">${escapeHtml(implementationDateDisplay)}</span>`}
+      </div>
+      <div class="implementation-plan-cell implementation-plan-cell-owner">
+        <span class="implementation-plan-cell-label">${escapeHtml(langText('Atsakingas asmuo / padalinys', 'Responsible person / unit'))}</span>
+        ${editable
+      ? `<input class="implementation-plan-input implementation-plan-owner" type="text" name="implementationOwner" value="${escapeHtml(implementationOwnerValue)}" placeholder="${escapeHtml(langText('Atsakingas asmuo ar padalinys', 'Responsible person or unit'))}" ${state.busy ? 'disabled' : ''} />`
+      : `<span class="implementation-plan-read-value${implementationOwnerValue ? '' : ' is-empty'}">${escapeHtml(implementationOwnerDisplay)}</span>`}
+      </div>
+      <div class="implementation-plan-cell implementation-plan-cell-actions">
+        ${editable
+      ? `<button class="btn btn-primary implementation-plan-save-btn" type="submit" ${state.busy ? 'disabled' : ''}>${escapeHtml(langText('Išsaugoti', 'Save'))}</button>`
+      : ''}
+      </div>
+    </form>
+  `;
 }
 
 function renderGuidelineCard(guideline, options) {
@@ -4650,6 +4799,150 @@ function renderInitiativesView() {
   bindInitiativeCardInteractions(list);
 }
 
+function renderImplementationPlanView() {
+  if (!state.institutionSlug) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.loading) {
+    elements.stepView.innerHTML = `<div class="card"><strong>${langText('Kraunami duomenys...', 'Loading data...')}</strong></div>`;
+    return;
+  }
+
+  if (state.error) {
+    elements.stepView.innerHTML = `
+      <div class="card">
+        <strong>${langText('Nepavyko ikelti duomenu', 'Failed to load data')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${escapeHtml(state.error)}</p>
+        <button id="retryLoadBtn" class="btn btn-primary" style="margin-top: 12px;">${langText('Bandyti dar karta', 'Try again')}</button>
+      </div>
+    `;
+    const retryBtn = elements.stepView.querySelector('#retryLoadBtn');
+    if (retryBtn) retryBtn.addEventListener('click', bootstrap);
+    return;
+  }
+
+  const editable = canManageSelectedInstitution();
+  const activeLayer = state.implementationPlanLayer === 'initiatives' ? 'initiatives' : 'guidelines';
+  const guidelineRows = buildImplementationPlanGuidelineRows(state.guidelines);
+  const initiativeRows = buildImplementationPlanInitiativeRows(state.initiatives);
+  const rows = activeLayer === 'initiatives' ? initiativeRows : guidelineRows;
+  const title = langText('Įgyvendinimo planas', 'Implementation plan');
+  const layerLabel = activeLayer === 'initiatives'
+    ? langText('Iniciatyvos', 'Initiatives')
+    : langText('Gairės', 'Guidelines');
+  const emptyLabel = activeLayer === 'initiatives'
+    ? langText('Iniciatyvų įgyvendinimo planas dar neužpildytas.', 'No initiative implementation entries yet.')
+    : langText('Gairių įgyvendinimo planas dar neužpildytas.', 'No guideline implementation entries yet.');
+  const viewerHint = editable
+    ? langText('Administratorius gali nurodyti įgyvendinimo datą ir atsakingą asmenį arba padalinį.', 'Institution admin can set the implementation date and responsible person or unit.')
+    : langText('Čia galite peržiūrėti suplanuotas įgyvendinimo datas ir atsakingus asmenis.', 'You can review planned implementation dates and responsible owners here.');
+
+  elements.stepView.innerHTML = `
+    <section class="implementation-plan-shell">
+      <div class="step-header implementation-plan-header">
+        <div>
+          <h2>${escapeHtml(title)}</h2>
+          <p class="prompt implementation-plan-intro">${escapeHtml(viewerHint)}</p>
+        </div>
+        <div class="map-layer-toggle implementation-plan-layer-toggle">
+          <button type="button" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}" data-implementation-layer="guidelines">${escapeHtml(langText('Gairės', 'Guidelines'))}</button>
+          <button type="button" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" data-implementation-layer="initiatives">${escapeHtml(langText('Iniciatyvos', 'Initiatives'))}</button>
+        </div>
+      </div>
+
+      <div class="header-stack implementation-plan-meta">
+        <span class="tag">${escapeHtml(langText('Institucija', 'Institution'))}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
+        <span class="tag">${escapeHtml(langText('Strategija', 'Strategy'))}: ${escapeHtml(state.strategy?.title || '-')}</span>
+        <span class="tag">${escapeHtml(layerLabel)}: ${rows.length}</span>
+        ${editable ? `<span class="tag">${escapeHtml(langText('Redagavimas įjungtas', 'Editing enabled'))}</span>` : `<span class="tag">${escapeHtml(langText('Peržiūros režimas', 'View mode'))}</span>`}
+      </div>
+
+      ${state.notice ? `<div class="card implementation-plan-notice"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
+
+      <section class="card implementation-plan-board">
+        <div class="implementation-plan-table-head">
+          <div>${escapeHtml(activeLayer === 'initiatives' ? langText('Iniciatyva', 'Initiative') : langText('Gairė', 'Guideline'))}</div>
+          <div>${escapeHtml(langText('Įgyvendinimo data', 'Implementation date'))}</div>
+          <div>${escapeHtml(langText('Atsakingas asmuo / padalinys', 'Responsible person / unit'))}</div>
+          <div></div>
+        </div>
+        ${rows.length
+      ? rows.map((row) => renderImplementationPlanRow(row, { editable })).join('')
+      : `<div class="implementation-plan-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`}
+      </section>
+    </section>
+  `;
+
+  elements.stepView.querySelectorAll('[data-implementation-layer]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const nextLayer = String(button.dataset.implementationLayer || '').trim().toLowerCase();
+      if (nextLayer !== 'guidelines' && nextLayer !== 'initiatives') return;
+      if (state.implementationPlanLayer === nextLayer) return;
+      state.implementationPlanLayer = nextLayer;
+      render();
+    });
+  });
+
+  if (!editable) return;
+
+  elements.stepView.querySelectorAll('.implementation-plan-row[data-plan-kind][data-plan-id]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const planKind = String(form.dataset.planKind || '').trim().toLowerCase();
+      const planId = String(form.dataset.planId || '').trim();
+      if (!planId || (planKind !== 'guideline' && planKind !== 'initiative')) return;
+
+      const fd = new FormData(form);
+      const implementationDate = normalizeImplementationDateInputValue(fd.get('implementationDate'));
+      const implementationOwner = String(fd.get('implementationOwner') || '').trim();
+
+      await runBusy(async () => {
+        if (planKind === 'guideline') {
+          const guideline = findGuidelineById(planId);
+          if (!guideline) return;
+          await api(`/api/v1/admin/guidelines/${encodeURIComponent(planId)}`, {
+            method: 'PUT',
+            body: {
+              title: guideline.title,
+              description: guideline.description || '',
+              status: guideline.status || 'active',
+              relationType: guideline.relationType || 'orphan',
+              parentGuidelineId: guideline.parentGuidelineId || '',
+              lineSide: guideline.lineSide || 'auto',
+              implementationDate,
+              implementationOwner
+            }
+          });
+          await refreshGuidelines();
+        } else {
+          const initiative = findInitiativeById(planId);
+          if (!initiative) return;
+          await api(`/api/v1/admin/initiatives/${encodeURIComponent(planId)}`, {
+            method: 'PUT',
+            body: {
+              title: initiative.title,
+              description: initiative.description || '',
+              status: initiative.status || 'active',
+              lineSide: initiative.lineSide || 'auto',
+              guidelineIds: resolveInitiativeGuidelineIds(initiative),
+              implementationDate,
+              implementationOwner
+            }
+          });
+          await refreshInitiatives();
+        }
+        state.notice = langText('Įgyvendinimo planas atnaujintas.', 'Implementation plan updated.');
+      });
+    });
+  });
+}
+
 function historyKindLabel(kind) {
   const normalized = String(kind || '').trim().toLowerCase();
   if (normalized === 'strategy') return langText('Strategija', 'Strategy');
@@ -5030,6 +5323,11 @@ function renderStepView() {
 
   if (state.activeView === 'initiatives') {
     renderInitiativesView();
+    return;
+  }
+
+  if (state.activeView === 'implementation-plan') {
+    renderImplementationPlanView();
     return;
   }
 

@@ -75,6 +75,8 @@ create table if not exists strategy_guidelines (
   cycle_id uuid not null references strategy_cycles(id) on delete cascade,
   title text not null,
   description text,
+  implementation_target_date date,
+  implementation_owner text,
   status text not null default 'active' check (status in ('active', 'merged', 'hidden')),
   line_side text not null default 'auto',
   created_by uuid references platform_users(id) on delete set null,
@@ -116,6 +118,8 @@ create table if not exists strategy_initiatives (
   cycle_id uuid not null references strategy_cycles(id) on delete cascade,
   title text not null,
   description text,
+  implementation_target_date date,
+  implementation_owner text,
   status text not null default 'active' check (status in ('active', 'disabled', 'merged', 'hidden')),
   line_side text not null default 'auto',
   map_x integer,
@@ -255,6 +259,12 @@ alter table if exists strategy_guidelines
 
 alter table if exists strategy_guidelines
   add column if not exists parent_guideline_id uuid references strategy_guidelines(id) on delete set null;
+
+alter table if exists strategy_guidelines
+  add column if not exists implementation_target_date date;
+
+alter table if exists strategy_guidelines
+  add column if not exists implementation_owner text;
 
 create index if not exists idx_guidelines_parent on strategy_guidelines(parent_guideline_id);
 
@@ -404,6 +414,12 @@ alter table if exists strategy_guidelines
 
 alter table if exists strategy_initiatives
   add column if not exists line_side text not null default 'auto';
+
+alter table if exists strategy_initiatives
+  add column if not exists implementation_target_date date;
+
+alter table if exists strategy_initiatives
+  add column if not exists implementation_owner text;
 
 update strategy_initiatives
 set line_side = 'auto'
