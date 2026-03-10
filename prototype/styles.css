@@ -1620,6 +1620,15 @@ textarea {
   margin-top: 12px;
 }
 
+.detail-related-group-initiative {
+  margin-top: 8px;
+}
+
+.detail-related-heading-compact {
+  font-size: 14px;
+  line-height: 1.15;
+}
+
 .detail-related-links {
   display: flex;
   flex-wrap: wrap;

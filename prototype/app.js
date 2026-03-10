@@ -4058,13 +4058,22 @@ function resolveGuidelineRelatedItems(guideline) {
   };
 }
 
-function renderRelatedGuidelineSectionMarkup({ heading, emptyLabel, items, showHeading = true }) {
+function renderRelatedGuidelineSectionMarkup({
+  heading,
+  emptyLabel,
+  items,
+  showHeading = true,
+  sectionClass = '',
+  headingClass = ''
+}) {
   const cards = Array.isArray(items) ? items : [];
+  const safeSectionClass = String(sectionClass || '').trim();
+  const safeHeadingClass = String(headingClass || '').trim();
   return `
-    <section class="guideline-group detail-related-group">
+    <section class="guideline-group detail-related-group ${escapeHtml(safeSectionClass)}">
       ${showHeading ? `
         <div class="guideline-group-header">
-          <h3>${escapeHtml(heading)}</h3>
+          <h3 class="${escapeHtml(safeHeadingClass)}">${escapeHtml(heading)}</h3>
           <span class="tag">${cards.length}</span>
         </div>
       ` : ''}
@@ -4103,7 +4112,9 @@ function renderInitiativeRelatedGuidelinesSection(initiative) {
   return renderRelatedGuidelineSectionMarkup({
     heading: langText('Palaikomos gaires', 'Supported guidelines'),
     emptyLabel: langText('Susietu gairiu nerasta.', 'No linked guidelines found.'),
-    items: sortCardsByTitle(Array.from(uniqueById.values()))
+    items: sortCardsByTitle(Array.from(uniqueById.values())),
+    sectionClass: 'detail-related-group-initiative',
+    headingClass: 'detail-related-heading-compact'
   });
 }
 
@@ -4405,8 +4416,6 @@ function renderInitiativeDetailView() {
   const member = isLoggedIn();
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
-  const cardUrl = initiativeShareUrl(initiative.id);
-  const breadcrumbMarkup = buildInitiativeDetailBreadcrumbs(initiative);
   const relatedGuidelinesMarkup = renderInitiativeRelatedGuidelinesSection(initiative);
   const canManage = canManageSelectedInstitution();
   const canImport = canImportExternalItem(initiative);
@@ -4419,11 +4428,6 @@ function renderInitiativeDetailView() {
         <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ iniciatyvas', 'Back to initiatives')}</button>
         <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
       </div>
-    </div>
-    ${breadcrumbMarkup}
-    <p class="prompt">${escapeHtml(langText('Atskiras iniciatyvos vidinis polapis su nuolatine nuoroda.', 'Dedicated internal sub-page for this initiative with a permanent URL.'))}</p>
-    <div class="header-stack" style="margin-bottom: 14px;">
-      <span class="tag">${escapeHtml(langText('Nuoroda', 'URL'))}: <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cardUrl)}</a></span>
     </div>
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
     <section id="initiativeSection" class="guideline-group" data-detail-view="1">
@@ -5132,8 +5136,7 @@ function renderStepView() {
                   </div>
                   <div class="relationship-child-stack">
                     <div class="relationship-child-label">
-                      <span>${langText('Vaikines gaires', 'Child guidelines')}</span>
-                      <span class="tag">${langText('Vaikiniu', 'Children')}: ${group.children.length}</span>
+                      <span class="tag">${langText('Vaikines gaires', 'Child guidelines')}: ${group.children.length}</span>
                     </div>
                     ${group.children.length
                       ? `<div class="card-list relationship-child-grid">
