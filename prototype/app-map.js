@@ -179,6 +179,17 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
       triggerMapPlanRevealRipple(node);
     }
   });
+  const datedEdges = Array.from(world.querySelectorAll('.strategy-map-edge[data-plan-date]'));
+  datedEdges.forEach((edge) => {
+    if (!(edge instanceof SVGElement)) return;
+    const parsed = parseMapPlanDateValue(edge.dataset.planDate);
+    if (!parsed) {
+      edge.classList.remove('map-plan-visible');
+      return;
+    }
+    const revealed = progress > 0 && (progress >= 1 || span <= 0 || parsed.time <= currentTime);
+    edge.classList.toggle('map-plan-visible', revealed);
+  });
 }
 
 function bindMapPlanTimeline(viewport, world, stepView) {
@@ -187,6 +198,7 @@ function bindMapPlanTimeline(viewport, world, stepView) {
   if (!(timelineRoot instanceof HTMLElement)) return;
   const range = timelineRoot.querySelector('#mapPlanTimelineRange');
   const playButton = timelineRoot.querySelector('[data-map-plan-play]');
+  const durationSelect = timelineRoot.querySelector('[data-map-plan-duration]');
   const hasTimeline = !timelineRoot.classList.contains('is-empty');
   let hideTimerId = 0;
 
@@ -215,10 +227,11 @@ function bindMapPlanTimeline(viewport, world, stepView) {
     }
     stopMapPlanPlayback();
     state.mapPlanPlaying = true;
-    state.mapPlanPlaybackStartedAt = performance.now() - (state.mapPlanProgress * MAP_PLAN_PLAYBACK_MS);
+    const playbackMs = Math.max(1000, Number(state.mapPlanPlaybackMs || MAP_PLAN_PLAYBACK_MS));
+    state.mapPlanPlaybackStartedAt = performance.now() - (state.mapPlanProgress * playbackMs);
     const tick = (timestamp) => {
       const elapsed = Math.max(0, timestamp - Number(state.mapPlanPlaybackStartedAt || timestamp));
-      state.mapPlanProgress = Math.max(0, Math.min(1, elapsed / MAP_PLAN_PLAYBACK_MS));
+      state.mapPlanProgress = Math.max(0, Math.min(1, elapsed / playbackMs));
       sync();
       if (state.mapPlanProgress >= 1) {
         stopMapPlanPlayback();
@@ -234,6 +247,16 @@ function bindMapPlanTimeline(viewport, world, stepView) {
   range?.addEventListener('input', () => {
     stopMapPlanPlayback();
     state.mapPlanProgress = Math.max(0, Math.min(1, Number(range.value || 0) / 1000));
+    sync();
+    registerActivity();
+  });
+
+  durationSelect?.addEventListener('change', () => {
+    const nextMs = Number(durationSelect.value || MAP_PLAN_PLAYBACK_MS);
+    state.mapPlanPlaybackMs = Array.isArray(MAP_PLAN_PLAYBACK_OPTIONS) && MAP_PLAN_PLAYBACK_OPTIONS.includes(nextMs)
+      ? nextMs
+      : MAP_PLAN_PLAYBACK_MS;
+    stopMapPlanPlayback();
     sync();
     registerActivity();
   });

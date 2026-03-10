@@ -44,6 +44,19 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
   const firstDate = earliestEventDate ? shiftDate(earliestEventDate, -5) : '';
   const lastDate = latestEventDate ? shiftDate(latestEventDate, 5) : firstDate || '';
   const hasTimeline = Boolean(firstDate && lastDate);
+  const playbackOptions = Array.isArray(MAP_PLAN_PLAYBACK_OPTIONS) && MAP_PLAN_PLAYBACK_OPTIONS.length
+    ? MAP_PLAN_PLAYBACK_OPTIONS
+    : [10000, 30000, 60000, 300000];
+  const selectedPlaybackMs = playbackOptions.includes(Number(state.mapPlanPlaybackMs))
+    ? Number(state.mapPlanPlaybackMs)
+    : 10000;
+  const playbackLabel = (ms) => {
+    if (ms === 10000) return '10sec';
+    if (ms === 30000) return '30sec';
+    if (ms === 60000) return '1min';
+    if (ms === 300000) return '5min';
+    return `${Math.round(ms / 1000)}sec`;
+  };
 
   return `
     <section
@@ -74,6 +87,13 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
         />
         <span class="map-plan-timeline-boundary">${escapeHtml(lastDate ? formatDate(lastDate) || lastDate : mapLang('Nėra datų', 'No dates'))}</span>
       </div>
+      <label class="map-plan-duration">
+        <select id="mapPlanDurationSelect" class="map-plan-duration-select" data-map-plan-duration>
+          ${playbackOptions.map((ms) => `
+            <option value="${ms}" ${selectedPlaybackMs === ms ? 'selected' : ''}>${escapeHtml(playbackLabel(ms))}</option>
+          `).join('')}
+        </select>
+      </label>
       <div id="mapPlanTimelineCurrent" class="map-plan-timeline-current"></div>
     </section>
   `;
@@ -101,7 +121,7 @@ function buildMapViewRenderPayload({ graph, activeLayer, hasInitiativeNodes, edi
   const guidelineEdgeMarkup = buildGuidelineEdgeMarkup({ graph, nodeById, activeLayer });
   const strategyGuidelineEdgeMarkup = buildStrategyGuidelineEdgeMarkup({ graph, nodeById });
   const strategicEdgeMarkup = buildStrategicEdgeMarkup({ graph, nodeById });
-  const initiativeEdgeMarkup = buildInitiativeEdgeMarkup({ graph, nodeById });
+  const initiativeEdgeMarkup = buildInitiativeEdgeMarkup({ graph, nodeById, activeLayer });
   const nodeMarkup = buildNodeMarkup({ graph, activeLayer, editable });
 
   return {

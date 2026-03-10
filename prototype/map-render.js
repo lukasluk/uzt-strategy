@@ -44,6 +44,9 @@ function buildGuidelineEdgeMarkup({ graph, nodeById, activeLayer }) {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
     if (!fromNode || !toNode) return '';
+    const normalizeDate = typeof normalizeImplementationDateInputValue === 'function'
+      ? normalizeImplementationDateInputValue
+      : (value) => String(value || '').trim();
     const lineSide = 'auto';
     const isParentRoot = edge.type === 'root'
       && toNode.kind === 'guideline'
@@ -55,7 +58,13 @@ function buildGuidelineEdgeMarkup({ graph, nodeById, activeLayer }) {
     const edgeToneStyle = edgeTone
       ? ` style="--strategy-guideline-edge:${escapeHtml(edgeTone.border)}"`
       : '';
-    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}${parentRootClass} edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}"${edgeToneStyle} d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
+    const edgePlanDate = activeLayer === 'plan'
+      ? normalizeDate(toNode.guideline?.implementationDate)
+      : '';
+    const planDateAttr = edgePlanDate
+      ? ` data-plan-date="${escapeHtml(edgePlanDate)}"`
+      : '';
+    return `<path class="strategy-map-edge edge-${escapeHtml(edge.type)}${parentRootClass} edge-guideline-layer" data-layer="guidelines" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}"${planDateAttr}${edgeToneStyle} d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
   }).join('');
 }
 
@@ -81,13 +90,22 @@ function buildStrategicEdgeMarkup({ graph, nodeById }) {
   }).join('');
 }
 
-function buildInitiativeEdgeMarkup({ graph, nodeById }) {
+function buildInitiativeEdgeMarkup({ graph, nodeById, activeLayer }) {
   return graph.initiativeEdges.map((edge) => {
     const fromNode = nodeById[edge.from];
     const toNode = nodeById[edge.to];
     if (!fromNode || !toNode) return '';
+    const normalizeDate = typeof normalizeImplementationDateInputValue === 'function'
+      ? normalizeImplementationDateInputValue
+      : (value) => String(value || '').trim();
     const lineSide = 'auto';
-    return `<path class="strategy-map-edge edge-initiative edge-initiative-layer" data-layer="initiatives" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}" d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
+    const edgePlanDate = activeLayer === 'plan'
+      ? normalizeDate(fromNode.initiative?.implementationDate)
+      : '';
+    const planDateAttr = edgePlanDate
+      ? ` data-plan-date="${escapeHtml(edgePlanDate)}"`
+      : '';
+    return `<path class="strategy-map-edge edge-initiative edge-initiative-layer" data-layer="initiatives" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-line-side="${escapeHtml(lineSide)}"${planDateAttr} d="${edgePath(fromNode, toNode, lineSide)}"></path>`;
   }).join('');
 }
 
