@@ -6,7 +6,7 @@
   <title>digistrategy.eu | Public Strategy OS</title>
   <meta id="landingMetaDescription" name="description" content="digistrategy.eu padeda institucijoms kartu kurti strategijas, susieti iniciatyvas ir viesinti pazanga." />
   <link rel="icon" type="image/svg+xml" href="assets/digistrategija-favicon.svg?v=20260212b" />
-  <link rel="stylesheet" href="landing.css?v=20260308a" />
+  <link rel="stylesheet" href="landing.css?v=20260310a" />
 </head>
 <body class="landing-page">
   <div class="landing-bg" aria-hidden="true">
@@ -51,50 +51,186 @@
         <p class="hero-kicker" data-i18n="heroKicker">Public Strategy OS</p>
         <h1 data-i18n="heroTitle">From ideas to auditable execution for modern public institutions.</h1>
         <p class="hero-copy" data-i18n="heroCopy">
-          Kurkite gairių struktūras, susiekite iniciatyvas, įtraukite komandas į skaidrų balsavimą ir publikuokite strategijų žemėlapius, kuriuos supranta visa bendruomenė.
+          Kurkite gairių struktūras, importuokite jau pasiteisinusias idėjas, priskirkite įgyvendinimo atsakomybes ir parodykite pažangą viename gyvame strategijos žemėlapyje.
         </p>
         <div class="hero-actions">
-          <a class="btn btn-outline" href="/strategies">Browse Strategy Library</a>
+          <a class="btn btn-outline" data-i18n="heroSecondaryCta" href="/strategies">Browse Strategy Library</a>
           <a class="btn btn-primary" data-active-strategy-link data-i18n="heroPrimaryCta" href="/index.html?view=map">Open Platform</a>
+        </div>
+        <div class="hero-proof" aria-label="Product highlights">
+          <span data-i18n="heroProof1">Public strategy library</span>
+          <span data-i18n="heroProof2">Use in my strategy import</span>
+          <span data-i18n="heroProof3">Implementation plan</span>
+          <span data-i18n="heroProof4">Timeline playback</span>
         </div>
       </div>
       <div class="hero-visual" aria-hidden="true">
-        <div class="hero-art-core">
-          <div class="hero-art-aura"></div>
-          <div class="hero-art-ring hero-art-ring-a"></div>
-          <div class="hero-art-ring hero-art-ring-b"></div>
-          <div class="hero-art-node hero-art-node-a"></div>
-          <div class="hero-art-node hero-art-node-b"></div>
-          <div class="hero-art-node hero-art-node-c"></div>
-          <div class="hero-art-beam hero-art-beam-a"></div>
-          <div class="hero-art-beam hero-art-beam-b"></div>
-        </div>
-        <div class="glass-card glass-main">
-          <p class="glass-label" data-i18n="glassInstitutionLabel">Institucija</p>
-          <h3 data-i18n="glassMainTitle">Skaitmenizacijos strategijos ciklas</h3>
-          <p data-i18n="glassMainCopy">Gairės, iniciatyvos, atsakomybės ir būsenos viename interaktyviame žemėlapyje.</p>
-          <div class="glass-main-summary">
-            <article class="glass-main-stat">
-              <span class="glass-main-stat-label" data-i18n="glassStatsInstitutionsLabel">Aktyvios institucijos</span>
-              <strong class="glass-main-stat-value" id="glassMetricInstitutions">--</strong>
+        <div class="hero-dashboard">
+          <div class="hero-dashboard-topbar">
+            <div class="hero-window-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span class="hero-dashboard-badge" data-i18n="heroVisualBadge">Live strategy workspace</span>
+          </div>
+
+          <div class="hero-dashboard-grid">
+            <article class="hero-panel hero-panel-primary">
+              <p class="hero-panel-kicker" data-i18n="heroLibraryKicker">Import what already works</p>
+              <h3 data-i18n="heroLibraryTitle">Browse external strategies and bring one guideline into your own cycle.</h3>
+              <div class="hero-import-strip">
+                <div class="hero-import-source">
+                  <span class="hero-import-pill" data-i18n="heroImportSourceLabel">External strategy</span>
+                  <strong>VMI / AI strategy</strong>
+                  <span data-i18n="heroImportSourceItem">Darbuotojų produktyvumo didinimas</span>
+                </div>
+                <div class="hero-import-arrow">→</div>
+                <div class="hero-import-target">
+                  <span class="hero-import-pill" data-i18n="heroImportTargetLabel">Your organization</span>
+                  <strong data-i18n="heroImportTargetTitle">Create proposal</strong>
+                  <span data-i18n="heroImportTargetItem">Source link kept</span>
+                </div>
+              </div>
+              <div class="glass-main-summary">
+                <article class="glass-main-stat">
+                  <span class="glass-main-stat-label" data-i18n="glassStatsInstitutionsLabel">Aktyvios institucijos</span>
+                  <strong class="glass-main-stat-value" id="glassMetricInstitutions">--</strong>
+                </article>
+                <article class="glass-main-stat">
+                  <span class="glass-main-stat-label" data-i18n="glassStatsGuidelinesLabel">Aktyvios gairės</span>
+                  <strong class="glass-main-stat-value" id="glassMetricGuidelines">--</strong>
+                </article>
+                <article class="glass-main-stat">
+                  <span class="glass-main-stat-label" data-i18n="glassStatsInitiativesLabel">Aktyvios iniciatyvos</span>
+                  <strong class="glass-main-stat-value" id="glassMetricInitiatives">--</strong>
+                </article>
+              </div>
             </article>
-            <article class="glass-main-stat">
-              <span class="glass-main-stat-label" data-i18n="glassStatsGuidelinesLabel">Aktyvios gairės</span>
-              <strong class="glass-main-stat-value" id="glassMetricGuidelines">--</strong>
+
+            <article class="hero-panel hero-panel-secondary">
+              <p class="hero-panel-kicker" data-i18n="heroMapKicker">Plan mode</p>
+              <h3 data-i18n="heroMapTitle">Reveal execution with a playback timeline across the map.</h3>
+              <div class="hero-timeline-preview">
+                <span>2026-03-25</span>
+                <div class="hero-timeline-bar"><i></i></div>
+                <span>2026-08-09</span>
+              </div>
+              <div class="hero-chip-row">
+                <span data-i18n="heroMapChip1">Guidelines</span>
+                <span data-i18n="heroMapChip2">Initiatives</span>
+                <span data-i18n="heroMapChip3">Plan</span>
+              </div>
             </article>
-            <article class="glass-main-stat">
-              <span class="glass-main-stat-label" data-i18n="glassStatsInitiativesLabel">Aktyvios iniciatyvos</span>
-              <strong class="glass-main-stat-value" id="glassMetricInitiatives">--</strong>
+
+            <article class="hero-panel hero-panel-secondary">
+              <p class="hero-panel-kicker" data-i18n="heroPlanKicker">Implementation plan</p>
+              <h3 data-i18n="heroPlanTitle">Set dates and responsible units without leaving strategy context.</h3>
+              <div class="hero-plan-list">
+                <div>
+                  <strong>2026-04-30</strong>
+                  <span>NPD</span>
+                </div>
+                <div>
+                  <strong>2026-05-12</strong>
+                  <span data-i18n="heroPlanOwner2">Customer service unit</span>
+                </div>
+                <div>
+                  <strong>2026-06-01</strong>
+                  <span data-i18n="heroPlanOwner3">Data governance team</span>
+                </div>
+              </div>
             </article>
           </div>
         </div>
-        <div class="glass-card glass-side glass-side-a">
-          <p class="glass-label" data-i18n="glassOutcomeLabel">Rezultato kontraktas</p>
-          <h4 data-i18n="glassOutcomeTitle">Tikslas + terminas + irodymas</h4>
-        </div>
-        <div class="glass-card glass-side glass-side-b">
-          <p class="glass-label" data-i18n="glassAuditLabel">Audituojamumas</p>
-          <h4 data-i18n="glassAuditTitle">Sprendimu istorija matoma nuo pradzios iki pabaigos</h4>
+      </div>
+    </section>
+
+    <section class="section-reveal section" id="usp">
+      <div class="section-head">
+        <p class="hero-kicker" data-i18n="uspKicker">Isskirtine verte</p>
+        <h2 data-i18n="uspTitle">Kuo tai daugiau nei planavimo lenta</h2>
+        <p class="section-copy" data-i18n="uspCopy">Nuo viešos strategijų bibliotekos iki plan playback žemėlapyje, visa produkto logika telpa vienoje sistemoje.</p>
+      </div>
+
+      <div class="product-badges" aria-label="Platform layers">
+        <span data-i18n="uspBadge1">Library → Import</span>
+        <span data-i18n="uspBadge2">Map → Plan</span>
+        <span data-i18n="uspBadge3">Links → Context</span>
+        <span data-i18n="uspBadge4">AI → Draft</span>
+      </div>
+
+      <div class="product-showcase">
+        <article class="product-story product-story-primary">
+          <div class="product-story-copy">
+            <p class="product-story-kicker" data-i18n="product1Kicker">Cross-institution learning</p>
+            <h3 data-i18n="product1Title">Browse public strategies and import what fits.</h3>
+            <p data-i18n="product1Copy">The strategy library is not just for reading. Teams can open an external strategy, select a guideline or initiative, and move it into their own moderated workflow.</p>
+            <ul>
+              <li data-i18n="product1Item1">Visible only while browsing external strategies</li>
+              <li data-i18n="product1Item2">Creates a proposal instead of writing directly to the live cycle</li>
+              <li data-i18n="product1Item3">Keeps source attribution and strategic links</li>
+            </ul>
+          </div>
+          <div class="product-story-visual import-visual" aria-hidden="true">
+            <div class="import-column">
+              <span class="import-label" data-i18n="product1VisualSource">External library</span>
+              <strong>VMI / AI strategy</strong>
+              <p data-i18n="product1VisualSourceItem">Use in my strategy</p>
+            </div>
+            <div class="import-arrow">→</div>
+            <div class="import-column import-column-target">
+              <span class="import-label" data-i18n="product1VisualTarget">Target cycle</span>
+              <strong data-i18n="product1VisualTargetTitle">Create import proposal</strong>
+              <p data-i18n="product1VisualTargetItem">Relation, parent, notes, provenance</p>
+            </div>
+          </div>
+        </article>
+
+        <div class="product-story-grid">
+          <article class="product-story">
+            <p class="product-story-kicker" data-i18n="product2Kicker">Execution playback</p>
+            <h3 data-i18n="product2Title">Switch to Plan mode and watch the map reveal delivery over time.</h3>
+            <p data-i18n="product2Copy">The same map now shows guidelines and initiatives together, with playback controls, reveal dates, and timeline markers.</p>
+            <div class="product-tag-row">
+              <span data-i18n="product2Tag1">Plan layer</span>
+              <span data-i18n="product2Tag2">Timeline</span>
+              <span data-i18n="product2Tag3">Ripple reveal</span>
+            </div>
+          </article>
+
+          <article class="product-story">
+            <p class="product-story-kicker" data-i18n="product3Kicker">Implementation workspace</p>
+            <h3 data-i18n="product3Title">Assign dates and responsible units for every item.</h3>
+            <p data-i18n="product3Copy">Admins edit in a dedicated implementation plan view and from internal detail pages. Everyone else sees the same plan in read-only mode.</p>
+            <div class="product-tag-row">
+              <span data-i18n="product3Tag1">Dates</span>
+              <span data-i18n="product3Tag2">Owners</span>
+              <span data-i18n="product3Tag3">Read-only visibility</span>
+            </div>
+          </article>
+
+          <article class="product-story">
+            <p class="product-story-kicker" data-i18n="product4Kicker">Strategic memory</p>
+            <h3 data-i18n="product4Title">Keep source context visible instead of losing it in copy-paste.</h3>
+            <p data-i18n="product4Copy">Strategic links, proposal moderation, and public-ready views preserve where ideas came from and how they were adapted.</p>
+            <div class="product-tag-row">
+              <span data-i18n="product4Tag1">Strategic links</span>
+              <span data-i18n="product4Tag2">Moderation</span>
+              <span data-i18n="product4Tag3">Public-ready</span>
+            </div>
+          </article>
+
+          <article class="product-story">
+            <p class="product-story-kicker" data-i18n="product5Kicker">AI acceleration</p>
+            <h3 data-i18n="product5Title">Start from PDFs, then refine structure with the team.</h3>
+            <p data-i18n="product5Copy">Generate a draft strategy from documents, translate source ideas into English JSON, and continue in the same guideline and initiative workflow.</p>
+            <div class="product-tag-row">
+              <span data-i18n="product5Tag1">Multi-PDF draft</span>
+              <span data-i18n="product5Tag2">English JSON output</span>
+              <span data-i18n="product5Tag3">Team refinement</span>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -149,7 +285,7 @@
             <article class="demo-node demo-node-institution">
               <span class="demo-node-kind institution" data-i18n="demoInstitutionKind">Institucija</span>
               <h3 data-i18n="demoInstitutionTitle">Skaitmenizacijos strategijos ciklas</h3>
-              <p data-i18n="demoInstitutionCopy">Bendras tikslas ir prioritetu kryptis visai organizacijai.</p>
+              <p data-i18n="demoInstitutionCopy">Bendras tikslas ir prioritetų kryptis visai organizacijai.</p>
             </article>
 
             <article class="demo-node demo-node-guideline demo-node-g1">
@@ -160,26 +296,26 @@
 
             <article class="demo-node demo-node-guideline demo-node-g2">
               <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gairė</span>
-              <h4 data-i18n="demoGuideline2Title">Duomenu valdysenos stiprinimas</h4>
-              <p data-i18n="demoGuideline2Copy">Vieningi standartai ir kokybiski duomenys sprendimams.</p>
+              <h4 data-i18n="demoGuideline2Title">Duomenų valdysenos stiprinimas</h4>
+              <p data-i18n="demoGuideline2Copy">Vieningi standartai ir kokybiški duomenys sprendimams.</p>
             </article>
 
             <article class="demo-node demo-node-guideline demo-node-g3">
               <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gairė</span>
               <h4 data-i18n="demoGuideline3Title">Skaitmeninių paslaugų plėtra</h4>
-              <p data-i18n="demoGuideline3Copy">Didesne savitarna ir greitesni procesai.</p>
+              <p data-i18n="demoGuideline3Copy">Didesnė savitarna ir greitesni procesai.</p>
             </article>
 
             <article class="demo-node demo-node-guideline demo-node-g4">
               <span class="demo-node-kind guideline" data-i18n="demoGuidelineKind">Gairė</span>
-              <h4 data-i18n="demoGuideline4Title">Kompetenciju ugdymas</h4>
-              <p data-i18n="demoGuideline4Copy">Komandu pasirengimas dirbti su naujais irankiais.</p>
+              <h4 data-i18n="demoGuideline4Title">Kompetencijų ugdymas</h4>
+              <p data-i18n="demoGuideline4Copy">Komandų pasirengimas dirbti su naujais įrankiais.</p>
             </article>
 
             <article class="demo-node demo-node-initiative demo-node-i1">
               <span class="demo-node-kind initiative" data-i18n="demoInitiativeKind">Iniciatyva</span>
               <h4 data-i18n="demoInitiative1Title">Vieningas registracijos kelias</h4>
-              <p data-i18n="demoInitiative1Copy">Vienas langas gyventojo uzklausoms ir aptarnavimui.</p>
+              <p data-i18n="demoInitiative1Copy">Vienas langas gyventojo užklausoms ir aptarnavimui.</p>
             </article>
 
             <article class="demo-node demo-node-initiative demo-node-i2">
@@ -191,46 +327,10 @@
             <article class="demo-node demo-node-initiative demo-node-i3">
               <span class="demo-node-kind initiative" data-i18n="demoInitiativeKind">Iniciatyva</span>
               <h4 data-i18n="demoInitiative3Title">Analitikos platforma</h4>
-              <p data-i18n="demoInitiative3Copy">Sprendimai gristi duomenimis, stebint poveikio rodiklius.</p>
+              <p data-i18n="demoInitiative3Copy">Sprendimai grįsti duomenimis, stebint poveikio rodiklius.</p>
             </article>
           </div>
         </div>
-      </div>
-    </section>
-
-    <section class="section-reveal section" id="usp">
-      <div class="section-head">
-        <p class="hero-kicker" data-i18n="uspKicker">Isskirtine verte</p>
-        <h2 data-i18n="uspTitle">Kuo tai daugiau nei planavimo lenta</h2>
-      </div>
-      <div class="feature-grid">
-        <article class="feature-card">
-          <h3 data-i18n="feature1Title">Atskaitomybes laiko juosta</h3>
-          <p data-i18n="feature1Copy">Kiekvienas strateginis pakeitimas atsekamas: kas, kada ir kodel pakeite.</p>
-          <ul>
-            <li data-i18n="feature1Item1">Nekintama veiklos istorija</li>
-            <li data-i18n="feature1Item2">Aiskus atsakomybiu perdavimas</li>
-            <li data-i18n="feature1Item3">Greitesnes valdymo perziuros</li>
-          </ul>
-        </article>
-        <article class="feature-card">
-          <h3 data-i18n="feature2Title">Rezultatu kontraktai</h3>
-          <p data-i18n="feature2Copy">Paverskite kiekviena iniciatyva pamatuojamu isipareigojimu su baze, tikslu ir terminu.</p>
-          <ul>
-            <li data-i18n="feature2Item1">Maziau abstrakciu igyvendinimo planu</li>
-            <li data-i18n="feature2Item2">Irodymais gristi busenos atnaujinimai</li>
-            <li data-i18n="feature2Item3">Prioritetai susieti su poveikiu</li>
-          </ul>
-        </article>
-        <article class="feature-card">
-          <h3 data-i18n="feature3Title">AI strategijos juodrastis is PDF</h3>
-          <p data-i18n="feature3Copy">Ikelkite bet kokius susijusius PDF dokumentus, o sistema automatiskai sugeneruos pradine strategijos juodrasti su gairiu ir iniciatyvu struktura.</p>
-          <ul>
-            <li data-i18n="feature3Item1">Keli PDF failai vienoje generacijoje</li>
-            <li data-i18n="feature3Item2">Automatinis gairiu ir iniciatyvu pasiulymas</li>
-            <li data-i18n="feature3Item3">Greitas startas tolesniam komandos tobulinimui</li>
-          </ul>
-        </article>
       </div>
     </section>
 
@@ -252,12 +352,12 @@
         </article>
         <article>
           <span>03</span>
-          <h3 data-i18n="flow3Title">Susiekite iniciatyvas su gairemis</h3>
+          <h3 data-i18n="flow3Title">Susiekite iniciatyvas su gairėmis</h3>
           <p data-i18n="flow3Copy">Strategijų žemėlapis parodo priklausomybes ir iškart išryškina nepriskirtus prioritetus.</p>
         </article>
         <article>
           <span>04</span>
-          <h3 data-i18n="flow4Title">Publikuokite ir stebekite</h3>
+          <h3 data-i18n="flow4Title">Publikuokite ir stebėkite</h3>
           <p data-i18n="flow4Copy">Skelbkite view-only žemėlapius viešai, o administratoriai stebi apkrovą ir panaudojimo rodiklius.</p>
         </article>
       </div>
@@ -266,19 +366,19 @@
     <section class="section-reveal section trust" id="trust">
       <div>
         <p class="hero-kicker" data-i18n="trustKicker">Pasitikejimas pagal dizaina</p>
-        <h2 data-i18n="trustTitle">Sukurta instituciniam valdymui, ne triuksmui</h2>
+        <h2 data-i18n="trustTitle">Sukurta instituciniam valdymui, ne triukšmui</h2>
         <p data-i18n="trustCopy">
-          Platforma kurta atsakingam bendradarbiavimui: aiskios roles, istorijos issaugojimas, kontroliuojamas viesumas ir konfiguruojami saugumo saugikliai.
+          Platforma kurta atsakingam bendradarbiavimui: aiškios roles, istorijos išsaugojimas, kontroliuojamas viešumas ir konfigūruojami saugumo saugikliai.
         </p>
       </div>
       <div class="trust-list">
         <article>
-          <h3 data-i18n="trust1Title">Bendradarbystes dirbtuviu modelis</h3>
-          <p data-i18n="trust1Copy">Dalyviai komentuoja, prioritetizuoja ir kuria gaires per strukturuotus, skaidrius procesus.</p>
+          <h3 data-i18n="trust1Title">Bendradarbystės dirbtuvių modelis</h3>
+          <p data-i18n="trust1Copy">Dalyviai komentuoja, prioritetizuoja ir kuria gaires per struktūruotus, skaidrius procesus.</p>
         </article>
         <article>
-          <h3 data-i18n="trust2Title">Institucine atmintis pagal dizaina</h3>
-          <p data-i18n="trust2Copy">Archyvuoti vartotojai ir istoriniu sprendimu pedsakai padeda islaikyti testinuma tarp ciklu.</p>
+          <h3 data-i18n="trust2Title">Institucinė atmintis pagal dizainą</h3>
+          <p data-i18n="trust2Copy">Archyvuoti vartotojai ir istorinių sprendimų pėdsakai padeda išlaikyti tęstinumą tarp ciklų.</p>
         </article>
         <article>
           <h3 data-i18n="trust3Title">Operacinis matomumas</h3>
@@ -302,12 +402,12 @@
 
     <section class="section-reveal section final-cta" id="finalCta">
       <div>
-        <p class="hero-kicker" data-i18n="finalKicker">Pasiruose pamatyti gyvai?</p>
+        <p class="hero-kicker" data-i18n="finalKicker">Pasiruošę pamatyti gyvai?</p>
         <h2 data-i18n="finalTitle">Atverkite aktyvų strategijos žemėlapį dabar.</h2>
-        <p data-i18n="finalCopy">Aplankykite viešą strategijos erdvę ir pamatykite, kaip susijungia gairės bei iniciatyvos.</p>
+        <p data-i18n="finalCopy">Aplankykite viešą strategijos erdvę ir pamatykite, kaip susijungia gairės, iniciatyvos ir įgyvendinimo planas.</p>
       </div>
       <div class="final-actions">
-        <a class="btn btn-outline" href="/strategies">Browse Strategy Library</a>
+        <a class="btn btn-outline" data-i18n="finalSecondaryCta" href="/strategies">Browse Strategy Library</a>
         <a class="btn btn-primary" data-active-strategy-link data-i18n="finalCta" href="/index.html?view=map">Open Platform</a>
       </div>
     </section>
@@ -315,7 +415,7 @@
 
   <footer class="landing-footer">
     <div class="landing-footer-main">
-      <p data-i18n="footerCopy">digistrategy.eu - strateginio bendradarbiavimo platforma viesosioms institucijoms.</p>
+      <p data-i18n="footerCopy">digistrategy.eu - strateginio bendradarbiavimo platforma viešosioms institucijoms.</p>
       <p>
         <button type="button" class="btn btn-ghost landing-access-btn" data-open-access-request data-i18n="footerAccessButton">Gauti prieigą</button>
         <span data-i18n="footerAccessLead">arba susisiekite per LinkedIn:</span>
@@ -324,7 +424,6 @@
     </div>
   </footer>
 
-  <script src="landing.js?v=20260308a"></script>
+  <script src="landing.js?v=20260310a"></script>
 </body>
 </html>
-
