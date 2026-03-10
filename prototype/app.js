@@ -5073,19 +5073,26 @@ function renderStepView() {
                   <strong>${escapeHtml(group.parent.title)}</strong>
                   <span class="tag">${langText('Vaikiniu', 'Children')}: ${group.children.length}</span>
                 </div>
-                <div class="card-list relationship-cluster-cards">
-                  ${renderGuidelineCard(group.parent, {
-                    member,
-                    writable,
-                    authenticated,
-                    commentsVisible: state.commentsVisible
-                  })}
-                  ${group.children.map((child) => renderGuidelineCard(child, {
-                    member,
-                    writable,
-                    authenticated,
-                    commentsVisible: state.commentsVisible
-                  })).join('')}
+                <div class="relationship-cluster-cards">
+                  <div class="relationship-parent-slot">
+                    ${renderGuidelineCard(group.parent, {
+                      member,
+                      writable,
+                      authenticated,
+                      commentsVisible: state.commentsVisible
+                    })}
+                  </div>
+                  <div class="relationship-child-stack">
+                    <div class="relationship-child-label">${langText('Vaikines gaires', 'Child guidelines')}</div>
+                    <div class="card-list relationship-child-grid">
+                      ${group.children.map((child) => renderGuidelineCard(child, {
+                        member,
+                        writable,
+                        authenticated,
+                        commentsVisible: state.commentsVisible
+                      })).join('')}
+                    </div>
+                  </div>
                 </div>
               </div>
             `).join('')
