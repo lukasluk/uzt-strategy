@@ -11,6 +11,7 @@ function buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes }) {
         <div class="map-layer-toggle map-overlay-layer-toggle">
           <button type="button" data-map-layer-btn="guidelines" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}">${escapeHtml(mapLang('Gairės', 'Guidelines'))}</button>
           <button type="button" data-map-layer-btn="initiatives" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" ${hasInitiativeNodes ? '' : 'disabled'}>${escapeHtml(mapLang('Iniciatyvos', 'Initiatives'))}</button>
+          <button type="button" data-map-layer-btn="plan" class="btn ${activeLayer === 'plan' ? 'btn-primary' : 'btn-ghost'}">${escapeHtml(mapLang('Planas', 'Plan'))}</button>
           <button type="button" data-map-layer-btn="strategic-links" class="btn ${activeLayer === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}">Strategic links</button>
         </div>
         <div class="map-overlay-actions">
@@ -566,7 +567,6 @@ function buildMapViewShellMarkup({
   activeLayer,
   editable,
   mapToolbar,
-  planButtonMarkup,
   planTimelineMarkup,
   strategicNoLinksMarkup,
   graph,
@@ -607,7 +607,6 @@ function buildMapViewShellMarkup({
           <img src="assets/digistrategija-logo.svg?v=20260212c" alt="" />
         </div>
         ${planTimelineMarkup}
-        ${planButtonMarkup}
         ${embedBranding}
       </section>
     </section>

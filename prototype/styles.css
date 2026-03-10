@@ -3052,19 +3052,6 @@ body.embed-map-page .map-fullscreen-watermark img {
 .map-layer-toggle .btn {
   min-width: 118px;
 }
-.map-plan-dock {
-  position: absolute;
-  left: 18px;
-  bottom: 18px;
-  z-index: 18;
-}
-.map-plan-dock .btn {
-  min-width: 112px;
-  box-shadow: 0 10px 24px rgba(26, 52, 84, 0.18);
-}
-.strategy-map-viewport.map-layer-plan .map-plan-dock {
-  bottom: 110px;
-}
 .map-plan-timeline {
   position: absolute;
   left: 18px;
@@ -3081,13 +3068,30 @@ body.embed-map-page .map-fullscreen-watermark img {
   background: rgba(251, 253, 255, 0.92);
   box-shadow: 0 18px 32px rgba(26, 52, 84, 0.16);
   backdrop-filter: blur(10px);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 .map-plan-timeline.is-empty {
   grid-template-columns: 1fr;
 }
+.map-plan-timeline.is-idle-hidden {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+}
 .map-plan-play-btn {
-  min-width: 92px;
+  min-width: 52px;
+  width: 52px;
+  height: 52px;
+  padding: 0;
   justify-content: center;
+}
+.map-plan-play-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  stroke: none;
 }
 .map-plan-timeline-track {
   display: grid;
@@ -3237,6 +3241,38 @@ body.embed-map-page .map-fullscreen-watermark img {
   opacity: 1;
   filter: none;
 }
+.strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-ripple-parent {
+  animation: mapPlanRippleParent 0.95s ease-out;
+}
+.strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-ripple-child {
+  animation: mapPlanRippleChild 0.95s ease-out;
+}
+.strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-ripple-orphan {
+  animation: mapPlanRippleOrphan 0.95s ease-out;
+}
+.strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-ripple-initiative {
+  animation: mapPlanRippleInitiative 0.95s ease-out;
+}
+@keyframes mapPlanRippleParent {
+  0% { box-shadow: 0 0 0 0 rgba(72, 104, 168, 0.08), 0 0 0 0 rgba(72, 104, 168, 0.45); }
+  45% { box-shadow: 0 0 0 3px rgba(72, 104, 168, 0.2), 0 0 0 16px rgba(72, 104, 168, 0.16); }
+  100% { box-shadow: 0 0 0 0 rgba(72, 104, 168, 0), 0 0 0 0 rgba(72, 104, 168, 0); }
+}
+@keyframes mapPlanRippleChild {
+  0% { box-shadow: 0 0 0 0 rgba(43, 138, 126, 0.08), 0 0 0 0 rgba(43, 138, 126, 0.45); }
+  45% { box-shadow: 0 0 0 3px rgba(43, 138, 126, 0.2), 0 0 0 16px rgba(43, 138, 126, 0.16); }
+  100% { box-shadow: 0 0 0 0 rgba(43, 138, 126, 0), 0 0 0 0 rgba(43, 138, 126, 0); }
+}
+@keyframes mapPlanRippleOrphan {
+  0% { box-shadow: 0 0 0 0 rgba(216, 107, 75, 0.08), 0 0 0 0 rgba(216, 107, 75, 0.45); }
+  45% { box-shadow: 0 0 0 3px rgba(216, 107, 75, 0.2), 0 0 0 16px rgba(216, 107, 75, 0.16); }
+  100% { box-shadow: 0 0 0 0 rgba(216, 107, 75, 0), 0 0 0 0 rgba(216, 107, 75, 0); }
+}
+@keyframes mapPlanRippleInitiative {
+  0% { box-shadow: 0 0 0 0 rgba(210, 145, 47, 0.08), 0 0 0 0 rgba(210, 145, 47, 0.45); }
+  45% { box-shadow: 0 0 0 3px rgba(210, 145, 47, 0.2), 0 0 0 16px rgba(210, 145, 47, 0.16); }
+  100% { box-shadow: 0 0 0 0 rgba(210, 145, 47, 0), 0 0 0 0 rgba(210, 145, 47, 0); }
+}
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives, .map-layer-plan) .institution-node strong {
   font-size: clamp(18px, 1.55vw, 22px);
   line-height: 1.08;
@@ -3342,10 +3378,6 @@ body.embed-map-page .map-fullscreen-watermark img {
     right: 12px;
     bottom: 12px;
     grid-template-columns: 1fr;
-  }
-
-  .strategy-map-viewport.map-layer-plan .map-plan-dock {
-    bottom: 154px;
   }
 
   .map-plan-timeline-track {

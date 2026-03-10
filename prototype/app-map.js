@@ -88,6 +88,29 @@ function stopMapPlanPlayback() {
   state.mapPlanPlaybackStartedAt = 0;
 }
 
+function mapPlanPlaybackButtonIconMarkup(isPlaying) {
+  if (typeof buildMapPlanPlaybackIcon === 'function') {
+    return buildMapPlanPlaybackIcon(isPlaying);
+  }
+  return isPlaying ? '||' : '>';
+}
+
+function triggerMapPlanRevealRipple(node) {
+  if (!(node instanceof HTMLElement)) return;
+  let rippleClass = 'map-plan-ripple-initiative';
+  if (node.classList.contains('guideline-node')) {
+    if (node.classList.contains('relation-parent')) rippleClass = 'map-plan-ripple-parent';
+    else if (node.classList.contains('relation-child')) rippleClass = 'map-plan-ripple-child';
+    else rippleClass = 'map-plan-ripple-orphan';
+  }
+  node.classList.remove('map-plan-ripple-parent', 'map-plan-ripple-child', 'map-plan-ripple-orphan', 'map-plan-ripple-initiative');
+  void node.offsetWidth;
+  node.classList.add(rippleClass);
+  window.setTimeout(() => {
+    node.classList.remove(rippleClass);
+  }, 1100);
+}
+
 function mapPlanCurrentDateText(firstDate, lastDate, progress) {
   const formatDate = typeof formatInstitutionDate === 'function'
     ? formatInstitutionDate
@@ -126,9 +149,12 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
     currentLabel.textContent = mapPlanCurrentDateText(firstDate, lastDate, progress);
   }
   if (playButton instanceof HTMLElement) {
-    playButton.textContent = state.mapPlanPlaying
+    playButton.innerHTML = mapPlanPlaybackButtonIconMarkup(state.mapPlanPlaying);
+    const nextLabel = state.mapPlanPlaying
       ? mapLang('Pauzė', 'Pause')
       : mapLang('Play', 'Play');
+    playButton.setAttribute('aria-label', nextLabel);
+    playButton.setAttribute('title', nextLabel);
     playButton.classList.toggle('btn-primary', state.mapPlanPlaying);
     playButton.classList.toggle('btn-ghost', !state.mapPlanPlaying);
   }
@@ -146,8 +172,12 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
       return;
     }
     node.classList.add('map-plan-dated');
+    const wasVisible = node.classList.contains('map-plan-visible');
     const revealed = progress > 0 && (progress >= 1 || span <= 0 || parsed.time <= currentTime);
     node.classList.toggle('map-plan-visible', revealed);
+    if (!wasVisible && revealed) {
+      triggerMapPlanRevealRipple(node);
+    }
   });
 }
 
@@ -158,8 +188,25 @@ function bindMapPlanTimeline(viewport, world, stepView) {
   const range = timelineRoot.querySelector('#mapPlanTimelineRange');
   const playButton = timelineRoot.querySelector('[data-map-plan-play]');
   const hasTimeline = !timelineRoot.classList.contains('is-empty');
+  let hideTimerId = 0;
 
   const sync = () => applyMapPlanTimelineState(viewport, world, timelineRoot);
+
+  const showTimeline = () => {
+    timelineRoot.classList.remove('is-idle-hidden');
+  };
+
+  const scheduleHide = () => {
+    if (hideTimerId) window.clearTimeout(hideTimerId);
+    hideTimerId = window.setTimeout(() => {
+      timelineRoot.classList.add('is-idle-hidden');
+    }, 1000);
+  };
+
+  const registerActivity = () => {
+    showTimeline();
+    scheduleHide();
+  };
 
   const startPlayback = () => {
     if (!hasTimeline) return;
@@ -188,9 +235,11 @@ function bindMapPlanTimeline(viewport, world, stepView) {
     stopMapPlanPlayback();
     state.mapPlanProgress = Math.max(0, Math.min(1, Number(range.value || 0) / 1000));
     sync();
+    registerActivity();
   });
 
   playButton?.addEventListener('click', () => {
+    registerActivity();
     if (state.mapPlanPlaying) {
       stopMapPlanPlayback();
       sync();
@@ -199,7 +248,15 @@ function bindMapPlanTimeline(viewport, world, stepView) {
     startPlayback();
   });
 
+  ['mousemove', 'pointermove', 'pointerdown', 'wheel', 'touchstart'].forEach((eventName) => {
+    viewport.addEventListener(eventName, registerActivity, { passive: true });
+  });
+
+  timelineRoot.addEventListener('mousemove', registerActivity, { passive: true });
+  timelineRoot.addEventListener('pointerdown', registerActivity, { passive: true });
+
   sync();
+  registerActivity();
 }
 
 

@@ -1,6 +1,21 @@
 // Map view shell payload assembly helpers extracted from app-map.js.
 // This file must load before app-map.js.
 
+function buildMapPlanPlaybackIcon(isPlaying) {
+  return isPlaying
+    ? `
+      <svg viewBox="0 0 24 24" class="map-plan-play-icon" aria-hidden="true">
+        <path d="M8 6.5h3.5v11H8z"></path>
+        <path d="M12.5 6.5H16v11h-3.5z"></path>
+      </svg>
+    `
+    : `
+      <svg viewBox="0 0 24 24" class="map-plan-play-icon" aria-hidden="true">
+        <path d="M8 6.5l9 5.5-9 5.5z"></path>
+      </svg>
+    `;
+}
+
 function buildMapPlanTimelineMarkup(graph, activeLayer) {
   if (activeLayer !== 'plan') return '';
   const normalizeDate = typeof normalizeImplementationDateInputValue === 'function'
@@ -14,12 +29,21 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
     .map((node) => normalizeDate(node.guideline?.implementationDate || node.initiative?.implementationDate))
     .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))
     .sort();
-  const firstDate = datedItems[0] || '';
-  const lastDate = datedItems[datedItems.length - 1] || firstDate || '';
+  const shiftDate = (rawDate, days) => {
+    const match = String(rawDate || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return '';
+    const utc = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days);
+    const next = new Date(utc);
+    const year = next.getUTCFullYear();
+    const month = String(next.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(next.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const earliestEventDate = datedItems[0] || '';
+  const latestEventDate = datedItems[datedItems.length - 1] || earliestEventDate || '';
+  const firstDate = earliestEventDate ? shiftDate(earliestEventDate, -5) : '';
+  const lastDate = latestEventDate ? shiftDate(latestEventDate, 5) : firstDate || '';
   const hasTimeline = Boolean(firstDate && lastDate);
-  const currentDate = hasTimeline
-    ? (state.mapPlanProgress > 0 ? lastDate : firstDate)
-    : '';
 
   return `
     <section
@@ -32,8 +56,10 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
         type="button"
         class="btn ${state.mapPlanPlaying ? 'btn-primary' : 'btn-ghost'} map-plan-play-btn"
         data-map-plan-play
+        aria-label="${escapeHtml(state.mapPlanPlaying ? mapLang('Pauzė', 'Pause') : mapLang('Play', 'Play'))}"
+        title="${escapeHtml(state.mapPlanPlaying ? mapLang('Pauzė', 'Pause') : mapLang('Play', 'Play'))}"
         ${hasTimeline ? '' : 'disabled'}
-      >${escapeHtml(state.mapPlanPlaying ? mapLang('Pauzė', 'Pause') : mapLang('Play', 'Play'))}</button>
+      >${buildMapPlanPlaybackIcon(state.mapPlanPlaying)}</button>
       <div class="map-plan-timeline-track">
         <span class="map-plan-timeline-boundary">${escapeHtml(firstDate ? formatDate(firstDate) || firstDate : mapLang('Nėra datų', 'No dates'))}</span>
         <input
@@ -48,7 +74,7 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
         />
         <span class="map-plan-timeline-boundary">${escapeHtml(lastDate ? formatDate(lastDate) || lastDate : mapLang('Nėra datų', 'No dates'))}</span>
       </div>
-      <div id="mapPlanTimelineCurrent" class="map-plan-timeline-current">${escapeHtml(currentDate ? formatDate(currentDate) || currentDate : '')}</div>
+      <div id="mapPlanTimelineCurrent" class="map-plan-timeline-current"></div>
     </section>
   `;
 }
@@ -66,13 +92,6 @@ function buildMapViewRenderPayload({ graph, activeLayer, hasInitiativeNodes, edi
 
   const mapHeader = buildMapHeaderMarkup({ graph, activeLayer, editable });
   const mapToolbar = buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes });
-  const planButtonMarkup = `
-    <div class="map-plan-dock">
-      <button type="button" class="btn ${activeLayer === 'plan' ? 'btn-primary' : 'btn-ghost'}" data-map-layer-btn="plan">
-        ${escapeHtml(mapLang('Planas', 'Plan'))}
-      </button>
-    </div>
-  `;
   const planTimelineMarkup = buildMapPlanTimelineMarkup(graph, activeLayer);
   const strategicNoLinksMarkup = activeLayer === 'strategic-links' && !graph.hasStrategicLinks
     ? '<div class="map-strategic-empty-note">No strategic links</div>'
@@ -90,7 +109,6 @@ function buildMapViewRenderPayload({ graph, activeLayer, hasInitiativeNodes, edi
     activeLayer,
     editable,
     mapToolbar,
-    planButtonMarkup,
     planTimelineMarkup,
     strategicNoLinksMarkup,
     graph,
