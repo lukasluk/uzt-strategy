@@ -88,6 +88,83 @@ function stopMapPlanPlayback() {
   state.mapPlanPlaybackStartedAt = 0;
 }
 
+let mapPlanAudioContext = null;
+let mapPlanLastSoundAt = 0;
+
+function ensureMapPlanAudioContext() {
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return null;
+  if (!mapPlanAudioContext) {
+    try {
+      mapPlanAudioContext = new AudioCtor();
+    } catch {
+      mapPlanAudioContext = null;
+    }
+  }
+  return mapPlanAudioContext;
+}
+
+function resolveMapPlanRevealKind(node) {
+  if (!(node instanceof HTMLElement)) return 'initiative';
+  if (!node.classList.contains('guideline-node')) return 'initiative';
+  if (node.classList.contains('relation-parent')) return 'parent';
+  if (node.classList.contains('relation-child')) return 'child';
+  return 'orphan';
+}
+
+function playMapPlanRevealSound(kinds = []) {
+  if (!state.mapPlanPlaying) return;
+  const audioContext = ensureMapPlanAudioContext();
+  if (!audioContext) return;
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().catch(() => {});
+  }
+  const nowStamp = performance.now();
+  if (nowStamp - mapPlanLastSoundAt < 55) return;
+  mapPlanLastSoundAt = nowStamp;
+
+  const kindList = Array.isArray(kinds) ? kinds.filter(Boolean) : [];
+  const uniqueKinds = new Set(kindList);
+  let baseFrequency = 480;
+  if (uniqueKinds.has('initiative')) baseFrequency = 560;
+  else if (uniqueKinds.has('child')) baseFrequency = 520;
+  else if (uniqueKinds.has('parent')) baseFrequency = 450;
+  else if (uniqueKinds.has('orphan')) baseFrequency = 500;
+
+  const layerCount = Math.max(1, Math.min(3, uniqueKinds.size || 1));
+  const now = audioContext.currentTime + 0.01;
+  const masterGain = audioContext.createGain();
+  masterGain.gain.setValueAtTime(0.0001, now);
+  masterGain.gain.linearRampToValueAtTime(0.028 + (layerCount * 0.006), now + 0.018);
+  masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.19);
+  masterGain.connect(audioContext.destination);
+
+  const mainOsc = audioContext.createOscillator();
+  const mainGain = audioContext.createGain();
+  mainOsc.type = 'triangle';
+  mainOsc.frequency.setValueAtTime(baseFrequency * 1.18, now);
+  mainOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 0.82, now + 0.16);
+  mainGain.gain.setValueAtTime(1, now);
+  mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+  mainOsc.connect(mainGain);
+  mainGain.connect(masterGain);
+
+  const shimmerOsc = audioContext.createOscillator();
+  const shimmerGain = audioContext.createGain();
+  shimmerOsc.type = 'sine';
+  shimmerOsc.frequency.setValueAtTime(baseFrequency * 1.95, now);
+  shimmerOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 1.32, now + 0.12);
+  shimmerGain.gain.setValueAtTime(0.28, now);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  shimmerOsc.connect(shimmerGain);
+  shimmerGain.connect(masterGain);
+
+  mainOsc.start(now);
+  shimmerOsc.start(now);
+  mainOsc.stop(now + 0.2);
+  shimmerOsc.stop(now + 0.14);
+}
+
 function mapPlanPlaybackButtonIconMarkup(isPlaying) {
   if (typeof buildMapPlanPlaybackIcon === 'function') {
     return buildMapPlanPlaybackIcon(isPlaying);
@@ -173,6 +250,7 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
     ? (span > 0 ? first.time + span * progress : last.time)
     : 0;
   const datedNodes = Array.from(world.querySelectorAll('.strategy-map-node[data-plan-date]'));
+  const newlyRevealedKinds = [];
   datedNodes.forEach((node) => {
     if (!(node instanceof HTMLElement)) return;
     const parsed = parseMapPlanDateValue(node.dataset.planDate);
@@ -185,9 +263,13 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
     const revealed = progress > 0 && (progress >= 1 || span <= 0 || parsed.time <= currentTime);
     node.classList.toggle('map-plan-visible', revealed);
     if (!wasVisible && revealed) {
+      newlyRevealedKinds.push(resolveMapPlanRevealKind(node));
       triggerMapPlanRevealRipple(node);
     }
   });
+  if (newlyRevealedKinds.length) {
+    playMapPlanRevealSound(newlyRevealedKinds);
+  }
   const datedEdges = Array.from(world.querySelectorAll('.strategy-map-edge[data-plan-date]'));
   datedEdges.forEach((edge) => {
     if (!(edge instanceof SVGElement)) return;
