@@ -596,10 +596,11 @@ function buildMapViewShellMarkup({
   mapWatermarkClass,
   embedBranding
 }) {
+  const secretMapClass = state.mapSecretAnthracite ? ' map-secret-anthracite' : '';
   return `
     <section class="map-view-shell">
       ${mapHeader}
-      <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer} ${editable ? 'map-editable' : ''}">
+      <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer} ${editable ? 'map-editable' : ''}${secretMapClass}">
         ${mapToolbar}
         ${strategicNoLinksMarkup}
         <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">

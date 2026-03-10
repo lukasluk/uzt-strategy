@@ -2484,9 +2484,13 @@ textarea {
 }
 .structure-layer-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
+  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr) auto minmax(180px, 1fr);
   gap: 8px;
   align-items: stretch;
+}
+.structure-step-implementation {
+  border-color: #c8d8ef;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
 }
 .structure-mini-cards {
   display: flex;
@@ -2573,6 +2577,13 @@ textarea {
   background-position: var(--grid-x) var(--grid-y);
   cursor: grab;
   isolation: isolate;
+}
+.strategy-map-viewport.map-secret-anthracite {
+  background-color: #23272b;
+  background-image:
+    linear-gradient(rgba(143, 153, 166, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(143, 153, 166, 0.15) 1px, transparent 1px);
+  border-color: #4a5560;
 }
 .map-view-shell {
   display: grid;

@@ -255,6 +255,7 @@ const state = {
   mapPlanAnimationFrameId: 0,
   mapPlanPlaybackStartedAt: 0,
   mapPlanPlaybackMs: MAP_PLAN_PLAYBACK_MS,
+  mapSecretAnthracite: false,
   expandedStepId: '',
   strategySwitcherDialogOpen: false,
   routeEntityKind: resolveRouteEntityKind(),
@@ -3075,16 +3076,17 @@ function renderIntroDeck() {
                     </div>
                     <span class="structure-badge">${langText('Etapas 2', 'Stage 2')}</span>
                   </article>
+                  <span class="structure-arrow structure-arrow-inner" aria-hidden="true">&rarr;</span>
+                  <article class="structure-step structure-step-layer structure-step-implementation" role="listitem">
+                    <span class="structure-label">${langText('Igyvendinimo planas', 'Implementation plan')}</span>
+                    <p>${langText('Perkelimas i konkrecias veiklas, terminus ir atsakomybes.', 'Translation into concrete actions, timelines, and ownership.')}</p>
+                    <span class="structure-badge">${langText('Etapas 3', 'Stage 3')}</span>
+                  </article>
                 </div>
               </section>
-              <span class="structure-arrow" aria-hidden="true">&rarr;</span>
-              <article class="structure-step" role="listitem">
-                <span class="structure-label">${langText('Igyvendinimo planas', 'Implementation plan')}</span>
-                <p>${langText('Perkelimas i konkrecias veiklas, terminus ir atsakomybes.', 'Translation into concrete actions, timelines, and ownership.')}</p>
-              </article>
             </div>
             <div class="structure-note-row">
-              <p class="structure-note">${langText('Platformos apimtis: "GairÄ—s" ir "Iniciatyvos" etapai.', 'Platform scope: "Guidelines" and "Initiatives" stages.')}</p>
+              <p class="structure-note">${langText('Platformos apimtis: "Gairės", "Iniciatyvos" ir "Įgyvendinimo planas" etapai.', 'Platform scope: "Guidelines", "Initiatives", and "Implementation plan" stages.')}</p>
               <div data-strategy-url-inline-slot></div>
             </div>
           </section>
@@ -6084,6 +6086,22 @@ function bindGlobal() {
     const world = document.getElementById('strategyMapWorld');
     if (!viewport || !world) return;
     fitMapToCurrentNodes(viewport, world);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (state.activeView !== 'map') return;
+    if (event.defaultPrevented || event.repeat) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const target = event.target;
+    if (target instanceof HTMLElement) {
+      const tagName = String(target.tagName || '').toLowerCase();
+      if (target.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select') return;
+    }
+    if (String(event.key || '').toLowerCase() !== 'j') return;
+    state.mapSecretAnthracite = !state.mapSecretAnthracite;
+    const viewport = document.getElementById('strategyMapViewport');
+    if (viewport instanceof HTMLElement) {
+      viewport.classList.toggle('map-secret-anthracite', state.mapSecretAnthracite);
+    }
   });
   window.addEventListener('scroll', maybeAutoCollapseIntroOnFirstScroll, { passive: true });
 }
