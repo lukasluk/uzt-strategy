@@ -555,25 +555,25 @@ h2 {
 }
 
 .hero-scene-aura {
-  top: 5%;
-  width: 86%;
-  height: 72%;
+  top: 2%;
+  width: 92%;
+  height: 76%;
   border-radius: 50%;
   background:
-    radial-gradient(circle at var(--scene-glow-x) var(--scene-glow-y), rgba(87, 154, 255, 0.48), rgba(87, 154, 255, 0) 34%),
-    radial-gradient(circle at 72% 70%, rgba(255, 212, 78, 0.22), rgba(255, 212, 78, 0) 28%),
-    radial-gradient(circle at 30% 80%, rgba(123, 170, 237, 0.18), rgba(123, 170, 237, 0) 26%);
-  filter: blur(16px);
-  opacity: 0.92;
+    radial-gradient(circle at var(--scene-glow-x) var(--scene-glow-y), rgba(87, 154, 255, 0.34), rgba(87, 154, 255, 0) 32%),
+    radial-gradient(circle at 74% 68%, rgba(255, 212, 78, 0.14), rgba(255, 212, 78, 0) 24%),
+    radial-gradient(circle at 30% 80%, rgba(123, 170, 237, 0.12), rgba(123, 170, 237, 0) 24%);
+  filter: blur(20px);
+  opacity: 0.82;
 }
 
 .hero-scene-floor {
-  bottom: 10%;
-  width: 72%;
-  height: 120px;
+  bottom: 8%;
+  width: 70%;
+  height: 104px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(27, 70, 127, 0.2) 0%, rgba(27, 70, 127, 0.08) 36%, rgba(27, 70, 127, 0) 74%);
-  filter: blur(12px);
+  background: radial-gradient(circle, rgba(27, 70, 127, 0.16) 0%, rgba(27, 70, 127, 0.06) 34%, rgba(27, 70, 127, 0) 74%);
+  filter: blur(14px);
 }
 
 .hero-scene-rig {
@@ -581,14 +581,35 @@ h2 {
   width: 100%;
   height: 540px;
   transform-style: preserve-3d;
-  transform: rotateX(calc(-10deg + var(--scene-tilt-x))) rotateY(calc(18deg + var(--scene-tilt-y)));
+  transform: rotateX(calc(-5deg + var(--scene-tilt-x))) rotateY(calc(12deg + var(--scene-tilt-y)));
   will-change: transform;
+}
+
+.hero-ribbon-line {
+  position: absolute;
+  top: 7%;
+  left: -108%;
+  width: 228%;
+  height: 280px;
+  overflow: visible;
+  transform: translate3d(0, 0, 20px) rotateX(10deg);
+  opacity: 0.98;
+  filter: drop-shadow(0 0 14px rgba(255, 203, 46, 0.22));
+  pointer-events: none;
+}
+
+.hero-ribbon-line path {
+  fill: none;
+  stroke: #ffcd31;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .hero-prism {
   position: absolute;
   left: 52%;
-  top: 48%;
+  top: 45%;
   --prism-depth: 80px;
   width: 312px;
   height: 392px;
@@ -689,8 +710,8 @@ h2 {
     linear-gradient(145deg, rgba(62, 129, 214, 0.18) 0%, rgba(255, 210, 66, 0.18) 100%);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.72),
-    0 0 56px rgba(74, 138, 221, 0.22);
-  opacity: 0.92;
+    0 0 34px rgba(74, 138, 221, 0.16);
+  opacity: 0.88;
 }
 
 .hero-float-card {
@@ -700,7 +721,7 @@ h2 {
   border: 1px solid rgba(145, 177, 221, 0.58);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(237, 247, 255, 0.88) 100%);
-  box-shadow: 0 14px 24px rgba(31, 77, 137, 0.12);
+  box-shadow: 0 12px 18px rgba(31, 77, 137, 0.1);
   backdrop-filter: blur(10px);
   display: grid;
   gap: 8px;
@@ -722,37 +743,37 @@ h2 {
 }
 
 .hero-float-card-a {
-  top: 4%;
-  left: 3%;
-  transform: translate3d(0, 0, 120px) rotateY(-12deg) rotateX(4deg);
+  top: 8%;
+  left: 0;
+  transform: translate3d(0, 0, 128px) rotateY(-10deg) rotateX(8deg);
   animation: heroCardFloatA 8s ease-in-out infinite;
 }
 
 .hero-float-card-b {
-  top: 14%;
-  right: 1%;
-  transform: translate3d(0, 0, 150px) rotateY(10deg) rotateX(-3deg);
+  top: 10%;
+  right: -6%;
+  transform: translate3d(0, 0, 164px) rotateY(8deg) rotateX(8deg);
   animation: heroCardFloatB 8.8s ease-in-out infinite;
 }
 
 .hero-float-card-c {
-  bottom: 22%;
-  left: 10%;
-  transform: translate3d(0, 0, 140px) rotateY(-8deg) rotateX(2deg);
+  bottom: 28%;
+  left: 2%;
+  transform: translate3d(0, 0, 146px) rotateY(-7deg) rotateX(7deg);
   animation: heroCardFloatC 9.4s ease-in-out infinite;
 }
 
 .hero-scene-dock {
   position: absolute;
   left: 50%;
-  bottom: 1%;
-  width: min(88%, 480px);
+  bottom: -1%;
+  width: min(92%, 500px);
   padding: 12px;
   transform: translate3d(-50%, 0, 120px);
   border: 1px solid rgba(143, 177, 221, 0.58);
   border-radius: 24px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(234, 244, 255, 0.76) 100%);
-  box-shadow: 0 20px 32px rgba(29, 72, 131, 0.14);
+  box-shadow: 0 16px 26px rgba(29, 72, 131, 0.12);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
@@ -1649,22 +1670,22 @@ h2 {
 
 @keyframes heroPrismFloat {
   0%, 100% { transform: translate3d(-50%, -50%, 84px) rotateZ(0deg); }
-  50% { transform: translate3d(-50%, calc(-50% - 10px), 96px) rotateZ(-0.6deg); }
+  50% { transform: translate3d(-50%, calc(-50% - 8px), 92px) rotateZ(-0.4deg); }
 }
 
 @keyframes heroCardFloatA {
-  0%, 100% { transform: translate3d(0, 0, 120px) rotateY(-12deg) rotateX(4deg); }
-  50% { transform: translate3d(-4px, -10px, 132px) rotateY(-9deg) rotateX(2deg); }
+  0%, 100% { transform: translate3d(0, 0, 128px) rotateY(-10deg) rotateX(8deg); }
+  50% { transform: translate3d(-4px, -9px, 138px) rotateY(-8deg) rotateX(10deg); }
 }
 
 @keyframes heroCardFloatB {
-  0%, 100% { transform: translate3d(0, 0, 150px) rotateY(10deg) rotateX(-3deg); }
-  50% { transform: translate3d(6px, -12px, 164px) rotateY(7deg) rotateX(-1deg); }
+  0%, 100% { transform: translate3d(0, 0, 164px) rotateY(8deg) rotateX(8deg); }
+  50% { transform: translate3d(6px, -10px, 176px) rotateY(6deg) rotateX(10deg); }
 }
 
 @keyframes heroCardFloatC {
-  0%, 100% { transform: translate3d(0, 0, 140px) rotateY(-8deg) rotateX(2deg); }
-  50% { transform: translate3d(4px, -8px, 152px) rotateY(-5deg) rotateX(0deg); }
+  0%, 100% { transform: translate3d(0, 0, 146px) rotateY(-7deg) rotateX(7deg); }
+  50% { transform: translate3d(4px, -8px, 156px) rotateY(-5deg) rotateX(9deg); }
 }
 
 @media (max-width: 1080px) {
@@ -1701,6 +1722,11 @@ h2 {
   .hero-scene {
     margin: 0 auto;
     min-height: 500px;
+  }
+
+  .hero-ribbon-line {
+    left: -88%;
+    width: 204%;
   }
 
   .hero-prism {
@@ -1900,6 +1926,13 @@ h2 {
     height: 460px;
   }
 
+  .hero-ribbon-line {
+    top: 10%;
+    left: -70%;
+    width: 180%;
+    height: 220px;
+  }
+
   .hero-prism {
     --prism-depth: 64px;
     width: 230px;
@@ -1941,12 +1974,12 @@ h2 {
   }
 
   .hero-float-card-b {
-    top: 12%;
-    right: 0;
+    top: 10%;
+    right: -2%;
   }
 
   .hero-float-card-c {
-    bottom: 28%;
+    bottom: 30%;
     left: 2%;
   }
 
