@@ -305,11 +305,16 @@ main {
   grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
   gap: clamp(22px, 3.4vw, 40px);
   align-items: center;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .hero-content {
   display: grid;
   align-content: center;
+  position: relative;
+  z-index: 2;
 }
 
 .hero-kicker {
@@ -532,13 +537,14 @@ h2 {
   display: grid;
   align-items: center;
   perspective: 1800px;
+  z-index: 1;
 }
 
 .hero-scene {
   position: relative;
   width: min(100%, 600px);
   min-height: 540px;
-  margin-left: auto;
+  margin-left: -48px;
   --scene-tilt-x: 0deg;
   --scene-tilt-y: 0deg;
   --scene-glow-x: 50%;
@@ -587,15 +593,16 @@ h2 {
 
 .hero-ribbon-line {
   position: absolute;
-  top: 7%;
+  top: 30%;
   left: -108%;
   width: 228%;
   height: 280px;
   overflow: visible;
-  transform: translate3d(0, 0, 20px) rotateX(10deg);
+  transform: translate3d(0, 0, 8px) rotateX(10deg);
   opacity: 0.98;
   filter: drop-shadow(0 0 14px rgba(255, 203, 46, 0.22));
   pointer-events: none;
+  z-index: 0;
 }
 
 .hero-ribbon-line path {
@@ -1725,6 +1732,7 @@ h2 {
   }
 
   .hero-ribbon-line {
+    top: 28%;
     left: -88%;
     width: 204%;
   }
@@ -1927,7 +1935,7 @@ h2 {
   }
 
   .hero-ribbon-line {
-    top: 10%;
+    top: 26%;
     left: -70%;
     width: 180%;
     height: 220px;

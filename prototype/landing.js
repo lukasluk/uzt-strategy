@@ -279,9 +279,9 @@
 
   const LANDING_REFRESH_TRANSLATIONS = {
     lt: {
-      metaTitle: 'digistrategy.eu | Gyva strategijų platforma viešajam sektoriui',
+      metaTitle: 'digistrategy.ey | strategy operatyng system',
       metaDescription: 'digistrategy.eu sujungia strategijų biblioteką, gairių ir iniciatyvų žemėlapį, įgyvendinimo planą ir plan playback vienoje platformoje.',
-      headerCta: 'Atidaryti gyvą platformą',
+      headerCta: 'Open Platform',
       heroKicker: 'Gyva strategijų platforma',
       heroTitle: 'Strategija, importas ir įgyvendinimas viename gyvame žemėlapyje.',
       heroCopy: 'digistrategy.eu sujungia viešą strategijų biblioteką, gairių ir iniciatyvų žemėlapį, įgyvendinimo planą, strateginius ryšius ir plan playback vienoje darbo erdvėje institucijoms.',
@@ -377,9 +377,9 @@
       finalCta: 'Atidaryti platformą'
     },
     en: {
-      metaTitle: 'digistrategy.eu | Living strategy platform for public institutions',
+      metaTitle: 'digistrategy.ey | strategy operatyng system',
       metaDescription: 'digistrategy.eu combines a public strategy library, map-based strategy design, implementation planning, strategic links, and plan playback in one platform.',
-      headerCta: 'Open Live Platform',
+      headerCta: 'Open Platform',
       heroKicker: 'Living strategy platform',
       heroTitle: 'Strategy, import, and implementation on one living map.',
       heroCopy: 'digistrategy.eu connects a public strategy library, guideline and initiative mapping, implementation planning, strategic links, and plan playback in one workspace for institutions.',
