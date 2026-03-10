@@ -32,8 +32,8 @@ function buildPlanMetaMarkup(item, activeLayer) {
   const implementationDate = normalizeDate(item.implementationDate);
   const implementationOwner = String(item.implementationOwner || '').trim();
   const metaParts = [];
-  if (implementationDate) metaParts.push(`<div class="map-plan-meta-line">${escapeHtml(formatDate(implementationDate) || implementationDate)}</div>`);
-  if (implementationOwner) metaParts.push(`<div class="map-plan-meta-line">${escapeHtml(implementationOwner)}</div>`);
+  if (implementationDate) metaParts.push(`<div class="map-plan-meta-line is-date">${escapeHtml(formatDate(implementationDate) || implementationDate)}</div>`);
+  if (implementationOwner) metaParts.push(`<div class="map-plan-meta-line is-owner">${escapeHtml(implementationOwner)}</div>`);
   if (!metaParts.length) return '';
   return `<div class="map-plan-meta">${metaParts.join('')}</div>`;
 }
@@ -115,8 +115,8 @@ function buildInstitutionNodeMarkup({ node, activeLayer, editable }) {
     ? (node.clusterRole === 'related'
       ? `<span class="tag">${escapeHtml(mapLang('Susieta strategija', 'Linked strategy'))}</span>`
       : '')
-    : `<span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>`;
-  const cycleStatusLine = activeLayer === 'strategic-links'
+    : (activeLayer === 'plan' ? '' : `<span class="tag">${escapeHtml(cycleState.toUpperCase())}</span>`);
+  const cycleStatusLine = activeLayer === 'strategic-links' || activeLayer === 'plan'
     ? ''
     : `<small class="institution-cycle-label">${escapeHtml(mapLang('Strategijos ciklo būsena', 'Strategy cycle status'))}</small>`;
   const strategyToneStyle = activeLayer === 'strategic-links' && node.strategyTone
@@ -200,7 +200,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
     : '';
   const guidelineOwnerLabel = activeLayer === 'strategic-links'
     ? `${String(node.institution.name || node.institution.slug || '').trim()} / ${String(node.institution.strategy?.title || '-').trim()}`
-    : `${String(node.institution.slug || '').trim()}`;
+    : (activeLayer === 'plan' ? '' : `${String(node.institution.slug || '').trim()}`);
   const guidelineToneStyle = activeLayer === 'strategic-links' && node.strategyTone
     ? `--strategy-pastel:${escapeHtml(node.strategyTone.pastel)};--strategy-border:${escapeHtml(node.strategyTone.border)};--strategy-ink:${escapeHtml(node.strategyTone.ink)};`
     : '';
@@ -240,7 +240,7 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
           <div class="map-node-head">
             <h4>${escapeHtml(node.guideline.title)}</h4>
           </div>
-          <small>${escapeHtml(guidelineOwnerLabel)}</small>
+          ${guidelineOwnerLabel ? `<small>${escapeHtml(guidelineOwnerLabel)}</small>` : ''}
           ${planMetaMarkup}
           <div class="map-vote-row">
             <span class="map-vote-chip" title="${escapeHtml(mapLang('Bendras balas', 'Total score'))}">
