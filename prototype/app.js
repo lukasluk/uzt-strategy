@@ -5205,10 +5205,13 @@ function renderStepView() {
     </div>
     <section id="guidelineAddSection" class="step-add-anchor">
     ${member ? (writable ? `
-      <div class="card" style="margin-top: 16px;">
+      <div class="card guideline-add-card" style="margin-top: 16px;">
         <div class="header-row">
-          <strong>${langText('Nauja gaire', 'New guideline')}</strong>
-          <span class="tag">${langText('Siulymas', 'Suggestion')}</span>
+          <div class="guideline-add-title">
+            <span class="guideline-add-plus" aria-hidden="true">+</span>
+            <strong>${langText('Nauja gaire', 'New guideline')}</strong>
+          </div>
+          <span class="tag tag-success">${langText('Siulymas', 'Suggestion')}</span>
         </div>
         <p class="prompt" style="margin-bottom: 10px;">${langText('Siulykite papildomas gaires, kurios turetu buti itrauktos.', 'Suggest additional guidelines that should be included.')}</p>
         <form id="guidelineAddForm" class="guideline-add-form">
@@ -5232,7 +5235,7 @@ function renderStepView() {
     ? ''
     : `<p id="guidelineParentHint" class="prompt" hidden>${langText('Nera aktyviu teviniu gairiu. Pirmiausia sukurkite tevine gaire.', 'No active parent guidelines found. Create a parent guideline first.')}</p>`}
           <textarea name="desc" placeholder="${escapeHtml(langText('Trumpas paaiskinimas', 'Short description'))}" ${state.busy ? 'disabled' : ''}></textarea>
-          <button class="btn btn-primary guideline-add-submit-btn" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('Prideti gaire', 'Add guideline')}</button>
+          <button class="btn guideline-add-submit-btn" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>+ ${langText('Prideti gaire', 'Add guideline')}</button>
         </form>
       </div>
     ` : `

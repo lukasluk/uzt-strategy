@@ -1221,10 +1221,58 @@ textarea {
   min-height: 110px;
   display: block;
 }
+.guideline-add-card {
+  border-color: #bfe1c9;
+  background: linear-gradient(180deg, #fbfffc 0%, #effaf1 100%);
+  box-shadow: 0 14px 28px rgba(46, 120, 71, 0.10);
+}
+.guideline-add-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.guideline-add-title strong {
+  font-size: 18px;
+  line-height: 1.2;
+}
+.guideline-add-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #46c167 0%, #2f9e54 100%);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(47, 158, 84, 0.22);
+}
+.guideline-add-card .prompt {
+  color: #5c7361;
+}
+.guideline-add-card input[type='text'],
+.guideline-add-card textarea,
+.guideline-add-card select {
+  border-color: #c7dfcd;
+  background: #fff;
+}
 .guideline-add-submit-btn {
   display: block;
   margin-left: auto;
   margin-right: auto;
+  background: linear-gradient(180deg, #46c167 0%, #2f9e54 100%);
+  color: #fff;
+  border-color: #278347;
+  box-shadow: 0 12px 22px rgba(47, 158, 84, 0.22);
+}
+.guideline-add-submit-btn:hover {
+  box-shadow: 0 14px 26px rgba(47, 158, 84, 0.28);
+}
+.tag-success {
+  background: #e6f6ea;
+  color: #24613b;
+  border: 1px solid #bfe1c9;
 }
 
 .card-list {
