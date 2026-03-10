@@ -2720,7 +2720,7 @@ body.embed-map-page .map-fullscreen-watermark img {
   stroke-width: 4.6;
 }
 .strategy-map-edge.edge-child {
-  stroke: var(--guideline-child-accent);
+  stroke: var(--guideline-parent-accent);
 }
 .strategy-map-edge.edge-orphan {
   stroke: var(--guideline-orphan-accent);
@@ -5390,10 +5390,10 @@ select:focus {
   stroke: var(--guideline-parent-accent);
   stroke-width: var(--map-parent-accent-thickness);
   opacity: 0.98;
-  filter: drop-shadow(0 0 2px rgba(43, 138, 126, 0.35));
+  filter: drop-shadow(0 0 2px rgba(72, 104, 168, 0.35));
 }
 .strategy-map-edge.edge-child {
-  stroke: var(--guideline-child-accent);
+  stroke: var(--guideline-parent-accent);
 }
 .strategy-map-edge.edge-orphan {
   stroke: var(--guideline-orphan-accent);

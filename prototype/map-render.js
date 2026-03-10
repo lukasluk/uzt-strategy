@@ -611,8 +611,8 @@ function buildMapViewShellMarkup({
           <svg class="strategy-map-lines initiative-lines" viewBox="0 0 ${graph.width} ${graph.height}" preserveAspectRatio="none">
             <defs>
               <linearGradient id="mapInitiativeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#2b6fbe" />
-                <stop offset="100%" stop-color="#1f4f84" />
+                <stop offset="0%" stop-color="#f1c84d" />
+                <stop offset="100%" stop-color="#d2912f" />
               </linearGradient>
             </defs>
             ${initiativeEdgeMarkup}
