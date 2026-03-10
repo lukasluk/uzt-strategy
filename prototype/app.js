@@ -3717,7 +3717,7 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
                   <td class="initiative-matrix-guideline">${escapeHtml(row.guidelineTitle)}</td>
                   <td>
                     ${row.unassigned
-                      ? '<span class="initiative-matrix-empty">Nepriskirta nÄ— viena iniciatyva</span>'
+                      ? `<span class="initiative-matrix-empty">${langText('Nepriskirta nė viena iniciatyva', 'No initiatives assigned')}</span>`
                       : `<div class="initiative-matrix-initiative-list">${row.initiativeTitles.map((title) => `<span class="initiative-matrix-chip">${escapeHtml(title)}</span>`).join('')}</div>`}
                   </td>
                 </tr>

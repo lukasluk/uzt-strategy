@@ -292,6 +292,15 @@
       heroProof3: 'Įgyvendinimo planas',
       heroProof4: 'Timeline playback',
       heroVisualBadge: 'Gyva strategijos darbo erdvė',
+      heroFloatLabel1: 'Importas',
+      heroFloatTitle1: 'Importuokite vieną gairę iš viešos bibliotekos.',
+      heroFloatLabel2: 'Planas',
+      heroFloatTitle2: 'Nustatykite datas ir atsakingus strategijos kontekste.',
+      heroFloatLabel3: 'Playback',
+      heroFloatTitle3: 'Atkurkite vykdymo eigą tame pačiame žemėlapyje.',
+      heroObjectKicker: 'Gyvas strategijos žemėlapis',
+      heroObjectTitle: 'Gairės, iniciatyvos, atsakingi ir laikas viename objekte.',
+      heroObjectCopy: 'Vienas erdvinis modelis struktūrai, atskaitomybei ir vykdymui.',
       heroLibraryKicker: 'Importuokite tai, kas jau veikia',
       heroLibraryTitle: 'Naršykite išorines strategijas ir perkelkite vieną gairę į savo ciklą.',
       heroImportSourceLabel: 'Išorinė strategija',
@@ -381,6 +390,15 @@
       heroProof3: 'Implementation plan',
       heroProof4: 'Timeline playback',
       heroVisualBadge: 'Live strategy workspace',
+      heroFloatLabel1: 'Import',
+      heroFloatTitle1: 'Import one guideline from the public library.',
+      heroFloatLabel2: 'Plan',
+      heroFloatTitle2: 'Set dates and owners inside strategy context.',
+      heroFloatLabel3: 'Playback',
+      heroFloatTitle3: 'Replay delivery over time on the same map.',
+      heroObjectKicker: 'Living strategy map',
+      heroObjectTitle: 'Guidelines, initiatives, owners, and time in one object.',
+      heroObjectCopy: 'A single spatial model for structure, accountability, and execution.',
       heroLibraryKicker: 'Import what already works',
       heroLibraryTitle: 'Browse external strategies and bring one guideline into your own cycle.',
       heroImportSourceLabel: 'External strategy',
@@ -933,6 +951,74 @@
     update();
   }
 
+  function initHeroScene() {
+    const scene = document.querySelector('[data-hero-scene]');
+    if (!(scene instanceof HTMLElement)) return;
+
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    let targetX = 0;
+    let targetY = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let targetGlowX = 50;
+    let targetGlowY = 34;
+    let currentGlowX = 50;
+    let currentGlowY = 34;
+    let frameId = 0;
+
+    const render = () => {
+      currentX += (targetX - currentX) * 0.12;
+      currentY += (targetY - currentY) * 0.12;
+      currentGlowX += (targetGlowX - currentGlowX) * 0.12;
+      currentGlowY += (targetGlowY - currentGlowY) * 0.12;
+
+      scene.style.setProperty('--scene-tilt-y', `${currentX.toFixed(2)}deg`);
+      scene.style.setProperty('--scene-tilt-x', `${currentY.toFixed(2)}deg`);
+      scene.style.setProperty('--scene-glow-x', `${currentGlowX.toFixed(2)}%`);
+      scene.style.setProperty('--scene-glow-y', `${currentGlowY.toFixed(2)}%`);
+
+      const moving = Math.abs(targetX - currentX) > 0.02
+        || Math.abs(targetY - currentY) > 0.02
+        || Math.abs(targetGlowX - currentGlowX) > 0.08
+        || Math.abs(targetGlowY - currentGlowY) > 0.08;
+
+      if (moving) {
+        frameId = window.requestAnimationFrame(render);
+      } else {
+        frameId = 0;
+      }
+    };
+
+    const requestRender = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(render);
+    };
+
+    scene.addEventListener('pointermove', (event) => {
+      const bounds = scene.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const px = (event.clientX - bounds.left) / bounds.width;
+      const py = (event.clientY - bounds.top) / bounds.height;
+      const nx = (px - 0.5) * 2;
+      const ny = (py - 0.5) * 2;
+      targetX = nx * 12;
+      targetY = ny * -9;
+      targetGlowX = 50 + (nx * 18);
+      targetGlowY = 34 + (ny * 16);
+      requestRender();
+    }, { passive: true });
+
+    scene.addEventListener('pointerleave', () => {
+      targetX = 0;
+      targetY = 0;
+      targetGlowX = 50;
+      targetGlowY = 34;
+      requestRender();
+    });
+  }
+
   function initLanguageSwitch() {
     if (!(languageSelect instanceof HTMLSelectElement)) return;
     languageSelect.addEventListener('change', () => {
@@ -954,6 +1040,7 @@
   initLanguageSwitch();
   setLanguage(currentLang, { updateUrl: true });
   initHeaderMotion();
+  initHeroScene();
   loadAdminLandingTranslations();
   loadPublicInstitutions();
   initAccessRequestButtons();

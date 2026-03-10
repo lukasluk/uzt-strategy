@@ -65,82 +65,53 @@
         </div>
       </div>
       <div class="hero-visual" aria-hidden="true">
-        <div class="hero-dashboard">
-          <div class="hero-dashboard-topbar">
-            <div class="hero-window-dots">
-              <span></span>
-              <span></span>
-              <span></span>
+        <div class="hero-scene" data-hero-scene>
+          <div class="hero-scene-aura"></div>
+          <div class="hero-scene-floor"></div>
+          <div class="hero-scene-rig">
+            <article class="hero-float-card hero-float-card-a">
+              <p class="hero-float-label" data-i18n="heroFloatLabel1">Import</p>
+              <strong data-i18n="heroFloatTitle1">Import one guideline from the public library.</strong>
+            </article>
+
+            <article class="hero-float-card hero-float-card-b">
+              <p class="hero-float-label" data-i18n="heroFloatLabel2">Plan</p>
+              <strong data-i18n="heroFloatTitle2">Set dates and owners inside strategy context.</strong>
+            </article>
+
+            <article class="hero-float-card hero-float-card-c">
+              <p class="hero-float-label" data-i18n="heroFloatLabel3">Playback</p>
+              <strong data-i18n="heroFloatTitle3">Replay delivery over time on the same map.</strong>
+            </article>
+
+            <div class="hero-prism">
+              <div class="hero-prism-face hero-prism-front">
+                <p class="hero-prism-kicker" data-i18n="heroObjectKicker">Living strategy map</p>
+                <h3 data-i18n="heroObjectTitle">Guidelines, initiatives, owners, and time in one object.</h3>
+                <p class="hero-prism-copy" data-i18n="heroObjectCopy">A single spatial model for structure, accountability, and execution.</p>
+              </div>
+              <div class="hero-prism-face hero-prism-back"></div>
+              <div class="hero-prism-face hero-prism-left"></div>
+              <div class="hero-prism-face hero-prism-right"></div>
+              <div class="hero-prism-face hero-prism-top"></div>
+              <div class="hero-prism-face hero-prism-bottom"></div>
+              <div class="hero-prism-core"></div>
             </div>
-            <span class="hero-dashboard-badge" data-i18n="heroVisualBadge">Live strategy workspace</span>
-          </div>
 
-          <div class="hero-dashboard-grid">
-            <article class="hero-panel hero-panel-primary">
-              <p class="hero-panel-kicker" data-i18n="heroLibraryKicker">Import what already works</p>
-              <h3 data-i18n="heroLibraryTitle">Browse external strategies and bring one guideline into your own cycle.</h3>
-              <div class="hero-import-strip">
-                <div class="hero-import-source">
-                  <span class="hero-import-pill" data-i18n="heroImportSourceLabel">External strategy</span>
-                  <strong>VMI / AI strategy</strong>
-                  <span data-i18n="heroImportSourceItem">Darbuotojų produktyvumo didinimas</span>
-                </div>
-                <div class="hero-import-arrow">→</div>
-                <div class="hero-import-target">
-                  <span class="hero-import-pill" data-i18n="heroImportTargetLabel">Your organization</span>
-                  <strong data-i18n="heroImportTargetTitle">Create proposal</strong>
-                  <span data-i18n="heroImportTargetItem">Source link kept</span>
-                </div>
-              </div>
-              <div class="glass-main-summary">
-                <article class="glass-main-stat">
-                  <span class="glass-main-stat-label" data-i18n="glassStatsInstitutionsLabel">Aktyvios institucijos</span>
-                  <strong class="glass-main-stat-value" id="glassMetricInstitutions">--</strong>
-                </article>
-                <article class="glass-main-stat">
-                  <span class="glass-main-stat-label" data-i18n="glassStatsGuidelinesLabel">Aktyvios gairės</span>
-                  <strong class="glass-main-stat-value" id="glassMetricGuidelines">--</strong>
-                </article>
-                <article class="glass-main-stat">
-                  <span class="glass-main-stat-label" data-i18n="glassStatsInitiativesLabel">Aktyvios iniciatyvos</span>
-                  <strong class="glass-main-stat-value" id="glassMetricInitiatives">--</strong>
-                </article>
-              </div>
-            </article>
-
-            <article class="hero-panel hero-panel-secondary">
-              <p class="hero-panel-kicker" data-i18n="heroMapKicker">Plan mode</p>
-              <h3 data-i18n="heroMapTitle">Reveal execution with a playback timeline across the map.</h3>
-              <div class="hero-timeline-preview">
-                <span>2026-03-25</span>
-                <div class="hero-timeline-bar"><i></i></div>
-                <span>2026-08-09</span>
-              </div>
-              <div class="hero-chip-row">
-                <span data-i18n="heroMapChip1">Guidelines</span>
-                <span data-i18n="heroMapChip2">Initiatives</span>
-                <span data-i18n="heroMapChip3">Plan</span>
-              </div>
-            </article>
-
-            <article class="hero-panel hero-panel-secondary">
-              <p class="hero-panel-kicker" data-i18n="heroPlanKicker">Implementation plan</p>
-              <h3 data-i18n="heroPlanTitle">Set dates and responsible units without leaving strategy context.</h3>
-              <div class="hero-plan-list">
-                <div>
-                  <strong>2026-04-30</strong>
-                  <span>NPD</span>
-                </div>
-                <div>
-                  <strong>2026-05-12</strong>
-                  <span data-i18n="heroPlanOwner2">Customer service unit</span>
-                </div>
-                <div>
-                  <strong>2026-06-01</strong>
-                  <span data-i18n="heroPlanOwner3">Data governance team</span>
-                </div>
-              </div>
-            </article>
+            <div class="hero-scene-dock">
+              <article class="hero-scene-stat">
+                <span class="hero-scene-stat-label" data-i18n="glassStatsInstitutionsLabel">Aktyvios institucijos</span>
+                <strong class="hero-scene-stat-value" id="glassMetricInstitutions">--</strong>
+              </article>
+              <article class="hero-scene-stat">
+                <span class="hero-scene-stat-label" data-i18n="glassStatsGuidelinesLabel">Aktyvios gairės</span>
+                <strong class="hero-scene-stat-value" id="glassMetricGuidelines">--</strong>
+              </article>
+              <article class="hero-scene-stat">
+                <span class="hero-scene-stat-label" data-i18n="glassStatsInitiativesLabel">Aktyvios iniciatyvos</span>
+                <strong class="hero-scene-stat-value" id="glassMetricInitiatives">--</strong>
+              </article>
+            </div>
           </div>
         </div>
       </div>
