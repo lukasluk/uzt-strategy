@@ -272,6 +272,7 @@ const state = {
   mapInstitutionPulseTimerId: 0
 };
 let adminAppLoadPromise = null;
+let implementationPlanCalendarConnectorFrameId = 0;
 
 hydrateAuthFromStorage();
 markIntroVisited();
@@ -3657,6 +3658,7 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
         : `
           <div class="implementation-plan-calendar-scroll">
             <div class="implementation-plan-calendar-board" style="min-width:${boardMinWidth}px;">
+              <svg class="implementation-plan-calendar-connector" aria-hidden="true" focusable="false"></svg>
               <div class="implementation-plan-calendar-row implementation-plan-calendar-row-header">
                 <div class="implementation-plan-calendar-entry-cell implementation-plan-calendar-entry-cell-header">${escapeHtml(langText('Įrašas', 'Entry'))}</div>
                 <div class="implementation-plan-calendar-days implementation-plan-calendar-days-header" style="grid-template-columns:${gridTemplate};">
@@ -3713,6 +3715,64 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
         `}
     </section>
   `;
+}
+
+function buildImplementationPlanCalendarConnectorPath(points) {
+  if (!Array.isArray(points) || points.length < 2) return '';
+  const start = points[0];
+  let path = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const previous = points[index - 1] || points[index];
+    const current = points[index];
+    const next = points[index + 1];
+    const afterNext = points[index + 2] || next;
+    const cp1x = current.x + ((next.x - previous.x) / 6);
+    const cp1y = current.y + ((next.y - previous.y) / 6);
+    const cp2x = next.x - ((afterNext.x - current.x) / 6);
+    const cp2y = next.y - ((afterNext.y - current.y) / 6);
+    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
+  }
+  return path;
+}
+
+function renderImplementationPlanCalendarConnector() {
+  implementationPlanCalendarConnectorFrameId = 0;
+  if (state.activeView !== 'implementation-plan' || state.implementationPlanSubview !== 'calendar') return;
+  const board = elements.stepView.querySelector('.implementation-plan-calendar-board');
+  if (!(board instanceof HTMLElement)) return;
+  const svg = board.querySelector('.implementation-plan-calendar-connector');
+  if (!(svg instanceof SVGSVGElement)) return;
+  const markers = Array.from(board.querySelectorAll('.implementation-plan-calendar-marker'));
+  const width = Math.max(board.scrollWidth, board.clientWidth, 1);
+  const height = Math.max(board.scrollHeight, board.clientHeight, 1);
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('width', String(width));
+  svg.setAttribute('height', String(height));
+  if (markers.length < 2) {
+    svg.innerHTML = '';
+    return;
+  }
+  const boardRect = board.getBoundingClientRect();
+  const points = markers.map((marker) => {
+    const rect = marker.getBoundingClientRect();
+    return {
+      x: (rect.left - boardRect.left) + (rect.width / 2),
+      y: (rect.top - boardRect.top) + (rect.height / 2)
+    };
+  });
+  const path = buildImplementationPlanCalendarConnectorPath(points);
+  svg.innerHTML = path
+    ? `<path class="implementation-plan-calendar-connector-shadow" d="${path}"></path><path class="implementation-plan-calendar-connector-path" d="${path}"></path>`
+    : '';
+}
+
+function scheduleImplementationPlanCalendarConnectorRender() {
+  if (implementationPlanCalendarConnectorFrameId) {
+    cancelAnimationFrame(implementationPlanCalendarConnectorFrameId);
+  }
+  implementationPlanCalendarConnectorFrameId = requestAnimationFrame(() => {
+    implementationPlanCalendarConnectorFrameId = requestAnimationFrame(renderImplementationPlanCalendarConnector);
+  });
 }
 
 function renderImplementationPlanRow(row, { editable = false } = {}) {
@@ -5311,6 +5371,10 @@ function renderImplementationPlanView() {
     });
   });
 
+  if (activeSubview === 'calendar') {
+    scheduleImplementationPlanCalendarConnectorRender();
+  }
+
   if (!editable || activeSubview !== 'table') return;
 
   const implementationPlanForm = elements.stepView.querySelector('#implementationPlanForm');
@@ -6390,6 +6454,10 @@ function bindGlobal() {
   window.addEventListener('uzt-auth-changed', handleAuthChanged);
   window.addEventListener('uzt-language-changed', () => {
     render();
+  });
+  window.addEventListener('resize', () => {
+    if (state.activeView !== 'implementation-plan' || state.implementationPlanSubview !== 'calendar') return;
+    scheduleImplementationPlanCalendarConnectorRender();
   });
   document.addEventListener('fullscreenchange', () => {
     updateMapFullscreenButtonLabel();

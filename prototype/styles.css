@@ -5202,7 +5202,29 @@ select:focus {
   background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
 }
 .implementation-plan-calendar-board {
+  position: relative;
   padding: 0;
+}
+.implementation-plan-calendar-connector {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: none;
+}
+.implementation-plan-calendar-connector-shadow {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.8);
+  stroke-width: 6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.implementation-plan-calendar-connector-path {
+  fill: none;
+  stroke: rgba(135, 143, 153, 0.78);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .implementation-plan-calendar-group {
   border-top: 1px solid #dfe7f4;
@@ -5212,12 +5234,13 @@ select:focus {
 }
 .implementation-plan-calendar-group-row,
 .implementation-plan-calendar-row {
+  position: relative;
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   min-width: max-content;
+  z-index: 2;
 }
 .implementation-plan-calendar-group-row {
-  position: relative;
   z-index: 2;
 }
 .implementation-plan-calendar-group-label {
@@ -5369,6 +5392,7 @@ select:focus {
 }
 .implementation-plan-calendar-marker {
   position: absolute;
+  z-index: 3;
   top: 50%;
   left: 50%;
   width: 14px;
