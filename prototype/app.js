@@ -143,6 +143,7 @@ const APP_PATH_GUIDELINE_SEGMENT = 'guideline';
 const APP_PATH_INITIATIVE_SEGMENT = 'initiative';
 const FOCUS_GUIDELINE_QUERY_KEY = 'focusGuideline';
 const FOCUS_INITIATIVE_QUERY_KEY = 'focusInitiative';
+const IMPLEMENTATION_PLAN_QUERY_KEY = 'implementation';
 const MAP_INSTITUTION_PULSE_MS = 10000;
 const MAP_PLAN_PLAYBACK_MS = 10000;
 const MAP_PLAN_PLAYBACK_OPTIONS = Object.freeze([10000, 30000, 60000, 300000]);
@@ -239,8 +240,8 @@ const state = {
   historyCycleId: '',
   historySortOrder: 'desc',
   mapLayer: 'guidelines',
-  implementationPlanLayer: 'guidelines',
-  implementationPlanSubview: 'table',
+  implementationPlanLayer: resolveInitialImplementationPlanLayer(),
+  implementationPlanSubview: resolveInitialImplementationPlanSubview(),
   mapStrategicLinksData: null,
   mapStrategicLinksLoading: false,
   mapStrategicLinksError: '',
@@ -512,6 +513,21 @@ function resolveInitialView() {
   return ALLOWED_VIEWS.has(view) ? view : 'guidelines';
 }
 
+function resolveInitialImplementationPlanTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const target = String(params.get(IMPLEMENTATION_PLAN_QUERY_KEY) || '').trim().toLowerCase();
+  if (target === 'initiatives' || target === 'calendar') return target;
+  return 'guidelines';
+}
+
+function resolveInitialImplementationPlanLayer() {
+  return resolveInitialImplementationPlanTarget() === 'initiatives' ? 'initiatives' : 'guidelines';
+}
+
+function resolveInitialImplementationPlanSubview() {
+  return resolveInitialImplementationPlanTarget() === 'calendar' ? 'calendar' : 'table';
+}
+
 function buildCanonicalAppPath({ slug, strategySlug, focusKind, focusId }) {
   const nextSlug = normalizeSlug(slug);
   const nextStrategySlug = normalizeSlug(strategySlug);
@@ -574,6 +590,15 @@ function buildCurrentPageHref({
     );
   if (nextView !== 'guidelines' && !shouldOmitViewParam) params.set('view', nextView);
   else params.delete('view');
+
+  if (nextView === 'implementation-plan') {
+    const implementationTarget = state.implementationPlanSubview === 'calendar'
+      ? 'calendar'
+      : (state.implementationPlanLayer === 'initiatives' ? 'initiatives' : 'guidelines');
+    params.set(IMPLEMENTATION_PLAN_QUERY_KEY, implementationTarget);
+  } else {
+    params.delete(IMPLEMENTATION_PLAN_QUERY_KEY);
+  }
 
   const query = params.toString();
   return `${path}${query ? `?${query}` : ''}`;
@@ -1234,13 +1259,13 @@ function toUserMessage(error) {
     'name required': 'Nurodykite pavadinimÄ….',
     'token and displayName required': 'Nurodykite kvietimo Å¾etonÄ… ir vardÄ….',
     'institutionId required': 'Pasirinkite institucijÄ….',
-    'institutionName required': 'Ä®veskite institucijos pavadinimÄ….',
+    'institutionName required': 'Įveskite institucijos pavadinimą.',
     'institutionName too long': 'Institucijos pavadinimas per ilgas.',
-    'fullName required': 'Ä®veskite vardÄ… ir pavardÄ™.',
-    'workEmail required': 'Ä®veskite darbinÄ¯ el. paÅ¡tÄ….',
-    'phone required': 'Ä®veskite kontaktinÄ¯ telefono numerÄ¯.',
-    'fullName too long': 'Vardas ir pavardÄ— per ilgi.',
-    'workEmail too long': 'El. paÅ¡tas per ilgas.',
+    'fullName required': 'Įveskite vardą ir pavardę.',
+    'workEmail required': 'Įveskite darbinį el. paštą.',
+    'phone required': 'Įveskite kontaktinį telefono numerį.',
+    'fullName too long': 'Vardas ir pavardė per ilgi.',
+    'workEmail too long': 'El. paštas per ilgas.',
     'phone too long': 'Telefono numeris per ilgas.',
     'notes too long': 'Papildoma informacija per ilga.',
     'invalid implementation date': 'Neteisinga įgyvendinimo data.',
@@ -5449,6 +5474,7 @@ function renderImplementationPlanView() {
       if (target === 'calendar') {
         if (state.implementationPlanSubview === 'calendar') return;
         state.implementationPlanSubview = 'calendar';
+        syncRouteState();
         render();
         return;
       }
@@ -5456,6 +5482,7 @@ function renderImplementationPlanView() {
       if (state.implementationPlanSubview === 'table' && state.implementationPlanLayer === target) return;
       state.implementationPlanLayer = target;
       state.implementationPlanSubview = 'table';
+      syncRouteState();
       render();
     });
   });
@@ -7831,16 +7858,16 @@ function accessRequestUiText() {
     };
   }
   return {
-    title: 'Prieigos uÅ¾klausa',
-    description: 'Pateikite trumpÄ… informacijÄ… ir perÅ¾iÅ«rÄ—sime jÅ«sÅ³ uÅ¾klausÄ….',
+    title: 'Prieigos užklausa',
+    description: 'Pateikite trumpą informaciją ir peržiūrėsime jūsų užklausą.',
     institution: 'Institucija',
-    fullName: 'Vardas ir pavardÄ—',
-    workEmail: 'Darbinis el. paÅ¡tas',
+    fullName: 'Vardas ir pavardė',
+    workEmail: 'Darbinis el. paštas',
     phone: 'Kontaktinis telefono numeris',
-    notes: 'Papildoma informacija (nebÅ«tina)',
-    submit: 'Pateikti uÅ¾klausÄ…',
-    close: 'UÅ¾daryti',
-    success: 'UÅ¾klausa gauta. UÅ¾registruota: ',
+    notes: 'Papildoma informacija (nebūtina)',
+    submit: 'Pateikti užklausą',
+    close: 'Uždaryti',
+    success: 'Užklausa gauta. Užregistruota: ',
     linkedinLead: 'Taip pat galite susisiekti tiesiogiai per LinkedIn:'
   };
 }
@@ -7883,7 +7910,7 @@ function showAccessRequestModal() {
       </form>
       <p class="prompt auth-hint" style="margin-top:8px;">
         ${escapeHtml(ui.linkedinLead)}
-        <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas LukoseviÄius</a>.
+        <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas Lukosevičius</a>.
       </p>
     </div>
   `;
