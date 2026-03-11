@@ -3514,16 +3514,34 @@ function getCurrentLocalDateKey() {
   return `${year}-${month}-${day}`;
 }
 
+function countImplementationPlanWorkdaysUntil(targetDateKey, fromDateKey = getCurrentLocalDateKey()) {
+  const targetUtc = parseImplementationPlanDateUtc(targetDateKey);
+  const fromUtc = parseImplementationPlanDateUtc(fromDateKey);
+  if (targetUtc === null || fromUtc === null) return null;
+  if (targetUtc === fromUtc) return 0;
+  const forward = targetUtc > fromUtc;
+  const startUtc = forward ? fromUtc : targetUtc;
+  const endUtc = forward ? targetUtc : fromUtc;
+  let count = 0;
+  for (let cursor = startUtc + (24 * 60 * 60 * 1000); cursor <= endUtc; cursor += 24 * 60 * 60 * 1000) {
+    const weekday = new Date(cursor).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) count += 1;
+  }
+  return forward ? count : -count;
+}
+
 function formatImplementationPlanCalendarDay(rawDate) {
   const utc = parseImplementationPlanDateUtc(rawDate);
-  if (utc === null) return { dayLabel: '--', monthLabel: '', monthNumber: '', weekdayLabel: '' };
+  if (utc === null) return { dayLabel: '--', monthLabel: '', monthNumber: '', weekdayLabel: '', isWeekend: false };
   const locale = currentLanguage() === 'en' ? 'en-GB' : 'lt-LT';
   const date = new Date(utc);
+  const weekday = date.getUTCDay();
   return {
     dayLabel: new Intl.DateTimeFormat(locale, { day: '2-digit' }).format(date),
     monthLabel: new Intl.DateTimeFormat(locale, { month: 'short' }).format(date),
     monthNumber: new Intl.DateTimeFormat(locale, { month: '2-digit' }).format(date),
-    weekdayLabel: new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date)
+    weekdayLabel: new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date),
+    isWeekend: weekday === 0 || weekday === 6
   };
 }
 
@@ -3539,6 +3557,9 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
     const kind = String(row.kind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
     const implementationDate = normalizeImplementationDateInputValue(item.implementationDate);
     const implementationOwner = String(item.implementationOwner || '').trim();
+    const workdaysUntilImplementation = implementationDate
+      ? countImplementationPlanWorkdaysUntil(implementationDate, todayKey)
+      : null;
     const linkedGuidelineNames = kind === 'initiative'
       ? resolveInitiativeLinkedGuidelines(item)
         .map((guideline) => String(guideline?.title || guideline?.id || '').trim())
@@ -3555,6 +3576,7 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
       title: String(item.title || item.id || '-').trim() || '-',
       implementationDate,
       implementationDateDisplay: formatInstitutionDate(implementationDate) || langText('Nenurodyta', 'Not set'),
+      workdaysUntilImplementation,
       implementationOwner,
       linkedGuidelineNames,
       originalIndex: index
@@ -3613,6 +3635,7 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
         monthLabel: formatted.monthLabel,
         monthNumber: formatted.monthNumber,
         weekdayLabel: formatted.weekdayLabel,
+        isWeekend: Boolean(formatted.isWeekend),
         isMonthStart: date === '01' || key === firstDate,
         isToday: key === todayKey
       });
@@ -3680,7 +3703,7 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
                     `).join('')}
                   </div>
                   ${days.map((day) => `
-                    <div class="implementation-plan-calendar-day-head${day.isMonthStart ? ' is-month-start' : ''}${day.isToday ? ' is-today' : ''}">
+                    <div class="implementation-plan-calendar-day-head${day.isMonthStart ? ' is-month-start' : ''}${day.isToday ? ' is-today' : ''}${day.isWeekend ? ' is-weekend' : ''}">
                       <span class="implementation-plan-calendar-day-label">${escapeHtml(day.dayLabel)}</span>
                     </div>
                   `).join('')}
@@ -3697,6 +3720,44 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
                       <div class="implementation-plan-calendar-entry-cell">
                         <div class="implementation-plan-calendar-entry-top">
                           <span class="tag implementation-plan-calendar-kind implementation-plan-calendar-kind-${escapeHtml(entry.kind)}">${escapeHtml(entry.kindLabel)}</span>
+                          ${entry.workdaysUntilImplementation === null
+                            ? ''
+                            : `
+                              <span
+                                class="implementation-plan-calendar-workdays${entry.workdaysUntilImplementation < 0 ? ' is-overdue' : ''}${entry.workdaysUntilImplementation === 0 ? ' is-today' : ''}"
+                                tabindex="0"
+                                aria-label="${escapeHtml(
+                                  entry.workdaysUntilImplementation < 0
+                                    ? langText(
+                                      `${Math.abs(entry.workdaysUntilImplementation)} darbo dienos po numatytos įgyvendinimo datos. Skaičiuojamos tik darbo dienos, savaitgaliai neįtraukiami.`,
+                                      `${Math.abs(entry.workdaysUntilImplementation)} workdays past the implementation date. Only workdays are counted, weekends are excluded.`
+                                    )
+                                    : entry.workdaysUntilImplementation === 0
+                                      ? langText(
+                                        'Įgyvendinimo data yra šiandien. Skaičiuojamos tik darbo dienos, savaitgaliai neįtraukiami.',
+                                        'The implementation date is today. Only workdays are counted, weekends are excluded.'
+                                      )
+                                      : langText(
+                                        `${entry.workdaysUntilImplementation} darbo dienos iki įgyvendinimo datos. Skaičiuojamos tik darbo dienos, savaitgaliai neįtraukiami.`,
+                                        `${entry.workdaysUntilImplementation} workdays until the implementation date. Only workdays are counted, weekends are excluded.`
+                                      )
+                                )}"
+                              >
+                                ${escapeHtml(
+                                  entry.workdaysUntilImplementation < 0
+                                    ? langText(`-${Math.abs(entry.workdaysUntilImplementation)} d.d.`, `-${Math.abs(entry.workdaysUntilImplementation)} wd`)
+                                    : entry.workdaysUntilImplementation === 0
+                                      ? langText('Šiandien', 'Today')
+                                      : langText(`${entry.workdaysUntilImplementation} d.d.`, `${entry.workdaysUntilImplementation} wd`)
+                                )}
+                                <span class="implementation-plan-calendar-workdays-tooltip">
+                                  ${escapeHtml(langText(
+                                    'Darbo dienos iki įgyvendinimo datos. Savaitgaliai neįtraukiami.',
+                                    'Workdays until the implementation date. Weekends are excluded.'
+                                  ))}
+                                </span>
+                              </span>
+                            `}
                           ${entry.implementationOwner ? `<span class="implementation-plan-calendar-owner">${escapeHtml(entry.implementationOwner)}</span>` : ''}
                         </div>
                         <button
