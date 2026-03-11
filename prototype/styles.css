@@ -5240,10 +5240,6 @@ select:focus {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   min-width: max-content;
-  z-index: 1;
-}
-.implementation-plan-calendar-group-row {
-  z-index: 1;
 }
 .implementation-plan-calendar-group-label {
   position: sticky;

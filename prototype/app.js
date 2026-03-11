@@ -3756,9 +3756,14 @@ function renderImplementationPlanCalendarConnector() {
   if (!(svg instanceof SVGSVGElement)) return;
   const firstDaysRow = board.querySelector('.implementation-plan-calendar-days-row, .implementation-plan-calendar-days-header');
   if (!(firstDaysRow instanceof HTMLElement)) return;
+  const firstEntryCell = board.querySelector('.implementation-plan-calendar-entry-cell');
+  if (!(firstEntryCell instanceof HTMLElement)) return;
   const markers = Array.from(board.querySelectorAll('.implementation-plan-calendar-marker'));
   const boardRect = board.getBoundingClientRect();
-  const leftOffset = Math.max(0, Number(firstDaysRow.offsetLeft || 0));
+  const leftOffset = Math.max(
+    0,
+    Math.round(firstEntryCell.getBoundingClientRect().width)
+  );
   const width = Math.max(board.scrollWidth - leftOffset, board.clientWidth - leftOffset, 1);
   const height = Math.max(board.scrollHeight, board.clientHeight, 1);
   svg.style.left = `${leftOffset}px`;
