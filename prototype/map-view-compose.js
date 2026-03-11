@@ -125,56 +125,62 @@ function buildMapPlanTimelineMarkup(graph, activeLayer) {
       data-plan-first-date="${escapeHtml(firstDate)}"
       data-plan-last-date="${escapeHtml(lastDate)}"
     >
-      <button
-        type="button"
-        class="btn ${state.mapPlanPlaying ? 'btn-primary' : 'btn-ghost'} map-plan-play-btn"
-        data-map-plan-play
-        aria-label="${escapeHtml(state.mapPlanPlaying ? mapLang('Pauzė', 'Pause') : mapLang('Play', 'Play'))}"
-        title="${escapeHtml(state.mapPlanPlaying ? mapLang('Pauzė', 'Pause') : mapLang('Play', 'Play'))}"
-        ${hasTimeline ? '' : 'disabled'}
-      >${buildMapPlanPlaybackIcon(state.mapPlanPlaying)}</button>
-      <div class="map-plan-timeline-track">
-        <span class="map-plan-timeline-boundary">${escapeHtml(firstDate ? formatDate(firstDate) || firstDate : mapLang('Nėra datų', 'No dates'))}</span>
-        <div class="map-plan-timeline-slider-wrap">
-          <div class="map-plan-timeline-dots" aria-hidden="true">
-            ${dotGroups.map((group) => `
-              <span
-                class="map-plan-timeline-dot${group.toneClass}"
-                data-plan-dot-date="${escapeHtml(group.date)}"
-                data-plan-dot-count="${group.count}"
-                style="left:${group.leftPercent.toFixed(3)}%;"
-                title="${escapeHtml(group.title)}"
-              ></span>
+      <div class="map-plan-timeline-controls">
+        <button
+          type="button"
+          class="btn ${state.mapPlanPlaying ? 'btn-primary' : 'btn-ghost'} map-plan-play-btn"
+          data-map-plan-play
+          aria-label="${escapeHtml(state.mapPlanPlaying ? mapLang('Pauzė', 'Pause') : mapLang('Play', 'Play'))}"
+          title="${escapeHtml(state.mapPlanPlaying ? mapLang('Pauzė', 'Pause') : mapLang('Play', 'Play'))}"
+          ${hasTimeline ? '' : 'disabled'}
+        >${buildMapPlanPlaybackIcon(state.mapPlanPlaying)}</button>
+        <button
+          type="button"
+          class="btn btn-ghost map-plan-sound-btn"
+          data-map-plan-sound
+          aria-label="${escapeHtml(state.mapPlanSoundEnabled ? mapLang('Išjungti garsą', 'Mute sound') : mapLang('Įjungti garsą', 'Enable sound'))}"
+          title="${escapeHtml(state.mapPlanSoundEnabled ? mapLang('Išjungti garsą', 'Mute sound') : mapLang('Įjungti garsą', 'Enable sound'))}"
+        >${buildMapPlanSoundIcon(state.mapPlanSoundEnabled)}</button>
+        <label class="map-plan-duration">
+          <select id="mapPlanDurationSelect" class="map-plan-duration-select" data-map-plan-duration>
+            ${playbackOptions.map((ms) => `
+              <option value="${ms}" ${selectedPlaybackMs === ms ? 'selected' : ''}>${escapeHtml(playbackLabel(ms))}</option>
             `).join('')}
-          </div>
-          <input
-            id="mapPlanTimelineRange"
-            class="map-plan-timeline-range"
-            type="range"
-            min="0"
-            max="1000"
-            step="1"
-            value="${Math.round(Math.max(0, Math.min(1, Number(state.mapPlanProgress || 0))) * 1000)}"
-            ${hasTimeline ? '' : 'disabled'}
-          />
-        </div>
-        <span class="map-plan-timeline-boundary">${escapeHtml(lastDate ? formatDate(lastDate) || lastDate : mapLang('Nėra datų', 'No dates'))}</span>
+          </select>
+        </label>
       </div>
-      <button
-        type="button"
-        class="btn btn-ghost map-plan-sound-btn"
-        data-map-plan-sound
-        aria-label="${escapeHtml(state.mapPlanSoundEnabled ? mapLang('Išjungti garsą', 'Mute sound') : mapLang('Įjungti garsą', 'Enable sound'))}"
-        title="${escapeHtml(state.mapPlanSoundEnabled ? mapLang('Išjungti garsą', 'Mute sound') : mapLang('Įjungti garsą', 'Enable sound'))}"
-      >${buildMapPlanSoundIcon(state.mapPlanSoundEnabled)}</button>
-      <label class="map-plan-duration">
-        <select id="mapPlanDurationSelect" class="map-plan-duration-select" data-map-plan-duration>
-          ${playbackOptions.map((ms) => `
-            <option value="${ms}" ${selectedPlaybackMs === ms ? 'selected' : ''}>${escapeHtml(playbackLabel(ms))}</option>
-          `).join('')}
-        </select>
-      </label>
-      <div id="mapPlanTimelineCurrent" class="map-plan-timeline-current"></div>
+      <div class="map-plan-timeline-main">
+        <div class="map-plan-timeline-head">
+          <span class="map-plan-timeline-boundary map-plan-timeline-boundary-start">${escapeHtml(firstDate ? formatDate(firstDate) || firstDate : mapLang('Nėra datų', 'No dates'))}</span>
+          <div id="mapPlanTimelineCurrent" class="map-plan-timeline-current"></div>
+          <span class="map-plan-timeline-boundary map-plan-timeline-boundary-end">${escapeHtml(lastDate ? formatDate(lastDate) || lastDate : mapLang('Nėra datų', 'No dates'))}</span>
+        </div>
+        <div class="map-plan-timeline-track">
+          <div class="map-plan-timeline-slider-wrap">
+            <div class="map-plan-timeline-dots" aria-hidden="true">
+              ${dotGroups.map((group) => `
+                <span
+                  class="map-plan-timeline-dot${group.toneClass}"
+                  data-plan-dot-date="${escapeHtml(group.date)}"
+                  data-plan-dot-count="${group.count}"
+                  style="left:${group.leftPercent.toFixed(3)}%;"
+                  title="${escapeHtml(group.title)}"
+                ></span>
+              `).join('')}
+            </div>
+            <input
+              id="mapPlanTimelineRange"
+              class="map-plan-timeline-range"
+              type="range"
+              min="0"
+              max="1000"
+              step="1"
+              value="${Math.round(Math.max(0, Math.min(1, Number(state.mapPlanProgress || 0))) * 1000)}"
+              ${hasTimeline ? '' : 'disabled'}
+            />
+          </div>
+        </div>
+      </div>
     </section>
   `;
 }
