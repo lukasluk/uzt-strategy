@@ -3507,12 +3507,13 @@ function parseImplementationPlanDateUtc(rawDate) {
 
 function formatImplementationPlanCalendarDay(rawDate) {
   const utc = parseImplementationPlanDateUtc(rawDate);
-  if (utc === null) return { dayLabel: '--', monthLabel: '', weekdayLabel: '' };
+  if (utc === null) return { dayLabel: '--', monthLabel: '', monthNumber: '', weekdayLabel: '' };
   const locale = currentLanguage() === 'en' ? 'en-GB' : 'lt-LT';
   const date = new Date(utc);
   return {
     dayLabel: new Intl.DateTimeFormat(locale, { day: '2-digit' }).format(date),
     monthLabel: new Intl.DateTimeFormat(locale, { month: 'short' }).format(date),
+    monthNumber: new Intl.DateTimeFormat(locale, { month: '2-digit' }).format(date),
     weekdayLabel: new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date)
   };
 }
@@ -3600,6 +3601,7 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
         key,
         dayLabel: formatted.dayLabel,
         monthLabel: formatted.monthLabel,
+        monthNumber: formatted.monthNumber,
         weekdayLabel: formatted.weekdayLabel,
         isMonthStart: date === '01' || key === firstDate
       });
@@ -3607,17 +3609,36 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
     }
   }
 
+  const monthGroups = [];
+  days.forEach((day, index) => {
+    const monthKey = String(day.monthNumber || '').trim();
+    const existing = monthGroups[monthGroups.length - 1];
+    if (existing && existing.key === monthKey) {
+      existing.span += 1;
+      existing.endIndex = index;
+      return;
+    }
+    monthGroups.push({
+      key: monthKey,
+      label: monthKey,
+      span: 1,
+      startIndex: index,
+      endIndex: index
+    });
+  });
+
   return {
     entries,
     groups,
-    days
+    days,
+    monthGroups
   };
 }
 
 function renderImplementationPlanCalendarMarkup(calendarData) {
   const groups = Array.isArray(calendarData?.groups) ? calendarData.groups : [];
   const days = Array.isArray(calendarData?.days) ? calendarData.days : [];
-  const totalEntries = groups.reduce((sum, group) => sum + (Array.isArray(group.entries) ? group.entries.length : 0), 0);
+  const monthGroups = Array.isArray(calendarData?.monthGroups) ? calendarData.monthGroups : [];
   const emptyLabel = langText(
     'Kalendoriuje dar nėra suplanuotų įgyvendinimo datų.',
     'No implementation dates are scheduled in the calendar yet.'
@@ -3629,13 +3650,7 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
       <div class="header-row">
         <div>
           <h3 id="implementationPlanCalendarTitle">${escapeHtml(langText('Įgyvendinimo kalendorius', 'Implementation calendar'))}</h3>
-          <p class="prompt implementation-plan-calendar-intro">${escapeHtml(langText('Įrašai surikiuoti pagal įgyvendinimo eiliškumą, o dešinėje pažymėta planuojama diena.', 'Entries are ordered by implementation sequence, with the planned day marked on the right.'))}</p>
         </div>
-      </div>
-      <div class="header-stack implementation-plan-calendar-summary">
-        <span class="tag">${escapeHtml(langText('Įrašai', 'Entries'))}: ${totalEntries}</span>
-        <span class="tag">${escapeHtml(langText('Su datomis', 'With dates'))}: ${groups.filter((group) => group.key !== 'undated').reduce((sum, group) => sum + group.entries.length, 0)}</span>
-        ${days.length ? `<span class="tag">${escapeHtml(langText('Kalendoriaus dienos', 'Calendar days'))}: ${days.length}</span>` : ''}
       </div>
       ${!groups.length || !days.length
         ? `<div class="card implementation-plan-calendar-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`
@@ -3645,17 +3660,26 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
               <div class="implementation-plan-calendar-row implementation-plan-calendar-row-header">
                 <div class="implementation-plan-calendar-entry-cell implementation-plan-calendar-entry-cell-header">${escapeHtml(langText('Įrašas', 'Entry'))}</div>
                 <div class="implementation-plan-calendar-days implementation-plan-calendar-days-header" style="grid-template-columns:${gridTemplate};">
+                  <div class="implementation-plan-calendar-months" style="grid-template-columns:${gridTemplate};">
+                    ${monthGroups.map((group) => `
+                      <div class="implementation-plan-calendar-month-cell" style="grid-column: span ${Math.max(1, Number(group.span || 1))};">
+                        ${escapeHtml(group.label)}
+                      </div>
+                    `).join('')}
+                  </div>
                   ${days.map((day) => `
                     <div class="implementation-plan-calendar-day-head${day.isMonthStart ? ' is-month-start' : ''}">
                       <span class="implementation-plan-calendar-day-label">${escapeHtml(day.dayLabel)}</span>
-                      <span class="implementation-plan-calendar-day-month">${escapeHtml(day.monthLabel)}</span>
                     </div>
                   `).join('')}
                 </div>
               </div>
               ${groups.map((group) => `
                 <div class="implementation-plan-calendar-group">
-                  <div class="implementation-plan-calendar-group-label">${escapeHtml(group.label)}</div>
+                  <div class="implementation-plan-calendar-group-row">
+                    <div class="implementation-plan-calendar-group-label">${escapeHtml(group.label)}</div>
+                    <div class="implementation-plan-calendar-group-fill"></div>
+                  </div>
                   ${group.entries.map((entry) => `
                     <div class="implementation-plan-calendar-row">
                       <div class="implementation-plan-calendar-entry-cell">
@@ -3670,9 +3694,6 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
                           data-kind="${escapeHtml(entry.kind)}"
                           data-id="${escapeHtml(entry.id)}"
                         >${escapeHtml(entry.title)}</button>
-                        ${entry.kind === 'initiative' && entry.linkedGuidelineNames.length
-                          ? `<p class="implementation-plan-calendar-linked">${escapeHtml(langText('Gairės', 'Guidelines'))}: ${escapeHtml(entry.linkedGuidelineNames.join(', '))}</p>`
-                          : ''}
                       </div>
                       <div class="implementation-plan-calendar-days implementation-plan-calendar-days-row" style="grid-template-columns:${gridTemplate};">
                         ${days.map((day) => `
@@ -5184,15 +5205,9 @@ function renderImplementationPlanView() {
   const rows = activeLayer === 'initiatives' ? initiativeRows : guidelineRows;
   const calendarData = buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows });
   const title = langText('Įgyvendinimo planas', 'Implementation plan');
-  const layerLabel = activeLayer === 'initiatives'
-    ? langText('Iniciatyvos', 'Initiatives')
-    : langText('Gairės', 'Guidelines');
   const emptyLabel = activeLayer === 'initiatives'
     ? langText('Iniciatyvų įgyvendinimo planas dar neužpildytas.', 'No initiative implementation entries yet.')
     : langText('Gairių įgyvendinimo planas dar neužpildytas.', 'No guideline implementation entries yet.');
-  const viewerHint = editable
-    ? langText('Administratorius gali nurodyti įgyvendinimo datą ir atsakingą asmenį arba padalinį.', 'Institution admin can set the implementation date and responsible person or unit.')
-    : langText('Čia galite peržiūrėti suplanuotas įgyvendinimo datas ir atsakingus asmenis.', 'You can review planned implementation dates and responsible owners here.');
   const pageCalendarButtonMarkup = calendarData.entries.length
     ? (activeSubview === 'calendar'
       ? `<button class="btn btn-ghost implementation-plan-calendar-btn" type="button" data-action="show-implementation-plan-table">${escapeHtml(langText('Lentelė', 'Table'))}</button>`
@@ -5208,7 +5223,6 @@ function renderImplementationPlanView() {
       <div class="step-header implementation-plan-header">
         <div>
           <h2>${escapeHtml(title)}</h2>
-          <p class="prompt implementation-plan-intro">${escapeHtml(viewerHint)}</p>
         </div>
         <div class="header-stack implementation-plan-header-actions">
           <div class="map-layer-toggle implementation-plan-layer-toggle">
@@ -5217,13 +5231,6 @@ function renderImplementationPlanView() {
           </div>
           ${pageActionButtonsMarkup}
         </div>
-      </div>
-
-      <div class="header-stack implementation-plan-meta">
-        <span class="tag">${escapeHtml(langText('Institucija', 'Institution'))}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
-        <span class="tag">${escapeHtml(langText('Strategija', 'Strategy'))}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        <span class="tag">${escapeHtml(layerLabel)}: ${rows.length}</span>
-        ${editable ? `<span class="tag">${escapeHtml(langText('Redagavimas įjungtas', 'Editing enabled'))}</span>` : `<span class="tag">${escapeHtml(langText('Peržiūros režimas', 'View mode'))}</span>`}
       </div>
 
       ${state.notice ? `<div class="card implementation-plan-notice"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}

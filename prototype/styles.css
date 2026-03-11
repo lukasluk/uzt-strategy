@@ -5192,13 +5192,6 @@ select:focus {
   padding: 16px;
   overflow: hidden;
 }
-.implementation-plan-calendar-intro {
-  margin: 6px 0 0;
-}
-.implementation-plan-calendar-summary {
-  gap: 8px;
-  margin-bottom: 12px;
-}
 .implementation-plan-calendar-empty {
   margin-top: 8px;
 }
@@ -5217,6 +5210,16 @@ select:focus {
 .implementation-plan-calendar-group:first-child {
   border-top: 0;
 }
+.implementation-plan-calendar-group-row,
+.implementation-plan-calendar-row {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-width: max-content;
+}
+.implementation-plan-calendar-group-row {
+  position: relative;
+  z-index: 2;
+}
 .implementation-plan-calendar-group-label {
   position: sticky;
   left: 0;
@@ -5230,10 +5233,9 @@ select:focus {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.implementation-plan-calendar-row {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  min-width: max-content;
+.implementation-plan-calendar-group-fill {
+  border-bottom: 1px solid #e2eaf6;
+  background: linear-gradient(180deg, #eef4ff 0%, #e6eefb 100%);
 }
 .implementation-plan-calendar-row + .implementation-plan-calendar-row {
   border-top: 1px solid #edf2f8;
@@ -5319,12 +5321,32 @@ select:focus {
 }
 .implementation-plan-calendar-days-header {
   background: linear-gradient(180deg, #f5f8ff 0%, #ecf2ff 100%);
+  align-content: start;
+}
+.implementation-plan-calendar-months {
+  display: grid;
+  grid-column: 1 / -1;
+}
+.implementation-plan-calendar-month-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 8px 4px 6px;
+  border-left: 1px solid #dde6f4;
+  border-bottom: 1px solid #dde6f4;
+  color: #5d7393;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .implementation-plan-calendar-day-head {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  padding: 10px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 4px;
   border-left: 1px solid #dde6f4;
   color: #456181;
 }
@@ -5335,11 +5357,6 @@ select:focus {
 .implementation-plan-calendar-day-label {
   font-size: 12px;
   font-weight: 800;
-}
-.implementation-plan-calendar-day-month {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 .implementation-plan-calendar-days-row {
   background:
@@ -6029,6 +6046,10 @@ select:focus {
   }
 
   .implementation-plan-calendar-row {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .implementation-plan-calendar-group-row {
     grid-template-columns: 220px minmax(0, 1fr);
   }
 
