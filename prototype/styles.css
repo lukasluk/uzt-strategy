@@ -5207,9 +5207,11 @@ select:focus {
 }
 .implementation-plan-calendar-connector {
   position: absolute;
-  inset: 0;
-  z-index: 2;
-  overflow: visible;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  overflow: hidden;
   pointer-events: none;
 }
 .implementation-plan-calendar-connector-shadow {
@@ -5241,7 +5243,7 @@ select:focus {
   z-index: 1;
 }
 .implementation-plan-calendar-group-row {
-  z-index: 3;
+  z-index: 2;
 }
 .implementation-plan-calendar-group-label {
   position: sticky;
@@ -5271,7 +5273,7 @@ select:focus {
 .implementation-plan-calendar-entry-cell {
   position: sticky;
   left: 0;
-  z-index: 5;
+  z-index: 6;
   display: grid;
   gap: 6px;
   padding: 12px 14px;
@@ -5279,7 +5281,7 @@ select:focus {
   border-right: 1px solid #dfe7f4;
 }
 .implementation-plan-calendar-entry-cell-header {
-  z-index: 8;
+  z-index: 9;
   align-items: center;
   background: linear-gradient(180deg, #f5f8ff 0%, #ecf2ff 100%);
   color: #304766;

@@ -3722,15 +3722,27 @@ function buildImplementationPlanCalendarConnectorPath(points) {
   const start = points[0];
   let path = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)}`;
   for (let index = 0; index < points.length - 1; index += 1) {
-    const previous = points[index - 1] || points[index];
     const current = points[index];
     const next = points[index + 1];
-    const afterNext = points[index + 2] || next;
-    const cp1x = current.x + ((next.x - previous.x) / 6);
-    const cp1y = current.y + ((next.y - previous.y) / 6);
-    const cp2x = next.x - ((afterNext.x - current.x) / 6);
-    const cp2y = next.y - ((afterNext.y - current.y) / 6);
-    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
+    const deltaX = next.x - current.x;
+    const deltaY = next.y - current.y;
+    if (Math.abs(deltaX) < 1 || Math.abs(deltaY) < 1) {
+      path += ` L ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
+      continue;
+    }
+    const radius = Math.min(18, Math.abs(deltaX) / 2, Math.abs(deltaY) / 2);
+    const verticalDirection = Math.sign(deltaY) || 1;
+    const horizontalDirection = Math.sign(deltaX) || 1;
+    const middleY = current.y + (deltaY / 2);
+    const firstVerticalY = middleY - (verticalDirection * radius);
+    const secondVerticalY = middleY + (verticalDirection * radius);
+    const firstHorizontalX = current.x + (horizontalDirection * radius);
+    const secondHorizontalX = next.x - (horizontalDirection * radius);
+    path += ` L ${current.x.toFixed(2)} ${firstVerticalY.toFixed(2)}`;
+    path += ` Q ${current.x.toFixed(2)} ${middleY.toFixed(2)} ${firstHorizontalX.toFixed(2)} ${middleY.toFixed(2)}`;
+    path += ` L ${secondHorizontalX.toFixed(2)} ${middleY.toFixed(2)}`;
+    path += ` Q ${next.x.toFixed(2)} ${middleY.toFixed(2)} ${next.x.toFixed(2)} ${secondVerticalY.toFixed(2)}`;
+    path += ` L ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
   }
   return path;
 }
@@ -3742,9 +3754,17 @@ function renderImplementationPlanCalendarConnector() {
   if (!(board instanceof HTMLElement)) return;
   const svg = board.querySelector('.implementation-plan-calendar-connector');
   if (!(svg instanceof SVGSVGElement)) return;
+  const firstDaysRow = board.querySelector('.implementation-plan-calendar-days-row, .implementation-plan-calendar-days-header');
+  if (!(firstDaysRow instanceof HTMLElement)) return;
   const markers = Array.from(board.querySelectorAll('.implementation-plan-calendar-marker'));
-  const width = Math.max(board.scrollWidth, board.clientWidth, 1);
+  const boardRect = board.getBoundingClientRect();
+  const daysRect = firstDaysRow.getBoundingClientRect();
+  const leftOffset = Math.max(0, (daysRect.left - boardRect.left));
+  const width = Math.max(board.scrollWidth - leftOffset, board.clientWidth - leftOffset, 1);
   const height = Math.max(board.scrollHeight, board.clientHeight, 1);
+  svg.style.left = `${leftOffset}px`;
+  svg.style.width = `${width}px`;
+  svg.style.height = `${height}px`;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.setAttribute('width', String(width));
   svg.setAttribute('height', String(height));
@@ -3752,11 +3772,10 @@ function renderImplementationPlanCalendarConnector() {
     svg.innerHTML = '';
     return;
   }
-  const boardRect = board.getBoundingClientRect();
   const points = markers.map((marker) => {
     const rect = marker.getBoundingClientRect();
     return {
-      x: (rect.left - boardRect.left) + (rect.width / 2),
+      x: (rect.left - boardRect.left - leftOffset) + (rect.width / 2),
       y: (rect.top - boardRect.top) + (rect.height / 2)
     };
   });
