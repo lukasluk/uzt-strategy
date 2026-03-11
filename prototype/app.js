@@ -240,6 +240,7 @@ const state = {
   historySortOrder: 'desc',
   mapLayer: 'guidelines',
   implementationPlanLayer: 'guidelines',
+  implementationPlanSubview: 'table',
   mapStrategicLinksData: null,
   mapStrategicLinksLoading: false,
   mapStrategicLinksError: '',
@@ -3613,31 +3614,23 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
   };
 }
 
-function openImplementationPlanCalendarModal(calendarData) {
+function renderImplementationPlanCalendarMarkup(calendarData) {
   const groups = Array.isArray(calendarData?.groups) ? calendarData.groups : [];
   const days = Array.isArray(calendarData?.days) ? calendarData.days : [];
   const totalEntries = groups.reduce((sum, group) => sum + (Array.isArray(group.entries) ? group.entries.length : 0), 0);
-  const existing = document.getElementById('implementationPlanCalendarOverlay');
-  if (existing) existing.remove();
-
   const emptyLabel = langText(
     'Kalendoriuje dar nėra suplanuotų įgyvendinimo datų.',
     'No implementation dates are scheduled in the calendar yet.'
   );
   const gridTemplate = days.length ? `repeat(${days.length}, minmax(34px, 1fr))` : '1fr';
   const boardMinWidth = Math.max(860, 340 + (days.length * 34));
-
-  const overlay = document.createElement('div');
-  overlay.id = 'implementationPlanCalendarOverlay';
-  overlay.className = 'modal-overlay implementation-plan-calendar-overlay';
-  overlay.innerHTML = `
-    <div class="modal-card implementation-plan-calendar-card" role="dialog" aria-modal="true" aria-labelledby="implementationPlanCalendarTitle">
+  return `
+    <section class="card implementation-plan-calendar-panel" aria-labelledby="implementationPlanCalendarTitle">
       <div class="header-row">
         <div>
           <h3 id="implementationPlanCalendarTitle">${escapeHtml(langText('Įgyvendinimo kalendorius', 'Implementation calendar'))}</h3>
           <p class="prompt implementation-plan-calendar-intro">${escapeHtml(langText('Įrašai surikiuoti pagal įgyvendinimo eiliškumą, o dešinėje pažymėta planuojama diena.', 'Entries are ordered by implementation sequence, with the planned day marked on the right.'))}</p>
         </div>
-        <button id="closeImplementationPlanCalendarBtn" class="btn btn-ghost" type="button">${escapeHtml(langText('Uždaryti', 'Close'))}</button>
       </div>
       <div class="header-stack implementation-plan-calendar-summary">
         <span class="tag">${escapeHtml(langText('Įrašai', 'Entries'))}: ${totalEntries}</span>
@@ -3697,37 +3690,8 @@ function openImplementationPlanCalendarModal(calendarData) {
             </div>
           </div>
         `}
-    </div>
+    </section>
   `;
-
-  document.body.appendChild(overlay);
-
-  const close = () => {
-    overlay.remove();
-    document.removeEventListener('keydown', onKeyDown);
-  };
-  const onKeyDown = (event) => {
-    if (event.key === 'Escape') close();
-  };
-
-  overlay.addEventListener('click', (event) => {
-    if (event.target === overlay) close();
-  });
-  overlay.querySelector('#closeImplementationPlanCalendarBtn')?.addEventListener('click', close);
-  overlay.querySelectorAll('[data-action="open-implementation-calendar-item"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const kind = String(button.dataset.kind || '').trim().toLowerCase();
-      const id = String(button.dataset.id || '').trim();
-      close();
-      if (!id) return;
-      if (kind === 'initiative') {
-        openInitiativeDetail(id);
-        return;
-      }
-      openGuidelineDetail(id);
-    });
-  });
-  document.addEventListener('keydown', onKeyDown);
 }
 
 function renderImplementationPlanRow(row, { editable = false } = {}) {
@@ -5214,6 +5178,7 @@ function renderImplementationPlanView() {
 
   const editable = canManageSelectedInstitution();
   const activeLayer = state.implementationPlanLayer === 'initiatives' ? 'initiatives' : 'guidelines';
+  const activeSubview = state.implementationPlanSubview === 'calendar' ? 'calendar' : 'table';
   const guidelineRows = buildImplementationPlanGuidelineRows(state.guidelines);
   const initiativeRows = buildImplementationPlanInitiativeRows(state.initiatives);
   const rows = activeLayer === 'initiatives' ? initiativeRows : guidelineRows;
@@ -5229,9 +5194,11 @@ function renderImplementationPlanView() {
     ? langText('Administratorius gali nurodyti įgyvendinimo datą ir atsakingą asmenį arba padalinį.', 'Institution admin can set the implementation date and responsible person or unit.')
     : langText('Čia galite peržiūrėti suplanuotas įgyvendinimo datas ir atsakingus asmenis.', 'You can review planned implementation dates and responsible owners here.');
   const pageCalendarButtonMarkup = calendarData.entries.length
-    ? `<button class="btn btn-ghost implementation-plan-calendar-btn" type="button" data-action="open-implementation-calendar">${escapeHtml(langText('Kalendorius', 'Calendar'))}</button>`
+    ? (activeSubview === 'calendar'
+      ? `<button class="btn btn-ghost implementation-plan-calendar-btn" type="button" data-action="show-implementation-plan-table">${escapeHtml(langText('Lentelė', 'Table'))}</button>`
+      : `<button class="btn btn-ghost implementation-plan-calendar-btn" type="button" data-action="show-implementation-plan-calendar">${escapeHtml(langText('Kalendorius', 'Calendar'))}</button>`)
     : '';
-  const pageSaveButtonMarkup = editable
+  const pageSaveButtonMarkup = editable && activeSubview === 'table'
     ? `<button class="btn btn-primary" type="submit" form="implementationPlanForm" ${state.busy ? 'disabled' : ''}>${escapeHtml(langText('Išsaugoti planą', 'Save plan'))}</button>`
     : '';
   const pageActionButtonsMarkup = [pageCalendarButtonMarkup, pageSaveButtonMarkup].filter(Boolean).join('');
@@ -5261,18 +5228,22 @@ function renderImplementationPlanView() {
 
       ${state.notice ? `<div class="card implementation-plan-notice"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
 
-      <form id="implementationPlanForm" class="card implementation-plan-board">
-        <div class="implementation-plan-table-head">
-          <div>${escapeHtml(activeLayer === 'initiatives' ? langText('Iniciatyva', 'Initiative') : langText('Gairė', 'Guideline'))}</div>
-          <div>${escapeHtml(langText('Įgyvendinimo data', 'Implementation date'))}</div>
-          <div>${escapeHtml(langText('Atsakingas asmuo / padalinys', 'Responsible person / unit'))}</div>
-          <div></div>
-        </div>
-        ${rows.length
-      ? rows.map((row) => renderImplementationPlanRow(row, { editable })).join('')
-      : `<div class="implementation-plan-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`}
-        ${editable && rows.length ? `<div class="implementation-plan-footer">${pageActionButtonsMarkup}</div>` : ''}
-      </form>
+      ${activeSubview === 'calendar'
+        ? renderImplementationPlanCalendarMarkup(calendarData)
+        : `
+          <form id="implementationPlanForm" class="card implementation-plan-board">
+            <div class="implementation-plan-table-head">
+              <div>${escapeHtml(activeLayer === 'initiatives' ? langText('Iniciatyva', 'Initiative') : langText('Gairė', 'Guideline'))}</div>
+              <div>${escapeHtml(langText('Įgyvendinimo data', 'Implementation date'))}</div>
+              <div>${escapeHtml(langText('Atsakingas asmuo / padalinys', 'Responsible person / unit'))}</div>
+              <div></div>
+            </div>
+            ${rows.length
+              ? rows.map((row) => renderImplementationPlanRow(row, { editable })).join('')
+              : `<div class="implementation-plan-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`}
+            ${editable && rows.length ? `<div class="implementation-plan-footer">${pageActionButtonsMarkup}</div>` : ''}
+          </form>
+        `}
     </section>
   `;
 
@@ -5299,13 +5270,34 @@ function renderImplementationPlanView() {
     });
   });
 
-  elements.stepView.querySelectorAll('[data-action="open-implementation-calendar"]').forEach((button) => {
+  elements.stepView.querySelectorAll('[data-action="show-implementation-plan-calendar"]').forEach((button) => {
     button.addEventListener('click', () => {
-      openImplementationPlanCalendarModal(calendarData);
+      state.implementationPlanSubview = 'calendar';
+      render();
     });
   });
 
-  if (!editable) return;
+  elements.stepView.querySelectorAll('[data-action="show-implementation-plan-table"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.implementationPlanSubview = 'table';
+      render();
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="open-implementation-calendar-item"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const kind = String(button.dataset.kind || '').trim().toLowerCase();
+      const id = String(button.dataset.id || '').trim();
+      if (!id) return;
+      if (kind === 'initiative') {
+        openInitiativeDetail(id);
+        return;
+      }
+      openGuidelineDetail(id);
+    });
+  });
+
+  if (!editable || activeSubview !== 'table') return;
 
   const implementationPlanForm = elements.stepView.querySelector('#implementationPlanForm');
   implementationPlanForm?.addEventListener('submit', async (event) => {

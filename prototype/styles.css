@@ -5188,6 +5188,10 @@ select:focus {
   width: min(1180px, 96vw);
   max-height: 92vh;
 }
+.implementation-plan-calendar-panel {
+  padding: 16px;
+  overflow: hidden;
+}
 .implementation-plan-calendar-intro {
   margin: 6px 0 0;
 }
@@ -6015,8 +6019,12 @@ select:focus {
     width: 100%;
   }
 
-  .implementation-plan-calendar-card {
+.implementation-plan-calendar-card {
     width: min(96vw, 96vw);
+    padding: 14px;
+  }
+
+  .implementation-plan-calendar-panel {
     padding: 14px;
   }
 
