@@ -124,75 +124,82 @@ function playMapPlanRevealSound(kinds = []) {
   mapPlanLastSoundAt = nowStamp;
 
   const kindList = Array.isArray(kinds) ? kinds.filter(Boolean) : [];
-  const uniqueKinds = new Set(kindList);
-  let baseFrequency = 420;
-  if (uniqueKinds.has('initiative')) baseFrequency = 520;
-  else if (uniqueKinds.has('child')) baseFrequency = 470;
-  else if (uniqueKinds.has('parent')) baseFrequency = 390;
-  else if (uniqueKinds.has('orphan')) baseFrequency = 445;
-
-  const layerCount = Math.max(1, Math.min(4, kindList.length || uniqueKinds.size || 1));
+  const layerCount = Math.max(1, Math.min(4, kindList.length || 1));
+  const baseFrequency = 310;
   const now = audioContext.currentTime + 0.01;
   const masterGain = audioContext.createGain();
   masterGain.gain.setValueAtTime(0.0001, now);
-  masterGain.gain.linearRampToValueAtTime(0.022 + (layerCount * 0.004), now + 0.012);
-  masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+  masterGain.gain.linearRampToValueAtTime(0.033 + (layerCount * 0.006), now + 0.009);
+  masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.26);
   masterGain.connect(audioContext.destination);
 
   const toneFilter = audioContext.createBiquadFilter();
   toneFilter.type = 'lowpass';
-  toneFilter.frequency.setValueAtTime(1800 + (layerCount * 120), now);
-  toneFilter.Q.setValueAtTime(0.8, now);
+  toneFilter.frequency.setValueAtTime(2400 + (layerCount * 160), now);
+  toneFilter.Q.setValueAtTime(1.15, now);
   toneFilter.connect(masterGain);
 
   const bodyOsc = audioContext.createOscillator();
   const bodyGain = audioContext.createGain();
   bodyOsc.type = 'triangle';
-  bodyOsc.frequency.setValueAtTime(baseFrequency * 1.1, now);
-  bodyOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 0.76, now + 0.22);
+  bodyOsc.frequency.setValueAtTime(baseFrequency * 1.95, now);
+  bodyOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 0.88, now + 0.13);
   bodyGain.gain.setValueAtTime(0.0001, now);
-  bodyGain.gain.linearRampToValueAtTime(0.95, now + 0.01);
-  bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+  bodyGain.gain.linearRampToValueAtTime(1.18, now + 0.006);
+  bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
   bodyOsc.connect(bodyGain);
   bodyGain.connect(toneFilter);
 
-  const bellOsc = audioContext.createOscillator();
-  const bellGain = audioContext.createGain();
-  bellOsc.type = 'sine';
-  bellOsc.frequency.setValueAtTime(baseFrequency * 2.02, now);
-  bellOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 1.26, now + 0.17);
-  bellGain.gain.setValueAtTime(0.0001, now);
-  bellGain.gain.linearRampToValueAtTime(0.42, now + 0.008);
-  bellGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-  bellOsc.connect(bellGain);
-  bellGain.connect(masterGain);
+  const popOsc = audioContext.createOscillator();
+  const popGain = audioContext.createGain();
+  popOsc.type = 'sine';
+  popOsc.frequency.setValueAtTime(baseFrequency * 3.8, now);
+  popOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 1.42, now + 0.07);
+  popGain.gain.setValueAtTime(0.0001, now);
+  popGain.gain.linearRampToValueAtTime(0.78, now + 0.004);
+  popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  popOsc.connect(popGain);
+  popGain.connect(masterGain);
 
-  const transientBuffer = audioContext.createBuffer(1, Math.max(1, Math.floor(audioContext.sampleRate * 0.05)), audioContext.sampleRate);
+  const transientBuffer = audioContext.createBuffer(1, Math.max(1, Math.floor(audioContext.sampleRate * 0.04)), audioContext.sampleRate);
   const transientData = transientBuffer.getChannelData(0);
   for (let index = 0; index < transientData.length; index += 1) {
     const decay = 1 - (index / transientData.length);
-    transientData[index] = (Math.random() * 2 - 1) * Math.pow(decay, 2.6);
+    transientData[index] = (Math.random() * 2 - 1) * Math.pow(decay, 3.4);
   }
   const transientSource = audioContext.createBufferSource();
   transientSource.buffer = transientBuffer;
   const transientFilter = audioContext.createBiquadFilter();
   transientFilter.type = 'bandpass';
-  transientFilter.frequency.setValueAtTime(920 + (layerCount * 70), now);
-  transientFilter.Q.setValueAtTime(1.4, now);
+  transientFilter.frequency.setValueAtTime(1450 + (layerCount * 120), now);
+  transientFilter.Q.setValueAtTime(1.9, now);
   const transientGain = audioContext.createGain();
   transientGain.gain.setValueAtTime(0.0001, now);
-  transientGain.gain.linearRampToValueAtTime(0.16, now + 0.004);
-  transientGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+  transientGain.gain.linearRampToValueAtTime(0.24, now + 0.002);
+  transientGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
   transientSource.connect(transientFilter);
   transientFilter.connect(transientGain);
   transientGain.connect(masterGain);
 
+  const clickOsc = audioContext.createOscillator();
+  const clickGain = audioContext.createGain();
+  clickOsc.type = 'square';
+  clickOsc.frequency.setValueAtTime(1180, now);
+  clickOsc.frequency.exponentialRampToValueAtTime(520, now + 0.018);
+  clickGain.gain.setValueAtTime(0.0001, now);
+  clickGain.gain.linearRampToValueAtTime(0.16, now + 0.0015);
+  clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.022);
+  clickOsc.connect(clickGain);
+  clickGain.connect(masterGain);
+
   bodyOsc.start(now);
-  bellOsc.start(now);
+  popOsc.start(now);
   transientSource.start(now);
-  bodyOsc.stop(now + 0.24);
-  bellOsc.stop(now + 0.18);
-  transientSource.stop(now + 0.07);
+  clickOsc.start(now);
+  bodyOsc.stop(now + 0.19);
+  popOsc.stop(now + 0.09);
+  transientSource.stop(now + 0.05);
+  clickOsc.stop(now + 0.025);
 }
 
 function mapPlanPlaybackButtonIconMarkup(isPlaying) {
