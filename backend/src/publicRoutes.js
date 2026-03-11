@@ -36,8 +36,10 @@ function registerPublicRoutes({
   }
 
   function canViewCommentsForInstitution(auth, institutionId) {
-    void institutionId;
-    return Boolean(auth?.sub);
+    const viewerInstitutionId = String(auth?.institutionId || '').trim();
+    const targetInstitutionId = String(institutionId || '').trim();
+    if (!viewerInstitutionId || !targetInstitutionId) return false;
+    return Boolean(auth?.sub) && viewerInstitutionId === targetInstitutionId;
   }
 
   function normalizeStrategyOutput(strategy) {
