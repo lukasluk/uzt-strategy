@@ -5210,7 +5210,7 @@ select:focus {
   top: 0;
   bottom: 0;
   left: 0;
-  z-index: 3;
+  z-index: 2;
   overflow: hidden;
   pointer-events: none;
 }
@@ -5243,7 +5243,7 @@ select:focus {
   z-index: 1;
 }
 .implementation-plan-calendar-group-row {
-  z-index: 2;
+  z-index: 1;
 }
 .implementation-plan-calendar-group-label {
   position: sticky;
@@ -5394,7 +5394,7 @@ select:focus {
 }
 .implementation-plan-calendar-marker {
   position: absolute;
-  z-index: 4;
+  z-index: 5;
   top: 50%;
   left: 50%;
   width: 14px;

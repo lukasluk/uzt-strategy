@@ -3758,8 +3758,7 @@ function renderImplementationPlanCalendarConnector() {
   if (!(firstDaysRow instanceof HTMLElement)) return;
   const markers = Array.from(board.querySelectorAll('.implementation-plan-calendar-marker'));
   const boardRect = board.getBoundingClientRect();
-  const daysRect = firstDaysRow.getBoundingClientRect();
-  const leftOffset = Math.max(0, (daysRect.left - boardRect.left));
+  const leftOffset = Math.max(0, Number(firstDaysRow.offsetLeft || 0));
   const width = Math.max(board.scrollWidth - leftOffset, board.clientWidth - leftOffset, 1);
   const height = Math.max(board.scrollHeight, board.clientHeight, 1);
   svg.style.left = `${leftOffset}px`;
