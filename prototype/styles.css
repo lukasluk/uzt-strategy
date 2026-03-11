@@ -5217,16 +5217,24 @@ select:focus {
 .implementation-plan-calendar-connector-shadow {
   fill: none;
   stroke: rgba(255, 255, 255, 0.92);
-  stroke-width: 7px;
+  stroke-width: 3.5px;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .implementation-plan-calendar-connector-path {
   fill: none;
   stroke: rgba(132, 140, 150, 0.96);
-  stroke-width: 3.5px;
+  stroke-width: 1.75px;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.implementation-plan-calendar-today-line-shadow {
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 6px;
+}
+.implementation-plan-calendar-today-line {
+  stroke: rgba(73, 135, 230, 0.82);
+  stroke-width: 2px;
 }
 .implementation-plan-calendar-group {
   border-top: 1px solid #dfe7f4;
@@ -5371,6 +5379,10 @@ select:focus {
   border-left: 1px solid #dde6f4;
   color: #456181;
 }
+.implementation-plan-calendar-day-head.is-today {
+  background: linear-gradient(180deg, rgba(117, 177, 255, 0.22) 0%, rgba(117, 177, 255, 0.14) 100%);
+  color: #214d86;
+}
 .implementation-plan-calendar-day-head.is-month-start,
 .implementation-plan-calendar-day-cell.is-month-start {
   box-shadow: inset 1px 0 0 #c1d2eb;
@@ -5387,6 +5399,23 @@ select:focus {
   position: relative;
   min-height: 72px;
   border-left: 1px solid #edf2f8;
+  overflow: hidden;
+}
+.implementation-plan-calendar-day-cell.is-today {
+  background: rgba(117, 177, 255, 0.12);
+}
+.implementation-plan-calendar-day-cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(117, 177, 255, 0.28);
+  opacity: 0;
+  transition: opacity 2.1s ease-out;
+  pointer-events: none;
+}
+.implementation-plan-calendar-day-cell:hover::after {
+  opacity: 1;
 }
 .implementation-plan-calendar-marker {
   position: absolute;

@@ -3506,6 +3506,14 @@ function parseImplementationPlanDateUtc(rawDate) {
   return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
+function getCurrentLocalDateKey() {
+  const now = new Date();
+  const year = String(now.getFullYear());
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function formatImplementationPlanCalendarDay(rawDate) {
   const utc = parseImplementationPlanDateUtc(rawDate);
   if (utc === null) return { dayLabel: '--', monthLabel: '', monthNumber: '', weekdayLabel: '' };
@@ -3520,6 +3528,7 @@ function formatImplementationPlanCalendarDay(rawDate) {
 }
 
 function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows }) {
+  const todayKey = getCurrentLocalDateKey();
   const sourceRows = [
     ...(Array.isArray(guidelineRows) ? guidelineRows : []),
     ...(Array.isArray(initiativeRows) ? initiativeRows : [])
@@ -3604,7 +3613,8 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
         monthLabel: formatted.monthLabel,
         monthNumber: formatted.monthNumber,
         weekdayLabel: formatted.weekdayLabel,
-        isMonthStart: date === '01' || key === firstDate
+        isMonthStart: date === '01' || key === firstDate,
+        isToday: key === todayKey
       });
       cursor += 24 * 60 * 60 * 1000;
     }
@@ -3670,7 +3680,7 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
                     `).join('')}
                   </div>
                   ${days.map((day) => `
-                    <div class="implementation-plan-calendar-day-head${day.isMonthStart ? ' is-month-start' : ''}">
+                    <div class="implementation-plan-calendar-day-head${day.isMonthStart ? ' is-month-start' : ''}${day.isToday ? ' is-today' : ''}">
                       <span class="implementation-plan-calendar-day-label">${escapeHtml(day.dayLabel)}</span>
                     </div>
                   `).join('')}
@@ -3699,7 +3709,7 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
                       </div>
                       <div class="implementation-plan-calendar-days implementation-plan-calendar-days-row" style="grid-template-columns:${gridTemplate};">
                         ${days.map((day) => `
-                          <div class="implementation-plan-calendar-day-cell${day.isMonthStart ? ' is-month-start' : ''}">
+                          <div class="implementation-plan-calendar-day-cell${day.isMonthStart ? ' is-month-start' : ''}${day.isToday ? ' is-today' : ''}">
                             ${day.key === entry.implementationDate
                               ? `<span class="implementation-plan-calendar-marker implementation-plan-calendar-marker-${escapeHtml(entry.kind)}"></span>`
                               : ''}
@@ -3783,10 +3793,18 @@ function renderImplementationPlanCalendarConnector() {
       y: (rect.top - boardRect.top) + (rect.height / 2)
     };
   });
-  const path = buildImplementationPlanCalendarConnectorPath(points);
-  svg.innerHTML = path
-    ? `<path class="implementation-plan-calendar-connector-shadow" d="${path}"></path><path class="implementation-plan-calendar-connector-path" d="${path}"></path>`
+  const todayColumn = board.querySelector('.implementation-plan-calendar-day-head.is-today, .implementation-plan-calendar-day-cell.is-today');
+  const todayLineMarkup = todayColumn instanceof HTMLElement
+    ? (() => {
+      const rect = todayColumn.getBoundingClientRect();
+      const x = (rect.left - boardRect.left - leftOffset) + (rect.width / 2);
+      return `<line class="implementation-plan-calendar-today-line-shadow" x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="${height}"></line><line class="implementation-plan-calendar-today-line" x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="${height}"></line>`;
+    })()
     : '';
+  const path = buildImplementationPlanCalendarConnectorPath(points);
+  svg.innerHTML = `${todayLineMarkup}${path
+    ? `<path class="implementation-plan-calendar-connector-shadow" d="${path}"></path><path class="implementation-plan-calendar-connector-path" d="${path}"></path>`
+    : ''}`;
 }
 
 function scheduleImplementationPlanCalendarConnectorRender() {
