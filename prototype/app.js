@@ -5209,12 +5209,15 @@ function renderImplementationPlanView() {
     ? langText('Iniciatyvų įgyvendinimo planas dar neužpildytas.', 'No initiative implementation entries yet.')
     : langText('Gairių įgyvendinimo planas dar neužpildytas.', 'No guideline implementation entries yet.');
   const pageCalendarButtonMarkup = calendarData.entries.length
-    ? (activeSubview === 'calendar'
-      ? `<button class="btn btn-ghost implementation-plan-calendar-btn" type="button" data-action="show-implementation-plan-table">${escapeHtml(langText('Lentelė', 'Table'))}</button>`
-      : `<button class="btn btn-ghost implementation-plan-calendar-btn" type="button" data-action="show-implementation-plan-calendar">${escapeHtml(langText('Kalendorius', 'Calendar'))}</button>`)
+    ? `<button
+        class="btn btn-ghost implementation-plan-calendar-btn${activeSubview === 'calendar' ? ' is-active' : ''}"
+        type="button"
+        data-action="toggle-implementation-plan-calendar"
+        aria-pressed="${activeSubview === 'calendar' ? 'true' : 'false'}"
+      >${escapeHtml(langText('Kalendorius', 'Calendar'))}</button>`
     : '';
-  const pageSaveButtonMarkup = editable && activeSubview === 'table'
-    ? `<button class="btn btn-primary" type="submit" form="implementationPlanForm" ${state.busy ? 'disabled' : ''}>${escapeHtml(langText('Išsaugoti planą', 'Save plan'))}</button>`
+  const pageSaveButtonMarkup = editable
+    ? `<button class="btn btn-primary implementation-plan-save-header-btn" type="submit" form="implementationPlanForm" ${(state.busy || activeSubview !== 'table') ? 'disabled' : ''}>${escapeHtml(langText('Išsaugoti planą', 'Save plan'))}</button>`
     : '';
   const pageActionButtonsMarkup = [pageCalendarButtonMarkup, pageSaveButtonMarkup].filter(Boolean).join('');
 
@@ -5277,16 +5280,9 @@ function renderImplementationPlanView() {
     });
   });
 
-  elements.stepView.querySelectorAll('[data-action="show-implementation-plan-calendar"]').forEach((button) => {
+  elements.stepView.querySelectorAll('[data-action="toggle-implementation-plan-calendar"]').forEach((button) => {
     button.addEventListener('click', () => {
-      state.implementationPlanSubview = 'calendar';
-      render();
-    });
-  });
-
-  elements.stepView.querySelectorAll('[data-action="show-implementation-plan-table"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.implementationPlanSubview = 'table';
+      state.implementationPlanSubview = state.implementationPlanSubview === 'calendar' ? 'table' : 'calendar';
       render();
     });
   });
