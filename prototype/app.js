@@ -5210,10 +5210,10 @@ function renderImplementationPlanView() {
     : langText('Gairių įgyvendinimo planas dar neužpildytas.', 'No guideline implementation entries yet.');
   const pageCalendarButtonMarkup = calendarData.entries.length
     ? `<button
-        class="btn btn-ghost implementation-plan-calendar-btn${activeSubview === 'calendar' ? ' is-active' : ''}"
         type="button"
-        data-action="toggle-implementation-plan-calendar"
-        aria-pressed="${activeSubview === 'calendar' ? 'true' : 'false'}"
+        class="btn ${activeSubview === 'calendar' ? 'btn-primary' : 'btn-ghost'} implementation-plan-calendar-btn"
+        data-implementation-nav="calendar"
+        aria-current="${activeSubview === 'calendar' ? 'page' : 'false'}"
       >${escapeHtml(langText('Kalendorius', 'Calendar'))}</button>`
     : '';
   const pageSaveButtonMarkup = editable
@@ -5229,10 +5229,21 @@ function renderImplementationPlanView() {
         </div>
         <div class="header-stack implementation-plan-header-actions">
           <div class="map-layer-toggle implementation-plan-layer-toggle">
-            <button type="button" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}" data-implementation-layer="guidelines">${escapeHtml(langText('Gairės', 'Guidelines'))}</button>
-            <button type="button" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" data-implementation-layer="initiatives">${escapeHtml(langText('Iniciatyvos', 'Initiatives'))}</button>
+            <button
+              type="button"
+              class="btn ${activeSubview === 'table' && activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}"
+              data-implementation-nav="guidelines"
+              aria-current="${activeSubview === 'table' && activeLayer === 'guidelines' ? 'page' : 'false'}"
+            >${escapeHtml(langText('Gairės', 'Guidelines'))}</button>
+            <button
+              type="button"
+              class="btn ${activeSubview === 'table' && activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}"
+              data-implementation-nav="initiatives"
+              aria-current="${activeSubview === 'table' && activeLayer === 'initiatives' ? 'page' : 'false'}"
+            >${escapeHtml(langText('Iniciatyvos', 'Initiatives'))}</button>
+            ${pageCalendarButtonMarkup}
           </div>
-          ${pageActionButtonsMarkup}
+          ${pageSaveButtonMarkup}
         </div>
       </div>
 
@@ -5270,19 +5281,19 @@ function renderImplementationPlanView() {
     });
   });
 
-  elements.stepView.querySelectorAll('[data-implementation-layer]').forEach((button) => {
+  elements.stepView.querySelectorAll('[data-implementation-nav]').forEach((button) => {
     button.addEventListener('click', () => {
-      const nextLayer = String(button.dataset.implementationLayer || '').trim().toLowerCase();
-      if (nextLayer !== 'guidelines' && nextLayer !== 'initiatives') return;
-      if (state.implementationPlanLayer === nextLayer) return;
-      state.implementationPlanLayer = nextLayer;
-      render();
-    });
-  });
-
-  elements.stepView.querySelectorAll('[data-action="toggle-implementation-plan-calendar"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.implementationPlanSubview = state.implementationPlanSubview === 'calendar' ? 'table' : 'calendar';
+      const target = String(button.dataset.implementationNav || '').trim().toLowerCase();
+      if (target === 'calendar') {
+        if (state.implementationPlanSubview === 'calendar') return;
+        state.implementationPlanSubview = 'calendar';
+        render();
+        return;
+      }
+      if (target !== 'guidelines' && target !== 'initiatives') return;
+      if (state.implementationPlanSubview === 'table' && state.implementationPlanLayer === target) return;
+      state.implementationPlanLayer = target;
+      state.implementationPlanSubview = 'table';
       render();
     });
   });
