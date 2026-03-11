@@ -5208,21 +5208,21 @@ select:focus {
 .implementation-plan-calendar-connector {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   overflow: visible;
   pointer-events: none;
 }
 .implementation-plan-calendar-connector-shadow {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.8);
-  stroke-width: 6px;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 7px;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .implementation-plan-calendar-connector-path {
   fill: none;
-  stroke: rgba(135, 143, 153, 0.78);
-  stroke-width: 3px;
+  stroke: rgba(132, 140, 150, 0.96);
+  stroke-width: 3.5px;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -5238,15 +5238,15 @@ select:focus {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   min-width: max-content;
-  z-index: 2;
+  z-index: 1;
 }
 .implementation-plan-calendar-group-row {
-  z-index: 2;
+  z-index: 3;
 }
 .implementation-plan-calendar-group-label {
   position: sticky;
   left: 0;
-  z-index: 4;
+  z-index: 5;
   padding: 10px 14px;
   border-bottom: 1px solid #e2eaf6;
   background: linear-gradient(180deg, #eef4ff 0%, #e6eefb 100%);
@@ -5266,12 +5266,12 @@ select:focus {
 .implementation-plan-calendar-row-header {
   position: sticky;
   top: 0;
-  z-index: 6;
+  z-index: 7;
 }
 .implementation-plan-calendar-entry-cell {
   position: sticky;
   left: 0;
-  z-index: 3;
+  z-index: 5;
   display: grid;
   gap: 6px;
   padding: 12px 14px;
@@ -5279,7 +5279,7 @@ select:focus {
   border-right: 1px solid #dfe7f4;
 }
 .implementation-plan-calendar-entry-cell-header {
-  z-index: 7;
+  z-index: 8;
   align-items: center;
   background: linear-gradient(180deg, #f5f8ff 0%, #ecf2ff 100%);
   color: #304766;
@@ -5392,7 +5392,7 @@ select:focus {
 }
 .implementation-plan-calendar-marker {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   top: 50%;
   left: 50%;
   width: 14px;
