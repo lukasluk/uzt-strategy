@@ -5166,15 +5166,202 @@ select:focus {
   min-width: 96px;
   justify-content: center;
 }
+.implementation-plan-calendar-btn {
+  min-width: 112px;
+}
 .implementation-plan-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   padding: 14px;
   border-top: 1px solid #e8eef6;
   background: #fbfdff;
 }
+.implementation-plan-header-actions,
+.implementation-plan-footer {
+  flex-wrap: wrap;
+}
 .implementation-plan-empty {
   padding: 18px 20px;
+}
+.implementation-plan-calendar-card {
+  width: min(1180px, 96vw);
+  max-height: 92vh;
+}
+.implementation-plan-calendar-intro {
+  margin: 6px 0 0;
+}
+.implementation-plan-calendar-summary {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.implementation-plan-calendar-empty {
+  margin-top: 8px;
+}
+.implementation-plan-calendar-scroll {
+  overflow: auto;
+  border: 1px solid #d9e4f3;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
+}
+.implementation-plan-calendar-board {
+  padding: 0;
+}
+.implementation-plan-calendar-group {
+  border-top: 1px solid #dfe7f4;
+}
+.implementation-plan-calendar-group:first-child {
+  border-top: 0;
+}
+.implementation-plan-calendar-group-label {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2eaf6;
+  background: linear-gradient(180deg, #eef4ff 0%, #e6eefb 100%);
+  color: #27466d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.implementation-plan-calendar-row {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-width: max-content;
+}
+.implementation-plan-calendar-row + .implementation-plan-calendar-row {
+  border-top: 1px solid #edf2f8;
+}
+.implementation-plan-calendar-row-header {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+}
+.implementation-plan-calendar-entry-cell {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.98);
+  border-right: 1px solid #dfe7f4;
+}
+.implementation-plan-calendar-entry-cell-header {
+  z-index: 7;
+  align-items: center;
+  background: linear-gradient(180deg, #f5f8ff 0%, #ecf2ff 100%);
+  color: #304766;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.implementation-plan-calendar-entry-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.implementation-plan-calendar-kind {
+  font-weight: 800;
+}
+.implementation-plan-calendar-kind-guideline {
+  background: #edf4ff;
+  border-color: #c9daf4;
+  color: #274a75;
+}
+.implementation-plan-calendar-kind-initiative {
+  background: #fff4dc;
+  border-color: #efd194;
+  color: #8b5a12;
+}
+.implementation-plan-calendar-owner {
+  font-size: 12px;
+  color: #5f7391;
+  font-weight: 600;
+}
+.implementation-plan-calendar-entry-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #1e416d;
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.implementation-plan-calendar-entry-link:hover {
+  color: #0f315c;
+  text-decoration: underline;
+}
+.implementation-plan-calendar-entry-link:focus-visible {
+  outline: 2px solid rgba(63, 143, 230, 0.35);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.implementation-plan-calendar-linked {
+  margin: 0;
+  color: #6a7e98;
+  font-size: 12px;
+}
+.implementation-plan-calendar-days {
+  display: grid;
+  min-width: 0;
+}
+.implementation-plan-calendar-days-header {
+  background: linear-gradient(180deg, #f5f8ff 0%, #ecf2ff 100%);
+}
+.implementation-plan-calendar-day-head {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  border-left: 1px solid #dde6f4;
+  color: #456181;
+}
+.implementation-plan-calendar-day-head.is-month-start,
+.implementation-plan-calendar-day-cell.is-month-start {
+  box-shadow: inset 1px 0 0 #c1d2eb;
+}
+.implementation-plan-calendar-day-label {
+  font-size: 12px;
+  font-weight: 800;
+}
+.implementation-plan-calendar-day-month {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.implementation-plan-calendar-days-row {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(249, 252, 255, 0.98) 100%);
+}
+.implementation-plan-calendar-day-cell {
+  position: relative;
+  min-height: 72px;
+  border-left: 1px solid #edf2f8;
+}
+.implementation-plan-calendar-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px rgba(45, 98, 182, 0.14);
+}
+.implementation-plan-calendar-marker-guideline {
+  background: #2d62b6;
+}
+.implementation-plan-calendar-marker-initiative {
+  background: #d2912f;
+  box-shadow: 0 0 0 4px rgba(210, 145, 47, 0.16);
 }
 .implementation-detail-meta {
   margin-bottom: 14px;
@@ -5826,6 +6013,20 @@ select:focus {
 
   .implementation-plan-footer .btn {
     width: 100%;
+  }
+
+  .implementation-plan-calendar-card {
+    width: min(96vw, 96vw);
+    padding: 14px;
+  }
+
+  .implementation-plan-calendar-row {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .implementation-plan-calendar-entry-cell,
+  .implementation-plan-calendar-group-label {
+    padding: 10px 12px;
   }
 
   .admin-edit-grid,

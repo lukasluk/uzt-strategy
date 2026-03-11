@@ -3498,6 +3498,238 @@ function buildImplementationPlanInitiativeRows(initiatives) {
   }));
 }
 
+function parseImplementationPlanDateUtc(rawDate) {
+  const match = String(rawDate || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function formatImplementationPlanCalendarDay(rawDate) {
+  const utc = parseImplementationPlanDateUtc(rawDate);
+  if (utc === null) return { dayLabel: '--', monthLabel: '', weekdayLabel: '' };
+  const locale = currentLanguage() === 'en' ? 'en-GB' : 'lt-LT';
+  const date = new Date(utc);
+  return {
+    dayLabel: new Intl.DateTimeFormat(locale, { day: '2-digit' }).format(date),
+    monthLabel: new Intl.DateTimeFormat(locale, { month: 'short' }).format(date),
+    weekdayLabel: new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date)
+  };
+}
+
+function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows }) {
+  const sourceRows = [
+    ...(Array.isArray(guidelineRows) ? guidelineRows : []),
+    ...(Array.isArray(initiativeRows) ? initiativeRows : [])
+  ];
+  const entries = sourceRows.map((row, index) => {
+    const item = row?.item && typeof row.item === 'object' ? row.item : null;
+    if (!item) return null;
+    const kind = String(row.kind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+    const implementationDate = normalizeImplementationDateInputValue(item.implementationDate);
+    const implementationOwner = String(item.implementationOwner || '').trim();
+    const linkedGuidelineNames = kind === 'initiative'
+      ? resolveInitiativeLinkedGuidelines(item)
+        .map((guideline) => String(guideline?.title || guideline?.id || '').trim())
+        .filter(Boolean)
+      : [];
+    return {
+      id: String(item.id || '').trim(),
+      kind,
+      kindLabel: kind === 'initiative'
+        ? langText('Iniciatyva', 'Initiative')
+        : langText('Gairė', 'Guideline'),
+      relationKey: String(row.relationKey || kind).trim().toLowerCase(),
+      level: Number(row.level || 0),
+      title: String(item.title || item.id || '-').trim() || '-',
+      implementationDate,
+      implementationDateDisplay: formatInstitutionDate(implementationDate) || langText('Nenurodyta', 'Not set'),
+      implementationOwner,
+      linkedGuidelineNames,
+      originalIndex: index
+    };
+  }).filter(Boolean);
+
+  const datedEntries = entries
+    .filter((entry) => Boolean(entry.implementationDate))
+    .sort((left, right) => {
+      const byDate = String(left.implementationDate).localeCompare(String(right.implementationDate));
+      if (byDate !== 0) return byDate;
+      return Number(left.originalIndex || 0) - Number(right.originalIndex || 0);
+    });
+
+  const undatedEntries = entries
+    .filter((entry) => !entry.implementationDate)
+    .sort((left, right) => Number(left.originalIndex || 0) - Number(right.originalIndex || 0));
+
+  const groups = [];
+  let currentGroup = null;
+  datedEntries.forEach((entry) => {
+    if (!currentGroup || currentGroup.key !== entry.implementationDate) {
+      currentGroup = {
+        key: entry.implementationDate,
+        label: formatInstitutionDate(entry.implementationDate) || entry.implementationDate,
+        entries: []
+      };
+      groups.push(currentGroup);
+    }
+    currentGroup.entries.push(entry);
+  });
+  if (undatedEntries.length) {
+    groups.push({
+      key: 'undated',
+      label: langText('Be datos', 'No date set'),
+      entries: undatedEntries
+    });
+  }
+
+  const firstDate = datedEntries[0]?.implementationDate || '';
+  const lastDate = datedEntries[datedEntries.length - 1]?.implementationDate || firstDate;
+  const days = [];
+  if (firstDate && lastDate) {
+    let cursor = parseImplementationPlanDateUtc(firstDate);
+    const end = parseImplementationPlanDateUtc(lastDate);
+    while (cursor !== null && end !== null && cursor <= end) {
+      const day = new Date(cursor);
+      const year = day.getUTCFullYear();
+      const month = String(day.getUTCMonth() + 1).padStart(2, '0');
+      const date = String(day.getUTCDate()).padStart(2, '0');
+      const key = `${year}-${month}-${date}`;
+      const formatted = formatImplementationPlanCalendarDay(key);
+      days.push({
+        key,
+        dayLabel: formatted.dayLabel,
+        monthLabel: formatted.monthLabel,
+        weekdayLabel: formatted.weekdayLabel,
+        isMonthStart: date === '01' || key === firstDate
+      });
+      cursor += 24 * 60 * 60 * 1000;
+    }
+  }
+
+  return {
+    entries,
+    groups,
+    days
+  };
+}
+
+function openImplementationPlanCalendarModal(calendarData) {
+  const groups = Array.isArray(calendarData?.groups) ? calendarData.groups : [];
+  const days = Array.isArray(calendarData?.days) ? calendarData.days : [];
+  const totalEntries = groups.reduce((sum, group) => sum + (Array.isArray(group.entries) ? group.entries.length : 0), 0);
+  const existing = document.getElementById('implementationPlanCalendarOverlay');
+  if (existing) existing.remove();
+
+  const emptyLabel = langText(
+    'Kalendoriuje dar nėra suplanuotų įgyvendinimo datų.',
+    'No implementation dates are scheduled in the calendar yet.'
+  );
+  const gridTemplate = days.length ? `repeat(${days.length}, minmax(34px, 1fr))` : '1fr';
+  const boardMinWidth = Math.max(860, 340 + (days.length * 34));
+
+  const overlay = document.createElement('div');
+  overlay.id = 'implementationPlanCalendarOverlay';
+  overlay.className = 'modal-overlay implementation-plan-calendar-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card implementation-plan-calendar-card" role="dialog" aria-modal="true" aria-labelledby="implementationPlanCalendarTitle">
+      <div class="header-row">
+        <div>
+          <h3 id="implementationPlanCalendarTitle">${escapeHtml(langText('Įgyvendinimo kalendorius', 'Implementation calendar'))}</h3>
+          <p class="prompt implementation-plan-calendar-intro">${escapeHtml(langText('Įrašai surikiuoti pagal įgyvendinimo eiliškumą, o dešinėje pažymėta planuojama diena.', 'Entries are ordered by implementation sequence, with the planned day marked on the right.'))}</p>
+        </div>
+        <button id="closeImplementationPlanCalendarBtn" class="btn btn-ghost" type="button">${escapeHtml(langText('Uždaryti', 'Close'))}</button>
+      </div>
+      <div class="header-stack implementation-plan-calendar-summary">
+        <span class="tag">${escapeHtml(langText('Įrašai', 'Entries'))}: ${totalEntries}</span>
+        <span class="tag">${escapeHtml(langText('Su datomis', 'With dates'))}: ${groups.filter((group) => group.key !== 'undated').reduce((sum, group) => sum + group.entries.length, 0)}</span>
+        ${days.length ? `<span class="tag">${escapeHtml(langText('Kalendoriaus dienos', 'Calendar days'))}: ${days.length}</span>` : ''}
+      </div>
+      ${!groups.length || !days.length
+        ? `<div class="card implementation-plan-calendar-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`
+        : `
+          <div class="implementation-plan-calendar-scroll">
+            <div class="implementation-plan-calendar-board" style="min-width:${boardMinWidth}px;">
+              <div class="implementation-plan-calendar-row implementation-plan-calendar-row-header">
+                <div class="implementation-plan-calendar-entry-cell implementation-plan-calendar-entry-cell-header">${escapeHtml(langText('Įrašas', 'Entry'))}</div>
+                <div class="implementation-plan-calendar-days implementation-plan-calendar-days-header" style="grid-template-columns:${gridTemplate};">
+                  ${days.map((day) => `
+                    <div class="implementation-plan-calendar-day-head${day.isMonthStart ? ' is-month-start' : ''}">
+                      <span class="implementation-plan-calendar-day-label">${escapeHtml(day.dayLabel)}</span>
+                      <span class="implementation-plan-calendar-day-month">${escapeHtml(day.monthLabel)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              ${groups.map((group) => `
+                <div class="implementation-plan-calendar-group">
+                  <div class="implementation-plan-calendar-group-label">${escapeHtml(group.label)}</div>
+                  ${group.entries.map((entry) => `
+                    <div class="implementation-plan-calendar-row">
+                      <div class="implementation-plan-calendar-entry-cell">
+                        <div class="implementation-plan-calendar-entry-top">
+                          <span class="tag implementation-plan-calendar-kind implementation-plan-calendar-kind-${escapeHtml(entry.kind)}">${escapeHtml(entry.kindLabel)}</span>
+                          ${entry.implementationOwner ? `<span class="implementation-plan-calendar-owner">${escapeHtml(entry.implementationOwner)}</span>` : ''}
+                        </div>
+                        <button
+                          type="button"
+                          class="implementation-plan-calendar-entry-link"
+                          data-action="open-implementation-calendar-item"
+                          data-kind="${escapeHtml(entry.kind)}"
+                          data-id="${escapeHtml(entry.id)}"
+                        >${escapeHtml(entry.title)}</button>
+                        ${entry.kind === 'initiative' && entry.linkedGuidelineNames.length
+                          ? `<p class="implementation-plan-calendar-linked">${escapeHtml(langText('Gairės', 'Guidelines'))}: ${escapeHtml(entry.linkedGuidelineNames.join(', '))}</p>`
+                          : ''}
+                      </div>
+                      <div class="implementation-plan-calendar-days implementation-plan-calendar-days-row" style="grid-template-columns:${gridTemplate};">
+                        ${days.map((day) => `
+                          <div class="implementation-plan-calendar-day-cell${day.isMonthStart ? ' is-month-start' : ''}">
+                            ${day.key === entry.implementationDate
+                              ? `<span class="implementation-plan-calendar-marker implementation-plan-calendar-marker-${escapeHtml(entry.kind)}"></span>`
+                              : ''}
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `}
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKeyDown);
+  };
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') close();
+  };
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) close();
+  });
+  overlay.querySelector('#closeImplementationPlanCalendarBtn')?.addEventListener('click', close);
+  overlay.querySelectorAll('[data-action="open-implementation-calendar-item"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const kind = String(button.dataset.kind || '').trim().toLowerCase();
+      const id = String(button.dataset.id || '').trim();
+      close();
+      if (!id) return;
+      if (kind === 'initiative') {
+        openInitiativeDetail(id);
+        return;
+      }
+      openGuidelineDetail(id);
+    });
+  });
+  document.addEventListener('keydown', onKeyDown);
+}
+
 function renderImplementationPlanRow(row, { editable = false } = {}) {
   const item = row?.item && typeof row.item === 'object' ? row.item : null;
   if (!item) return '';
@@ -4985,6 +5217,7 @@ function renderImplementationPlanView() {
   const guidelineRows = buildImplementationPlanGuidelineRows(state.guidelines);
   const initiativeRows = buildImplementationPlanInitiativeRows(state.initiatives);
   const rows = activeLayer === 'initiatives' ? initiativeRows : guidelineRows;
+  const calendarData = buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows });
   const title = langText('Įgyvendinimo planas', 'Implementation plan');
   const layerLabel = activeLayer === 'initiatives'
     ? langText('Iniciatyvos', 'Initiatives')
@@ -4995,9 +5228,13 @@ function renderImplementationPlanView() {
   const viewerHint = editable
     ? langText('Administratorius gali nurodyti įgyvendinimo datą ir atsakingą asmenį arba padalinį.', 'Institution admin can set the implementation date and responsible person or unit.')
     : langText('Čia galite peržiūrėti suplanuotas įgyvendinimo datas ir atsakingus asmenis.', 'You can review planned implementation dates and responsible owners here.');
+  const pageCalendarButtonMarkup = calendarData.entries.length
+    ? `<button class="btn btn-ghost implementation-plan-calendar-btn" type="button" data-action="open-implementation-calendar">${escapeHtml(langText('Kalendorius', 'Calendar'))}</button>`
+    : '';
   const pageSaveButtonMarkup = editable
     ? `<button class="btn btn-primary" type="submit" form="implementationPlanForm" ${state.busy ? 'disabled' : ''}>${escapeHtml(langText('Išsaugoti planą', 'Save plan'))}</button>`
     : '';
+  const pageActionButtonsMarkup = [pageCalendarButtonMarkup, pageSaveButtonMarkup].filter(Boolean).join('');
 
   elements.stepView.innerHTML = `
     <section class="implementation-plan-shell">
@@ -5011,7 +5248,7 @@ function renderImplementationPlanView() {
             <button type="button" class="btn ${activeLayer === 'guidelines' ? 'btn-primary' : 'btn-ghost'}" data-implementation-layer="guidelines">${escapeHtml(langText('Gairės', 'Guidelines'))}</button>
             <button type="button" class="btn ${activeLayer === 'initiatives' ? 'btn-primary' : 'btn-ghost'}" data-implementation-layer="initiatives">${escapeHtml(langText('Iniciatyvos', 'Initiatives'))}</button>
           </div>
-          ${pageSaveButtonMarkup}
+          ${pageActionButtonsMarkup}
         </div>
       </div>
 
@@ -5034,7 +5271,7 @@ function renderImplementationPlanView() {
         ${rows.length
       ? rows.map((row) => renderImplementationPlanRow(row, { editable })).join('')
       : `<div class="implementation-plan-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`}
-        ${editable && rows.length ? `<div class="implementation-plan-footer">${pageSaveButtonMarkup}</div>` : ''}
+        ${editable && rows.length ? `<div class="implementation-plan-footer">${pageActionButtonsMarkup}</div>` : ''}
       </form>
     </section>
   `;
@@ -5059,6 +5296,12 @@ function renderImplementationPlanView() {
       if (state.implementationPlanLayer === nextLayer) return;
       state.implementationPlanLayer = nextLayer;
       render();
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-action="open-implementation-calendar"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      openImplementationPlanCalendarModal(calendarData);
     });
   });
 
