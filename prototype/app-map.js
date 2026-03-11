@@ -129,7 +129,7 @@ function playMapPlanRevealSound(kinds = []) {
   const now = audioContext.currentTime + 0.01;
   const masterGain = audioContext.createGain();
   masterGain.gain.setValueAtTime(0.0001, now);
-  masterGain.gain.linearRampToValueAtTime(0.028 + (layerCount * 0.005), now + 0.016);
+  masterGain.gain.linearRampToValueAtTime(0.042 + (layerCount * 0.007), now + 0.013);
   masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.18);
   masterGain.connect(audioContext.destination);
 
@@ -146,11 +146,11 @@ function playMapPlanRevealSound(kinds = []) {
   toneFilter.connect(masterGain);
 
   const partials = [
-    { ratio: 1, gain: 0.54, decay: 1.14, attack: 0.012 },
-    { ratio: 2.01, gain: 0.18, decay: 0.96, attack: 0.01 },
-    { ratio: 2.74, gain: 0.34, decay: 0.82, attack: 0.008 },
-    { ratio: 3.93, gain: 0.23, decay: 0.62, attack: 0.006 },
-    { ratio: 5.45, gain: 0.12, decay: 0.48, attack: 0.004 }
+    { ratio: 1, gain: 0.66, decay: 1.18, attack: 0.01 },
+    { ratio: 2.01, gain: 0.24, decay: 1.02, attack: 0.009 },
+    { ratio: 2.74, gain: 0.42, decay: 0.88, attack: 0.007 },
+    { ratio: 3.93, gain: 0.29, decay: 0.7, attack: 0.005 },
+    { ratio: 5.45, gain: 0.16, decay: 0.54, attack: 0.0035 }
   ];
   const oscillators = [];
   partials.forEach((partial, index) => {
@@ -161,7 +161,7 @@ function playMapPlanRevealSound(kinds = []) {
     osc.detune.setValueAtTime((index % 2 === 0 ? -3 : 3) * layerCount, now);
     osc.frequency.exponentialRampToValueAtTime((baseFrequency * partial.ratio) * 0.996, now + partial.decay);
     gainNode.gain.setValueAtTime(0.0001, now);
-    gainNode.gain.linearRampToValueAtTime(partial.gain + (layerCount * 0.02), now + partial.attack + (index * 0.0015));
+    gainNode.gain.linearRampToValueAtTime(partial.gain + (layerCount * 0.026), now + partial.attack + (index * 0.0012));
     gainNode.gain.exponentialRampToValueAtTime(0.001, now + partial.decay);
     osc.connect(gainNode);
     gainNode.connect(highpassFilter);
@@ -174,10 +174,21 @@ function playMapPlanRevealSound(kinds = []) {
   shimmerOsc.frequency.setValueAtTime(baseFrequency * 6.2, now);
   shimmerOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 5.05, now + 0.22);
   shimmerGain.gain.setValueAtTime(0.0001, now);
-  shimmerGain.gain.linearRampToValueAtTime(0.09, now + 0.006);
-  shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+  shimmerGain.gain.linearRampToValueAtTime(0.14, now + 0.005);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
   shimmerOsc.connect(shimmerGain);
   shimmerGain.connect(highpassFilter);
+
+  const bodyOsc = audioContext.createOscillator();
+  const bodyGain = audioContext.createGain();
+  bodyOsc.type = 'triangle';
+  bodyOsc.frequency.setValueAtTime(baseFrequency * 0.5, now);
+  bodyOsc.frequency.exponentialRampToValueAtTime(baseFrequency * 0.485, now + 0.5);
+  bodyGain.gain.setValueAtTime(0.0001, now);
+  bodyGain.gain.linearRampToValueAtTime(0.13 + (layerCount * 0.018), now + 0.012);
+  bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
+  bodyOsc.connect(bodyGain);
+  bodyGain.connect(highpassFilter);
 
   const transientBuffer = audioContext.createBuffer(1, Math.max(1, Math.floor(audioContext.sampleRate * 0.018)), audioContext.sampleRate);
   const transientData = transientBuffer.getChannelData(0);
@@ -193,16 +204,18 @@ function playMapPlanRevealSound(kinds = []) {
   transientFilter.Q.setValueAtTime(2.9, now);
   const transientGain = audioContext.createGain();
   transientGain.gain.setValueAtTime(0.0001, now);
-  transientGain.gain.linearRampToValueAtTime(0.036, now + 0.0015);
-  transientGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+  transientGain.gain.linearRampToValueAtTime(0.085, now + 0.0012);
+  transientGain.gain.exponentialRampToValueAtTime(0.001, now + 0.026);
   transientSource.connect(transientFilter);
   transientFilter.connect(transientGain);
   transientGain.connect(highpassFilter);
 
   oscillators.forEach(({ osc }) => osc.start(now));
+  bodyOsc.start(now);
   shimmerOsc.start(now);
   transientSource.start(now);
   oscillators.forEach(({ osc, stopAt }) => osc.stop(stopAt));
+  bodyOsc.stop(now + 0.62);
   shimmerOsc.stop(now + 0.27);
   transientSource.stop(now + 0.025);
 }

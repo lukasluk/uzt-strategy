@@ -3400,19 +3400,19 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-ripple-parent {
   --map-plan-ripple-rgb: 72, 104, 168;
-  animation: mapPlanRippleDual 1.9s ease-out;
+  animation: mapPlanRippleDual 2.15s cubic-bezier(0.16, 0.78, 0.24, 1);
 }
 .strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-ripple-child {
   --map-plan-ripple-rgb: 43, 138, 126;
-  animation: mapPlanRippleDual 1.9s ease-out;
+  animation: mapPlanRippleDual 2.15s cubic-bezier(0.16, 0.78, 0.24, 1);
 }
 .strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-ripple-orphan {
   --map-plan-ripple-rgb: 216, 107, 75;
-  animation: mapPlanRippleDual 1.9s ease-out;
+  animation: mapPlanRippleDual 2.15s cubic-bezier(0.16, 0.78, 0.24, 1);
 }
 .strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-ripple-initiative {
   --map-plan-ripple-rgb: 210, 145, 47;
-  animation: mapPlanRippleDual 1.9s ease-out;
+  animation: mapPlanRippleDual 2.15s cubic-bezier(0.16, 0.78, 0.24, 1);
 }
 @keyframes mapPlanRippleDual {
   0% {
@@ -3420,20 +3420,30 @@ body.embed-map-page .map-fullscreen-watermark img {
       0 0 0 0 rgba(var(--map-plan-ripple-rgb), 0.38),
       0 0 0 0 rgba(var(--map-plan-ripple-rgb), 0);
   }
-  14% {
+  10% {
     box-shadow:
-      0 0 0 18px rgba(var(--map-plan-ripple-rgb), 0.24),
+      0 0 0 10px rgba(var(--map-plan-ripple-rgb), 0.31),
       0 0 0 0 rgba(var(--map-plan-ripple-rgb), 0);
   }
-  36% {
+  24% {
     box-shadow:
-      0 0 0 42px rgba(var(--map-plan-ripple-rgb), 0.16),
-      0 0 0 18px rgba(var(--map-plan-ripple-rgb), 0.2);
+      0 0 0 24px rgba(var(--map-plan-ripple-rgb), 0.24),
+      0 0 0 8px rgba(var(--map-plan-ripple-rgb), 0.16);
+  }
+  46% {
+    box-shadow:
+      0 0 0 44px rgba(var(--map-plan-ripple-rgb), 0.16),
+      0 0 0 24px rgba(var(--map-plan-ripple-rgb), 0.17);
+  }
+  68% {
+    box-shadow:
+      0 0 0 62px rgba(var(--map-plan-ripple-rgb), 0.09),
+      0 0 0 44px rgba(var(--map-plan-ripple-rgb), 0.1);
   }
   100% {
     box-shadow:
-      0 0 0 86px rgba(var(--map-plan-ripple-rgb), 0),
-      0 0 0 68px rgba(var(--map-plan-ripple-rgb), 0);
+      0 0 0 88px rgba(var(--map-plan-ripple-rgb), 0),
+      0 0 0 70px rgba(var(--map-plan-ripple-rgb), 0);
   }
 }
 .strategy-map-viewport:is(.map-layer-guidelines, .map-layer-initiatives, .map-layer-plan) .institution-node strong {
