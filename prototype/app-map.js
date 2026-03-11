@@ -400,9 +400,19 @@ function bindMapPlanTimeline(viewport, world, stepView) {
     const playbackMs = Math.max(1000, Number(state.mapPlanPlaybackMs || MAP_PLAN_PLAYBACK_MS));
     state.mapPlanPlaybackStartedAt = performance.now() - (state.mapPlanProgress * playbackMs);
     const tick = (timestamp) => {
+      if (!document.body.contains(timelineRoot) || !document.body.contains(world)) {
+        stopMapPlanPlayback();
+        return;
+      }
       const elapsed = Math.max(0, timestamp - Number(state.mapPlanPlaybackStartedAt || timestamp));
       state.mapPlanProgress = Math.max(0, Math.min(1, elapsed / playbackMs));
-      sync();
+      try {
+        sync();
+      } catch (error) {
+        console.error('Map plan playback sync failed', error);
+        stopMapPlanPlayback();
+        return;
+      }
       if (state.mapPlanProgress >= 1) {
         stopMapPlanPlayback();
         sync();
@@ -462,6 +472,9 @@ function bindMapPlanTimeline(viewport, world, stepView) {
 
   sync();
   registerActivity();
+  if (state.mapPlanPlaying) {
+    startPlayback();
+  }
 }
 
 function bindMapOverlayToolbarAutoHide(viewport, stepView) {
