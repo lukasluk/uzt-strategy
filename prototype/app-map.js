@@ -240,7 +240,7 @@ function triggerMapPlanRevealRipple(node) {
   node.classList.add(rippleClass);
   window.setTimeout(() => {
     node.classList.remove(rippleClass);
-  }, 1100);
+  }, 2250);
 }
 
 function mapPlanCurrentDateText(firstDate, lastDate, progress) {
