@@ -356,36 +356,6 @@ h3 {
   margin-top: 34px;
 }
 
-.hero-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 34px;
-}
-
-.hero-metric-card {
-  padding: 18px;
-  border: 1px solid var(--landing-line);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.84);
-}
-
-.hero-metric-label {
-  display: block;
-  color: var(--landing-muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.hero-metric-value {
-  display: block;
-  margin-top: 8px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
 .hero-visual {
   display: flex;
   justify-content: center;
@@ -619,6 +589,47 @@ h3 {
     linear-gradient(171deg, transparent 46%, rgba(47, 91, 255, 0.8) 47%, rgba(47, 91, 255, 0.8) 49%, transparent 50%);
 }
 
+.hero-mini-badge {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--landing-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  color: var(--landing-muted);
+  font-size: 10px;
+  font-weight: 500;
+  transform: translate3d(calc(var(--hero-shift-x) * 0.5), calc(var(--hero-shift-y) * 0.5), 0);
+}
+
+.hero-mini-badge-a {
+  left: 154px;
+  top: 34px;
+}
+
+.hero-mini-badge-b {
+  right: 38px;
+  bottom: 114px;
+}
+
+.hero-mini-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hero-mini-dot-green {
+  background: var(--landing-green);
+}
+
+.hero-mini-dot-amber {
+  background: var(--landing-amber);
+}
+
 .section {
   padding: clamp(28px, 4vw, 52px);
 }
@@ -644,6 +655,10 @@ h3 {
 .section-head {
   display: grid;
   gap: 12px;
+}
+
+.section-head-center {
+  text-align: center;
 }
 
 .section-head p {
@@ -1025,6 +1040,60 @@ h3 {
   font-size: 15px;
 }
 
+.section-governance {
+  background: linear-gradient(180deg, #0f1c3f 0%, #0a1530 100%);
+  border-color: rgba(47, 91, 255, 0.08);
+  color: #fff;
+  overflow: hidden;
+}
+
+.section-governance::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(123, 159, 255, 0.12), transparent 18%),
+    radial-gradient(circle at 82% 68%, rgba(47, 91, 255, 0.12), transparent 18%);
+  pointer-events: none;
+}
+
+.governance-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.governance-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.governance-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 20px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(47, 91, 255, 0.2);
+  color: #7b9fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.governance-card h3 {
+  color: #fff;
+  font-size: 17px;
+}
+
 .about-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr);
@@ -1069,6 +1138,11 @@ h3 {
     linear-gradient(180deg, #fff 0%, #f9fbff 100%);
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+}
+
+.about-visual-card-illustrated {
+  min-height: 360px;
+  aspect-ratio: 4 / 3;
 }
 
 .about-visual-grid {
@@ -1363,6 +1437,7 @@ h3 {
   .layers-row-top,
   .layers-row-bottom,
   .trust-grid,
+  .governance-grid,
   .about-layout,
   .landing-footer,
   .landing-footer-links {
@@ -1448,6 +1523,16 @@ h3 {
 
   .hero-metric-float {
     bottom: 34px;
+  }
+
+  .hero-mini-badge-a {
+    left: 118px;
+    top: 26px;
+  }
+
+  .hero-mini-badge-b {
+    right: 18px;
+    bottom: 102px;
   }
 
   .layers-connector {
