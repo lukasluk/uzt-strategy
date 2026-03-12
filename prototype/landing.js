@@ -1,655 +1,359 @@
 (function () {
-  const activeStrategyLinks = Array.from(document.querySelectorAll('[data-active-strategy-link]'));
-  const glassMetricInstitutions = document.getElementById('glassMetricInstitutions');
-  const glassMetricGuidelines = document.getElementById('glassMetricGuidelines');
-  const glassMetricInitiatives = document.getElementById('glassMetricInitiatives');
-  const landingAboutContent = document.getElementById('landingAboutContent');
-  const navLinks = Array.from(document.querySelectorAll('[data-scroll-link]'));
-  const accessRequestButtons = Array.from(document.querySelectorAll('[data-open-access-request]'));
-  const languageSelect = document.getElementById('landingLangSelect');
-  const metaDescription = document.getElementById('landingMetaDescription');
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+  const activeStrategyLinks = $$('[data-active-strategy-link]');
+  const navLinks = $$('.landing-header [data-scroll-link]');
+  const scrollLinks = $$('[data-scroll-link]');
+  const accessRequestButtons = $$('[data-open-access-request]');
+  const heroScene = $('[data-hero-scene]');
+  const heroNodes = $$('[data-hero-node]');
+  const heroLines = $$('[data-hero-line]');
+  const aboutRoot = $('#landingAboutContent');
+  const languageSelect = $('#landingLangSelect');
+  const metaDescription = $('#landingMetaDescription');
+
+  const metrics = {
+    institutions: $('#glassMetricInstitutions'),
+    guidelines: $('#glassMetricGuidelines'),
+    initiatives: $('#glassMetricInitiatives')
+  };
 
   const SUPPORTED_LANGS = ['lt', 'en'];
   const DEFAULT_LANG = 'lt';
   const STORAGE_LANG_KEY = 'landing_lang';
-  const DEFAULT_ABOUT_TEXT_LT = [
-    'Lietuvos viešajame sektoriuje skaitmenizacija vis dažniau suvokiama ne kaip pavienių IT projektų rinkinys, o kaip sisteminis pokytis, apimantis paslaugų kokybę, duomenų valdymą ir naujų technologijų taikymą. Todėl vis didesnę reikšmę įgyja ne tik technologiniai sprendimai, bet ir aiškios, įgyvendinamos skaitmenizacijos strategijos (arba IT plėtros planai).',
-    'Praktika rodo, kad tradiciniai, didelės apimties strateginiai dokumentai dažnai tampa sunkiai pritaikomi greitai besikeičiančioje aplinkoje. Dėl to vis daugiau dėmesio skiriama lanksčioms, įtraukioms ir duomenimis grįstoms strategijų formavimo praktikoms, kurios leidžia greičiau susitarti dėl prioritetų ir krypties.',
-    'Vienas iš būdų tai pasiekti - aiškiai išsigryninti pagrindines ašis, aplink kurias sukasi dauguma sprendimų:',
-    '- Kokybiškų paslaugų teikimas (vidiniams ir išoriniams naudotojams).\n- Duomenų kokybė ir duomenų valdymas (data governance).\n- Tikslingas dirbtinio intelekto taikymas (AI with purpose).',
-    'Svarbi ne tik strategijos kryptis, bet ir pats jos rengimo procesas - jis turi būti suprantamas, įtraukiantis ir skatinantis bendrą atsakomybę. Tam vis dažniau pasitelkiami paprasti skaitmeniniai įrankiai, leidžiantys dalyviams siūlyti gaires, jas komentuoti, balsuoti ir viešai matyti bendrus rezultatus. Tokie sprendimai skatina skaidrumą, tarpinstitucinį mokymąsi ir gerosios praktikos dalijimąsi.',
-    'Šiame kontekste atsirado digistrategy.eu - eksperimentinis, atviras įrankis, skirtas skaitmenizacijos strategijų ar IT plėtros planų gairėms formuoti ir prioritetizuoti. Jis leidžia dalyviams struktūruotai įsitraukti į strateginį procesą ir padeda greičiau pereiti nuo abstrakčių idėjų prie aiškių sprendimų krypčių.',
-    'Svarbu pabrėžti, kad tai nėra enterprise lygio ar sertifikuotas sprendimas - veikiau praktinis eksperimentas, skirtas parodyti, kaip pasitelkiant šiuolaikines technologijas ir dirbtinį intelektą galima greitai sukurti veikiančius, naudotojams suprantamus įrankius.',
-    'Dirbtinis intelektas ir skaitmeniniai sprendimai jau keičia viešojo sektoriaus veiklos modelius. Organizacijos, kurios drąsiai eksperimentuoja, augina kompetencijas ir taiko technologijas tikslingai, turi realią galimybę judėti greičiau ir išlikti konkurencingos sparčiai besikeičiančioje aplinkoje.'
-  ].join('\n\n');
-  const DEFAULT_ABOUT_TEXT_EN = [
-    'Across public institutions, digital transformation is no longer seen as a set of isolated IT projects but as a systemic shift that affects service quality, data governance, and responsible adoption of emerging technologies.',
-    'That is exactly why digistrategy.eu was created: to provide a practical, transparent workspace where strategy priorities can be discussed, structured, and translated into initiatives with clear ownership.',
-    'The platform helps teams agree faster on what matters most, while preserving context and traceability for long-term institutional continuity.'
-  ].join('\n\n');
-  let currentLang = DEFAULT_LANG;
-  let preferredStrategySlug = 'uzt';
-  let publicInstitutions = [];
-  const adminAboutTextByLang = {
-    lt: '',
-    en: ''
+  const HERO_SEQUENCE = ['core', 'library', 'guidelines', 'initiatives', 'plan', 'metrics', 'publish'];
+  const HERO_DELAY = 2800;
+  const DEFAULT_ABOUT = {
+    lt: [
+      'Lietuvos viešajame sektoriuje strateginis darbas vis dar dažnai išskaidomas tarp dokumentų, skaičiuoklių ir atskirų sistemų.',
+      'Dėl to gairės, iniciatyvos ir įgyvendinimo eiga praranda bendrą kontekstą, o viešinimas tampa papildomu rankiniu darbu.',
+      'digistrategy.eu sukurta tam, kad strategija taptų gyvu darbo žemėlapiu: nuo bibliotekos ir gairių iki iniciatyvų, terminų bei pažangos viešinimo.'
+    ].join('\n\n'),
+    en: [
+      'Across public institutions, strategy work is often split between documents, spreadsheets, and disconnected systems.',
+      'That makes it hard to keep guidelines, initiatives, and implementation in one visible context.',
+      'digistrategy.eu was created to turn strategy into a living operational map: from library content and guidelines to delivery planning and public progress views.'
+    ].join('\n\n')
   };
 
-  const adminLandingTranslations = {
-    lt: {},
-    en: {}
-  };
-
-  const BASE_TRANSLATIONS = {
+  const TRANSLATIONS = {
     lt: {
-      metaTitle: 'digistrategy.eu | Viešojo sektoriaus strategijų platforma',
-      metaDescription: 'digistrategy.eu padeda institucijoms kartu kurti strategijas, susieti iniciatyvas ir skaidriai viešinti pažangą.',
-      navHow: 'Kaip veikia',
-      navWhy: 'Kodėl išsiskiria',
-      navTrust: 'Patikimumas',
-      navLaunch: 'Pradėti',
+      metaTitle: 'digistrategy.eu | Strategijos ir įgyvendinimas viename žemėlapyje',
+      metaDescription: 'digistrategy.eu padeda institucijoms kurti gairių struktūrą, susieti iniciatyvas ir valdyti įgyvendinimą vienoje darbo erdvėje.',
+      navHome: 'Pradžia',
+      navLayers: 'Sluoksniai',
+      navDemo: 'Demonstracija',
+      navHow: 'Kaip tai veikia',
+      navAbout: 'Apie platformą',
       langLabel: 'Kalba',
-      headerCta: 'Atidaryti platforma',
-      heroKicker: 'Strategijų platforma viešajam sektoriui',
-      heroTitle: 'Nuo idėjų iki audituojamo įgyvendinimo šiuolaikinėms viešojo sektoriaus institucijoms.',
-      heroCopy: 'Kurkite gairių struktūras, susiekite iniciatyvas, įtraukite komandas į skaidrų balsavimą ir publikuokite strategijų žemėlapius, kuriuos supranta visa bendruomenė.',
-      heroPrimaryCta: 'Atidaryti platforma',
-      metricInstitutionsLabel: 'Aktyvios institucijos',
-      metricGuidelinesLabel: 'Aktyvios gairės',
-      metricInitiativesLabel: 'Aktyvios iniciatyvos',
-      glassInstitutionLabel: 'Institucija',
-      glassMainTitle: 'Skaitmenizacijos strategijos ciklas',
-      glassMainCopy: 'Gairės, iniciatyvos, atsakomybės ir būsenos viename interaktyviame žemėlapyje.',
-      glassStatsInstitutionsLabel: 'Aktyvios institucijos',
-      glassStatsGuidelinesLabel: 'Aktyvios gairės',
-      glassStatsInitiativesLabel: 'Aktyvios iniciatyvos',
-      glassOutcomeLabel: 'Rezultatų kontraktas',
-      glassOutcomeTitle: 'Tikslas + terminas + įrodymai',
-      glassAuditLabel: 'Audituojamumas',
-      glassAuditTitle: 'Sprendimų istorija matoma nuo pradžios iki pabaigos',
-      demoMapKicker: 'Interaktyvus pavyzdys',
-      demoMapTitle: 'Strategijų žemėlapio mini demonstracija',
-      demoMapCopy: 'Šis supaprastintas pavyzdys parodo, kaip institucijos strategija susiejama su pagrindinėmis gairėmis ir jas įgyvendinančiomis iniciatyvomis.',
-      demoLegendGuideline: 'Gairė',
-      demoLegendInitiative: 'Iniciatyva',
-      demoInstitutionKind: 'Institucija',
-      demoInstitutionTitle: 'Skaitmenizacijos strategijos ciklas',
-      demoInstitutionCopy: 'Bendra kryptis ir prioritetai visai organizacijai.',
-      demoGuidelineKind: 'Gairė',
-      demoGuideline1Title: 'Klientų patirčių gerinimas',
-      demoGuideline1Copy: 'Trumpesnis paslaugų kelias ir aiškesnė komunikacija.',
-      demoGuideline2Title: 'Duomenų valdysenos stiprinimas',
-      demoGuideline2Copy: 'Vieningi standartai ir kokybiški duomenys sprendimams.',
-      demoGuideline3Title: 'Skaitmeninių paslaugų plėtra',
-      demoGuideline3Copy: 'Daugiau savitarnos galimybių ir greitesni procesai.',
-      demoGuideline4Title: 'Kompetencijų ugdymas',
-      demoGuideline4Copy: 'Komandų pasirengimas dirbti su naujais įrankiais.',
-      demoInitiativeKind: 'Iniciatyva',
-      demoInitiative1Title: 'Vieningas registracijos kelias',
-      demoInitiative1Copy: 'Vienas langas gyventojų užklausoms ir aptarnavimui.',
-      demoInitiative2Title: 'Savitarnos modernizavimas',
-      demoInitiative2Copy: 'Atnaujinta naudotojų patirtis pagrindinėse paslaugose.',
-      demoInitiative3Title: 'Analitikos platforma',
-      demoInitiative3Copy: 'Duomenimis grįsti sprendimai, nuolat stebint poveikio rodiklius.',
-      backboneKicker: 'Europos skaitmeninis valdymas',
-      backboneTitle: 'Patikimas pagrindas institucijų strategijų įgyvendinimui.',
-      backboneJokeQuestion: 'Sukurta Europoje Europai?',
-      backboneMetric1Title: 'Daugiainstitucė architektūra',
-      backboneMetric1Copy: 'Viena platforma daugeliui institucijų su aiškiai atskirtu valdymu pagal roles.',
-      backboneMetric2Title: 'Audito pėdsakas',
-      backboneMetric2Copy: 'Sprendimų kontekstas išlieka matomas per visą strategijos ciklą.',
-      backboneMetric3Title: 'Parengta viešinimui',
-      backboneMetric3Copy: 'View-only įterpimas leidžia skaidriai viešinti strategiją ir išlaikyti valdymo kontrolę.',
-      uspKicker: 'Išskirtinė vertė',
-      uspTitle: 'Kodėl tai daugiau nei planavimo lenta',
-      feature1Title: 'Atskaitomybės laiko juosta',
-      feature1Copy: 'Kiekvienas strateginis pakeitimas yra atsekamas: kas, kada ir kodėl jį atliko.',
-      feature1Item1: 'Nekintama veiklos istorija',
-      feature1Item2: 'Aiškus atsakomybių perdavimas',
-      feature1Item3: 'Greitesnės valdymo peržiūros',
-      feature2Title: 'Rezultatų kontraktai',
-      feature2Copy: 'Kiekvieną iniciatyvą paverskite pamatuojamu įsipareigojimu su baze, tikslu ir terminu.',
-      feature2Item1: 'Mažiau abstrakčių įgyvendinimo planų',
-      feature2Item2: 'Įrodymais grįsti būsenos atnaujinimai',
-      feature2Item3: 'Prioritetai susieti su poveikiu',
-      feature3Title: 'AI strategijos juodrastis is PDF',
-      feature3Copy: 'Ikelkite bet kokius susijusius PDF dokumentus, o sistema automatiskai sugeneruos pradine strategijos juodrasti su gairiu ir iniciatyvu struktura.',
-      feature3Item1: 'Keli PDF failai vienoje generacijoje',
-      feature3Item2: 'Automatinis gairiu ir iniciatyvu pasiulymas',
-      feature3Item3: 'Greitas startas tolesniam komandos tobulinimui',
-      flowKicker: 'Eiga',
-      flowTitle: 'Kaip institucijos vykdo strategijos ciklus',
-      flow1Title: 'Pakvieskite komandas pagal roles',
-      flow1Copy: 'Meta admin sukuria vienkartines pakvietimo nuorodas ir priskiria narystes pagal institucijas.',
-      flow2Title: 'Suformuokite gairių struktūrą',
-      flow2Copy: 'Dalyviai siūlo, diskutuoja, balsuoja ir kartu tobulina strategines kryptis.',
-      flow3Title: 'Susiekite iniciatyvas su gairėmis',
-      flow3Copy: 'Strategijų žemėlapis parodo priklausomybes ir iškart išryškina nepriskirtus prioritetus.',
-      flow4Title: 'Publikuokite ir stebėkite',
-      flow4Copy: 'Skelbkite view-only žemėlapius viešai, o administratoriai stebi apkrovą ir panaudojimo rodiklius.',
-      trustKicker: 'Patikimumas pagal dizainą',
-      trustTitle: 'Sukurta instituciniam valdymui, ne triukšmui',
-      trustCopy: 'Platforma kurta atsakingam bendradarbiavimui: aiškios rolės, istorijos išsaugojimas, kontroliuojamas viešumas ir konfigūruojami saugumo saugikliai.',
-      trust1Title: 'Bendradarbystės dirbtuvių modelis',
-      trust1Copy: 'Dalyviai komentuoja, prioritetizuoja ir kuria gaires per struktūruotus, skaidrius procesus.',
-      trust2Title: 'Institucinė atmintis pagal dizainą',
-      trust2Copy: 'Archyvuoti vartotojai ir istorinių sprendimų pėdsakai padeda išlaikyti tęstinumą tarp ciklų.',
-      trust3Title: 'Operacinis matomumas',
-      trust3Copy: 'Užklausų limitai ir stebėsena padeda apsaugoti infrastruktūrą esant didelei apkrovai.',
-      aboutKicker: 'Apie platformą',
+      headerCta: 'Atidaryti platformą',
+      heroEyebrow: 'Strategijos darbo erdvė viešajam sektoriui',
+      heroTitle: 'Strategija ir įgyvendinimas viename gyvame žemėlapyje.',
+      heroCopy: 'Visa biblioteka, gairės, iniciatyvos ir įgyvendinimo planai vienoje darbo erdvėje.',
+      heroPrimaryCta: 'Naršyti strategijų biblioteką',
+      heroSecondaryCta: 'Atidaryti platformą',
+      heroMetricInstitutionsLabel: 'Aktyvios institucijos',
+      heroMetricGuidelinesLabel: 'Aktyvios gairės',
+      heroMetricInitiativesLabel: 'Aktyvios iniciatyvos',
+      heroNodeCore: 'Strategijos žemėlapis',
+      heroNodeLibrary: 'Biblioteka',
+      heroNodeGuidelines: 'Gairės',
+      heroNodeInitiatives: 'Iniciatyvos',
+      heroNodePlan: 'Įgyvendinimo planas',
+      heroNodeMetrics: 'Rodikliai',
+      heroNodePublish: 'Viešas žemėlapis',
+      heroProjectLabel: 'INICIATYVA',
+      heroProjectTitle: 'Vieningas paslaugos kelias',
+      heroProjectStatus: 'Vykdoma',
+      heroSignalLabel: 'RODIKLIS',
+      heroSignalTitle: 'Gyventojų pasitenkinimas',
+      heroSignalTrend: '+4.2%',
+      layersTitle: 'Visi strategijos sluoksniai vienoje sistemoje',
+      layersCopy: 'Nuo viešos bibliotekos iki gairių, iniciatyvų ir matuojamo įgyvendinimo.',
+      layer1Title: 'Strategijų biblioteka',
+      layer1Copy: 'Naršykite viešas strategijas ir importuokite gaires ar iniciatyvas į savo moderuojamą ciklą.',
+      layer2Title: 'Gairių struktūra',
+      layer2Copy: 'Formuokite tėvines ir vaikines gaires, išlaikydami aiškią strategijos logiką.',
+      layer3Title: 'Iniciatyvų susiejimas',
+      layer3Copy: 'Kiekviena iniciatyva susiejama bent su viena gaire, todėl ryšiai lieka matomi žemėlapyje.',
+      layer4Title: 'Įgyvendinimo planas',
+      layer4Copy: 'Priskirkite terminus, atsakomybes ir eigą toms pačioms gairėms bei iniciatyvoms.',
+      layer5Title: 'Rodikliai ir stebėsena',
+      layer5Copy: 'Matykite pažangą per rodiklius, būsenas ir laiko pjūvius toje pačioje sistemoje.',
+      layer6Title: 'Viešas strategijos žemėlapis',
+      layer6Copy: 'Publikuokite view-only žemėlapį ir skaidriai parodykite, kaip strategija juda į vykdymą.',
+      trustTitle: 'Patikimas pagrindas strategijos valdymui.',
+      trustCopy: 'Platforma kurta instituciniam naudojimui: atskirai valdoma pagal institucijas, su istorija ir viešinimo kontrole.',
+      trust1Title: 'Daugiainstitucinė architektūra',
+      trust1Copy: 'Viena platforma daugeliui institucijų su atskirais nariais, ciklais ir valdymu pagal roles.',
+      trust2Title: 'Audito pėdsakas',
+      trust2Copy: 'Sprendimų kontekstas, pasiūlymai ir ryšiai neišnyksta, kai strategija pereina į vykdymą.',
+      trust3Title: 'Parengta viešinimui',
+      trust3Copy: 'Vieši žemėlapiai ir embed režimas leidžia dalintis rezultatais neatsiveriant vidinio valdymo.',
+      demoTitle: 'Strategijos žemėlapio demonstracija',
+      demoCopy: 'Tas pats modelis leidžia matyti gaires, iniciatyvas ir jų įgyvendinimo logiką viename vaizde.',
+      demoViewMap: 'Žemėlapis',
+      demoViewList: 'Sąrašas',
+      demoViewTable: 'Lentelė',
+      demoNodeCoreLabel: 'Strategija',
+      demoNodeCoreTitle: 'Skaitmenizacijos strategijos ciklas',
+      demoNodeGuidelineLabel: 'Gairė',
+      demoNodeInitiativeLabel: 'Iniciatyva',
+      demoNodePlanLabel: 'Planas',
+      demoGuideline1Title: 'Patogesnės viešosios paslaugos',
+      demoGuideline1Copy: 'Trumpesnis kelias naudotojui ir mažiau nereikalingų žingsnių.',
+      demoGuideline2Title: 'Duomenų valdysena',
+      demoGuideline2Copy: 'Vieningi standartai, atsakomybės ir rodiklių stebėsena.',
+      demoInitiative1Title: 'Savitarnos modernizavimas',
+      demoInitiative1Copy: 'Nauja naudotojo kelionė ir aiškesnės skaitmeninės paslaugos.',
+      demoInitiative2Title: 'Analitikos platforma',
+      demoInitiative2Copy: 'Vienas vaizdas sprendimams, rodikliams ir būsenos signalams.',
+      demoPlanTitle: 'Įgyvendinimo planas',
+      demoPlanCopy: 'Terminai, atsakomybės ir būsena paliekami tame pačiame kontekste.',
+      flowTitle: 'Nuo gairių prie vykdymo',
+      flowCopy: 'Platforma skirta ne tik strategijai sudėti, bet ir ją nuosekliai vykdyti.',
+      flow1Title: 'Sukurkite gairių struktūrą',
+      flow1Copy: 'Institucijos komanda siūlo, komentuoja ir derina gaires viename procese.',
+      flow2Title: 'Susiekite iniciatyvas',
+      flow2Copy: 'Iniciatyvos pririšamos prie gairių, todėl ryšiai nepasimeta tarp dokumentų.',
+      flow3Title: 'Pridėkite įgyvendinimo planą',
+      flow3Copy: 'Terminus, atsakomybes ir eigą matysite tame pačiame strategijos objekte.',
+      flow4Title: 'Publikuokite žemėlapį',
+      flow4Copy: 'Viešinkite skaidriai ir parodykite pažangą be papildomo rankinio suvedimo.',
       aboutTitle: 'Kodėl ši platforma sukurta',
-      finalKicker: 'Pasiruošę pamatyti gyvai?',
-      finalTitle: 'Atverkite aktyvų strategijos žemėlapį dabar.',
-      finalCopy: 'Aplankykite viešą strategijos erdvę ir pamatykite, kaip susijungia gairės bei iniciatyvos.',
-      finalCta: 'Atidaryti platforma',
-      footerCopy: 'digistrategy.eu - strateginio bendradarbiavimo platforma viešojo sektoriaus institucijoms.',
+      aboutVisualEyebrow: 'Strategija',
+      aboutVisualTitle: 'Nuo gairių iki viešo vykdymo vaizdo',
+      aboutVisualCopy: 'Vienas modelis planavimui, susiejimui ir pažangos parodymui.',
+      finalTitle: 'Atidarykite platformą dabar.',
+      finalCopy: 'Peržiūrėkite viešą strategijos erdvę ir pamatykite, kaip gairės bei iniciatyvos susijungia į vykdymą.',
+      finalPrimaryCta: 'Naršyti strategijų biblioteką',
+      finalSecondaryCta: 'Atidaryti platformą',
+      footerColumn1Title: 'Produktas',
+      footerColumn2Title: 'Platforma',
+      footerColumn3Title: 'Kontaktas',
+      footerLibraryLink: 'Strategijų biblioteka',
+      footerMapLink: 'Strategijos žemėlapis',
+      footerHowLink: 'Kaip tai veikia',
+      footerAboutLink: 'Apie platformą',
       footerAccessButton: 'Gauti prieigą',
-      footerAccessLead: 'arba susisiekite per LinkedIn:',
+      footerCopy: 'digistrategy.eu padeda institucijoms kurti strategiją, susieti gaires su iniciatyvomis ir viešinti pažangą.',
       accessRequestTitle: 'Prieigos užklausa',
-      accessRequestDescription: 'Pateikite trumpą informaciją ir peržiūrėsime jūsų užklausą.',
+      accessRequestDescription: 'Palikite kontaktus ir trumpą kontekstą. Peržiūrėsime užklausą ir susisieksime.',
       accessRequestInstitution: 'Institucija',
       accessRequestFullName: 'Vardas ir pavardė',
       accessRequestEmail: 'Darbinis el. paštas',
-      accessRequestPhone: 'Kontaktinis telefono numeris',
-      accessRequestNotes: 'Papildoma informacija (nebūtina)',
+      accessRequestPhone: 'Telefono numeris',
+      accessRequestNotes: 'Papildoma informacija',
       accessRequestSubmit: 'Pateikti užklausą',
-      accessRequestClose: 'Užverti',
-      accessRequestSuccess: 'Užklausa gauta. Užregistruota: {REQUEST_CODE}',
+      accessRequestClose: 'Uždaryti',
+      accessRequestSuccess: 'Užklausa gauta. Registracijos kodas: {REQUEST_CODE}',
       accessRequestError: 'Nepavyko pateikti užklausos. Pabandykite dar kartą.',
       accessRequestLinkedInLead: 'Taip pat galite susisiekti tiesiogiai per LinkedIn:'
     },
     en: {
-      metaTitle: 'digistrategy.eu | Public Strategy OS',
-      metaDescription: 'digistrategy.eu helps institutions co-create strategy, map initiatives, and publish transparent progress.',
-      navHow: 'How it works',
-      navWhy: 'Why it stands out',
-      navTrust: 'Trust',
-      navLaunch: 'Launch',
-      langLabel: 'Language',
-      headerCta: 'Open Platform',
-      heroKicker: 'Public Strategy OS',
-      heroTitle: 'From ideas to auditable execution for modern public institutions.',
-      heroCopy: 'Build guideline structures, connect initiatives, involve teams in transparent voting, and publish strategy maps your community can actually understand.',
-      heroPrimaryCta: 'Open Platform',
-      metricInstitutionsLabel: 'Active Institutions',
-      metricGuidelinesLabel: 'Active Guidelines',
-      metricInitiativesLabel: 'Active Initiatives',
-      glassInstitutionLabel: 'Institution',
-      glassMainTitle: 'Digital Strategy Cycle',
-      glassMainCopy: 'Guidelines, initiatives, ownership and status in one interactive map.',
-      glassStatsInstitutionsLabel: 'Active Institutions',
-      glassStatsGuidelinesLabel: 'Active Guidelines',
-      glassStatsInitiativesLabel: 'Active Initiatives',
-      glassOutcomeLabel: 'Outcome contract',
-      glassOutcomeTitle: 'Target + Deadline + Evidence',
-      glassAuditLabel: 'Auditability',
-      glassAuditTitle: 'Decision history visible end-to-end',
-      demoMapKicker: 'Interactive example',
-      demoMapTitle: 'Mini strategy map demo',
-      demoMapCopy: 'This simplified example shows how an institutional strategy links core guidelines with concrete delivery initiatives.',
-      demoLegendGuideline: 'Guideline',
-      demoLegendInitiative: 'Initiative',
-      demoInstitutionKind: 'Institution',
-      demoInstitutionTitle: 'Digital Strategy Cycle',
-      demoInstitutionCopy: 'Shared direction and priorities for the entire organization.',
-      demoGuidelineKind: 'Guideline',
-      demoGuideline1Title: 'Client experience improvement',
-      demoGuideline1Copy: 'Shorter service journey and clearer communication.',
-      demoGuideline2Title: 'Data governance strengthening',
-      demoGuideline2Copy: 'Common standards and higher-quality data for decisions.',
-      demoGuideline3Title: 'Digital service expansion',
-      demoGuideline3Copy: 'More self-service options and faster workflows.',
-      demoGuideline4Title: 'Capability development',
-      demoGuideline4Copy: 'Teams prepared to work with modern tools.',
-      demoInitiativeKind: 'Initiative',
-      demoInitiative1Title: 'Unified registration flow',
-      demoInitiative1Copy: 'Single entry point for citizen requests and support.',
-      demoInitiative2Title: 'Self-service modernization',
-      demoInitiative2Copy: 'Refreshed user experience across core services.',
-      demoInitiative3Title: 'Analytics platform',
-      demoInitiative3Copy: 'Data-driven decisions with measurable impact tracking.',
-      backboneKicker: 'European digital governance',
-      backboneTitle: 'The backbone for institutional strategy delivery.',
-      backboneJokeQuestion: 'Made in Europe for Europe?',
-      backboneMetric1Title: 'Multi-tenant',
-      backboneMetric1Copy: 'One platform, many institutions with role-separated governance.',
-      backboneMetric2Title: 'Audit trail',
-      backboneMetric2Copy: 'Decision context remains visible across the full strategy lifecycle.',
-      backboneMetric3Title: 'Public-ready',
-      backboneMetric3Copy: 'View-only embeds enable transparent publication with governance control.',
-      uspKicker: 'Distinct Value',
-      uspTitle: 'What makes this more than a planning board',
-      feature1Title: 'Accountability Timeline',
-      feature1Copy: 'Every strategic change is traceable: who changed what, when, and why.',
-      feature1Item1: 'Immutable operational history',
-      feature1Item2: 'Clear ownership handover',
-      feature1Item3: 'Fast governance reviews',
-      feature2Title: 'Outcome Contracts',
-      feature2Copy: 'Turn each initiative into measurable commitment with baseline, target, and deadline.',
-      feature2Item1: 'No vague implementation plans',
-      feature2Item2: 'Evidence-backed status updates',
-      feature2Item3: 'Priority decisions tied to impact',
-      feature3Title: 'AI strategy draft from PDF',
-      feature3Copy: 'Upload any relevant PDFs and the system will automatically generate an initial strategy draft with guideline and initiative structure.',
-      feature3Item1: 'Multiple PDFs in one generation run',
-      feature3Item2: 'Automatic guideline and initiative proposal',
-      feature3Item3: 'Fast starting point for team refinement',
-      flowKicker: 'Flow',
-      flowTitle: 'How institutions run strategy cycles',
-      flow1Title: 'Invite teams by role',
-      flow1Copy: 'Meta admin creates one-time invite links and assigns membership by institution.',
-      flow2Title: 'Shape guideline structure',
-      flow2Copy: 'Participants propose, discuss, vote and refine strategic directions collaboratively.',
-      flow3Title: 'Map initiatives to guidelines',
-      flow3Copy: 'Strategy map visualizes dependencies and reveals unassigned priorities instantly.',
-      flow4Title: 'Publish and monitor',
-      flow4Copy: 'Embed view-only maps publicly while admins monitor load and interaction metrics.',
-      trustKicker: 'Trust by design',
-      trustTitle: 'Built for institutional governance, not hype',
-      trustCopy: 'The platform is designed for accountable collaboration: role separation, archived history, controlled public visibility, and configurable operational safeguards.',
-      trust1Title: 'Collaborative workshop model',
-      trust1Copy: 'Participants comment, prioritize and shape guidelines through structured, visible workflows.',
-      trust2Title: 'Institutional memory by design',
-      trust2Copy: 'Archived users and historical decisions preserve continuity between strategy cycles.',
-      trust3Title: 'Operational visibility',
-      trust3Copy: 'Rate limiting and request monitoring help protect infrastructure under heavy load.',
-      aboutKicker: 'About the Platform',
-      aboutTitle: 'Why this platform exists',
-      finalKicker: 'Ready to see it live?',
-      finalTitle: 'Explore an active strategy map now.',
-      finalCopy: 'Open current public strategy workspace and review how guidelines and initiatives connect.',
-      finalCta: 'Open Platform',
-      footerCopy: 'digistrategy.eu - Strategy collaboration platform for public institutions.',
-      footerAccessButton: 'Request access',
-      footerAccessLead: 'or contact directly on LinkedIn:',
-      accessRequestTitle: 'Access request',
-      accessRequestDescription: 'Share short details and we will review your request.',
-      accessRequestInstitution: 'Institution',
-      accessRequestFullName: 'Full name',
-      accessRequestEmail: 'Work email',
-      accessRequestPhone: 'Contact phone number',
-      accessRequestNotes: 'Additional information (optional)',
-      accessRequestSubmit: 'Submit request',
-      accessRequestClose: 'Close',
-      accessRequestSuccess: 'Request received. Registered as: {REQUEST_CODE}',
-      accessRequestError: 'Failed to submit request. Please try again.',
-      accessRequestLinkedInLead: 'You can also contact directly on LinkedIn:'
+      metaTitle: 'digistrategy.eu | Strategy and execution in one living map',
+      metaDescription: 'digistrategy.eu helps institutions structure guidelines, connect initiatives, and manage delivery in one workspace.',
+      navHome: 'Home', navLayers: 'Layers', navDemo: 'Demo', navHow: 'How it works', navAbout: 'About', langLabel: 'Language',
+      headerCta: 'Open platform', heroEyebrow: 'Strategy workspace for the public sector', heroTitle: 'Strategy and execution in one living map.',
+      heroCopy: 'Library, guidelines, initiatives, and implementation plans in one shared workspace.', heroPrimaryCta: 'Browse strategy library',
+      heroSecondaryCta: 'Open platform', heroMetricInstitutionsLabel: 'Active institutions', heroMetricGuidelinesLabel: 'Active guidelines',
+      heroMetricInitiativesLabel: 'Active initiatives', heroNodeCore: 'Strategy map', heroNodeLibrary: 'Library', heroNodeGuidelines: 'Guidelines',
+      heroNodeInitiatives: 'Initiatives', heroNodePlan: 'Implementation plan', heroNodeMetrics: 'Metrics', heroNodePublish: 'Public map',
+      heroProjectLabel: 'INITIATIVE', heroProjectTitle: 'Unified service journey', heroProjectStatus: 'In progress',
+      heroSignalLabel: 'METRIC', heroSignalTitle: 'Resident satisfaction', heroSignalTrend: '+4.2%',
+      layersTitle: 'All strategy layers in one system', layersCopy: 'From public library content to guidelines, initiatives, and measurable execution.',
+      layer1Title: 'Strategy library', layer1Copy: 'Browse public strategies and import guidelines or initiatives into your moderated cycle.',
+      layer2Title: 'Guideline structure', layer2Copy: 'Build parent and child guideline structures without losing strategic clarity.',
+      layer3Title: 'Initiative mapping', layer3Copy: 'Every initiative links to at least one guideline, so relationships stay visible on the map.',
+      layer4Title: 'Implementation plan', layer4Copy: 'Assign dates, owners, and status to the same guidelines and initiatives.',
+      layer5Title: 'Metrics and monitoring', layer5Copy: 'Track progress through metrics, statuses, and timeline views in the same system.',
+      layer6Title: 'Public strategy map', layer6Copy: 'Publish a view-only map and show how strategy moves into delivery.',
+      trustTitle: 'A reliable foundation for strategy management.', trustCopy: 'Built for institutional use: separated by institution, with visible history and controlled publication.',
+      trust1Title: 'Multi-institution architecture', trust1Copy: 'One platform for many institutions with separate members, cycles, and role-based governance.',
+      trust2Title: 'Audit trail', trust2Copy: 'Decision context, proposals, and relationships remain visible when strategy moves into delivery.',
+      trust3Title: 'Ready for publication', trust3Copy: 'Public maps and embed mode let you share results without exposing internal governance.',
+      demoTitle: 'Strategy map demo', demoCopy: 'The same model keeps guidelines, initiatives, and implementation logic in one view.',
+      demoViewMap: 'Map', demoViewList: 'List', demoViewTable: 'Table', demoNodeCoreLabel: 'Strategy', demoNodeCoreTitle: 'Digital strategy cycle', demoNodeGuidelineLabel: 'Guideline',
+      demoNodeInitiativeLabel: 'Initiative', demoNodePlanLabel: 'Plan', demoGuideline1Title: 'Better public services',
+      demoGuideline1Copy: 'A shorter service journey and fewer unnecessary steps for end users.', demoGuideline2Title: 'Data governance',
+      demoGuideline2Copy: 'Shared standards, accountability, and metric visibility.', demoInitiative1Title: 'Self-service modernization',
+      demoInitiative1Copy: 'A cleaner user journey and more understandable digital services.', demoInitiative2Title: 'Analytics platform',
+      demoInitiative2Copy: 'One view for decisions, indicators, and delivery signals.', demoPlanTitle: 'Implementation plan',
+      demoPlanCopy: 'Dates, owners, and status remain in the same strategic context.', flowTitle: 'From guidelines to delivery',
+      flowCopy: 'The platform is meant not only to structure strategy, but to run it over time.', flow1Title: 'Build the guideline structure',
+      flow1Copy: 'Institution teams propose, discuss, and refine guidelines in one shared process.', flow2Title: 'Link initiatives',
+      flow2Copy: 'Initiatives are mapped to guidelines so relationships do not disappear across documents.', flow3Title: 'Add the implementation plan',
+      flow3Copy: 'Dates, owners, and execution status stay attached to the same strategy objects.', flow4Title: 'Publish the map',
+      flow4Copy: 'Share progress transparently without extra manual reporting work.', aboutTitle: 'Why this platform exists',
+      aboutVisualEyebrow: 'Strategy', aboutVisualTitle: 'From guidelines to a public execution view', aboutVisualCopy: 'One model for planning, linking work, and showing progress.',
+      finalTitle: 'Open the platform now.', finalCopy: 'Explore the public strategy workspace and see how guidelines and initiatives connect to delivery.',
+      finalPrimaryCta: 'Browse strategy library', finalSecondaryCta: 'Open platform', footerColumn1Title: 'Product', footerColumn2Title: 'Platform',
+      footerColumn3Title: 'Contact', footerLibraryLink: 'Strategy library', footerMapLink: 'Strategy map', footerHowLink: 'How it works',
+      footerAboutLink: 'About the platform', footerAccessButton: 'Request access',
+      footerCopy: 'digistrategy.eu helps institutions shape strategy, link guidelines to initiatives, and publish progress.',
+      accessRequestTitle: 'Access request', accessRequestDescription: 'Share your contact details and context. We will review the request and follow up.',
+      accessRequestInstitution: 'Institution', accessRequestFullName: 'Full name', accessRequestEmail: 'Work email', accessRequestPhone: 'Phone number',
+      accessRequestNotes: 'Additional information', accessRequestSubmit: 'Submit request', accessRequestClose: 'Close',
+      accessRequestSuccess: 'Request received. Registration code: {REQUEST_CODE}', accessRequestError: 'Failed to submit request. Please try again.',
+      accessRequestLinkedInLead: 'You can also reach out directly on LinkedIn:'
     }
   };
 
-  const LANDING_REFRESH_TRANSLATIONS = {
-    lt: {
-      metaTitle: 'digistrategy.ey | strategy operatyng system',
-      metaDescription: 'digistrategy.eu sujungia strategijų biblioteką, žemėlapį ir įgyvendinimo planą vienoje platformoje.',
-      headerCta: 'Open Platform',
-      heroTitle: 'Strategija ir įgyvendinimas viename gyvame žemėlapyje.',
-      heroCopy: 'Vieša biblioteka, žemėlapis ir įgyvendinimo planas vienoje darbo erdvėje.',
-      heroSecondaryCta: 'Naršyti strategijų biblioteką',
-      heroPrimaryCta: 'Atidaryti platformą',
-      heroFloatTitle1: 'Importuokite vieną gairę.',
-      heroFloatTitle2: 'Nustatykite datas ir atsakingus.',
-      heroFloatTitle3: 'Atkurkite vykdymą laike.',
-      heroObjectTitle: 'Gairės, iniciatyvos ir laikas viename objekte.',
-      heroObjectCopy: 'Vienas modelis struktūrai ir vykdymui.',
-      uspTitle: 'Visi strategijos sluoksniai vienoje sistemoje',
-      product1Title: 'Naršykite viešas strategijas ir importuokite tai, kas tinka.',
-      product1Copy: 'Perkelkite vieną gairę ar iniciatyvą į savo eigą su išsaugotu šaltiniu.',
-      product1Item1: 'Tik išorinėse strategijose',
-      product1Item2: 'Kuriamas pasiūlymas',
-      product1Item3: 'Išsaugoma kilmė',
-      product1VisualSource: 'Išorinė biblioteka',
-      product1VisualSourceItem: 'Use in my strategy',
-      product1VisualTarget: 'Tikslinis ciklas',
-      product1VisualTargetTitle: 'Importo pasiūlymas',
-      product1VisualTargetItem: 'Ryšys, tėvinė gairė, pastabos',
-      product2Title: 'Perjunkite į Plano režimą.',
-      product2Copy: 'Žemėlapis parodo vykdymą laiko eigoje.',
-      product3Title: 'Priskirkite datas ir atsakingus.',
-      product3Copy: 'Administratoriai redaguoja, kiti peržiūri tą patį planą.',
-      product4Title: 'Išlaikykite šaltinio kontekstą.',
-      product4Copy: 'Strateginiai ryšiai ir moderavimas saugo kilmę.',
-      product5Title: 'Pradėkite nuo PDF.',
-      product5Copy: 'Sugeneruokite juodraštį ir toliau tikslinkite su komanda.',
-      backboneTitle: 'Patikimas pagrindas strategijos valdymui.',
-      backboneJokeQuestion: 'Sukurta Europoje Europai?',
-      backboneMetric1Title: 'Daugiainstitucė architektūra',
-      backboneMetric1Copy: 'Viena platforma daugeliui institucijų.',
-      backboneMetric2Title: 'Audito pėdsakas',
-      backboneMetric2Copy: 'Sprendimų kontekstas išlieka matomas.',
-      backboneMetric3Title: 'Parengta viešinimui',
-      backboneMetric3Copy: 'View-only viešinimas su valdymo kontrole.',
-      demoMapTitle: 'Strategijų žemėlapio demonstracija',
-      demoMapCopy: 'Pavyzdys, kaip strategija susiejama su gairėmis ir iniciatyvomis.',
-      demoInstitutionTitle: 'Skaitmenizacijos strategijos ciklas',
-      demoInstitutionCopy: 'Bendra kryptis organizacijai.',
-      demoGuideline1Title: 'Klientų patirčių gerinimas',
-      demoGuideline1Copy: 'Trumpesnis paslaugų kelias.',
-      demoGuideline2Title: 'Duomenų valdysenos stiprinimas',
-      demoGuideline2Copy: 'Vieningi standartai sprendimams.',
-      demoGuideline3Title: 'Skaitmeninių paslaugų plėtra',
-      demoGuideline3Copy: 'Daugiau savitarnos.',
-      demoGuideline4Title: 'Kompetencijų ugdymas',
-      demoGuideline4Copy: 'Komandų pasirengimas.',
-      demoInitiative1Title: 'Vieningas registracijos kelias',
-      demoInitiative1Copy: 'Vienas langas užklausoms.',
-      demoInitiative2Title: 'Savitarnos modernizavimas',
-      demoInitiative2Copy: 'Atnaujinta patirtis.',
-      demoInitiative3Title: 'Analitikos platforma',
-      demoInitiative3Copy: 'Duomenimis grįsti sprendimai.',
-      flowTitle: 'Nuo krypties prie vykdymo',
-      flow1Title: 'Pakvieskite komandas pagal roles',
-      flow1Copy: 'Pakvieskite komandas pagal roles.',
-      flow2Title: 'Sugeneruokite arba importuokite struktūrą',
-      flow2Copy: 'Pradėkite nuo AI arba bibliotekos.',
-      flow3Title: 'Susiekite iniciatyvas ir strateginius ryšius',
-      flow3Copy: 'Sujunkite gaires, iniciatyvas ir ryšius.',
-      flow4Title: 'Priskirkite datas, atsakingus ir paleiskite planą',
-      flow4Copy: 'Priskirkite datas, atsakingus ir paleiskite planą.',
-      trustTitle: 'Sukurta instituciniam valdymui',
-      trustCopy: 'Aiškios rolės, istorija ir kontroliuojamas viešumas.',
-      trust1Title: 'Bendradarbystės modelis',
-      trust1Copy: 'Komentavimas, prioritetai ir gairės vienoje eigoje.',
-      trust2Title: 'Institucinė atmintis',
-      trust2Copy: 'Istorija išlieka tarp ciklų.',
-      trust3Title: 'Operacinis matomumas',
-      trust3Copy: 'Stebėsena padeda saugoti infrastruktūrą.',
-      aboutTitle: 'Kodėl ši platforma sukurta',
-      finalTitle: 'Atidarykite platformą dabar.',
-      finalCopy: 'Peržiūrėkite viešą strategijos erdvę gyvai.',
-      finalSecondaryCta: 'Naršyti strategijų biblioteką',
-      finalCta: 'Atidaryti platformą'
-    },
-    en: {
-      metaTitle: 'digistrategy.ey | strategy operatyng system',
-      metaDescription: 'digistrategy.eu combines a public strategy library, map, and implementation workspace in one platform.',
-      headerCta: 'Open Platform',
-      heroTitle: 'Strategy and execution on one living map.',
-      heroCopy: 'A public library, live map, and implementation workspace in one place.',
-      heroSecondaryCta: 'Browse Strategy Library',
-      heroPrimaryCta: 'Open Platform',
-      heroFloatTitle1: 'Import one guideline.',
-      heroFloatTitle2: 'Set dates and owners.',
-      heroFloatTitle3: 'Replay delivery over time.',
-      heroObjectTitle: 'Guidelines, initiatives, and time in one object.',
-      heroObjectCopy: 'One model for structure and execution.',
-      uspTitle: 'All strategy layers in one system',
-      product1Title: 'Browse public strategies and import what fits.',
-      product1Copy: 'Move one guideline or initiative into your own moderated workflow.',
-      product1Item1: 'Only in external strategies',
-      product1Item2: 'Creates a proposal',
-      product1Item3: 'Keeps source context',
-      product1VisualSource: 'External library',
-      product1VisualSourceItem: 'Use in my strategy',
-      product1VisualTarget: 'Target cycle',
-      product1VisualTargetTitle: 'Import proposal',
-      product1VisualTargetItem: 'Relation, parent, notes',
-      product2Title: 'Switch to Plan mode.',
-      product2Copy: 'The map reveals delivery over time.',
-      product3Title: 'Assign dates and owners.',
-      product3Copy: 'Admins edit. Everyone else views the same plan.',
-      product4Title: 'Keep source context visible.',
-      product4Copy: 'Strategic links and moderation preserve origin.',
-      product5Title: 'Start from PDFs.',
-      product5Copy: 'Generate a draft and refine it with the team.',
-      backboneTitle: 'A reliable backbone for strategy governance.',
-      backboneJokeQuestion: 'Made in Europe for Europe?',
-      backboneMetric1Title: 'Multi-tenant',
-      backboneMetric1Copy: 'One platform for many institutions.',
-      backboneMetric2Title: 'Audit trail',
-      backboneMetric2Copy: 'Decision context stays visible.',
-      backboneMetric3Title: 'Public-ready',
-      backboneMetric3Copy: 'View-only publishing with governance control.',
-      demoMapTitle: 'Strategy map demo',
-      demoMapCopy: 'An example of how strategy connects to guidelines and initiatives.',
-      demoInstitutionTitle: 'Digital strategy cycle',
-      demoInstitutionCopy: 'Shared direction for the organization.',
-      demoGuideline1Title: 'Client experience improvement',
-      demoGuideline1Copy: 'Shorter service journey.',
-      demoGuideline2Title: 'Data governance strengthening',
-      demoGuideline2Copy: 'Common standards for decisions.',
-      demoGuideline3Title: 'Digital service expansion',
-      demoGuideline3Copy: 'More self-service.',
-      demoGuideline4Title: 'Capability development',
-      demoGuideline4Copy: 'Teams ready to deliver.',
-      demoInitiative1Title: 'Unified registration flow',
-      demoInitiative1Copy: 'One entry point for requests.',
-      demoInitiative2Title: 'Self-service modernization',
-      demoInitiative2Copy: 'Refreshed user experience.',
-      demoInitiative3Title: 'Analytics platform',
-      demoInitiative3Copy: 'Data-driven decisions.',
-      flowTitle: 'From direction to delivery',
-      flow1Title: 'Invite teams by role',
-      flow1Copy: 'Invite teams by role.',
-      flow2Title: 'Generate or import the structure',
-      flow2Copy: 'Start from AI or the public library.',
-      flow3Title: 'Connect initiatives and strategic links',
-      flow3Copy: 'Connect guidelines, initiatives, and links.',
-      flow4Title: 'Assign dates, owners, and play the plan',
-      flow4Copy: 'Assign dates, owners, and play the plan.',
-      trustTitle: 'Built for institutional governance',
-      trustCopy: 'Clear roles, preserved history, and controlled visibility.',
-      trust1Title: 'Collaboration model',
-      trust1Copy: 'Comments, priorities, and guidelines in one workflow.',
-      trust2Title: 'Institutional memory',
-      trust2Copy: 'History remains visible across cycles.',
-      trust3Title: 'Operational visibility',
-      trust3Copy: 'Monitoring helps protect infrastructure.',
-      aboutTitle: 'Why this platform exists',
-      finalTitle: 'Open the platform now.',
-      finalCopy: 'Explore a public strategy workspace live.',
-      finalSecondaryCta: 'Browse Strategy Library',
-      finalCta: 'Open Platform'
-    }
-  };
+  let currentLang = DEFAULT_LANG;
+  let preferredStrategySlug = 'uzt';
+  let adminAboutTextByLang = { lt: '', en: '' };
+  let adminTranslations = { lt: {}, en: {} };
+  let heroState = { active: 'core', timer: 0, resume: 0, frame: 0, currentX: 0, currentY: 0, targetX: 0, targetY: 0, currentGX: 50, currentGY: 44, targetGX: 50, targetGY: 44 };
 
-  function normalizeLang(value) {
-    const normalized = String(value || '').trim().toLowerCase();
-    return SUPPORTED_LANGS.includes(normalized) ? normalized : '';
-  }
+  const bundle = () => ({ ...TRANSLATIONS[currentLang], ...(adminTranslations[currentLang] || {}) });
+  const text = (key) => bundle()[key] || '';
+  const setMetric = (node, value) => { if (node) node.textContent = Number.isFinite(value) ? String(value) : '--'; };
+  const setActiveHref = () => activeStrategyLinks.forEach((link) => link.setAttribute('href', `/index.html?institution=${encodeURIComponent(preferredStrategySlug)}&view=map&lang=${encodeURIComponent(currentLang)}`));
+  const escaped = (value) => String(value || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 
-  function readInitialLang() {
-    const params = new URLSearchParams(window.location.search);
-    const queryLang = normalizeLang(params.get('lang'));
-    if (queryLang) return queryLang;
-    const storageLang = normalizeLang(window.localStorage.getItem(STORAGE_LANG_KEY));
-    if (storageLang) return storageLang;
-    const browserLang = normalizeLang((window.navigator.language || '').slice(0, 2));
-    return browserLang || DEFAULT_LANG;
-  }
-
-  function syncLangToUrl(lang) {
-    const normalized = normalizeLang(lang) || DEFAULT_LANG;
-    const url = new URL(window.location.href);
-    url.searchParams.set('lang', normalized);
-    window.history.replaceState({}, '', url.toString());
-  }
-
-  function setLanguage(lang, { updateUrl = true } = {}) {
-    const normalized = normalizeLang(lang) || DEFAULT_LANG;
-    currentLang = normalized;
-    window.localStorage.setItem(STORAGE_LANG_KEY, normalized);
-    if (updateUrl) syncLangToUrl(normalized);
-    if (languageSelect) languageSelect.value = normalized;
-    applyTranslations();
-    updateNavigationLinks();
-  }
-
-  function getTranslationBundle(lang) {
-    const normalized = normalizeLang(lang) || DEFAULT_LANG;
-    const base = BASE_TRANSLATIONS[normalized] || BASE_TRANSLATIONS[DEFAULT_LANG];
-    const refresh = LANDING_REFRESH_TRANSLATIONS[normalized] || {};
-    const adminOverrides = adminLandingTranslations[normalized] || {};
-    return { ...base, ...refresh, ...adminOverrides };
-  }
-
-  function applyTranslations() {
-    const translations = getTranslationBundle(currentLang);
-    document.documentElement.lang = currentLang;
-    if (translations.metaTitle) document.title = translations.metaTitle;
-    if (metaDescription && translations.metaDescription) {
-      metaDescription.setAttribute('content', translations.metaDescription);
-    }
-
-    document.querySelectorAll('[data-i18n]').forEach((element) => {
-      const key = String(element.getAttribute('data-i18n') || '').trim();
-      if (!key) return;
-      const translated = translations[key];
-      if (typeof translated !== 'string' || !translated.trim()) return;
-      element.textContent = translated;
-    });
-    renderAboutSection();
-  }
-
-  function setActiveStrategyHref(slug) {
-    if (!slug) return;
-    const href = `/index.html?institution=${encodeURIComponent(slug)}&view=map&lang=${encodeURIComponent(currentLang)}`;
-    activeStrategyLinks.forEach((link) => {
-      link.setAttribute('href', href);
-    });
-  }
-
-  function updateNavigationLinks() {
-    setActiveStrategyHref(preferredStrategySlug);
-  }
-
-  function setMetricValue(element, value) {
-    if (!(element instanceof HTMLElement)) return;
-    element.textContent = Number.isFinite(value) ? String(value) : '--';
-  }
-
-  function applyInstitutionCount(value) {
-    setMetricValue(glassMetricInstitutions, value);
-  }
-
-  function applyActiveContentCounts({ totalGuidelines, totalInitiatives }) {
-    setMetricValue(glassMetricGuidelines, totalGuidelines);
-    setMetricValue(glassMetricInitiatives, totalInitiatives);
-  }
-
-  function escapeHtml(value) {
-    return String(value || '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-  }
-
-  function renderAboutBlocks(text) {
-    const normalized = String(text || '').replace(/\r\n/g, '\n').trim();
-    if (!normalized) return '';
-    const blocks = normalized.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
-    return blocks.map((block) => {
+  function renderAbout() {
+    if (!aboutRoot) return;
+    const value = String(adminAboutTextByLang[currentLang] || DEFAULT_ABOUT[currentLang]).trim();
+    aboutRoot.innerHTML = value.split(/\n{2,}/).map((block) => {
       const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
       if (!lines.length) return '';
-      const bulletLines = lines.filter((line) => /^[-*]\s+/.test(line));
-      if (bulletLines.length === lines.length) {
-        return `<article class="landing-about-block"><ul class="landing-about-list">${bulletLines.map((line) => `<li>${escapeHtml(line.replace(/^[-*]\s+/, ''))}</li>`).join('')}</ul></article>`;
-      }
-      return `<article class="landing-about-block"><p>${lines.map((line) => escapeHtml(line)).join('<br />')}</p></article>`;
+      if (lines.every((line) => /^[-*]\s+/.test(line))) return `<article class="landing-about-block"><ul class="landing-about-list">${lines.map((line) => `<li>${escaped(line.replace(/^[-*]\s+/, ''))}</li>`).join('')}</ul></article>`;
+      return `<article class="landing-about-block"><p>${lines.map(escaped).join('<br />')}</p></article>`;
     }).join('');
   }
 
-  function resolveAboutText() {
-    const adminText = String(adminAboutTextByLang[currentLang] || '').trim();
-    if (adminText) return adminText;
-    return currentLang === 'en' ? DEFAULT_ABOUT_TEXT_EN : DEFAULT_ABOUT_TEXT_LT;
+  function applyTranslations() {
+    document.title = text('metaTitle') || document.title;
+    if (metaDescription) metaDescription.content = text('metaDescription');
+    $$('[data-i18n]').forEach((node) => { const key = node.getAttribute('data-i18n'); if (key && text(key)) node.textContent = text(key); });
+    if (languageSelect) languageSelect.value = currentLang;
+    renderAbout();
+    setActiveHref();
   }
 
-  function renderAboutSection() {
-    if (!(landingAboutContent instanceof HTMLElement)) return;
-    landingAboutContent.innerHTML = renderAboutBlocks(resolveAboutText());
+  function setLanguage(lang, updateUrl) {
+    currentLang = SUPPORTED_LANGS.includes(lang) ? lang : DEFAULT_LANG;
+    try { localStorage.setItem(STORAGE_LANG_KEY, currentLang); } catch {}
+    if (updateUrl) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('lang', currentLang);
+      window.history.replaceState({}, '', url.toString());
+    }
+    applyTranslations();
   }
 
-  function closeAccessRequestModal() {
-    const current = document.getElementById('landingAccessRequestOverlay');
-    if (current) current.remove();
+  function initLanguage() {
+    const urlLang = new URL(window.location.href).searchParams.get('lang');
+    let lang = SUPPORTED_LANGS.includes(String(urlLang || '').toLowerCase()) ? String(urlLang).toLowerCase() : '';
+    if (!lang) try { const stored = String(localStorage.getItem(STORAGE_LANG_KEY) || '').toLowerCase(); if (SUPPORTED_LANGS.includes(stored)) lang = stored; } catch {}
+    setLanguage(lang || DEFAULT_LANG, true);
+    if (languageSelect) languageSelect.addEventListener('change', () => setLanguage(languageSelect.value, true));
   }
 
-  function openAccessRequestModal() {
-    const labels = getTranslationBundle(currentLang);
-    closeAccessRequestModal();
+  async function loadContentSettings() {
+    try {
+      const response = await fetch('/api/v1/public/content-settings', { credentials: 'same-origin' });
+      if (!response.ok) return;
+      const settings = (await response.json())?.contentSettings || {};
+      adminAboutTextByLang = { lt: String(settings.aboutTextLt || settings.aboutText || '').trim(), en: String(settings.aboutTextEn || '').trim() };
+      adminTranslations = {
+        lt: settings.landingTranslationsLt && typeof settings.landingTranslationsLt === 'object' ? settings.landingTranslationsLt : {},
+        en: settings.landingTranslationsEn && typeof settings.landingTranslationsEn === 'object' ? settings.landingTranslationsEn : {}
+      };
+      applyTranslations();
+    } catch {}
+  }
 
+  function toSummary(payload) {
+    const items = (Array.isArray(payload?.institutions) ? payload.institutions : []).map((item) => ({
+      slug: String(item?.slug || '').trim(),
+      hasCycle: Boolean(item?.cycle?.id),
+      guidelines: Array.isArray(item?.guidelines) ? item.guidelines.filter((entry) => String(entry?.status || '').toLowerCase() === 'active').length : 0,
+      initiatives: Array.isArray(item?.initiatives) ? item.initiatives.filter((entry) => String(entry?.status || '').toLowerCase() === 'active').length : 0
+    })).filter((item) => item.slug);
+    return {
+      items,
+      totalGuidelines: items.reduce((sum, item) => sum + item.guidelines, 0),
+      totalInitiatives: items.reduce((sum, item) => sum + item.initiatives, 0)
+    };
+  }
+
+  async function loadMetrics() {
+    try {
+      const institutionResponse = await fetch('/api/v1/public/institutions', { credentials: 'same-origin' });
+      if (institutionResponse.ok) {
+        const institutions = (await institutionResponse.json())?.institutions || [];
+        const active = institutions.filter((item) => String(item?.status || '').toLowerCase() === 'active');
+        setMetric(metrics.institutions, active.length || institutions.length || 0);
+        preferredStrategySlug = String((active.find((item) => item?.slug) || institutions.find((item) => item?.slug) || {}).slug || preferredStrategySlug);
+      }
+    } catch {
+      setMetric(metrics.institutions, null);
+    }
+
+    try {
+      const response = await fetch('/api/v1/public/strategy-map?source=app', { credentials: 'same-origin' });
+      if (!response.ok) throw new Error('strategy-map');
+      const summary = toSummary(await response.json());
+      const ranked = summary.items.filter((item) => item.hasCycle && (item.guidelines + item.initiatives) > 0).sort((a, b) => (b.guidelines + b.initiatives) - (a.guidelines + a.initiatives));
+      if (ranked[0]?.slug) preferredStrategySlug = ranked[0].slug;
+      setMetric(metrics.guidelines, summary.totalGuidelines);
+      setMetric(metrics.initiatives, summary.totalInitiatives);
+    } catch {
+      setMetric(metrics.guidelines, null);
+      setMetric(metrics.initiatives, null);
+    }
+
+    setActiveHref();
+  }
+
+  function showAccessModal() {
     const overlay = document.createElement('div');
     overlay.id = 'landingAccessRequestOverlay';
     overlay.className = 'landing-access-overlay';
     overlay.innerHTML = `
       <div class="landing-access-card">
         <div class="header-row">
-          <h3>${escapeHtml(labels.accessRequestTitle || 'Access request')}</h3>
-          <button type="button" class="btn btn-ghost" id="closeLandingAccessRequest">${escapeHtml(labels.accessRequestClose || 'Close')}</button>
+          <h3>${escaped(text('accessRequestTitle'))}</h3>
+          <button type="button" class="btn btn-secondary" id="closeLandingAccessRequest">${escaped(text('accessRequestClose'))}</button>
         </div>
-        <p class="prompt">${escapeHtml(labels.accessRequestDescription || '')}</p>
+        <p class="prompt">${escaped(text('accessRequestDescription'))}</p>
         <div id="landingAccessRequestStatus" class="landing-access-status" hidden></div>
         <form id="landingAccessRequestForm" class="landing-access-form">
-          <label for="landingAccessInstitution">${escapeHtml(labels.accessRequestInstitution || 'Institution')}</label>
+          <label for="landingAccessInstitution">${escaped(text('accessRequestInstitution'))}</label>
           <input id="landingAccessInstitution" type="text" name="institutionName" required />
-
-          <label for="landingAccessFullName">${escapeHtml(labels.accessRequestFullName || 'Full name')}</label>
+          <label for="landingAccessFullName">${escaped(text('accessRequestFullName'))}</label>
           <input id="landingAccessFullName" type="text" name="fullName" required />
-
-          <label for="landingAccessEmail">${escapeHtml(labels.accessRequestEmail || 'Work email')}</label>
+          <label for="landingAccessEmail">${escaped(text('accessRequestEmail'))}</label>
           <input id="landingAccessEmail" type="email" name="workEmail" required />
-
-          <label for="landingAccessPhone">${escapeHtml(labels.accessRequestPhone || 'Contact phone number')}</label>
+          <label for="landingAccessPhone">${escaped(text('accessRequestPhone'))}</label>
           <input id="landingAccessPhone" type="text" name="phone" required />
-
-          <label for="landingAccessNotes">${escapeHtml(labels.accessRequestNotes || 'Additional information (optional)')}</label>
+          <label for="landingAccessNotes">${escaped(text('accessRequestNotes'))}</label>
           <textarea id="landingAccessNotes" name="notes" rows="4"></textarea>
-
           <div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
             <label for="landingAccessOrgWebsite">Organization website</label>
             <input id="landingAccessOrgWebsite" type="text" name="organizationWebsite" tabindex="-1" autocomplete="off" />
           </div>
-
-          <button type="submit" class="btn btn-primary">${escapeHtml(labels.accessRequestSubmit || 'Submit request')}</button>
+          <button type="submit" class="btn btn-primary">${escaped(text('accessRequestSubmit'))}</button>
         </form>
-        <p class="landing-access-linkedin">
-          ${escapeHtml(labels.accessRequestLinkedInLead || '')}
-          <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas Lukosevičius</a>.
-        </p>
-      </div>
-    `;
+        <p class="landing-access-linkedin">${escaped(text('accessRequestLinkedInLead'))} <a href="https://www.linkedin.com/in/lukaslukosevicius/" target="_blank" rel="noopener noreferrer">Lukas Lukosevičius</a>.</p>
+      </div>`;
     document.body.appendChild(overlay);
 
-    const closeButton = overlay.querySelector('#closeLandingAccessRequest');
-    const form = overlay.querySelector('#landingAccessRequestForm');
-    const statusNode = overlay.querySelector('#landingAccessRequestStatus');
+    const statusNode = $('#landingAccessRequestStatus', overlay);
+    $('#closeLandingAccessRequest', overlay)?.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (event) => { if (event.target === overlay) overlay.remove(); });
 
-    function showStatus(message, isError = false) {
-      if (!(statusNode instanceof HTMLElement)) return;
-      statusNode.textContent = String(message || '').trim();
-      statusNode.hidden = false;
-      statusNode.classList.toggle('is-error', Boolean(isError));
-      statusNode.classList.toggle('is-success', !isError);
-    }
-
-    closeButton?.addEventListener('click', closeAccessRequestModal);
-    overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) closeAccessRequestModal();
-    });
-
-    form?.addEventListener('submit', async (event) => {
+    $('#landingAccessRequestForm', overlay)?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const submitButton = form.querySelector('button[type="submit"]');
-      if (!(submitButton instanceof HTMLButtonElement)) return;
-      submitButton.disabled = true;
-      if (statusNode instanceof HTMLElement) {
-        statusNode.hidden = true;
-        statusNode.textContent = '';
-      }
-
+      const form = event.currentTarget;
+      const submit = $('button[type="submit"]', form);
+      if (submit) submit.disabled = true;
+      if (statusNode) { statusNode.hidden = true; statusNode.textContent = ''; }
       try {
         const fd = new FormData(form);
-        const payload = {
-          institutionName: String(fd.get('institutionName') || '').trim(),
-          fullName: String(fd.get('fullName') || '').trim(),
-          workEmail: String(fd.get('workEmail') || '').trim(),
-          phone: String(fd.get('phone') || '').trim(),
-          notes: String(fd.get('notes') || '').trim(),
-          organizationWebsite: String(fd.get('organizationWebsite') || '').trim()
-        };
-
+        const payload = Object.fromEntries(fd.entries());
         const response = await fetch('/api/v1/public/access-requests', {
           method: 'POST',
           credentials: 'same-origin',
@@ -658,358 +362,156 @@
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(String(data?.error || 'request failed'));
-
-        const requestCode = String(data?.requestCode || '').trim() || '-';
-        const successTemplate = String(labels.accessRequestSuccess || 'Request received: {REQUEST_CODE}');
-        showStatus(successTemplate.replace('{REQUEST_CODE}', requestCode), false);
+        if (statusNode) {
+          statusNode.hidden = false;
+          statusNode.className = 'landing-access-status is-success';
+          statusNode.textContent = text('accessRequestSuccess').replace('{REQUEST_CODE}', String(data?.requestCode || '-'));
+        }
         form.reset();
-      } catch (_error) {
-        showStatus(String(labels.accessRequestError || 'Failed to submit request.'), true);
+      } catch {
+        if (statusNode) {
+          statusNode.hidden = false;
+          statusNode.className = 'landing-access-status is-error';
+          statusNode.textContent = text('accessRequestError');
+        }
       } finally {
-        submitButton.disabled = false;
+        if (submit) submit.disabled = false;
       }
     });
   }
 
-  function toStrategySummary(payload) {
-    const institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
-    const items = institutions
-      .map((item) => {
-        const slug = String(item?.slug || '').trim();
-        if (!slug) return null;
-        const guidelineCount = Array.isArray(item?.guidelines)
-          ? item.guidelines.filter((entry) => String(entry?.status || '').toLowerCase() === 'active').length
-          : 0;
-        const initiativeCount = Array.isArray(item?.initiatives)
-          ? item.initiatives.filter((entry) => String(entry?.status || '').toLowerCase() === 'active').length
-          : 0;
-        return {
-          slug,
-          hasCycle: Boolean(item?.cycle?.id),
-          guidelineCount,
-          initiativeCount,
-          score: guidelineCount + initiativeCount
-        };
-      })
-      .filter(Boolean);
-    return {
-      items,
-      totalGuidelines: items.reduce((sum, item) => sum + item.guidelineCount, 0),
-      totalInitiatives: items.reduce((sum, item) => sum + item.initiativeCount, 0)
-    };
-  }
-
-  async function loadPreferredSlugWithContent() {
-    try {
-      const response = await fetch('/api/v1/public/strategy-map?source=app', {
-        method: 'GET',
-        credentials: 'same-origin'
-      });
-      if (!response.ok) return { preferredSlug: '', totalGuidelines: null, totalInitiatives: null };
-      const payload = await response.json();
-      const summary = toStrategySummary(payload);
-      const mapped = summary.items;
-      if (!mapped.length) {
-        return { preferredSlug: '', totalGuidelines: 0, totalInitiatives: 0 };
-      }
-
-      const candidates = mapped
-        .filter((item) => item.hasCycle && item.score > 0)
-        .sort((left, right) => right.score - left.score);
-      if (candidates.length) {
-        return {
-          preferredSlug: candidates[0].slug,
-          totalGuidelines: summary.totalGuidelines,
-          totalInitiatives: summary.totalInitiatives
-        };
-      }
-
-      const withCycle = mapped.find((item) => item.hasCycle);
-      return {
-        preferredSlug: withCycle?.slug || '',
-        totalGuidelines: summary.totalGuidelines,
-        totalInitiatives: summary.totalInitiatives
-      };
-    } catch {
-      return { preferredSlug: '', totalGuidelines: null, totalInitiatives: null };
-    }
-  }
-
-  async function loadPublicInstitutions() {
-    try {
-      const response = await fetch('/api/v1/public/institutions', {
-        method: 'GET',
-        credentials: 'same-origin'
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json();
-      const institutions = Array.isArray(payload?.institutions) ? payload.institutions : [];
-      const active = institutions.filter((item) => String(item?.status || '').toLowerCase() === 'active');
-      publicInstitutions = (active.length ? active : institutions).map((item) => ({
-        id: String(item?.id || '').trim(),
-        name: String(item?.name || '').trim(),
-        slug: String(item?.slug || '').trim(),
-        status: String(item?.status || '').trim().toLowerCase()
-      })).filter((item) => item.id && item.name);
-      applyInstitutionCount(active.length || institutions.length || 0);
-
-      const preferred = active.find((item) => String(item?.slug || '').trim())
-        || institutions.find((item) => String(item?.slug || '').trim())
-        || null;
-
-      const contentSummary = await loadPreferredSlugWithContent();
-      applyActiveContentCounts(contentSummary);
-      if (contentSummary.preferredSlug) preferredStrategySlug = contentSummary.preferredSlug;
-      else if (preferred?.slug) preferredStrategySlug = String(preferred.slug);
-      updateNavigationLinks();
-    } catch {
-      applyInstitutionCount(null);
-      applyActiveContentCounts({ totalGuidelines: null, totalInitiatives: null });
-      preferredStrategySlug = 'uzt';
-      publicInstitutions = [];
-      updateNavigationLinks();
-    }
-  }
-
-  async function loadAdminLandingTranslations() {
-    try {
-      const response = await fetch('/api/v1/public/content-settings', {
-        method: 'GET',
-        credentials: 'same-origin'
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json();
-      const settings = payload?.contentSettings && typeof payload.contentSettings === 'object'
-        ? payload.contentSettings
-        : {};
-      const ltRaw = settings?.landingTranslationsLt;
-      const enRaw = settings?.landingTranslationsEn;
-      adminAboutTextByLang.lt = String(settings?.aboutTextLt || settings?.aboutText || '').trim();
-      adminAboutTextByLang.en = String(settings?.aboutTextEn || '').trim();
-      adminLandingTranslations.lt = ltRaw && typeof ltRaw === 'object' && !Array.isArray(ltRaw) ? ltRaw : {};
-      adminLandingTranslations.en = enRaw && typeof enRaw === 'object' && !Array.isArray(enRaw) ? enRaw : {};
-      applyTranslations();
-    } catch {
-      adminAboutTextByLang.lt = '';
-      adminAboutTextByLang.en = '';
-      adminLandingTranslations.lt = {};
-      adminLandingTranslations.en = {};
-      renderAboutSection();
-    }
+  function initAccessButtons() {
+    accessRequestButtons.forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); $('#landingAccessRequestOverlay')?.remove(); showAccessModal(); }));
   }
 
   function initReveal() {
-    const items = Array.from(document.querySelectorAll('.section-reveal'));
-    if (!items.length) return;
-
-    if (!('IntersectionObserver' in window)) {
-      items.forEach((item) => item.classList.add('revealed'));
-      return;
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('revealed');
-        observer.unobserve(entry.target);
-      });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.1 });
-
-    items.forEach((item) => observer.observe(item));
+    const sections = $$('.section-reveal');
+    if (!('IntersectionObserver' in window)) return sections.forEach((section) => section.classList.add('revealed'));
+    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('revealed');
+      observer.unobserve(entry.target);
+    }), { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    sections.forEach((section) => observer.observe(section));
   }
 
-  function initNavScroll() {
-    if (!navLinks.length) return;
-
-    const sections = navLinks
-      .map((link) => {
-        const href = String(link.getAttribute('href') || '').trim();
-        if (!href.startsWith('#')) return null;
-        const element = document.querySelector(href);
-        if (!(element instanceof HTMLElement)) return null;
-        return { link, element };
-      })
-      .filter(Boolean)
-      .sort((left, right) => left.element.offsetTop - right.element.offsetTop);
-
-    if (!sections.length) return;
-
-    const clearActive = () => {
-      navLinks.forEach((link) => link.classList.remove('active'));
-    };
-
-    const setActive = (link) => {
-      clearActive();
-      if (link) link.classList.add('active');
-    };
-
-    const updateActiveByScroll = () => {
-      const headerOffset = 144;
-      const scrollTop = window.scrollY || window.pageYOffset || 0;
-      const firstSectionTop = sections[0].element.offsetTop;
-
-      if (scrollTop < Math.max(120, firstSectionTop - headerOffset - 80)) {
-        clearActive();
-        return;
-      }
-
-      const probe = scrollTop + headerOffset;
-      let current = null;
-      sections.forEach((section) => {
-        if (section.element.offsetTop <= probe) current = section;
-      });
-
+  function initNav() {
+    const sections = navLinks.map((link) => ({ link, element: $(link.getAttribute('href')) })).filter((item) => item.element);
+    const setActive = (targetLink) => navLinks.forEach((link) => link.classList.toggle('active', link === targetLink));
+    const sync = () => {
+      const probe = (window.scrollY || window.pageYOffset || 0) + 140;
+      let current = sections[0];
+      sections.forEach((section) => { if (section.element.offsetTop <= probe) current = section; });
       setActive(current?.link || null);
     };
-
-    navLinks.forEach((link) => {
-      link.addEventListener('click', (event) => {
-        const href = String(link.getAttribute('href') || '').trim();
-        if (!href.startsWith('#')) return;
-        const target = document.querySelector(href);
-        if (!(target instanceof HTMLElement)) return;
-        event.preventDefault();
-        setActive(link);
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
-
-    window.addEventListener('scroll', updateActiveByScroll, { passive: true });
-    window.addEventListener('resize', updateActiveByScroll);
-    updateActiveByScroll();
+    scrollLinks.forEach((link) => link.addEventListener('click', (event) => {
+      const target = $(link.getAttribute('href'));
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (navLinks.includes(link)) setActive(link);
+    }));
+    window.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+    sync();
   }
 
-  function initHeaderMotion() {
-    const header = document.querySelector('.landing-header');
-    if (!(header instanceof HTMLElement)) return;
-
+  function initHeader() {
+    const header = $('.landing-header');
+    if (!header) return;
     let lastY = window.scrollY || window.pageYOffset || 0;
     let ticking = false;
-    const threshold = 180;
-
     const update = () => {
       const y = window.scrollY || window.pageYOffset || 0;
-      const delta = y - lastY;
-      const goingUp = delta < -2;
-      const goingDown = delta > 2;
-      const pastThreshold = y > threshold;
-
-      header.classList.toggle('is-floating', pastThreshold);
-
-      if (!pastThreshold || goingUp) {
-        header.classList.add('is-visible');
-      } else if (goingDown) {
-        header.classList.remove('is-visible');
-      }
-
+      const past = y > 180;
+      header.classList.toggle('is-floating', past);
+      if (!past || y < lastY || y < 40) header.classList.add('is-visible');
+      else if (y > lastY) header.classList.remove('is-visible');
       lastY = y;
       ticking = false;
     };
-
-    const requestUpdate = () => {
-      if (ticking) return;
-      ticking = true;
-      window.requestAnimationFrame(update);
-    };
-
-    window.addEventListener('scroll', requestUpdate, { passive: true });
-    window.addEventListener('resize', requestUpdate);
+    const request = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
+    window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('resize', request);
     update();
   }
 
-  function initHeroScene() {
-    const scene = document.querySelector('[data-hero-scene]');
-    if (!(scene instanceof HTMLElement)) return;
+  function setHeroActive(id) {
+    heroState.active = HERO_SEQUENCE.includes(id) ? id : 'core';
+    if (heroScene) heroScene.setAttribute('data-active-node', heroState.active);
+    heroNodes.forEach((node) => node.classList.toggle('is-active', node.getAttribute('data-hero-node') === heroState.active));
+    heroLines.forEach((line) => line.classList.toggle('is-active', line.getAttribute('data-from') === heroState.active || line.getAttribute('data-to') === heroState.active));
+  }
 
-    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
+  function clearHeroTimers() {
+    if (heroState.timer) clearInterval(heroState.timer);
+    if (heroState.resume) clearTimeout(heroState.resume);
+    heroState.timer = 0;
+    heroState.resume = 0;
+  }
 
-    let targetX = 0;
-    let targetY = 0;
-    let currentX = 0;
-    let currentY = 0;
-    let targetGlowX = 50;
-    let targetGlowY = 34;
-    let currentGlowX = 50;
-    let currentGlowY = 34;
-    let frameId = 0;
+  function startHeroRotation() {
+    clearHeroTimers();
+    heroState.timer = setInterval(() => {
+      const index = HERO_SEQUENCE.indexOf(heroState.active);
+      setHeroActive(HERO_SEQUENCE[(index + 1) % HERO_SEQUENCE.length]);
+    }, HERO_DELAY);
+  }
 
-    const render = () => {
-      currentX += (targetX - currentX) * 0.12;
-      currentY += (targetY - currentY) * 0.12;
-      currentGlowX += (targetGlowX - currentGlowX) * 0.12;
-      currentGlowY += (targetGlowY - currentGlowY) * 0.12;
+  function requestHeroFrame() {
+    if (heroState.frame || !heroScene) return;
+    heroState.frame = requestAnimationFrame(function render() {
+      heroState.currentX += (heroState.targetX - heroState.currentX) * 0.12;
+      heroState.currentY += (heroState.targetY - heroState.currentY) * 0.12;
+      heroState.currentGX += (heroState.targetGX - heroState.currentGX) * 0.12;
+      heroState.currentGY += (heroState.targetGY - heroState.currentGY) * 0.12;
+      heroScene.style.setProperty('--hero-shift-x', `${heroState.currentX.toFixed(2)}px`);
+      heroScene.style.setProperty('--hero-shift-y', `${heroState.currentY.toFixed(2)}px`);
+      heroScene.style.setProperty('--hero-glow-x', `${heroState.currentGX.toFixed(2)}%`);
+      heroScene.style.setProperty('--hero-glow-y', `${heroState.currentGY.toFixed(2)}%`);
+      const moving = Math.abs(heroState.targetX - heroState.currentX) > 0.08 || Math.abs(heroState.targetY - heroState.currentY) > 0.08 || Math.abs(heroState.targetGX - heroState.currentGX) > 0.12 || Math.abs(heroState.targetGY - heroState.currentGY) > 0.12;
+      if (moving) heroState.frame = requestAnimationFrame(render);
+      else heroState.frame = 0;
+    });
+  }
 
-      scene.style.setProperty('--scene-tilt-y', `${currentX.toFixed(2)}deg`);
-      scene.style.setProperty('--scene-tilt-x', `${currentY.toFixed(2)}deg`);
-      scene.style.setProperty('--scene-glow-x', `${currentGlowX.toFixed(2)}%`);
-      scene.style.setProperty('--scene-glow-y', `${currentGlowY.toFixed(2)}%`);
-
-      const moving = Math.abs(targetX - currentX) > 0.02
-        || Math.abs(targetY - currentY) > 0.02
-        || Math.abs(targetGlowX - currentGlowX) > 0.08
-        || Math.abs(targetGlowY - currentGlowY) > 0.08;
-
-      if (moving) {
-        frameId = window.requestAnimationFrame(render);
-      } else {
-        frameId = 0;
-      }
-    };
-
-    const requestRender = () => {
-      if (frameId) return;
-      frameId = window.requestAnimationFrame(render);
-    };
-
-    scene.addEventListener('pointermove', (event) => {
-      const bounds = scene.getBoundingClientRect();
-      if (!bounds.width || !bounds.height) return;
-      const px = (event.clientX - bounds.left) / bounds.width;
-      const py = (event.clientY - bounds.top) / bounds.height;
-      const nx = (px - 0.5) * 2;
-      const ny = (py - 0.5) * 2;
-      targetX = nx * 12;
-      targetY = ny * -9;
-      targetGlowX = 50 + (nx * 18);
-      targetGlowY = 34 + (ny * 16);
-      requestRender();
+  function initHero() {
+    if (!heroScene || !heroNodes.length) return;
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setHeroActive('core');
+    heroNodes.forEach((node) => node.addEventListener('mouseenter', () => {
+      clearHeroTimers();
+      setHeroActive(node.getAttribute('data-hero-node'));
+      heroState.resume = setTimeout(startHeroRotation, HERO_DELAY + 600);
+    }));
+    if (reduced) return;
+    startHeroRotation();
+    heroScene.addEventListener('pointermove', (event) => {
+      const bounds = heroScene.getBoundingClientRect();
+      const nx = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
+      const ny = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+      heroState.targetX = nx * 12;
+      heroState.targetY = ny * 10;
+      heroState.targetGX = 50 + (nx * 18);
+      heroState.targetGY = 44 + (ny * 16);
+      requestHeroFrame();
     }, { passive: true });
-
-    scene.addEventListener('pointerleave', () => {
-      targetX = 0;
-      targetY = 0;
-      targetGlowX = 50;
-      targetGlowY = 34;
-      requestRender();
+    heroScene.addEventListener('pointerleave', () => {
+      heroState.targetX = 0;
+      heroState.targetY = 0;
+      heroState.targetGX = 50;
+      heroState.targetGY = 44;
+      requestHeroFrame();
     });
   }
 
-  function initLanguageSwitch() {
-    if (!(languageSelect instanceof HTMLSelectElement)) return;
-    languageSelect.addEventListener('change', () => {
-      setLanguage(languageSelect.value, { updateUrl: true });
-    });
-  }
-
-  function initAccessRequestButtons() {
-    if (!accessRequestButtons.length) return;
-    accessRequestButtons.forEach((button) => {
-      button.addEventListener('click', (event) => {
-        event.preventDefault();
-        openAccessRequestModal();
-      });
-    });
-  }
-
-  currentLang = readInitialLang();
-  initLanguageSwitch();
-  setLanguage(currentLang, { updateUrl: true });
-  initHeaderMotion();
-  initHeroScene();
-  loadAdminLandingTranslations();
-  loadPublicInstitutions();
-  initAccessRequestButtons();
+  initLanguage();
+  initHeader();
   initReveal();
-  initNavScroll();
+  initNav();
+  initHero();
+  initAccessButtons();
+  renderAbout();
+  loadContentSettings();
+  loadMetrics();
 })();
