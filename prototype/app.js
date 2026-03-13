@@ -2610,6 +2610,11 @@ function strategySwitcherCardMarkup(options = {}) {
             <strong title="${escapeHtml(strategyTitle)}">${escapeHtml(strategyTitle)}</strong>
           </span>
           ${voteBudgetMarkup}
+          <span class="strategy-switcher-caret" aria-hidden="true">
+            <svg viewBox="0 0 20 20" class="strategy-switcher-caret-svg">
+              <path d="M5 7.5l5 5 5-5"></path>
+            </svg>
+          </span>
         </div>
       </button>
       <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>

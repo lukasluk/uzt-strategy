@@ -582,6 +582,7 @@ async function buildViewPayload(query, snapshot, view, entityId) {
 
 function buildPromptPayload(snapshot, viewPayload) {
   const cycle = snapshot?.cycle || {};
+  const responseLanguage = String(viewPayload?.responseLanguage || 'lt').trim().toLowerCase() === 'en' ? 'en' : 'lt';
   return {
     reviewFocus: {
       contentWeight: '90%',
@@ -603,6 +604,7 @@ function buildPromptPayload(snapshot, viewPayload) {
       missionText: cleanText(cycle.mission_text, 600),
       visionText: cleanText(cycle.vision_text, 600)
     },
+    requestedResponseLanguage: responseLanguage,
     page: viewPayload
   };
 }
@@ -610,8 +612,9 @@ function buildPromptPayload(snapshot, viewPayload) {
 function buildSystemPrompt(locale) {
   const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
   const languageRule = isEnglish
-    ? 'Return every string in English.'
-    : 'Return every string in Lithuanian.';
+    ? 'Return every string in English. Use English even if the source strategy content is Lithuanian.'
+    : 'Return every string in Lithuanian. Use Lithuanian even if the source strategy content or previous analyses contain English.';
+  const requiredLanguageCode = isEnglish ? 'en' : 'lt';
   return [
     'You are Clarity Gremlin, a strict but useful strategy content reviewer for public-sector strategy workspaces.',
     'Review only the provided page context. Do not invent data, entities, votes, dates, or relationships.',
@@ -627,8 +630,11 @@ function buildSystemPrompt(locale) {
     'Good example: "The service accessibility theme is defined, but the strategy says little about channel integration, inclusion, or measurable service quality outcomes."',
     'When mentioning technical details, do so only if they materially weaken execution readiness.',
     languageRule,
+    `The selected UI language is ${requiredLanguageCode}. You must answer in that selected language, not in the source document language.`,
+    `Set responseLanguage to exactly "${requiredLanguageCode}".`,
     'Return only valid JSON with this exact schema:',
     '{',
+    `  "responseLanguage": "${requiredLanguageCode}",`,
     '  "pageLabel": "string",',
     '  "score": 1,',
     '  "summary": "string",',
@@ -690,6 +696,7 @@ function buildUserPrompt(payload) {
 function normalizeAnalysis(raw) {
   const value = raw && typeof raw === 'object' ? raw : {};
   return {
+    responseLanguage: String(value.responseLanguage || '').trim().toLowerCase(),
     pageLabel: cleanText(value.pageLabel, 120),
     score: clampScore(value.score),
     summary: cleanText(value.summary, 900),
@@ -733,7 +740,11 @@ function normalizeAnalysis(raw) {
   };
 }
 
-function validateAnalysis(value) {
+function validateAnalysis(value, locale = 'lt') {
+  const requiredLanguage = String(locale || '').trim().toLowerCase() === 'en' ? 'en' : 'lt';
+  if (value.responseLanguage !== requiredLanguage) {
+    throw new Error('ai response language mismatch');
+  }
   if (!Number.isInteger(value.score) || value.score < 1 || value.score > 10) {
     throw new Error('ai response invalid');
   }
@@ -765,7 +776,10 @@ async function analyzeStrategyPage({
   }
 
   const viewPayload = await buildViewPayload(query, snapshot, normalizedView, entityId);
-  const promptPayload = buildPromptPayload(snapshot, viewPayload);
+  const promptPayload = buildPromptPayload(snapshot, {
+    ...viewPayload,
+    responseLanguage: locale
+  });
   const response = await requestPolicyAlignmentJson({
     ...aiConfig,
     systemText: buildSystemPrompt(locale),
@@ -774,7 +788,7 @@ async function analyzeStrategyPage({
   });
 
   const analysis = normalizeAnalysis(response?.parsed);
-  validateAnalysis(analysis);
+  validateAnalysis(analysis, locale);
 
   return {
     model: response?.model || null,
