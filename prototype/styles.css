@@ -1544,6 +1544,14 @@ textarea {
   border-left-width: 6px;
   padding-left: 14px;
 }
+.relationship-parent-slot .guideline-card .card-top h4 {
+  font-size: 32px;
+  line-height: 1.08;
+}
+.relationship-parent-slot .guideline-card .card-top p {
+  font-size: 26px;
+  line-height: 1.24;
+}
 .relationship-child-stack {
   position: relative;
   display: grid;
@@ -1739,6 +1747,17 @@ textarea {
   margin-top: 12px;
 }
 
+.detail-related-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.detail-related-grid .detail-related-group {
+  margin-top: 0;
+}
+
 .detail-related-group-initiative {
   margin-top: 8px;
 }
@@ -1777,6 +1796,12 @@ textarea {
 .detail-related-link:focus-visible {
   outline: 2px solid rgba(63, 143, 230, 0.35);
   outline-offset: 1px;
+}
+
+@media (max-width: 920px) {
+  .detail-related-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .mini-list {

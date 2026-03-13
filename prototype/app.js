@@ -4762,17 +4762,57 @@ function resolveGuidelineRelatedItems(guideline) {
   };
 }
 
-function renderRelatedGuidelineSectionMarkup({
+function resolveGuidelineRelatedInitiatives(guideline) {
+  const item = guideline && typeof guideline === 'object' ? guideline : null;
+  if (!item) {
+    return {
+      heading: langText('Susijusios iniciatyvos', 'Associated initiatives'),
+      emptyLabel: langText('Susietu iniciatyvu nerasta.', 'No linked initiatives found.'),
+      items: []
+    };
+  }
+
+  const guidelineIds = new Set();
+  const currentGuidelineId = String(item.id || '').trim();
+  if (currentGuidelineId) guidelineIds.add(currentGuidelineId);
+
+  if (normalizeGuidelineRelation(item.relationType) === 'parent') {
+    (Array.isArray(state.guidelines) ? state.guidelines : []).forEach((candidate) => {
+      if (!candidate || typeof candidate !== 'object') return;
+      if (normalizeGuidelineRelation(candidate.relationType) !== 'child') return;
+      if (String(candidate.parentGuidelineId || '').trim() !== currentGuidelineId) return;
+      const childId = String(candidate.id || '').trim();
+      if (childId) guidelineIds.add(childId);
+    });
+  }
+
+  const initiatives = sortCardsByTitle((Array.isArray(state.initiatives) ? state.initiatives : []).filter((initiative) => {
+    const linkedGuidelineIds = resolveInitiativeGuidelineIds(initiative);
+    return linkedGuidelineIds.some((guidelineId) => guidelineIds.has(String(guidelineId || '').trim()));
+  }));
+
+  return {
+    heading: langText('Susijusios iniciatyvos', 'Associated initiatives'),
+    emptyLabel: langText('Susietu iniciatyvu nerasta.', 'No linked initiatives found.'),
+    items: initiatives
+  };
+}
+
+function renderRelatedDetailSectionMarkup({
   heading,
   emptyLabel,
   items,
   showHeading = true,
   sectionClass = '',
-  headingClass = ''
+  headingClass = '',
+  action = 'open-related-guideline-detail',
+  idAttribute = 'data-guideline-id'
 }) {
   const cards = Array.isArray(items) ? items : [];
   const safeSectionClass = String(sectionClass || '').trim();
   const safeHeadingClass = String(headingClass || '').trim();
+  const safeAction = String(action || 'open-related-guideline-detail').trim() || 'open-related-guideline-detail';
+  const safeIdAttribute = String(idAttribute || 'data-guideline-id').trim() || 'data-guideline-id';
   return `
     <section class="guideline-group detail-related-group ${escapeHtml(safeSectionClass)}">
       ${showHeading ? `
@@ -4787,8 +4827,8 @@ function renderRelatedGuidelineSectionMarkup({
               <button
                 type="button"
                 class="detail-related-link"
-                data-action="open-related-guideline-detail"
-                data-guideline-id="${escapeHtml(card.id)}"
+                data-action="${escapeHtml(safeAction)}"
+                ${safeIdAttribute}="${escapeHtml(card.id)}"
               >${escapeHtml(card.title || card.id)}</button>
             `).join('')}
           </div>`
@@ -4797,10 +4837,10 @@ function renderRelatedGuidelineSectionMarkup({
   `;
 }
 
-function renderGuidelineRelatedSection(guideline) {
-  return renderRelatedGuidelineSectionMarkup({
+function renderGuidelineRelatedSection(guideline, options = {}) {
+  return renderRelatedDetailSectionMarkup({
     ...resolveGuidelineRelatedItems(guideline),
-    showHeading: false
+    showHeading: Boolean(options.showHeading)
   });
 }
 
@@ -4813,13 +4853,31 @@ function renderInitiativeRelatedGuidelinesSection(initiative) {
     if (uniqueById.has(cardId)) return;
     uniqueById.set(cardId, card);
   });
-  return renderRelatedGuidelineSectionMarkup({
+  return renderRelatedDetailSectionMarkup({
     heading: langText('Palaikomos gaires', 'Supported guidelines'),
     emptyLabel: langText('Susietu gairiu nerasta.', 'No linked guidelines found.'),
     items: sortCardsByTitle(Array.from(uniqueById.values())),
     sectionClass: 'detail-related-group-initiative',
     headingClass: 'detail-related-heading-compact'
   });
+}
+
+function renderGuidelineDetailRelatedGrid(guideline) {
+  return `
+    <div class="detail-related-grid">
+      ${renderRelatedDetailSectionMarkup({
+    ...resolveGuidelineRelatedItems(guideline),
+    showHeading: true
+  })}
+      ${renderRelatedDetailSectionMarkup({
+    ...resolveGuidelineRelatedInitiatives(guideline),
+    showHeading: true,
+    sectionClass: 'detail-related-group-initiative',
+    action: 'open-related-initiative-detail',
+    idAttribute: 'data-initiative-id'
+  })}
+    </div>
+  `;
 }
 
 function buildGuidelineDetailBreadcrumbs(guideline) {
@@ -4929,7 +4987,9 @@ function renderGuidelineDetailView() {
   const writable = member && cycleIsWritable();
   const cardUrl = guidelineShareUrl(guideline.id);
   const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
-  const relatedGuidelinesMarkup = renderGuidelineRelatedSection(guideline);
+  const relatedGuidelinesMarkup = member
+    ? renderGuidelineDetailRelatedGrid(guideline)
+    : renderGuidelineRelatedSection(guideline, { showHeading: true });
   const canManage = canManageSelectedInstitution();
   const canImport = canImportExternalItem(guideline);
   elements.stepView.innerHTML = `
@@ -4986,6 +5046,13 @@ function renderGuidelineDetailView() {
       const relatedId = String(button.dataset.guidelineId || '').trim();
       if (!relatedId) return;
       openGuidelineDetail(relatedId);
+    });
+  });
+  elements.stepView.querySelectorAll('[data-action="open-related-initiative-detail"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const initiativeId = String(button.dataset.initiativeId || '').trim();
+      if (!initiativeId) return;
+      openInitiativeDetail(initiativeId);
     });
   });
   const openMapButton = elements.stepView.querySelector('#openGuidelineMapBtn');
