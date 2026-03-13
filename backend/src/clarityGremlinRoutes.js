@@ -20,8 +20,8 @@ function registerClarityGremlinRoutes({
 
   async function loadStrategyUsage(strategyId) {
     const strategyRes = await query(
-      `select id,
-              title,
+      `select s.id,
+              s.title,
               coalesce(s.clarity_gremlin_calls_used, 0)::int as clarity_gremlin_calls_used,
               coalesce(i.clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans
        from institution_strategies s
