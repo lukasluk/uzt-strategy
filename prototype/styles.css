@@ -1866,10 +1866,43 @@ textarea {
 }
 
 .detail-related-link-guideline {
+  --detail-related-guideline-accent: var(--guideline-parent-accent);
+  --detail-related-guideline-accent-width: 8px;
   border-color: #cddcf4;
-  border-left: 4px solid var(--guideline-parent-accent);
+  border-left: var(--detail-related-guideline-accent-width) solid var(--detail-related-guideline-accent);
   background: linear-gradient(180deg, #ffffff 0%, #f2f7ff 100%);
   color: #274975;
+}
+
+.detail-related-link-guideline.detail-related-link-relation-child {
+  --detail-related-guideline-accent: var(--guideline-child-accent);
+  --detail-related-guideline-accent-width: 4px;
+}
+
+.detail-related-link-guideline.detail-related-link-relation-orphan {
+  --detail-related-guideline-accent: var(--guideline-orphan-accent);
+  --detail-related-guideline-accent-width: 4px;
+}
+
+.detail-related-link-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.detail-related-link-title {
+  min-width: 0;
+}
+
+.detail-related-link-branch {
+  width: 14px;
+  min-height: 18px;
+  border-left: 2px solid var(--guideline-child-branch);
+  border-bottom: 2px solid var(--guideline-child-branch);
+  border-bottom-left-radius: 10px;
+  flex: 0 0 auto;
+  margin-top: 1px;
 }
 
 .detail-related-link-guideline:hover {
@@ -3526,6 +3559,13 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategy-map-viewport.map-layer-plan .guideline-node {
   z-index: 9;
 }
+.strategy-map-viewport.map-layer-plan:not(.map-plan-started) .guideline-node,
+.strategy-map-viewport.map-layer-plan:not(.map-plan-started) .initiative-node {
+  opacity: 0;
+  filter: saturate(0.2);
+  pointer-events: none;
+  transition: opacity 0.24s ease, filter 0.24s ease, box-shadow 0.24s ease;
+}
 .strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-dated {
   opacity: 0.1;
   filter: saturate(0.3);
@@ -3534,6 +3574,11 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-dated.map-plan-visible {
   opacity: 1;
   filter: none;
+}
+.strategy-map-viewport.map-layer-plan:not(.map-plan-started) .strategy-map-node.map-plan-dated,
+.strategy-map-viewport.map-layer-plan:not(.map-plan-started) .strategy-map-node.map-plan-dated.map-plan-visible {
+  opacity: 0;
+  filter: saturate(0.2);
 }
 .strategy-map-viewport.map-layer-plan.map-plan-started .guideline-node:not([data-plan-date]),
 .strategy-map-viewport.map-layer-plan.map-plan-started .initiative-node:not([data-plan-date]) {

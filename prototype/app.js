@@ -4818,12 +4818,26 @@ function renderRelatedDetailSectionMarkup({
       ${cards.length
     ? `<div class="detail-related-links">
             ${cards.map((card) => `
+              ${(() => {
+                const relation = safeTone === 'guideline'
+                  ? normalizeGuidelineRelation(card?.relationType)
+                  : '';
+                const relationClass = relation ? ` detail-related-link-relation-${escapeHtml(relation)}` : '';
+                const title = escapeHtml(card?.title || card?.id);
+                const content = safeTone === 'guideline'
+                  ? `<span class="detail-related-link-wrap">
+                      ${relation === 'child' ? '<span class="detail-related-link-branch" aria-hidden="true"></span>' : ''}
+                      <span class="detail-related-link-title">${title}</span>
+                    </span>`
+                  : title;
+                return `
               <button
                 type="button"
-                class="detail-related-link detail-related-link-${escapeHtml(safeTone)}"
+                class="detail-related-link detail-related-link-${escapeHtml(safeTone)}${relationClass}"
                 data-action="${escapeHtml(safeAction)}"
                 ${safeIdAttribute}="${escapeHtml(card.id)}"
-              >${escapeHtml(card.title || card.id)}</button>
+              >${content}</button>`;
+              })()}
             `).join('')}
           </div>`
     : `<div class="card guideline-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`}
