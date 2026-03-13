@@ -2838,7 +2838,7 @@ function stepIconMarkup(stepId) {
   }
 
   if (id === 'clarity-gremlin') {
-    return '<img class="step-icon-asset step-icon-asset-gremlin" src="assets/clarity_gremlin_ui.png" alt="" />';
+    return '<img class="step-icon-asset step-icon-asset-gremlin" src="assets/clarity_gremlin2_ui.png" alt="" />';
   }
 
   if (id === 'history') {
@@ -8301,7 +8301,7 @@ function showClarityGremlinModal() {
     <div class="modal-card clarity-gremlin-modal" role="dialog" aria-modal="true" aria-labelledby="clarityGremlinTitle">
       <div class="header-row">
         <div class="gremlin-title-block">
-          <img class="gremlin-title-icon" src="assets/clarity_gremlin_ui.png" alt="" aria-hidden="true" />
+          <img class="gremlin-title-icon" src="assets/clarity_gremlin2_ui.png" alt="" aria-hidden="true" />
           <div>
           <h2 id="clarityGremlinTitle">${escapeHtml(ui.title)}</h2>
           <p class="prompt gremlin-subtitle">${escapeHtml(ui.subtitle)}</p>
