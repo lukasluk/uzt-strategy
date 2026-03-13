@@ -2600,12 +2600,12 @@ function strategySwitcherCardMarkup(options = {}) {
         aria-expanded="${dialogOpen ? 'true' : 'false'}"
       >
         <div class="strategy-switcher-inline">
-          <span class="strategy-switcher-item">
+          <span class="strategy-switcher-item strategy-switcher-item-institution">
             <span class="strategy-switcher-label">Institution</span>
             <strong title="${escapeHtml(institutionName)}">${escapeHtml(institutionName)}</strong>
           </span>
           <span class="strategy-switcher-separator" aria-hidden="true">&middot;</span>
-          <span class="strategy-switcher-item">
+          <span class="strategy-switcher-item strategy-switcher-item-strategy">
             <span class="strategy-switcher-label">Strategy</span>
             <strong title="${escapeHtml(strategyTitle)}">${escapeHtml(strategyTitle)}</strong>
           </span>
@@ -5619,9 +5619,6 @@ function renderInitiativesView() {
   const member = isLoggedIn();
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
-  const budget = voteBudget();
-  const used = member ? usedVotesTotal() : 0;
-  const remaining = Math.max(0, budget - used);
   const initiatives = Array.isArray(state.initiatives) ? state.initiatives : [];
   const eligibleGuidelines = state.guidelines.filter((guideline) => {
     const status = String(guideline.status || 'active').toLowerCase();
@@ -5629,23 +5626,10 @@ function renderInitiativesView() {
   });
   const guidelineInitiativeMatrix = renderGuidelineInitiativeMatrix(eligibleGuidelines, initiatives);
 
-  const stats = [
-    `${langText('Busena', 'Status')}: ${String(state.cycle?.state || '-').toUpperCase()}`,
-    `${langText('Iniciatyvos', 'Initiatives')}: ${Number(state.summary?.initiatives_count || initiatives.length || 0)}`,
-    `${langText('Dalyviai', 'Participants')}: ${Number(state.summary?.participant_count || 0)}`
-  ];
-  if (state.commentsVisible) {
-    stats.splice(2, 0, `${langText('Komentarai', 'Comments')}: ${Number(state.summary?.initiative_comments_count || 0)}`);
-  }
-
   elements.stepView.innerHTML = `
     <div class="step-header">
       <div class="header-stack step-header-actions">
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
-        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
-        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        ${member ? `<span class="tag">${langText('Tavo balsai', 'Your votes')}: ${remaining} / ${budget}</span>` : `<span class="tag">${langText('Viesas rezimas', 'Public mode')}</span>`}
-        ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
       </div>
     </div>
 
@@ -6400,18 +6384,6 @@ function renderStepView() {
   const member = isLoggedIn();
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
-  const budget = voteBudget();
-  const used = member ? usedVotesTotal() : 0;
-  const remaining = Math.max(0, budget - used);
-
-  const stats = [
-    `${langText('Busena', 'Status')}: ${String(state.cycle?.state || '-').toUpperCase()}`,
-    `${langText('GairÄ—s', 'Guidelines')}: ${Number(state.summary?.guidelines_count || state.guidelines.length || 0)}`,
-    `${langText('Dalyviai', 'Participants')}: ${Number(state.summary?.participant_count || 0)}`
-  ];
-  if (state.commentsVisible) {
-    stats.splice(2, 0, `${langText('Komentarai', 'Comments')}: ${Number(state.summary?.comments_count || 0)}`);
-  }
   const relationGroups = buildGuidelineRelationshipGroups(state.guidelines);
   const activeParentGuidelines = (state.guidelines || []).filter((guideline) => {
     const status = String(guideline?.status || '').trim().toLowerCase();
@@ -6425,10 +6397,6 @@ function renderStepView() {
     <div class="step-header">
       <div class="header-stack step-header-actions">
         <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
-        <span class="tag">${langText('Institucija', 'Institution')}: ${escapeHtml(state.institution?.name || state.institutionSlug)}</span>
-        <span class="tag">${langText('Strategija', 'Strategy')}: ${escapeHtml(state.strategy?.title || '-')}</span>
-        ${member ? `<span class="tag">${langText('Tavo balsai', 'Your votes')}: ${remaining} / ${budget}</span>` : `<span class="tag">${langText('Viesas rezimas', 'Public mode')}</span>`}
-        ${stats.map((line) => `<span class="tag">${escapeHtml(line)}</span>`).join('')}
       </div>
     </div>
 

@@ -2,6 +2,7 @@ const {
   getPolicyAlignmentAiConfig,
   requestPolicyAlignmentJson
 } = require('./policyAlignmentAiService');
+const { resolveProviderCompatibleModel } = require('./aiProviderService');
 
 const SUPPORTED_VIEWS = new Set([
   'guidelines',
@@ -800,13 +801,15 @@ async function analyzeStrategyPage({
 
 function getClarityGremlinConfig({ provider } = {}) {
   const base = getPolicyAlignmentAiConfig({ provider });
+  const fallbackModel = String(base.model || '').trim()
+    || (String(provider || '').trim().toLowerCase() === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini');
   return {
     ...base,
-    model: String(
-      process.env.CLARITY_GREMLIN_MODEL
-      || base.model
-      || 'gpt-5-mini'
-    ).trim() || 'gpt-5-mini',
+    model: resolveProviderCompatibleModel(
+      provider || base.provider,
+      process.env.CLARITY_GREMLIN_MODEL,
+      fallbackModel
+    ),
     timeoutMs: Math.max(
       15000,
       Number(process.env.CLARITY_GREMLIN_TIMEOUT_MS || base.timeoutMs || 120000)

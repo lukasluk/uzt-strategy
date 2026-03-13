@@ -6,6 +6,29 @@ function normalizeAiProvider(value) {
   return SUPPORTED_AI_PROVIDERS.has(normalized) ? normalized : DEFAULT_AI_PROVIDER;
 }
 
+function isProviderCompatibleModel(provider, model) {
+  const resolvedProvider = normalizeAiProvider(provider);
+  const modelText = String(model || '').trim();
+  if (!modelText) return false;
+  if (resolvedProvider === 'mistral') {
+    return /mistral/i.test(modelText);
+  }
+  return !/mistral/i.test(modelText);
+}
+
+function resolveProviderCompatibleModel(provider, preferredModel, fallbackModel = '') {
+  const resolvedProvider = normalizeAiProvider(provider);
+  const preferred = String(preferredModel || '').trim();
+  const fallback = String(fallbackModel || '').trim();
+  if (preferred && isProviderCompatibleModel(resolvedProvider, preferred)) {
+    return preferred;
+  }
+  if (fallback && isProviderCompatibleModel(resolvedProvider, fallback)) {
+    return fallback;
+  }
+  return resolvedProvider === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini';
+}
+
 async function resolveInstitutionAiProvider(query, institutionId) {
   const id = String(institutionId || '').trim();
   if (!id || typeof query !== 'function') {
@@ -62,12 +85,14 @@ function buildAiProviderConfig(provider, {
   const providerDefaultBaseUrl = resolvedProvider === 'mistral'
     ? 'https://api.mistral.ai/v1'
     : 'https://api.openai.com/v1';
+  const providerOnlyModel = pickEnvValue([providerModelEnv], defaultModel || providerDefaultModel);
+  const preferredModel = pickEnvValue([providerModelEnv, ...modelEnvNames], providerOnlyModel);
 
   return {
     provider: resolvedProvider,
-    apiKey: pickEnvValue([...apiKeyEnvNames, providerApiKeyEnv], ''),
-    model: pickEnvValue([...modelEnvNames, providerModelEnv], defaultModel || providerDefaultModel),
-    baseUrl: pickEnvValue([...baseUrlEnvNames, providerBaseUrlEnv], providerDefaultBaseUrl),
+    apiKey: pickEnvValue([providerApiKeyEnv, ...apiKeyEnvNames], ''),
+    model: resolveProviderCompatibleModel(resolvedProvider, preferredModel, providerOnlyModel),
+    baseUrl: pickEnvValue([providerBaseUrlEnv, ...baseUrlEnvNames], providerDefaultBaseUrl),
     timeoutMs: Math.max(15000, pickEnvNumber(timeoutMsEnvNames, 120000))
   };
 }
@@ -218,7 +243,9 @@ module.exports = {
   DEFAULT_AI_PROVIDER,
   SUPPORTED_AI_PROVIDERS,
   normalizeAiProvider,
+  isProviderCompatibleModel,
   resolveInstitutionAiProvider,
+  resolveProviderCompatibleModel,
   buildAiProviderConfig,
   requestAiCompletion,
   extractAiText
