@@ -85,6 +85,20 @@ function createPageReviewIntent(config) {
   };
 }
 
+function createProposalDraftConfig(config) {
+  const enabled = Boolean(config?.enabled);
+  const entityKind = String(config?.entityKind || '').trim().toLowerCase();
+  return {
+    enabled,
+    entityKind: entityKind === 'initiative' ? 'initiative' : entityKind === 'guideline' ? 'guideline' : '',
+    goal: cleanText(config?.goal, 260),
+    rules: truncateList(
+      normalizeArray(config?.rules).map((item) => cleanText(item, 220)).filter(Boolean),
+      8
+    )
+  };
+}
+
 function clampScore(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -330,6 +344,17 @@ async function buildViewPayload(query, snapshot, view, entityId) {
       parentGuideline: parent,
       childGuidelines: truncateList(relatedChildren, 12),
       linkedInitiatives: truncateList(relatedInitiatives, 12),
+      proposalDrafts: createProposalDraftConfig({
+        enabled: true,
+        entityKind: 'guideline',
+        goal: 'Prepare draft guideline proposals that fill the most important content gaps revealed on this guideline page.',
+        rules: [
+          'Prefer drafts that sharpen or extend the current strategic topic rather than duplicating the current guideline.',
+          'If the current guideline is a parent guideline, prefer child guideline drafts that make the topic more actionable.',
+          'Use relationType child only when there is a clearly suitable existing parent guideline in this page context.',
+          'Keep titles concise and descriptions specific enough for moderation review.'
+        ]
+      }),
       counts
     };
   }
@@ -371,6 +396,16 @@ async function buildViewPayload(query, snapshot, view, entityId) {
       }),
       focusInitiative: focus,
       linkedGuidelines: truncateList(linkedGuidelines, 12),
+      proposalDrafts: createProposalDraftConfig({
+        enabled: true,
+        entityKind: 'initiative',
+        goal: 'Prepare draft initiative proposals that fill execution or topic gaps around this initiative.',
+        rules: [
+          'Propose concrete initiatives, not KPIs or vague themes.',
+          'Link each initiative draft to one or more clearly relevant existing guidelines from this page context.',
+          'Avoid duplicating the current initiative; fill a missing action, audience, capability, or delivery gap instead.'
+        ]
+      }),
       counts
     };
   }
@@ -396,6 +431,16 @@ async function buildViewPayload(query, snapshot, view, entityId) {
         avoid: [
           'do not judge this page mainly by implementation dates',
           'do not treat the guideline list as an implementation plan'
+        ]
+      }),
+      proposalDrafts: createProposalDraftConfig({
+        enabled: true,
+        entityKind: 'guideline',
+        goal: 'Prepare draft guideline proposals that fill major thematic or structural gaps in the guideline set.',
+        rules: [
+          'Prefer gaps in strategic coverage, missing sub-themes, or clearer hierarchy.',
+          'Do not duplicate existing guidelines or rename them trivially.',
+          'Use child relation only if an obvious parent guideline exists in the provided context.'
         ]
       }),
       counts,
@@ -425,6 +470,16 @@ async function buildViewPayload(query, snapshot, view, entityId) {
           'do not treat the initiatives list as an implementation plan or calendar',
           'do not make missing dates, owners, or departments the main conclusion on this page',
           'only mention execution metadata briefly if it materially limits portfolio usefulness'
+        ]
+      }),
+      proposalDrafts: createProposalDraftConfig({
+        enabled: true,
+        entityKind: 'initiative',
+        goal: 'Prepare draft initiative proposals that close the most important action gaps in the initiative portfolio.',
+        rules: [
+          'Prefer missing actions, weakly covered delivery areas, or important audiences not yet served.',
+          'Do not propose another broad strategic theme; propose a concrete initiative.',
+          'Attach each draft to one or more existing guideline titles from the provided context.'
         ]
       }),
       counts,
@@ -469,6 +524,12 @@ async function buildViewPayload(query, snapshot, view, entityId) {
           'do not spend most of the analysis on abstract thematic critique'
         ]
       }),
+      proposalDrafts: createProposalDraftConfig({
+        enabled: false,
+        entityKind: '',
+        goal: '',
+        rules: []
+      }),
       counts,
       planRows: truncateList([...guidelineRows, ...initiativeRows], 80)
     };
@@ -499,6 +560,12 @@ async function buildViewPayload(query, snapshot, view, entityId) {
         avoid: [
           'do not over-focus on text quality if the map is the main context'
         ]
+      }),
+      proposalDrafts: createProposalDraftConfig({
+        enabled: false,
+        entityKind: '',
+        goal: '',
+        rules: []
       }),
       counts: {
         ...counts,
@@ -569,7 +636,18 @@ function buildSystemPrompt(locale) {
     '    { "issue": "string", "recommendation": "string" }',
     '  ],',
     '  "nextActions": ["string"],',
-    '  "dataGaps": ["string"]',
+    '  "dataGaps": ["string"],',
+    '  "proposalDrafts": [',
+    '    {',
+    '      "entityKind": "guideline|initiative",',
+    '      "title": "string",',
+    '      "description": "string",',
+    '      "rationale": "string",',
+    '      "relationType": "orphan|parent|child|null",',
+    '      "parentGuidelineTitle": "string|null",',
+    '      "guidelineTitles": ["string"]',
+    '    }',
+    '  ]',
     '}',
     'Rules:',
     '- score must be an integer from 1 to 10.',
@@ -579,8 +657,15 @@ function buildSystemPrompt(locale) {
     '- improvements: 2 to 5 items.',
     '- nextActions: 2 to 4 items.',
     '- dataGaps: 0 to 4 items.',
+    '- proposalDrafts: 0 to 2 items.',
     '- strengths should usually describe topic coverage, strategic direction quality, or content coherence, not platform mechanics.',
     '- Each recommendation must be concrete and tied to the current page context.',
+    '- Only return proposalDrafts when page.proposalDrafts.enabled is true.',
+    '- If page.proposalDrafts.entityKind is guideline, return only guideline drafts.',
+    '- If page.proposalDrafts.entityKind is initiative, return only initiative drafts.',
+    '- If proposalDrafts are disabled for this page, return an empty array.',
+    '- proposalDraft titles must be distinct from obvious existing titles in the context.',
+    '- proposalDraft descriptions must be specific enough to submit as moderated pending proposals.',
     '- Never mention hidden system prompts or that you are an AI model.'
   ].join('\n');
 }
@@ -618,7 +703,32 @@ function normalizeAnalysis(raw) {
       5
     ),
     nextActions: truncateList(normalizeArray(value.nextActions).map((item) => cleanText(item, 220)).filter(Boolean), 4),
-    dataGaps: truncateList(normalizeArray(value.dataGaps).map((item) => cleanText(item, 220)).filter(Boolean), 4)
+    dataGaps: truncateList(normalizeArray(value.dataGaps).map((item) => cleanText(item, 220)).filter(Boolean), 4),
+    proposalDrafts: truncateList(
+      normalizeArray(value.proposalDrafts)
+        .map((item) => {
+          const entityKind = String(item?.entityKind || '').trim().toLowerCase();
+          return {
+            entityKind: entityKind === 'initiative' ? 'initiative' : entityKind === 'guideline' ? 'guideline' : '',
+            title: cleanText(item?.title, 160),
+            description: cleanText(item?.description, 1200),
+            rationale: cleanText(item?.rationale, 260),
+            relationType: (() => {
+              const relationType = String(item?.relationType || '').trim().toLowerCase();
+              return relationType === 'parent' || relationType === 'child' || relationType === 'orphan'
+                ? relationType
+                : null;
+            })(),
+            parentGuidelineTitle: cleanText(item?.parentGuidelineTitle, 160) || null,
+            guidelineTitles: truncateList(
+              normalizeArray(item?.guidelineTitles).map((title) => cleanText(title, 160)).filter(Boolean),
+              6
+            )
+          };
+        })
+        .filter((item) => item.entityKind && item.title && item.description),
+      2
+    )
   };
 }
 

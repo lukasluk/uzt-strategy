@@ -4730,6 +4730,7 @@ function clarityGremlinUiText() {
       analyze: 'Analyze current page',
       loading: 'Clarity Gremlin is inspecting this page...',
       unsupported: 'This page is not supported yet. Open Guidelines, Initiatives, Strategy map, or Implementation plan.',
+      disabledView: 'Analysis is disabled on Admin and Policy Alignment pages.',
       loginRequired: 'Sign in to use Clarity Gremlin.',
       noCycle: 'Open a strategy cycle first to run analysis.',
       currentContext: 'Current context',
@@ -4745,6 +4746,11 @@ function clarityGremlinUiText() {
       strengths: 'What looks strong',
       improvements: 'What should improve',
       nextActions: 'Concrete next actions',
+      draftProposals: 'Prepared draft proposals',
+      createPendingDraft: 'Create pending draft',
+      creatingPendingDraft: 'Creating pending draft...',
+      pendingDraftCreated: 'Draft proposal created and sent for admin approval.',
+      draftUnavailable: 'Draft creation is available only in a writable strategy cycle.',
       dataGaps: 'Potential gaps',
       remainingCalls: 'Remaining analyses',
       page: 'Page'
@@ -4758,6 +4764,7 @@ function clarityGremlinUiText() {
     analyze: 'Analizuoti dabartinį puslapį',
     loading: 'Aiškumo nykštukas analizuoja šį puslapį...',
     unsupported: 'Šis puslapis kol kas nepalaikomas. Atverkite Gaires, Iniciatyvas, Strategijų žemėlapį arba Įgyvendinimo planą.',
+    disabledView: 'Analizė išjungta Admin ir Politikos atitikties puslapiuose.',
     loginRequired: 'Prisijunkite, kad galėtumėte naudoti Aiškumo nykštuką.',
     noCycle: 'Pirmiausia atverkite strategijos ciklą, kad būtų galima paleisti analizę.',
     currentContext: 'Dabartinis kontekstas',
@@ -4773,6 +4780,11 @@ function clarityGremlinUiText() {
     strengths: 'Kas atrodo stipru',
     improvements: 'Ką verta pagerinti',
     nextActions: 'Konkretūs kiti žingsniai',
+    draftProposals: 'Paruošti pasiūlymų juodraščiai',
+    createPendingDraft: 'Sukurti laukiantį pasiūlymą',
+    creatingPendingDraft: 'Kuriamas laukiantis pasiūlymas...',
+    pendingDraftCreated: 'Pasiūlymas sukurtas ir pateiktas administratoriaus tvirtinimui.',
+    draftUnavailable: 'Juodraščio kūrimas galimas tik redaguojamame strategijos cikle.',
     dataGaps: 'Galimos spragos',
     remainingCalls: 'Likę kvietimai',
     page: 'Puslapis'
@@ -4800,6 +4812,9 @@ function resolveClarityGremlinContext() {
   }
   if (!state.cycle?.id) {
     return { supported: false, reason: 'cycle-required', view };
+  }
+  if (view === 'admin' || view === 'policy-alignment') {
+    return { supported: false, reason: 'disabled-view', view };
   }
   if (!CLARITY_GREMLIN_SUPPORTED_VIEWS.has(view)) {
     return { supported: false, reason: 'unsupported-view', view };
@@ -4836,6 +4851,56 @@ function resolveClarityGremlinContext() {
     entityId: '',
     contextLabel: clarityGremlinPageLabel(view)
   };
+}
+
+function canCreateClarityGremlinDrafts() {
+  return Boolean(isLoggedIn() && state.cycle?.id && cycleIsWritable());
+}
+
+function findActiveGuidelineByNormalizedTitle(title) {
+  const target = normalizeImportComparableText(title);
+  if (!target) return null;
+  return (Array.isArray(state.guidelines) ? state.guidelines : []).find((guideline) => {
+    const status = String(guideline?.status || 'active').trim().toLowerCase();
+    if (status !== 'active') return false;
+    return normalizeImportComparableText(guideline?.title) === target;
+  }) || null;
+}
+
+function resolveGremlinDraftParentGuidelineId(draft, historyItem) {
+  const relationType = normalizeGuidelineRelation(draft?.relationType);
+  if (relationType !== 'child') return null;
+
+  const parentByTitle = findActiveGuidelineByNormalizedTitle(draft?.parentGuidelineTitle);
+  if (parentByTitle?.id) return String(parentByTitle.id).trim();
+
+  const view = String(historyItem?.view || '').trim().toLowerCase();
+  if (view === 'guideline-detail') {
+    const current = findGuidelineById(historyItem?.entityId);
+    if (normalizeGuidelineRelation(current?.relationType) === 'parent') {
+      return String(current?.id || '').trim() || null;
+    }
+  }
+  return null;
+}
+
+function resolveGremlinDraftGuidelineIds(draft, historyItem) {
+  const linkedFromDraft = Array.from(new Set(
+    (Array.isArray(draft?.guidelineTitles) ? draft.guidelineTitles : [])
+      .map((title) => findActiveGuidelineByNormalizedTitle(title))
+      .map((guideline) => String(guideline?.id || '').trim())
+      .filter(Boolean)
+  ));
+  if (linkedFromDraft.length) return linkedFromDraft;
+
+  const view = String(historyItem?.view || '').trim().toLowerCase();
+  if (view === 'initiative-detail') {
+    const initiative = findInitiativeById(historyItem?.entityId);
+    return resolveInitiativeLinkedGuidelines(initiative)
+      .map((guideline) => String(guideline?.id || '').trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 function normalizeImportComparableText(value) {
@@ -8159,17 +8224,22 @@ function closeClarityGremlinModal() {
   if (existing) existing.remove();
 }
 
-function renderClarityGremlinResultMarkup(result, ui) {
+function renderClarityGremlinResultMarkup(result, ui, options = {}) {
   const analysis = result?.analysis && typeof result.analysis === 'object' ? result.analysis : {};
   const usage = result?.usage && typeof result.usage === 'object' ? result.usage : null;
+  const historyItem = result?.historyItem && typeof result.historyItem === 'object' ? result.historyItem : null;
   const score = Math.max(1, Math.min(10, Number(analysis.score || 0) || 0));
   const strengths = Array.isArray(analysis.strengths) ? analysis.strengths : [];
   const improvements = Array.isArray(analysis.improvements) ? analysis.improvements : [];
   const nextActions = Array.isArray(analysis.nextActions) ? analysis.nextActions : [];
   const dataGaps = Array.isArray(analysis.dataGaps) ? analysis.dataGaps : [];
+  const draftProposals = Array.isArray(analysis.proposalDrafts) ? analysis.proposalDrafts : [];
   const usageText = usage
     ? `${Math.max(0, Number(usage.remaining || 0))} / ${Math.max(0, Number(usage.limit || 0))}`
     : '';
+  const canCreateDrafts = canCreateClarityGremlinDrafts();
+  const allowDraftActions = Boolean(options.allowDraftActions);
+  const draftButtonsDisabled = !canCreateDrafts || !allowDraftActions;
 
   return `
     <div class="gremlin-result">
@@ -8225,6 +8295,57 @@ function renderClarityGremlinResultMarkup(result, ui) {
             <ul class="gremlin-list gremlin-list-actions">
               ${nextActions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
             </ul>
+          </section>`
+      : ''}
+
+      ${draftProposals.length
+      ? `<section class="gremlin-section">
+            <h3>${escapeHtml(ui.draftProposals)}</h3>
+            <div class="gremlin-draft-list">
+              ${draftProposals.map((draft, index) => {
+                const entityKind = String(draft?.entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+                const kindLabel = entityKind === 'initiative'
+                  ? langText('Iniciatyvos pasiūlymas', 'Initiative proposal')
+                  : langText('Gairės pasiūlymas', 'Guideline proposal');
+                const relationLabel = entityKind === 'guideline' && draft?.relationType
+                  ? ` · ${escapeHtml(
+                    draft.relationType === 'child'
+                      ? langText('Vaikinė', 'Child')
+                      : draft.relationType === 'parent'
+                        ? langText('Tėvinė', 'Parent')
+                        : langText('Savarankiška', 'Standalone')
+                  )}`
+                  : '';
+                const guidelineTags = entityKind === 'initiative'
+                  ? (Array.isArray(draft?.guidelineTitles) ? draft.guidelineTitles : []).map((title) => `<span class="tag">${escapeHtml(title)}</span>`).join('')
+                  : '';
+                const parentHint = entityKind === 'guideline' && draft?.relationType === 'child' && draft?.parentGuidelineTitle
+                  ? `<p class="gremlin-draft-meta">${escapeHtml(langText('Siūloma priskirti prie', 'Suggested parent'))}: <strong>${escapeHtml(draft.parentGuidelineTitle)}</strong></p>`
+                  : '';
+                return `
+                  <article class="gremlin-draft-card">
+                    <div class="gremlin-draft-head">
+                      <span class="tag tag-main">${escapeHtml(kindLabel)}${relationLabel}</span>
+                    </div>
+                    <strong class="gremlin-draft-title">${escapeHtml(draft?.title || '')}</strong>
+                    <p class="gremlin-draft-description">${escapeHtml(draft?.description || '')}</p>
+                    ${draft?.rationale ? `<p class="gremlin-draft-rationale">${escapeHtml(draft.rationale)}</p>` : ''}
+                    ${parentHint}
+                    ${guidelineTags ? `<div class="gremlin-draft-tags">${guidelineTags}</div>` : ''}
+                    <div class="gremlin-draft-actions">
+                      <button
+                        type="button"
+                        class="btn btn-primary"
+                        data-gremlin-draft-index="${escapeHtml(index)}"
+                        ${historyItem ? `data-gremlin-history-entry="${escapeHtml(historyItem.id)}"` : ''}
+                        ${draftButtonsDisabled ? 'disabled' : ''}
+                        title="${draftButtonsDisabled ? escapeHtml(ui.draftUnavailable) : ''}"
+                      >${escapeHtml(ui.createPendingDraft)}</button>
+                    </div>
+                  </article>
+                `;
+              }).join('')}
+            </div>
           </section>`
       : ''}
 
@@ -8356,20 +8477,27 @@ function showClarityGremlinModal() {
   let historyItems = [];
   let selectedHistoryId = '';
   let isAnalyzing = false;
+  let draftSubmitInProgress = false;
 
   const syncBusyUi = () => {
     overlay.classList.toggle('gremlin-analysis-locked', isAnalyzing);
+    const currentContext = resolveClarityGremlinContext();
     if (closeButton instanceof HTMLButtonElement) {
       closeButton.disabled = isAnalyzing;
     }
     if (runButton instanceof HTMLButtonElement) {
-      runButton.disabled = isAnalyzing || !resolveClarityGremlinContext().supported;
+      runButton.disabled = isAnalyzing || draftSubmitInProgress || !currentContext.supported;
+      runButton.title = currentContext.reason === 'disabled-view'
+        ? ui.disabledView
+        : currentContext.supported
+          ? ''
+          : ui.unsupported;
     }
     if (historyNode) {
       historyNode.innerHTML = renderClarityGremlinHistoryListMarkup(
         historyItems,
         selectedHistoryId,
-        resolveClarityGremlinContext(),
+        currentContext,
         ui,
         { locked: isAnalyzing }
       );
@@ -8397,12 +8525,16 @@ function showClarityGremlinModal() {
     }
     body.innerHTML = renderClarityGremlinResultMarkup({
       analysis: selected.analysis,
+      historyItem: selected,
       page: {
         label: selected.pageLabel,
         contextLabel: selected.contextLabel
       },
       usage: null
-    }, ui);
+    }, ui, {
+      allowDraftActions: !draftSubmitInProgress
+    });
+    bindDraftActions(selected);
   };
 
   const bindHistorySelection = () => {
@@ -8418,10 +8550,80 @@ function showClarityGremlinModal() {
     });
   };
 
+  const submitDraftProposal = async (selected, draftIndex, button) => {
+    const drafts = Array.isArray(selected?.analysis?.proposalDrafts) ? selected.analysis.proposalDrafts : [];
+    const draft = drafts[Number(draftIndex)];
+    if (!draft || !canCreateClarityGremlinDrafts()) return;
+
+    const cycleId = String(state.cycle?.id || '').trim();
+    if (!cycleId) return;
+    const entityKind = String(draft.entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+
+    draftSubmitInProgress = true;
+    if (button instanceof HTMLButtonElement) {
+      button.disabled = true;
+      button.textContent = ui.creatingPendingDraft;
+    }
+    syncBusyUi();
+
+    try {
+      if (entityKind === 'initiative') {
+        const guidelineIds = resolveGremlinDraftGuidelineIds(draft, selected);
+        const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/initiatives`, {
+          method: 'POST',
+          body: {
+            title: String(draft.title || '').trim(),
+            description: String(draft.description || '').trim(),
+            guidelineIds,
+            lineSide: 'auto'
+          }
+        });
+        scheduleInitiativeFocus(payload?.initiativeId || '');
+      } else {
+        const relationType = normalizeGuidelineRelation(draft.relationType || 'orphan');
+        const parentGuidelineId = resolveGremlinDraftParentGuidelineId(draft, selected);
+        const effectiveRelation = relationType === 'child' && !parentGuidelineId ? 'orphan' : relationType;
+        const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/guidelines`, {
+          method: 'POST',
+          body: {
+            title: String(draft.title || '').trim(),
+            description: String(draft.description || '').trim(),
+            relationType: effectiveRelation,
+            parentGuidelineId: effectiveRelation === 'child' ? parentGuidelineId : null
+          }
+        });
+        scheduleGuidelineFocus(payload?.guidelineId || '');
+      }
+
+      await Promise.all([refreshGuidelines(), refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
+      notifySuccess(ui.pendingDraftCreated);
+    } catch (error) {
+      notifyError(toUserMessage(error));
+    } finally {
+      draftSubmitInProgress = false;
+      renderSelection();
+      syncBusyUi();
+    }
+  };
+
+  const bindDraftActions = (selected) => {
+    body?.querySelectorAll('[data-gremlin-draft-index]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        void submitDraftProposal(
+          selected,
+          Number(button.getAttribute('data-gremlin-draft-index') || 0),
+          button
+        );
+      });
+    });
+  };
+
   const renderUnsupported = (context) => {
     let message = ui.unsupported;
     if (context.reason === 'login-required') message = ui.loginRequired;
     if (context.reason === 'cycle-required') message = ui.noCycle;
+    if (context.reason === 'disabled-view') message = ui.disabledView;
     if (body) body.innerHTML = `<div class="card guideline-empty gremlin-empty"><strong>${escapeHtml(message)}</strong></div>`;
   };
 
