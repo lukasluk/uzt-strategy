@@ -5325,6 +5325,252 @@ function buildInitiativeDetailBreadcrumbs(initiative) {
   `;
 }
 
+function canModeratePendingProposal(item) {
+  return Boolean(canOpenAdminView() && String(item?.pendingProposalId || '').trim());
+}
+
+function proposalModerationText() {
+  if (currentLanguage() === 'en') {
+    return {
+      title: 'Proposal review',
+      subtitleGuideline: 'Review this pending guideline proposal and record the decision.',
+      subtitleInitiative: 'Review this pending initiative proposal and record the decision.',
+      approve: 'Approve',
+      approveWithChanges: 'Approve with changes',
+      reject: 'Reject',
+      noteLabel: 'Decision explanation',
+      notePlaceholder: 'Explain why you approved, changed, or rejected this proposal.',
+      changesLabel: 'Changes before approval',
+      submit: 'Submit decision',
+      titleLabel: 'Title',
+      descriptionLabel: 'Description',
+      relationLabel: 'Relation type',
+      parentLabel: 'Parent guideline',
+      linkedGuidelinesLabel: 'Linked guidelines',
+      standalone: 'Standalone',
+      parent: 'Parent',
+      child: 'Child',
+      parentRequired: 'Select a parent guideline for a child guideline before approving with changes.',
+      approved: 'Proposal approved.',
+      approvedWithChanges: 'Proposal approved with changes.',
+      rejected: 'Proposal rejected.'
+    };
+  }
+  return {
+    title: 'Pasiulymo perziura',
+    subtitleGuideline: 'Perziurekite laukianti gaires pasiulyma ir uzfiksuokite sprendima.',
+    subtitleInitiative: 'Perziurekite laukianti iniciatyvos pasiulyma ir uzfiksuokite sprendima.',
+    approve: 'Patvirtinti',
+    approveWithChanges: 'Patvirtinti su pakeitimais',
+    reject: 'Atmesti',
+    noteLabel: 'Sprendimo paaiskinimas',
+    notePlaceholder: 'Trumpai paaiskinkite, kodel pasiulyma patvirtinate, koreguojate arba atmetate.',
+    changesLabel: 'Pakeitimai pries tvirtinima',
+    submit: 'Pateikti sprendima',
+    titleLabel: 'Pavadinimas',
+    descriptionLabel: 'Aprasymas',
+    relationLabel: 'Rysio tipas',
+    parentLabel: 'Tevine gaire',
+    linkedGuidelinesLabel: 'Susietos gaires',
+    standalone: 'Savarankiska',
+    parent: 'Tevine',
+    child: 'Vaikine',
+    parentRequired: 'Pries tvirtindami su pakeitimais pasirinkite tevine gaire vaikinei gairei.',
+    approved: 'Pasiulymas patvirtintas.',
+    approvedWithChanges: 'Pasiulymas patvirtintas su pakeitimais.',
+    rejected: 'Pasiulymas atmestas.'
+  };
+}
+
+function renderProposalModerationPanel(item, entityKind) {
+  if (!canModeratePendingProposal(item)) return '';
+  const ui = proposalModerationText();
+  const proposalId = String(item?.pendingProposalId || '').trim();
+  if (!proposalId) return '';
+  const normalizedKind = String(entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+  const pendingToneClass = normalizedKind === 'initiative'
+    ? 'proposal-review-card-initiative'
+    : 'proposal-review-card-guideline';
+  const title = String(item?.title || '').trim();
+  const description = String(item?.description || '').trim();
+  const activeParentGuidelines = (Array.isArray(state.guidelines) ? state.guidelines : []).filter((guideline) =>
+    String(guideline?.status || '').trim().toLowerCase() === 'active'
+    && normalizeGuidelineRelation(guideline?.relationType) === 'parent'
+  );
+  const eligibleGuidelines = (Array.isArray(state.guidelines) ? state.guidelines : []).filter((guideline) =>
+    String(guideline?.status || '').trim().toLowerCase() === 'active'
+  );
+  const linkedGuidelineIds = normalizedKind === 'initiative'
+    ? resolveInitiativeGuidelineIds(item)
+    : [];
+  const relationType = normalizeGuidelineRelation(item?.relationType || 'orphan');
+  const parentGuidelineId = relationType === 'child'
+    ? String(item?.parentGuidelineId || '').trim()
+    : '';
+  return `
+    <section class="card proposal-review-card ${pendingToneClass}">
+      <div class="proposal-review-header">
+        <div>
+          <h3>${escapeHtml(ui.title)}</h3>
+          <p class="prompt">${escapeHtml(normalizedKind === 'initiative' ? ui.subtitleInitiative : ui.subtitleGuideline)}</p>
+        </div>
+        <span class="tag tag-main">${escapeHtml(langText('Laukia tvirtinimo', 'Pending review'))}</span>
+      </div>
+      <form class="proposal-review-form" data-action="proposal-review" data-proposal-id="${escapeHtml(proposalId)}" data-entity-kind="${escapeHtml(normalizedKind)}">
+        <div class="proposal-review-pill" role="group" aria-label="${escapeHtml(ui.title)}">
+          <button type="button" class="proposal-review-choice active" data-decision="approved">${escapeHtml(ui.approve)}</button>
+          <button type="button" class="proposal-review-choice" data-decision="approved_with_changes">${escapeHtml(ui.approveWithChanges)}</button>
+          <button type="button" class="proposal-review-choice" data-decision="rejected">${escapeHtml(ui.reject)}</button>
+        </div>
+        <input type="hidden" name="decision" value="approved" />
+        <label class="proposal-review-field">
+          <span class="proposal-review-label">${escapeHtml(ui.noteLabel)}</span>
+          <textarea name="reviewNote" rows="3" placeholder="${escapeHtml(ui.notePlaceholder)}"></textarea>
+        </label>
+        <div class="proposal-review-changes" hidden>
+          <div class="proposal-review-label">${escapeHtml(ui.changesLabel)}</div>
+          <div class="proposal-review-grid">
+            <label class="proposal-review-field proposal-review-field-full">
+              <span class="proposal-review-label">${escapeHtml(ui.titleLabel)}</span>
+              <input type="text" name="title" value="${escapeHtml(title)}" />
+            </label>
+            <label class="proposal-review-field proposal-review-field-full">
+              <span class="proposal-review-label">${escapeHtml(ui.descriptionLabel)}</span>
+              <textarea name="description" rows="4">${escapeHtml(description)}</textarea>
+            </label>
+            ${normalizedKind === 'guideline' ? `
+              <label class="proposal-review-field">
+                <span class="proposal-review-label">${escapeHtml(ui.relationLabel)}</span>
+                <select name="relationType">
+                  <option value="orphan" ${relationType === 'orphan' ? 'selected' : ''}>${escapeHtml(ui.standalone)}</option>
+                  <option value="parent" ${relationType === 'parent' ? 'selected' : ''}>${escapeHtml(ui.parent)}</option>
+                  <option value="child" ${relationType === 'child' ? 'selected' : ''}>${escapeHtml(ui.child)}</option>
+                </select>
+              </label>
+              <label class="proposal-review-field proposal-review-parent-field" ${relationType === 'child' ? '' : 'hidden'}>
+                <span class="proposal-review-label">${escapeHtml(ui.parentLabel)}</span>
+                <select name="parentGuidelineId">
+                  ${buildParentGuidelineOptions(activeParentGuidelines, parentGuidelineId)}
+                </select>
+              </label>
+            ` : `
+              <div class="proposal-review-field proposal-review-field-full">
+                <span class="proposal-review-label">${escapeHtml(ui.linkedGuidelinesLabel)}</span>
+                <div class="proposal-review-guidelines">
+                  ${renderGuidelineCheckboxList(eligibleGuidelines, { selectedIds: linkedGuidelineIds, name: 'guidelineIds' })}
+                </div>
+              </div>
+            `}
+          </div>
+        </div>
+        <div class="proposal-review-actions">
+          <button type="submit" class="btn btn-primary">${escapeHtml(ui.submit)}</button>
+        </div>
+      </form>
+    </section>
+  `;
+}
+
+function bindProposalModerationPanel(container, item, entityKind) {
+  if (!(container instanceof HTMLElement) || !canModeratePendingProposal(item)) return;
+  const form = container.querySelector('[data-action="proposal-review"]');
+  if (!(form instanceof HTMLFormElement)) return;
+  const ui = proposalModerationText();
+  const normalizedKind = String(entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+  const decisionInput = form.querySelector('input[name="decision"]');
+  const changesBlock = form.querySelector('.proposal-review-changes');
+  const relationSelect = form.querySelector('select[name="relationType"]');
+  const parentField = form.querySelector('.proposal-review-parent-field');
+  const parentSelect = form.querySelector('select[name="parentGuidelineId"]');
+
+  const syncDecisionState = () => {
+    const decision = String(decisionInput?.value || 'approved').trim().toLowerCase();
+    form.querySelectorAll('.proposal-review-choice').forEach((button) => {
+      const isActive = String(button.getAttribute('data-decision') || '').trim().toLowerCase() === decision;
+      button.classList.toggle('active', isActive);
+    });
+    if (changesBlock instanceof HTMLElement) {
+      changesBlock.hidden = decision !== 'approved_with_changes';
+    }
+  };
+
+  const syncParentState = () => {
+    if (!(relationSelect instanceof HTMLSelectElement) || !(parentField instanceof HTMLElement) || !(parentSelect instanceof HTMLSelectElement)) return;
+    const isChild = normalizeGuidelineRelation(relationSelect.value) === 'child';
+    parentField.hidden = !isChild;
+    parentSelect.disabled = !isChild;
+    if (!isChild) parentSelect.value = '';
+  };
+
+  form.querySelectorAll('.proposal-review-choice').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!(decisionInput instanceof HTMLInputElement)) return;
+      decisionInput.value = String(button.getAttribute('data-decision') || 'approved').trim().toLowerCase();
+      syncDecisionState();
+    });
+  });
+
+  if (relationSelect instanceof HTMLSelectElement) {
+    relationSelect.addEventListener('change', syncParentState);
+    syncParentState();
+  }
+  syncDecisionState();
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const fd = new FormData(form);
+    const decision = String(fd.get('decision') || 'approved').trim().toLowerCase();
+    const proposalId = String(form.dataset.proposalId || '').trim();
+    if (!proposalId) return;
+    const body = {
+      decision,
+      reviewNote: String(fd.get('reviewNote') || '').trim()
+    };
+
+    if (decision === 'approved_with_changes') {
+      body.title = String(fd.get('title') || '').trim();
+      body.description = String(fd.get('description') || '').trim();
+      if (normalizedKind === 'guideline') {
+        const relationType = normalizeGuidelineRelation(fd.get('relationType'));
+        const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
+        if (relationType === 'child' && !parentGuidelineId) {
+          notifyError(ui.parentRequired);
+          return;
+        }
+        body.relationType = relationType;
+        body.parentGuidelineId = relationType === 'child' ? parentGuidelineId : null;
+      } else {
+        body.guidelineIds = checkedFormValues(form, 'guidelineIds');
+      }
+    }
+
+    await runBusy(async () => {
+      const result = await api(`/api/v1/admin/proposals/${encodeURIComponent(proposalId)}/decision`, {
+        method: 'POST',
+        body
+      });
+      state.notice = decision === 'approved_with_changes'
+        ? ui.approvedWithChanges
+        : (decision === 'approved' ? ui.approved : ui.rejected);
+      notifySuccess(state.notice);
+      if (decision === 'rejected' || !String(result?.finalEntityId || '').trim()) {
+        setActiveView(normalizedKind === 'initiative' ? 'initiatives' : 'guidelines');
+        await bootstrap();
+        return;
+      }
+      if (normalizedKind === 'initiative') {
+        setRouteEntity('initiative', result.finalEntityId);
+        state.activeView = 'initiative-detail';
+      } else {
+        setRouteEntity('guideline', result.finalEntityId);
+        state.activeView = 'guideline-detail';
+      }
+      syncRouteState();
+      await bootstrap();
+    });
+  });
+}
+
 function renderGuidelineDetailView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
@@ -5378,12 +5624,14 @@ function renderGuidelineDetailView() {
   const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
   const relatedGuidelinesMarkup = renderGuidelineDetailRelatedGrid(guideline);
   const canManage = canManageSelectedInstitution();
+  const isPendingProposal = Boolean(String(guideline.pendingProposalId || '').trim());
+  const canEdit = canManage && !isPendingProposal;
   const canImport = canImportExternalItem(guideline);
   elements.stepView.innerHTML = `
     <div class="step-header">
       <div></div>
       <div class="header-stack step-header-actions">
-        ${canManage ? `<button id="editGuidelineBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
+        ${canEdit ? `<button id="editGuidelineBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
         ${canImport ? `<button id="importGuidelineBtn" class="btn btn-primary">${langText('Naudoti mano strategijoje', 'Use in my strategy')}</button>` : ''}
         <button id="backToGuidelinesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ gaires', 'Back to guidelines')}</button>
         <button id="openGuidelineMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
@@ -5394,6 +5642,7 @@ function renderGuidelineDetailView() {
       <span class="tag">${escapeHtml(langText('Nuoroda', 'URL'))}: <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cardUrl)}</a></span>
     </div>
     ${renderImplementationMetaSummary(guideline)}
+    ${renderProposalModerationPanel(guideline, 'guideline')}
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
     <section id="guidelineGroups" class="guideline-groups" data-detail-view="1">
       <div class="card-list">
@@ -5460,6 +5709,7 @@ function renderGuidelineDetailView() {
       openExternalItemImportModal('guideline', guideline.id);
     });
   }
+  bindProposalModerationPanel(elements.stepView, guideline, 'guideline');
 }
 
 function bindInitiativeCardInteractions(list) {
@@ -5577,18 +5827,21 @@ function renderInitiativeDetailView() {
   const writable = member && cycleIsWritable();
   const relatedGuidelinesMarkup = renderInitiativeRelatedGuidelinesSection(initiative);
   const canManage = canManageSelectedInstitution();
+  const isPendingProposal = Boolean(String(initiative.pendingProposalId || '').trim());
+  const canEdit = canManage && !isPendingProposal;
   const canImport = canImportExternalItem(initiative);
   elements.stepView.innerHTML = `
     <div class="step-header">
       <h2>${langText('Iniciatyvos kortele', 'Initiative card')}</h2>
       <div class="header-stack step-header-actions">
-        ${canManage ? `<button id="editInitiativeBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
+        ${canEdit ? `<button id="editInitiativeBtn" class="btn btn-primary">${langText('Redaguoti', 'Edit')}</button>` : ''}
         ${canImport ? `<button id="importInitiativeBtn" class="btn btn-primary">${langText('Naudoti mano strategijoje', 'Use in my strategy')}</button>` : ''}
         <button id="backToInitiativesBtn" class="btn btn-ghost">${langText('GrÄ¯Å¾ti Ä¯ iniciatyvas', 'Back to initiatives')}</button>
         <button id="openInitiativeMapBtn" class="btn btn-ghost">${langText('Rodyti Å¾emÄ—lapyje', 'Show on map')}</button>
       </div>
     </div>
     ${renderImplementationMetaSummary(initiative)}
+    ${renderProposalModerationPanel(initiative, 'initiative')}
     ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
     <section id="initiativeSection" class="guideline-group" data-detail-view="1">
       <div class="card-list initiative-list">
@@ -5649,6 +5902,7 @@ function renderInitiativeDetailView() {
   }
   const list = elements.stepView.querySelector('#initiativeSection');
   bindInitiativeCardInteractions(list);
+  bindProposalModerationPanel(elements.stepView, initiative, 'initiative');
 }
 
 function renderInitiativesView() {

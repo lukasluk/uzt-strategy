@@ -1924,6 +1924,152 @@ textarea {
   grid-template-columns: 1fr;
 }
 
+.proposal-review-card {
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.proposal-review-card-guideline {
+  border: 1px solid #cddcf4;
+  background: linear-gradient(180deg, #fbfdff 0%, #f2f7ff 100%);
+}
+
+.proposal-review-card-initiative {
+  border: 1px solid #e5c89a;
+  background: linear-gradient(180deg, #fffdf8 0%, #fbf2e3 100%);
+}
+
+.proposal-review-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.proposal-review-header h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.proposal-review-header .prompt {
+  margin: 0;
+}
+
+.proposal-review-form {
+  display: grid;
+  gap: 14px;
+}
+
+.proposal-review-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid #cfdcf0;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.proposal-review-choice {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #3b5577;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.proposal-review-choice:hover {
+  background: #f2f7ff;
+}
+
+.proposal-review-choice.active {
+  background: linear-gradient(180deg, #3e69e3 0%, #2854d3 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(47, 87, 198, 0.22);
+}
+
+.proposal-review-field {
+  display: grid;
+  gap: 6px;
+}
+
+.proposal-review-label {
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5f799a;
+}
+
+.proposal-review-field input,
+.proposal-review-field textarea,
+.proposal-review-field select {
+  width: 100%;
+}
+
+.proposal-review-changes {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #d8e2f1;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.proposal-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.proposal-review-field-full {
+  grid-column: 1 / -1;
+}
+
+.proposal-review-guidelines {
+  border: 1px solid #d7e3f4;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 10px 12px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.proposal-review-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 920px) {
+  .proposal-review-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .proposal-review-pill {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .proposal-review-choice {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+
+  .proposal-review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .detail-related-grid .detail-related-group {
   margin-top: 0;
 }
