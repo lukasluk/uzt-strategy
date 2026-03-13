@@ -537,7 +537,20 @@ async function analyzeStrategyPage({
     analysis,
     page: {
       view: normalizedView,
-      label: viewPayload.pageLabel || analysis.pageLabel || normalizedView
+      label: viewPayload.pageLabel || analysis.pageLabel || normalizedView,
+      contextLabel: (
+        normalizedView === 'guideline-detail'
+          ? `${viewPayload.pageLabel}: ${viewPayload.focusGuideline?.title || entityId}`
+          : normalizedView === 'initiative-detail'
+            ? `${viewPayload.pageLabel}: ${viewPayload.focusInitiative?.title || entityId}`
+            : viewPayload.pageLabel || normalizedView
+      ),
+      entityKind: normalizedView === 'guideline-detail'
+        ? 'guideline'
+        : normalizedView === 'initiative-detail'
+          ? 'initiative'
+          : null,
+      entityId: String(entityId || '').trim() || null
     }
   };
 }

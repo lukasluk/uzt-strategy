@@ -289,6 +289,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
   registerClarityGremlinRoutes({
     app,
     query,
+    uuid,
     requireAuth,
     verifyCycleAccess,
     memberWriteRateLimit

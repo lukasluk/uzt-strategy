@@ -754,3 +754,27 @@ create index if not exists idx_policy_alignment_suggestions_status
   on policy_alignment_suggestions(status);
 create index if not exists idx_policy_alignment_suggestions_kind
   on policy_alignment_suggestions(suggestion_kind);
+
+create table if not exists clarity_gremlin_analyses (
+  id uuid primary key,
+  institution_id uuid not null references institutions(id) on delete cascade,
+  strategy_id uuid not null references institution_strategies(id) on delete cascade,
+  cycle_id uuid not null references strategy_cycles(id) on delete cascade,
+  view text not null,
+  entity_kind text check (entity_kind in ('guideline', 'initiative')),
+  entity_id uuid,
+  page_label text not null,
+  context_label text not null,
+  locale text not null default 'lt',
+  model text,
+  analysis_json jsonb not null default '{}'::jsonb,
+  created_by uuid references platform_users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_clarity_gremlin_strategy
+  on clarity_gremlin_analyses(strategy_id, created_at desc);
+create index if not exists idx_clarity_gremlin_cycle
+  on clarity_gremlin_analyses(cycle_id, created_at desc);
+create index if not exists idx_clarity_gremlin_entity
+  on clarity_gremlin_analyses(entity_id, created_at desc);

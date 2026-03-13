@@ -4733,7 +4733,7 @@ function clarityGremlinUiText() {
       subtitle: 'Contextual AI review for the page you are currently viewing.',
       actionLabel: 'Clarity Gremlin',
       close: 'Close',
-      refresh: 'Refresh analysis',
+      analyze: 'Analyze current page',
       loading: 'Clarity Gremlin is inspecting this page...',
       unsupported: 'This page is not supported yet. Open Guidelines, Initiatives, Strategy map, or Implementation plan.',
       loginRequired: 'Sign in to use Clarity Gremlin.',
@@ -4742,6 +4742,12 @@ function clarityGremlinUiText() {
       usage: 'Usage',
       score: 'Clarity score',
       scoreTooltip: 'Rates this page from 1 to 10 based on content clarity, specificity, topic coverage, and execution readiness. 1 means weak and unclear; 10 means strong, clear, and actionable.',
+      history: 'Recent analyses',
+      noHistory: 'No recent Clarity Gremlin analyses yet. Click Analyze current page to create the first one.',
+      emptySelection: 'Select a previous analysis or run a new one for the current page.',
+      createdBy: 'Created by',
+      createdAt: 'Created',
+      currentPage: 'Current page',
       strengths: 'What looks strong',
       improvements: 'What should improve',
       nextActions: 'Concrete next actions',
@@ -4755,7 +4761,7 @@ function clarityGremlinUiText() {
     subtitle: 'Kontekstinis AI vertinimas pagal šiuo metu atvertą puslapį.',
     actionLabel: 'Clarity Gremlin',
     close: 'Uždaryti',
-    refresh: 'Atnaujinti analizę',
+    analyze: 'Analizuoti dabartinį puslapį',
     loading: 'Clarity Gremlin analizuoja šį puslapį...',
     unsupported: 'Šis puslapis kol kas nepalaikomas. Atverkite Gaires, Iniciatyvas, Strategijų žemėlapį arba Įgyvendinimo planą.',
     loginRequired: 'Prisijunkite, kad galėtumėte naudoti Clarity Gremlin.',
@@ -4764,6 +4770,12 @@ function clarityGremlinUiText() {
     usage: 'Naudojimas',
     score: 'Clarity score',
     scoreTooltip: 'Vertina šį puslapį nuo 1 iki 10 pagal turinio aiškumą, konkretumą, temos padengimą ir vykdomumą. 1 reiškia silpną ir neaiškų turinį, 10 reiškia stiprų, aiškų ir lengvai įgyvendinamą turinį.',
+    history: 'Naujausios analizės',
+    noHistory: 'Dar nėra ankstesnių Clarity Gremlin analizių. Paspauskite „Analizuoti dabartinį puslapį“ ir sukurkite pirmąją.',
+    emptySelection: 'Pasirinkite ankstesnę analizę arba paleiskite naują dabartiniam puslapiui.',
+    createdBy: 'Sukūrė',
+    createdAt: 'Sukurta',
+    currentPage: 'Dabartinis puslapis',
     strengths: 'Kas atrodo stipru',
     improvements: 'Ką verta pagerinti',
     nextActions: 'Konkretūs kiti žingsniai',
@@ -8223,6 +8235,52 @@ function renderClarityGremlinResultMarkup(result, ui) {
   `;
 }
 
+function clarityGremlinHistoryMatchesContext(item, context) {
+  if (!item || !context) return false;
+  const itemView = String(item.view || '').trim().toLowerCase();
+  const contextView = String(context.view || '').trim().toLowerCase();
+  if (!itemView || itemView !== contextView) return false;
+  const itemEntityId = String(item.entityId || '').trim();
+  const contextEntityId = String(context.entityId || '').trim();
+  if (!itemEntityId && !contextEntityId) return true;
+  return itemEntityId === contextEntityId;
+}
+
+function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) {
+    return `<div class="card guideline-empty gremlin-history-empty"><strong>${escapeHtml(ui.noHistory)}</strong></div>`;
+  }
+
+  return `
+    <div class="gremlin-history-list">
+      ${list.map((item) => {
+        const analysis = item?.analysis && typeof item.analysis === 'object' ? item.analysis : {};
+        const score = Math.max(1, Math.min(10, Number(analysis.score || 0) || 0));
+        const isSelected = String(item?.id || '').trim() === String(selectedId || '').trim();
+        const isCurrentContext = clarityGremlinHistoryMatchesContext(item, context);
+        return `
+          <button
+            type="button"
+            class="gremlin-history-item${isSelected ? ' is-selected' : ''}"
+            data-gremlin-history-id="${escapeHtml(item.id)}"
+          >
+            <div class="gremlin-history-item-top">
+              <strong>${escapeHtml(item.contextLabel || item.pageLabel || item.view || '-')}</strong>
+              ${score ? `<span class="gremlin-history-score">${escapeHtml(`${score}/10`)}</span>` : ''}
+            </div>
+            <div class="gremlin-history-meta">
+              <span>${escapeHtml(formatCommentDateTime(item.createdAt) || String(item.createdAt || ''))}</span>
+              ${item.createdByName ? `<span>${escapeHtml(item.createdByName)}</span>` : ''}
+              ${isCurrentContext ? `<span class="tag tag-main">${escapeHtml(ui.currentPage)}</span>` : ''}
+            </div>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
 function showClarityGremlinModal() {
   const ui = clarityGremlinUiText();
   const initialContext = resolveClarityGremlinContext();
@@ -8244,30 +8302,125 @@ function showClarityGremlinModal() {
       <div class="gremlin-toolbar">
         <div class="gremlin-toolbar-meta">
           <span class="tag tag-main">${escapeHtml(ui.currentContext)}: ${escapeHtml(initialContext.contextLabel || clarityGremlinPageLabel(initialContext.view))}</span>
-          <span id="clarityGremlinUsage" class="tag" ${initialContext.supported ? '' : 'hidden'}></span>
+          <span id="clarityGremlinUsage" class="tag"></span>
         </div>
-        <button id="refreshClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.refresh)}</button>
+        <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
       </div>
-      <div id="clarityGremlinBody" class="gremlin-body"></div>
+      <div class="gremlin-layout">
+        <aside class="gremlin-history-panel">
+          <div class="gremlin-panel-head">
+            <h3>${escapeHtml(ui.history)}</h3>
+          </div>
+          <div id="clarityGremlinHistory" class="gremlin-history-body"></div>
+        </aside>
+        <section class="gremlin-detail-panel">
+          <div id="clarityGremlinBody" class="gremlin-body"></div>
+        </section>
+      </div>
     </div>
   `;
   document.body.appendChild(overlay);
 
   const body = overlay.querySelector('#clarityGremlinBody');
+  const historyNode = overlay.querySelector('#clarityGremlinHistory');
   const closeButton = overlay.querySelector('#closeClarityGremlinModal');
-  const refreshButton = overlay.querySelector('#refreshClarityGremlinBtn');
+  const runButton = overlay.querySelector('#runClarityGremlinBtn');
   const usageNode = overlay.querySelector('#clarityGremlinUsage');
+  let historyItems = [];
+  let selectedHistoryId = '';
+
+  const applyUsage = (usage) => {
+    if (!usageNode) return;
+    if (!usage) {
+      usageNode.hidden = true;
+      usageNode.textContent = '';
+      return;
+    }
+    usageNode.hidden = false;
+    usageNode.textContent = `${ui.usage}: ${Math.max(0, Number(usage.remaining || 0))} / ${Math.max(0, Number(usage.limit || 0))}`;
+  };
+
+  const renderSelection = () => {
+    const selected = historyItems.find((item) => String(item?.id || '').trim() === String(selectedHistoryId || '').trim()) || null;
+    if (!body) return;
+    if (!selected) {
+      body.innerHTML = `<div class="card guideline-empty gremlin-empty"><strong>${escapeHtml(ui.emptySelection)}</strong></div>`;
+      return;
+    }
+    body.innerHTML = renderClarityGremlinResultMarkup({
+      analysis: selected.analysis,
+      page: {
+        label: selected.pageLabel,
+        contextLabel: selected.contextLabel
+      },
+      usage: null
+    }, ui);
+  };
+
+  const bindHistorySelection = () => {
+    historyNode?.querySelectorAll('[data-gremlin-history-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        selectedHistoryId = String(button.getAttribute('data-gremlin-history-id') || '').trim();
+        if (historyNode) {
+          historyNode.innerHTML = renderClarityGremlinHistoryListMarkup(historyItems, selectedHistoryId, resolveClarityGremlinContext(), ui);
+          bindHistorySelection();
+        }
+        renderSelection();
+      });
+    });
+  };
 
   const renderUnsupported = (context) => {
     let message = ui.unsupported;
     if (context.reason === 'login-required') message = ui.loginRequired;
     if (context.reason === 'cycle-required') message = ui.noCycle;
-    if (body) {
-      body.innerHTML = `<div class="card guideline-empty gremlin-empty"><strong>${escapeHtml(message)}</strong></div>`;
+    if (body) body.innerHTML = `<div class="card guideline-empty gremlin-empty"><strong>${escapeHtml(message)}</strong></div>`;
+  };
+
+  const loadHistory = async (preferredHistoryId = '') => {
+    const context = resolveClarityGremlinContext();
+    if (!state.cycle?.id) {
+      renderUnsupported(context);
+      applyUsage(null);
+      if (historyNode) {
+        historyNode.innerHTML = `<div class="card guideline-empty gremlin-history-empty"><strong>${escapeHtml(ui.noCycle)}</strong></div>`;
+      }
+      return;
     }
-    if (usageNode) {
-      usageNode.hidden = true;
-      usageNode.textContent = '';
+
+    try {
+      if (historyNode) {
+        historyNode.innerHTML = `
+          <div class="gremlin-loading-card gremlin-history-loading">
+            <div class="gremlin-loading-spinner" aria-hidden="true"></div>
+          </div>
+        `;
+      }
+      const payload = await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/clarity-gremlin`);
+      historyItems = Array.isArray(payload?.history) ? payload.history : [];
+      applyUsage(payload?.usage || null);
+      const preferred = String(preferredHistoryId || '').trim();
+      const matchingCurrent = historyItems.find((item) => clarityGremlinHistoryMatchesContext(item, context)) || null;
+      selectedHistoryId = preferred
+        || String(matchingCurrent?.id || '').trim()
+        || String(historyItems[0]?.id || '').trim();
+      if (historyNode) {
+        historyNode.innerHTML = renderClarityGremlinHistoryListMarkup(historyItems, selectedHistoryId, context, ui);
+        bindHistorySelection();
+      }
+      if (context.supported !== true && !selectedHistoryId) {
+        renderUnsupported(context);
+      } else {
+        renderSelection();
+      }
+    } catch (error) {
+      if (historyNode) {
+        historyNode.innerHTML = `<div class="card guideline-empty gremlin-history-empty"><strong>${escapeHtml(toUserMessage(error))}</strong></div>`;
+      }
+      if (body) {
+        body.innerHTML = `<div class="card guideline-empty gremlin-empty"><strong>${escapeHtml(ui.emptySelection)}</strong></div>`;
+      }
+      applyUsage(error?.payload?.usage || null);
     }
   };
 
@@ -8275,11 +8428,11 @@ function showClarityGremlinModal() {
     const context = resolveClarityGremlinContext();
     if (context.supported !== true) {
       renderUnsupported(context);
-      if (refreshButton instanceof HTMLButtonElement) refreshButton.disabled = true;
+      if (runButton instanceof HTMLButtonElement) runButton.disabled = true;
       return;
     }
 
-    if (refreshButton instanceof HTMLButtonElement) refreshButton.disabled = true;
+    if (runButton instanceof HTMLButtonElement) runButton.disabled = true;
     if (body) {
       body.innerHTML = `
         <div class="gremlin-loading-card">
@@ -8288,7 +8441,6 @@ function showClarityGremlinModal() {
         </div>
       `;
     }
-
     try {
       const payload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycleId)}/clarity-gremlin`, {
         method: 'POST',
@@ -8298,32 +8450,16 @@ function showClarityGremlinModal() {
           locale: currentLanguage()
         }
       });
-      if (body) {
-        body.innerHTML = renderClarityGremlinResultMarkup(payload, ui);
-      }
-      if (usageNode) {
-        const remaining = Number(payload?.usage?.remaining || 0);
-        const limit = Number(payload?.usage?.limit || 0);
-        usageNode.hidden = false;
-        usageNode.textContent = `${ui.usage}: ${remaining} / ${limit}`;
-      }
+      await loadHistory(String(payload?.historyEntryId || '').trim());
     } catch (error) {
       const usage = error?.payload?.usage || null;
       if (body) {
         body.innerHTML = `<div class="card guideline-empty gremlin-empty"><strong>${escapeHtml(toUserMessage(error))}</strong></div>`;
       }
-      if (usageNode) {
-        if (usage) {
-          usageNode.hidden = false;
-          usageNode.textContent = `${ui.usage}: ${Math.max(0, Number(usage.remaining || 0))} / ${Math.max(0, Number(usage.limit || 0))}`;
-        } else {
-          usageNode.hidden = true;
-          usageNode.textContent = '';
-        }
-      }
+      applyUsage(usage);
     } finally {
-      if (refreshButton instanceof HTMLButtonElement) {
-        refreshButton.disabled = !resolveClarityGremlinContext().supported;
+      if (runButton instanceof HTMLButtonElement) {
+        runButton.disabled = !resolveClarityGremlinContext().supported;
       }
     }
   };
@@ -8332,15 +8468,16 @@ function showClarityGremlinModal() {
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) closeClarityGremlinModal();
   });
-  refreshButton?.addEventListener('click', () => {
+  runButton?.addEventListener('click', () => {
     void runAnalysis();
   });
-
-  if (initialContext.supported) {
-    void runAnalysis();
-  } else {
+  if (runButton instanceof HTMLButtonElement) {
+    runButton.disabled = !initialContext.supported;
+  }
+  if (initialContext.supported !== true && !state.cycle?.id) {
     renderUnsupported(initialContext);
   }
+  void loadHistory();
 }
 
 function accessRequestUiText() {

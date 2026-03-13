@@ -2055,6 +2055,10 @@ textarea {
     width: 100%;
     justify-content: center;
   }
+
+  .gremlin-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .mini-list {
@@ -5966,6 +5970,99 @@ select:focus {
   align-items: center;
 }
 
+.gremlin-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.gremlin-history-panel,
+.gremlin-detail-panel {
+  min-width: 0;
+}
+
+.gremlin-panel-head {
+  margin-bottom: 10px;
+}
+
+.gremlin-panel-head h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #304766;
+}
+
+.gremlin-history-body {
+  display: grid;
+  gap: 10px;
+}
+
+.gremlin-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.gremlin-history-item {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #d9e5f1;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  padding: 11px 12px;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.gremlin-history-item:hover {
+  border-color: #bed2ea;
+  box-shadow: 0 8px 18px rgba(40, 74, 116, 0.08);
+  transform: translateY(-1px);
+}
+
+.gremlin-history-item.is-selected {
+  border-color: #7ea7db;
+  box-shadow: 0 10px 22px rgba(40, 74, 116, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+}
+
+.gremlin-history-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.gremlin-history-item-top strong {
+  color: #263d5d;
+  line-height: 1.35;
+}
+
+.gremlin-history-score {
+  flex: 0 0 auto;
+  min-width: 52px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #cadcf2;
+  background: #edf4ff;
+  color: #1f4678;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.gremlin-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: #6b84a5;
+  font-size: 12px;
+}
+
 .gremlin-body {
   display: grid;
   gap: 14px;
@@ -5978,6 +6075,11 @@ select:focus {
   place-items: center;
   text-align: center;
   gap: 10px;
+}
+
+.gremlin-history-empty,
+.gremlin-history-loading {
+  min-height: 180px;
 }
 
 .gremlin-loading-spinner {
