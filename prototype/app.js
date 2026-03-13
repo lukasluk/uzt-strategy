@@ -9043,7 +9043,7 @@ function showClarityGremlinModal() {
             relationType: normalizeGuidelineRelation(draft.relationType || targetGuideline.relationType || 'orphan'),
             lineSide: normalizeLineSide(targetGuideline.lineSide || 'auto') || 'auto',
             parentGuidelineId: resolveGremlinDraftParentGuidelineId(draft, selected) || targetGuideline.parentGuidelineId || null,
-            implementationDate: targetGuideline.implementationDate || null,
+            implementationDate: normalizeImplementationDateInputValue(targetGuideline.implementationDate) || null,
             implementationOwner: String(targetGuideline.implementationOwner || '').trim() || null
           }
         });
@@ -9065,7 +9065,7 @@ function showClarityGremlinModal() {
             status: String(targetInitiative.status || 'active').trim() || 'active',
             lineSide: normalizeLineSide(targetInitiative.lineSide || 'auto') || 'auto',
             guidelineIds: resolveGremlinDraftGuidelineIds(draft, selected),
-            implementationDate: targetInitiative.implementationDate || null,
+            implementationDate: normalizeImplementationDateInputValue(targetInitiative.implementationDate) || null,
             implementationOwner: String(targetInitiative.implementationOwner || '').trim() || null
           }
         });
