@@ -389,27 +389,27 @@ body.embed-map-page .stage {
 .steps-header {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 2px;
+  margin-bottom: 0;
+  min-height: 14px;
 }
 
 .steps-toggle {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  border: 1px solid #b9cae6;
-  background: linear-gradient(180deg, #ffffff 0%, #e4eeff 100%);
+  width: 22px;
+  height: 22px;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
   color: #1f4f8c;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    0 10px 22px rgba(35, 78, 148, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  box-shadow: none;
+  padding: 0;
 }
 
 .steps-toggle:hover {
-  border-color: #93afda;
-  background: linear-gradient(180deg, #ffffff 0%, #edf4ff 100%);
+  background: transparent;
+  color: #163f77;
   transform: translateY(-1px);
 }
 
@@ -419,8 +419,8 @@ body.embed-map-page .stage {
 }
 
 .steps-toggle-icon {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   display: inline-flex;
 }
 

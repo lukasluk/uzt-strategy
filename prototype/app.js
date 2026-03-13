@@ -1303,10 +1303,10 @@ function toUserMessage(error) {
     'view required': 'Trūksta rodinio konteksto.',
     'clarity gremlin unsupported view': currentLanguage() === 'en'
       ? 'Clarity Gremlin does not support this page yet.'
-      : 'Clarity Gremlin kol kas nepalaiko šio puslapio.',
+      : 'Aiškumo nykštukas kol kas nepalaiko šio puslapio.',
     'clarity gremlin limit reached': currentLanguage() === 'en'
       ? 'This strategy already used all 10 Clarity Gremlin analyses.'
-      : 'Ši strategija jau išnaudojo visus 10 Clarity Gremlin kvietimų.',
+      : 'Ši strategija jau išnaudojo visus 10 Aiškumo nykštuko kvietimų.',
     'documents upload failed': 'Nepavyko Ä¯kelti dokumentÅ³.',
     'analysis title required': 'Nurodykite analizÄ—s pavadinimÄ….',
     'analysis not found': 'Policy Alignment analizÄ— nerasta.',
@@ -4751,21 +4751,21 @@ function clarityGremlinUiText() {
     };
   }
   return {
-    title: 'Clarity Gremlin',
+    title: 'Aiškumo nykštukas',
     subtitle: 'Kontekstinis AI vertinimas pagal šiuo metu atvertą puslapį.',
-    actionLabel: 'Clarity Gremlin',
+    actionLabel: 'Aiškumo nykštukas',
     close: 'Uždaryti',
     analyze: 'Analizuoti dabartinį puslapį',
-    loading: 'Clarity Gremlin analizuoja šį puslapį...',
+    loading: 'Aiškumo nykštukas analizuoja šį puslapį...',
     unsupported: 'Šis puslapis kol kas nepalaikomas. Atverkite Gaires, Iniciatyvas, Strategijų žemėlapį arba Įgyvendinimo planą.',
-    loginRequired: 'Prisijunkite, kad galėtumėte naudoti Clarity Gremlin.',
+    loginRequired: 'Prisijunkite, kad galėtumėte naudoti Aiškumo nykštuką.',
     noCycle: 'Pirmiausia atverkite strategijos ciklą, kad būtų galima paleisti analizę.',
     currentContext: 'Dabartinis kontekstas',
     usage: 'Naudojimas',
     score: 'Clarity score',
     scoreTooltip: 'Vertina šį puslapį nuo 1 iki 10 pagal turinio aiškumą, konkretumą, temos padengimą ir vykdomumą. 1 reiškia silpną ir neaiškų turinį, 10 reiškia stiprų, aiškų ir lengvai įgyvendinamą turinį.',
     history: 'Naujausios analizės',
-    noHistory: 'Dar nėra ankstesnių Clarity Gremlin analizių. Paspauskite „Analizuoti dabartinį puslapį“ ir sukurkite pirmąją.',
+    noHistory: 'Dar nėra ankstesnių Aiškumo nykštuko analizių. Paspauskite „Analizuoti dabartinį puslapį“ ir sukurkite pirmąją.',
     emptySelection: 'Pasirinkite ankstesnę analizę arba paleiskite naują dabartiniam puslapiui.',
     createdBy: 'Sukūrė',
     createdAt: 'Sukurta',
