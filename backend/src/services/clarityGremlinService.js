@@ -68,6 +68,24 @@ function truncateList(items, maxItems = 40) {
   return list.slice(0, Math.max(0, Number(maxItems) || 0));
 }
 
+function gremlinLocalizedReviewLabel(locale) {
+  return String(locale || '').trim().toLowerCase() === 'en'
+    ? 'Strategy-wide review'
+    : 'Strategijos visumos analizė';
+}
+
+function gremlinLocalizedFocusLabel(view, locale) {
+  const normalizedView = normalizeView(view);
+  const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
+  if (normalizedView === 'guideline-detail') return isEnglish ? 'Guideline detail' : 'Gairės kortelė';
+  if (normalizedView === 'initiative-detail') return isEnglish ? 'Initiative detail' : 'Iniciatyvos kortelė';
+  if (normalizedView === 'guidelines') return isEnglish ? 'Guidelines list' : 'Gairių sąrašas';
+  if (normalizedView === 'initiatives') return isEnglish ? 'Initiatives list' : 'Iniciatyvų sąrašas';
+  if (normalizedView === 'implementation-plan') return isEnglish ? 'Implementation plan' : 'Įgyvendinimo planas';
+  if (normalizedView === 'map') return isEnglish ? 'Strategy map' : 'Strategijų žemėlapis';
+  return isEnglish ? 'Page' : 'Puslapis';
+}
+
 function createPageReviewIntent(config) {
   return {
     primaryPurpose: cleanText(config?.primaryPurpose, 260),
@@ -295,293 +313,139 @@ function buildCounts(snapshot) {
   };
 }
 
-async function buildViewPayload(query, snapshot, view, entityId) {
+async function buildViewPayload(query, snapshot, view, entityId, locale = 'lt') {
   const guidelines = normalizeArray(snapshot?.guidelines);
   const initiatives = normalizeArray(snapshot?.initiatives);
   const guidelineById = createTitleLookup(guidelines);
   const initiativeById = createTitleLookup(initiatives);
   const counts = buildCounts(snapshot);
+  let focusGuideline = null;
+  let focusInitiative = null;
+  let focusSummary = null;
+  let focusLabel = '';
 
   if (view === 'guideline-detail') {
     const focusBase = guidelineById.get(String(entityId || '').trim()) || null;
     const focus = focusBase
       ? {
-          ...focusBase,
-          description: await loadFullEntityDescription(query, { kind: 'guideline', entityId })
-            || focusBase.description
-        }
+        ...focusBase,
+        description: await loadFullEntityDescription(query, { kind: 'guideline', entityId }) || focusBase.description
+      }
       : null;
     if (!focus) throw new Error('guideline not found');
+    focusGuideline = focus;
+    focusLabel = gremlinLocalizedFocusLabel(view, locale);
     const relatedChildren = guidelines.filter((item) => String(item.parentTitle || '').trim() === String(focus.title || '').trim());
     const parent = focus.parentTitle
       ? guidelines.find((item) => String(item.title || '').trim() === String(focus.parentTitle || '').trim()) || null
       : null;
-    const relatedInitiatives = initiatives.filter((item) =>
-      normalizeArray(item.linkedGuidelines).includes(focus.title)
-    );
-    return {
-      view,
-      pageLabel: 'Guideline detail',
-      reviewIntent: createPageReviewIntent({
-        primaryPurpose: 'Review this one guideline as a strategic direction: whether it is clear, focused, non-overlapping, and well supported by child guidelines or initiatives.',
-        primaryQuestions: [
-          'Is the guideline conceptually clear and strategically meaningful?',
-          'Is it too broad, too vague, or mixing several themes at once?',
-          'Are child guidelines or linked initiatives sufficient and coherent for this guideline?'
-        ],
-        prioritize: [
-          'title clarity',
-          'description specificity',
-          'theme coherence',
-          'fit within hierarchy',
-          'supporting initiatives'
-        ],
-        avoid: [
-          'do not treat this page as an implementation calendar',
-          'do not over-focus on missing dates unless they block execution'
-        ]
-      }),
-      focusGuideline: focus,
+    const relatedInitiatives = initiatives.filter((item) => normalizeArray(item.linkedGuidelines).includes(focus.title));
+    focusSummary = {
+      focusKind: 'guideline',
+      focusTitle: focus.title,
       parentGuideline: parent,
       childGuidelines: truncateList(relatedChildren, 12),
-      linkedInitiatives: truncateList(relatedInitiatives, 12),
-      proposalDrafts: createProposalDraftConfig({
-        enabled: true,
-        entityKind: 'guideline',
-        goal: 'Prepare draft guideline proposals that fill the most important content gaps revealed on this guideline page.',
-        rules: [
-          'You may either propose a new guideline draft or a revision draft for an existing guideline already visible in this page context.',
-          'Prefer drafts that sharpen or extend the current strategic topic rather than duplicating the current guideline.',
-          'If the current guideline is a parent guideline, prefer child guideline drafts that make the topic more actionable.',
-          'Use relationType child only when there is a clearly suitable existing parent guideline in this page context.',
-          'Keep titles concise and descriptions specific enough for moderation review.'
-        ]
-      }),
-      counts
+      linkedInitiatives: truncateList(relatedInitiatives, 12)
     };
-  }
-
-  if (view === 'initiative-detail') {
+  } else if (view === 'initiative-detail') {
     const focusBase = initiativeById.get(String(entityId || '').trim()) || null;
     const focus = focusBase
       ? {
-          ...focusBase,
-          description: await loadFullEntityDescription(query, { kind: 'initiative', entityId })
-            || focusBase.description
-        }
+        ...focusBase,
+        description: await loadFullEntityDescription(query, { kind: 'initiative', entityId }) || focusBase.description
+      }
       : null;
     if (!focus) throw new Error('initiative not found');
-    const linkedGuidelines = guidelines.filter((item) =>
-      normalizeArray(focus.linkedGuidelines).includes(item.title)
-    );
-    return {
-      view,
-      pageLabel: 'Initiative detail',
-      reviewIntent: createPageReviewIntent({
-        primaryPurpose: 'Review this initiative as a concrete action: whether it is specific, actionable, relevant to the strategy, and well connected to the supported guidelines.',
-        primaryQuestions: [
-          'Is the initiative concrete enough to be understood and executed?',
-          'Does it clearly contribute to the linked guidelines?',
-          'Is it duplicative, too broad, or missing a sharper delivery focus?'
-        ],
-        prioritize: [
-          'actionability',
-          'scope clarity',
-          'fit to guidelines',
-          'distinctiveness',
-          'expected strategic contribution'
-        ],
-        avoid: [
-          'do not treat initiative detail as a whole-program roadmap',
-          'keep missing dates or owners secondary unless severe'
-        ]
-      }),
-      focusInitiative: focus,
-      linkedGuidelines: truncateList(linkedGuidelines, 12),
-      proposalDrafts: createProposalDraftConfig({
-        enabled: true,
-        entityKind: 'initiative',
-        goal: 'Prepare draft initiative proposals that fill execution or topic gaps around this initiative.',
-        rules: [
-          'You may either propose a new initiative draft or a revision draft for an existing initiative already visible in this page context.',
-          'Propose concrete initiatives, not KPIs or vague themes.',
-          'Link each initiative draft to one or more clearly relevant existing guidelines from this page context.',
-          'Avoid duplicating the current initiative; fill a missing action, audience, capability, or delivery gap instead.'
-        ]
-      }),
-      counts
+    focusInitiative = focus;
+    focusLabel = gremlinLocalizedFocusLabel(view, locale);
+    const linkedGuidelines = guidelines.filter((item) => normalizeArray(focus.linkedGuidelines).includes(item.title));
+    focusSummary = {
+      focusKind: 'initiative',
+      focusTitle: focus.title,
+      linkedGuidelines: truncateList(linkedGuidelines, 12)
     };
+  } else if (view === 'guidelines') {
+    focusLabel = gremlinLocalizedFocusLabel(view, locale);
+  } else if (view === 'initiatives') {
+    focusLabel = gremlinLocalizedFocusLabel(view, locale);
+  } else if (view === 'implementation-plan') {
+    focusLabel = gremlinLocalizedFocusLabel(view, locale);
+  } else if (view === 'map') {
+    focusLabel = gremlinLocalizedFocusLabel(view, locale);
+  } else {
+    throw new Error('clarity gremlin unsupported view');
   }
 
-  if (view === 'guidelines') {
-    return {
-      view,
-      pageLabel: 'Guidelines list',
-      reviewIntent: createPageReviewIntent({
-        primaryPurpose: 'Review the full guideline set as a strategic architecture: thematic coverage, hierarchy quality, overlaps, gaps, and clarity of strategic direction.',
-        primaryQuestions: [
-          'Do the guidelines cover the right strategic themes for this strategy?',
-          'Are parent and child guidelines logically structured and non-overlapping?',
-          'Are there missing themes, duplicated topics, or vague formulations?'
-        ],
-        prioritize: [
-          'thematic coverage',
-          'hierarchy logic',
-          'duplication',
-          'gaps',
-          'clarity of strategic directions'
-        ],
-        avoid: [
-          'do not judge this page mainly by implementation dates',
-          'do not treat the guideline list as an implementation plan'
-        ]
-      }),
-      proposalDrafts: createProposalDraftConfig({
-        enabled: true,
-        entityKind: 'guideline',
-        goal: 'Prepare draft guideline proposals that fill major thematic or structural gaps in the guideline set.',
-        rules: [
-          'You may either propose a new guideline draft or a revision draft for an existing guideline already present in the list.',
-          'Prefer gaps in strategic coverage, missing sub-themes, or clearer hierarchy.',
-          'Do not duplicate existing guidelines or rename them trivially.',
-          'Use child relation only if an obvious parent guideline exists in the provided context.'
-        ]
-      }),
-      counts,
-      guidelines: truncateList(guidelines, 40)
-    };
-  }
+  const guidelineRows = guidelines.map((item) => ({
+    kind: 'guideline',
+    title: item.title,
+    relationType: item.relationType,
+    parentTitle: item.parentTitle,
+    implementationDate: item.implementationDate,
+    implementationOwner: item.implementationOwner,
+    linkedInitiatives: item.linkedInitiatives
+  }));
+  const initiativeRows = initiatives.map((item) => ({
+    kind: 'initiative',
+    title: item.title,
+    implementationDate: item.implementationDate,
+    implementationOwner: item.implementationOwner,
+    linkedGuidelines: truncateList(item.linkedGuidelines, 6)
+  }));
+  const mostConnectedGuidelines = guidelines
+    .filter((item) => item.linkedInitiatives > 0)
+    .sort((left, right) => right.linkedInitiatives - left.linkedInitiatives)
+    .slice(0, 12);
 
-  if (view === 'initiatives') {
-    return {
-      view,
-      pageLabel: 'Initiatives list',
-      reviewIntent: createPageReviewIntent({
-        primaryPurpose: 'Review the initiative portfolio as a set of actions: thematic spread, redundancy, specificity, portfolio balance, and how well initiatives operationalize the guidelines.',
-        primaryQuestions: [
-          'Do the initiatives collectively translate the strategy into a coherent action portfolio?',
-          'Are there duplicate, overlapping, fragmented, or vague initiatives?',
-          'Do initiatives cover the most important guideline themes, or are some themes under-served?'
-        ],
-        prioritize: [
-          'initiative portfolio coherence',
-          'topic overlap',
-          'initiative specificity',
-          'coverage of guideline themes',
-          'balance across strategic priorities'
-        ],
-        avoid: [
-          'do not treat the initiatives list as an implementation plan or calendar',
-          'do not make missing dates, owners, or departments the main conclusion on this page',
-          'only mention execution metadata briefly if it materially limits portfolio usefulness'
-        ]
-      }),
-      proposalDrafts: createProposalDraftConfig({
-        enabled: true,
-        entityKind: 'initiative',
-        goal: 'Prepare draft initiative proposals that close the most important action gaps in the initiative portfolio.',
-        rules: [
-          'You may either propose a new initiative draft or a revision draft for an existing initiative already present in the list.',
-          'Prefer missing actions, weakly covered delivery areas, or important audiences not yet served.',
-          'Do not propose another broad strategic theme; propose a concrete initiative.',
-          'Attach each draft to one or more existing guideline titles from the provided context.'
-        ]
-      }),
-      counts,
-      initiatives: truncateList(initiatives, 40)
-    };
-  }
-
-  if (view === 'implementation-plan') {
-    const guidelineRows = guidelines.map((item) => ({
-      kind: 'guideline',
-      title: item.title,
-      relationType: item.relationType,
-      parentTitle: item.parentTitle,
-      implementationDate: item.implementationDate,
-      implementationOwner: item.implementationOwner,
-      linkedInitiatives: item.linkedInitiatives
-    }));
-    const initiativeRows = initiatives.map((item) => ({
-      kind: 'initiative',
-      title: item.title,
-      implementationDate: item.implementationDate,
-      implementationOwner: item.implementationOwner,
-      linkedGuidelines: truncateList(item.linkedGuidelines, 6)
-    }));
-    return {
-      view,
-      pageLabel: 'Implementation plan',
-      reviewIntent: createPageReviewIntent({
-        primaryPurpose: 'Review execution readiness, sequencing, ownership, and timeline quality across the plan.',
-        primaryQuestions: [
-          'Is the plan scheduled and sequenced in a believable way?',
-          'Are major items missing dates or owners?',
-          'Does execution support the strategy in a balanced way?'
-        ],
-        prioritize: [
-          'timeline quality',
-          'sequencing',
-          'owners',
-          'coverage of execution'
-        ],
-        avoid: [
-          'do not spend most of the analysis on abstract thematic critique'
-        ]
-      }),
-      proposalDrafts: createProposalDraftConfig({
-        enabled: false,
-        entityKind: '',
-        goal: '',
-        rules: []
-      }),
-      counts,
-      planRows: truncateList([...guidelineRows, ...initiativeRows], 80)
-    };
-  }
-
-  if (view === 'map') {
-    const highLinkGuidelines = guidelines
-      .filter((item) => item.linkedInitiatives > 0)
-      .sort((left, right) => right.linkedInitiatives - left.linkedInitiatives)
-      .slice(0, 12);
-    const initiativesWithDates = initiatives.filter((item) => item.implementationDate).length;
-    return {
-      view,
-      pageLabel: 'Strategy map',
-      reviewIntent: createPageReviewIntent({
-        primaryPurpose: 'Review the structural coherence of the strategy landscape: connections, clusters, isolation, and whether the map reflects a sensible strategic system.',
-        primaryQuestions: [
-          'Are important guidelines supported by enough initiatives?',
-          'Are there isolated initiatives or weakly connected areas?',
-          'Does the map reveal imbalance or fragmentation in the strategy?'
-        ],
-        prioritize: [
-          'connectivity',
-          'coverage',
-          'isolated nodes',
-          'cluster balance'
-        ],
-        avoid: [
-          'do not over-focus on text quality if the map is the main context'
-        ]
-      }),
-      proposalDrafts: createProposalDraftConfig({
-        enabled: false,
-        entityKind: '',
-        goal: '',
-        rules: []
-      }),
-      counts: {
-        ...counts,
-        initiativesWithDates
-      },
-      mostConnectedGuidelines: highLinkGuidelines,
-      initiatives: truncateList(initiatives, 20)
-    };
-  }
-
-  throw new Error('clarity gremlin unsupported view');
+  return {
+    view,
+    pageLabel: gremlinLocalizedReviewLabel(locale),
+    focusLabel,
+    reviewIntent: createPageReviewIntent({
+      primaryPurpose: 'Review the full strategy system as one portfolio: guidelines, initiatives, overlaps, gaps, hierarchy quality, and execution readiness. Use the currently opened page only as the focus point for where to look first.',
+      primaryQuestions: [
+        'Do the guidelines and initiatives together form a coherent strategic system?',
+        'Where are the main overlaps, duplications, vague areas, under-served themes, or weak links between strategic direction and concrete action?',
+        'How does the current focus page reveal the most important systemic weaknesses or opportunities in the whole strategy?'
+      ],
+      prioritize: [
+        'whole-strategy coherence',
+        'guideline and initiative alignment',
+        'overlaps and duplication',
+        'missing themes or action gaps',
+        'clarity of strategic architecture',
+        'focus-page relevance'
+      ],
+      avoid: [
+        'do not analyze only the currently open page in isolation',
+        'do not ignore the focus page; use it as the main lens into the whole strategy',
+        'do not make implementation metadata the main conclusion unless it severely blocks execution'
+      ]
+    }),
+    proposalDrafts: createProposalDraftConfig({
+      enabled: true,
+      entityKind: '',
+      goal: 'Prepare up to 9 concrete mixed draft proposals across both guidelines and initiatives so the whole strategy becomes clearer, less duplicated, and more actionable.',
+      rules: [
+        'You may return a mix of guideline and initiative drafts in the same analysis.',
+        'You may use create, update, or delete drafts for either guidelines or initiatives.',
+        'Prefer the smallest set of changes that most improves the whole strategy system.',
+        'When a focus page reveals a broader structural problem, include the necessary drafts even if they touch other visible items in the strategy.',
+        'Use delete only when an existing visible item is clearly redundant, duplicative, or misleading.'
+      ]
+    }),
+    counts: {
+      ...counts,
+      initiativesWithDates: initiatives.filter((item) => item.implementationDate).length
+    },
+    focusGuideline,
+    focusInitiative,
+    focusSummary,
+    guidelines: truncateList(guidelines, 60),
+    initiatives: truncateList(initiatives, 60),
+    planRows: truncateList([...guidelineRows, ...initiativeRows], 120),
+    mostConnectedGuidelines
+  };
 }
 
 function buildPromptPayload(snapshot, viewPayload) {
@@ -591,7 +455,7 @@ function buildPromptPayload(snapshot, viewPayload) {
     reviewFocus: {
       contentWeight: '90%',
       technicalWeight: '10%',
-      primaryGoal: 'Analyze the actual strategic subject matter, thematic coverage, clarity of direction, overlaps, gaps, and content quality of this strategy page.',
+      primaryGoal: 'Analyze the whole strategy system across both guidelines and initiatives, using the currently open page only as the focus lens for what to emphasize first.',
       technicalGoal: 'Only briefly note missing implementation dates, owners, or responsible units when those omissions materially weaken execution readiness.',
       avoid: [
         'Do not describe or praise generic system-wide product features.',
@@ -621,12 +485,13 @@ function buildSystemPrompt(locale) {
   const requiredLanguageCode = isEnglish ? 'en' : 'lt';
   return [
     'You are Clarity Gremlin, a strict but useful strategy content reviewer for public-sector strategy workspaces.',
-    'Review only the provided page context. Do not invent data, entities, votes, dates, or relationships.',
+    'Review the whole provided strategy context. Do not invent data, entities, votes, dates, or relationships.',
     'Prefer precise editorial feedback over generic motivational advice.',
     'Distinguish between what is clearly present in the data and what appears missing or weak.',
-    'First identify the purpose of the current page and evaluate it against that purpose, not against some other page type.',
-    'For example: an initiatives list is an action portfolio page, not an implementation calendar; a guideline list is a strategic architecture page, not a task tracker.',
-    'Spend about 90% of your attention on the strategy subject matter itself: the policy topic, thematic coverage, specificity, overlaps, missing themes, coherence, and quality of the content.',
+    'Always evaluate the whole strategy system across both guidelines and initiatives.',
+    'Use the currently opened page only as the focus point that should receive the most attention, examples, and prioritization.',
+    'For example: if the focus is an initiative detail page, still review the wider strategy, but emphasize how that initiative exposes broader portfolio problems or strengths.',
+    'Spend about 90% of your attention on the strategy subject matter itself: thematic coverage, specificity, overlaps, missing themes, coherence, and quality of the combined guideline + initiative system.',
     'Spend at most about 10% of your attention on technical execution details such as missing implementation dates, missing owners, or missing responsible units.',
     'Do not describe, praise, or summarize inherited product features that would be true for almost any strategy in this system.',
     'Do not comment on the mere presence of relation types, parent fields, counters, metadata fields, cards, tags, hierarchy labels, or aggregate counts unless their absence or weakness creates a concrete problem.',
@@ -670,10 +535,11 @@ function buildSystemPrompt(locale) {
     '- improvements: 2 to 5 items.',
     '- nextActions: 2 to 4 items.',
     '- dataGaps: 0 to 4 items.',
-    '- proposalDrafts: 0 to 5 items.',
+    '- proposalDrafts: 0 to 9 items.',
     '- strengths should usually describe topic coverage, strategic direction quality, or content coherence, not platform mechanics.',
-    '- Each recommendation must be concrete and tied to the current page context.',
+    '- Each recommendation must be concrete and tied to the whole strategy, while still reflecting the current focus page.',
     '- Only return proposalDrafts when page.proposalDrafts.enabled is true.',
+    '- If page.proposalDrafts.entityKind is empty, you may return a mix of guideline and initiative drafts.',
     '- If page.proposalDrafts.entityKind is guideline, return only guideline drafts.',
     '- If page.proposalDrafts.entityKind is initiative, return only initiative drafts.',
     '- Use draftMode "update" only when revising an existing visible item; in that case targetTitle must match the item to change.',
@@ -692,11 +558,11 @@ function buildSystemPrompt(locale) {
 
 function buildUserPrompt(payload) {
   return [
-    'Analyze the current workspace page context below and suggest how to improve clarity, structure, and execution quality.',
-    'Focus on what should be improved in this exact page.',
+    'Analyze the full strategy workspace context below and suggest how to improve clarity, structure, and execution quality across the whole strategy.',
+    'Always consider both guidelines and initiatives together.',
+    'Use the current page only as the focus point that should receive the strongest emphasis.',
     'Use the page purpose and reviewIntent in the context as the main evaluation frame.',
-    'Judge the page by what it is supposed to do in the workflow, not by what another page in the product is supposed to do.',
-    'Prioritize the actual content and strategic topic covered by the page.',
+    'Prioritize the actual strategic content and the quality of the whole guideline + initiative system.',
     'Avoid generic observations about system structure or reusable platform fields.',
     'If you mention technical readiness gaps, keep them secondary and brief unless they are severe.',
     'If the context is already strong, say so briefly and still give the most useful refinements.',
@@ -753,7 +619,7 @@ function normalizeAnalysis(raw) {
           };
         })
         .filter((item) => item.entityKind && item.title && item.description && ((item.draftMode !== 'update' && item.draftMode !== 'delete') || item.targetTitle)),
-      5
+      9
     )
   };
 }
@@ -793,7 +659,7 @@ async function analyzeStrategyPage({
     throw new Error('cycle not found');
   }
 
-  const viewPayload = await buildViewPayload(query, snapshot, normalizedView, entityId);
+  const viewPayload = await buildViewPayload(query, snapshot, normalizedView, entityId, locale);
   const promptPayload = buildPromptPayload(snapshot, {
     ...viewPayload,
     responseLanguage: locale
@@ -816,10 +682,10 @@ async function analyzeStrategyPage({
       label: viewPayload.pageLabel || analysis.pageLabel || normalizedView,
       contextLabel: (
         normalizedView === 'guideline-detail'
-          ? `${viewPayload.pageLabel}: ${viewPayload.focusGuideline?.title || entityId}`
+          ? `${viewPayload.focusLabel || gremlinLocalizedFocusLabel('guideline-detail', locale)}: ${viewPayload.focusGuideline?.title || entityId}`
           : normalizedView === 'initiative-detail'
-            ? `${viewPayload.pageLabel}: ${viewPayload.focusInitiative?.title || entityId}`
-            : viewPayload.pageLabel || normalizedView
+            ? `${viewPayload.focusLabel || gremlinLocalizedFocusLabel('initiative-detail', locale)}: ${viewPayload.focusInitiative?.title || entityId}`
+            : viewPayload.focusLabel || viewPayload.pageLabel || normalizedView
       ),
       entityKind: normalizedView === 'guideline-detail'
         ? 'guideline'

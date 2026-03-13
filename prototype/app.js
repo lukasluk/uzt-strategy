@@ -3059,7 +3059,7 @@ function renderSteps() {
       ? (!isLoggedIn()
         ? langText('Sis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only')
         : langText('Pirmiausia atverkite aktyvu strategijos cikla', 'Open an active strategy cycle first'))
-      : langText('Gauti AI pasiulymus pagal dabartini puslapi', 'Get AI suggestions for the current page');
+      : langText('Gauti AI pasiūlymus visai strategijai pagal dabartinį fokusą', 'Get AI suggestions for the whole strategy from the current focus');
     if (sidebarCollapsed) {
       gremlinButton.title = clarityGremlinUiText().actionLabel;
     }
@@ -4687,33 +4687,34 @@ function clarityGremlinUiText() {
   if (currentLanguage() === 'en') {
     return {
       title: 'Clarity Gremlin',
-      subtitle: 'Contextual AI review for the page you are currently viewing.',
+      subtitle: 'Contextual AI review of the whole strategy, using the currently open page as the focus point.',
       actionLabel: 'Clarity Gremlin',
       close: 'Close',
-      analyze: 'Analyze current page',
+      analyze: 'Analyze strategy',
       modelLabel: 'Model',
-      loading: 'Clarity Gremlin is inspecting this page...',
+      loading: 'Clarity Gremlin is reviewing the whole strategy...',
       unsupported: 'This page is not supported yet. Open Guidelines, Initiatives, Strategy map, or Implementation plan.',
       disabledView: 'Analysis is disabled on Admin and Policy Alignment pages.',
       loginRequired: 'Sign in to use Clarity Gremlin.',
       noCycle: 'Open a strategy cycle first to run analysis.',
-      currentContext: 'Current context',
+      currentContext: 'Current focus',
       usage: 'Usage',
       howItWorks: 'How it works',
-      howItWorksLead: 'Clarity Gremlin reviews only the page that is currently open and keeps recent analyses for this strategy.',
-      howStepCurrent: 'Reads the current page context, visible content, and linked strategy data.',
+      howItWorksLead: 'Clarity Gremlin reviews the whole strategy system and uses the currently open page only as the focus point.',
+      howStepCurrent: 'Reads all visible guidelines and initiatives, then uses the current page as the main focus lens.',
       howStepHistory: 'Keeps recent analyses on the left so you can reopen or compare them later.',
-      howStepConsume: 'Uses one scan only when you click Analyze current page.',
+      howStepConsume: 'Uses one scan only when you click Analyze strategy.',
       score: 'Clarity score',
-      scoreTooltip: 'Rates this page from 1 to 10 based on content clarity, specificity, topic coverage, and execution readiness. 1 means weak and unclear; 10 means strong, clear, and actionable.',
+      scoreTooltip: 'Rates the strategy from 1 to 10 based on content clarity, specificity, topic coverage, coherence between guidelines and initiatives, and execution readiness.',
       history: 'Recent analyses',
-      noHistory: 'No recent Clarity Gremlin analyses yet. Click Analyze current page to create the first one.',
-      emptySelection: 'Select a previous analysis or run a new one for the current page.',
-      emptySelectionBody: 'Pick an item from Recent analyses or create a fresh review for the current page.',
+      noHistory: 'No recent Clarity Gremlin analyses yet. Click Analyze strategy to create the first one.',
+      emptySelection: 'Select a previous analysis or run a new strategy review.',
+      emptySelectionBody: 'Pick an item from Recent analyses or create a fresh whole-strategy review from the current focus point.',
       createdBy: 'Created by',
       createdAt: 'Created',
       provider: 'Provider',
       currentPage: 'Current page',
+      focus: 'Focus',
       strengths: 'What looks strong',
       improvements: 'What should improve',
       nextActions: 'Concrete next actions',
@@ -4748,33 +4749,34 @@ function clarityGremlinUiText() {
   }
   return {
     title: 'Aiškumo nykštukas',
-    subtitle: 'Kontekstinis AI vertinimas pagal šiuo metu atvertą puslapį.',
+    subtitle: 'Kontekstinis AI vertinimas visai strategijai, naudojant šiuo metu atvertą puslapį kaip fokusavimo tašką.',
     actionLabel: 'Aiškumo nykštukas',
     close: 'Uždaryti',
-    analyze: 'Analizuoti dabartinį puslapį',
+    analyze: 'Analizuoti strategiją',
     modelLabel: 'Modelis',
-    loading: 'Aiškumo nykštukas analizuoja šį puslapį...',
+    loading: 'Aiškumo nykštukas analizuoja visą strategiją...',
     unsupported: 'Šis puslapis kol kas nepalaikomas. Atverkite Gaires, Iniciatyvas, Strategijų žemėlapį arba Įgyvendinimo planą.',
     disabledView: 'Analizė išjungta Admin ir Politikos atitikties puslapiuose.',
     loginRequired: 'Prisijunkite, kad galėtumėte naudoti Aiškumo nykštuką.',
     noCycle: 'Pirmiausia atverkite strategijos ciklą, kad būtų galima paleisti analizę.',
-    currentContext: 'Dabartinis kontekstas',
+    currentContext: 'Dabartinis fokusas',
     usage: 'Naudojimas',
     howItWorks: 'Kaip tai veikia',
-    howItWorksLead: 'Aiškumo nykštukas vertina tik šiuo metu atvertą puslapį ir išsaugo naujausias šios strategijos analizes.',
-    howStepCurrent: 'Perskaito dabartinio puslapio kontekstą, matomą turinį ir susietus strategijos duomenis.',
+    howItWorksLead: 'Aiškumo nykštukas vertina visą strategijos sistemą ir naudoja šiuo metu atvertą puslapį tik kaip fokusavimo tašką.',
+    howStepCurrent: 'Perskaito visas matomas gaires ir iniciatyvas, o dabartinį puslapį naudoja tam, kad paryškintų svarbiausią analizės kryptį.',
     howStepHistory: 'Kairėje saugo naujausias analizes, kad galėtumėte jas bet kada vėl atsidaryti ir palyginti.',
-    howStepConsume: 'Vienas scan sunaudojamas tik tada, kai paspaudžiate „Analizuoti dabartinį puslapį“.',
+    howStepConsume: 'Vienas scan sunaudojamas tik tada, kai paspaudžiate „Analizuoti strategiją“.',
     score: 'Clarity score',
-    scoreTooltip: 'Vertina šį puslapį nuo 1 iki 10 pagal turinio aiškumą, konkretumą, temos padengimą ir vykdomumą. 1 reiškia silpną ir neaiškų turinį, 10 reiškia stiprų, aiškų ir lengvai įgyvendinamą turinį.',
+    scoreTooltip: 'Vertina visą strategiją nuo 1 iki 10 pagal turinio aiškumą, konkretumą, temos padengimą, gairių ir iniciatyvų suderinamumą bei vykdomumą.',
     history: 'Naujausios analizės',
-    noHistory: 'Dar nėra ankstesnių Aiškumo nykštuko analizių. Paspauskite „Analizuoti dabartinį puslapį“ ir sukurkite pirmąją.',
-    emptySelection: 'Pasirinkite ankstesnę analizę arba paleiskite naują dabartiniam puslapiui.',
-    emptySelectionBody: 'Kairėje pasirinkite jau sukurtą analizę arba sukurkite naują dabartiniam puslapiui.',
+    noHistory: 'Dar nėra ankstesnių Aiškumo nykštuko analizių. Paspauskite „Analizuoti strategiją“ ir sukurkite pirmąją.',
+    emptySelection: 'Pasirinkite ankstesnę analizę arba paleiskite naują strategijos analizę.',
+    emptySelectionBody: 'Kairėje pasirinkite jau sukurtą analizę arba sukurkite naują visos strategijos analizę iš dabartinio fokusavimo taško.',
     createdBy: 'Sukūrė',
     createdAt: 'Sukurta',
     provider: 'Tiekėjas',
     currentPage: 'Dabartinis puslapis',
+    focus: 'Fokusas',
     strengths: 'Kas atrodo stipru',
     improvements: 'Ką verta pagerinti',
     nextActions: 'Konkretūs kiti žingsniai',
@@ -8671,6 +8673,8 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
   const nextActions = Array.isArray(analysis.nextActions) ? analysis.nextActions : [];
   const dataGaps = Array.isArray(analysis.dataGaps) ? analysis.dataGaps : [];
   const draftProposals = Array.isArray(analysis.proposalDrafts) ? analysis.proposalDrafts : [];
+  const analysisScopeLabel = String(analysis.pageLabel || result?.page?.label || '-').trim() || '-';
+  const focusLabel = String(result?.page?.contextLabel || historyItem?.contextLabel || '').trim();
   const usageText = usage
     ? `${Math.max(0, Number(usage.remaining || 0))} / ${Math.max(0, Number(usage.limit || 0))}`
     : '';
@@ -8683,8 +8687,14 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
       <div class="gremlin-summary-card">
         <div class="gremlin-summary-row">
           <span class="gremlin-summary-label">${escapeHtml(ui.page)}</span>
-          <strong>${escapeHtml(analysis.pageLabel || result?.page?.label || '-')}</strong>
+          <strong>${escapeHtml(analysisScopeLabel)}</strong>
         </div>
+        ${focusLabel && focusLabel !== analysisScopeLabel
+      ? `<div class="gremlin-summary-row">
+            <span class="gremlin-summary-label">${escapeHtml(ui.focus)}</span>
+            <strong>${escapeHtml(focusLabel)}</strong>
+          </div>`
+      : ''}
         ${score
       ? `<div class="gremlin-summary-row">
             <span class="gremlin-summary-label gremlin-summary-label-with-help">
