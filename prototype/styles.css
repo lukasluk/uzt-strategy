@@ -2056,6 +2056,16 @@ textarea {
     justify-content: center;
   }
 
+  .gremlin-toolbar-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .gremlin-current-page-chip {
+    max-width: none;
+    width: 100%;
+  }
+
   .gremlin-layout {
     grid-template-columns: 1fr;
   }
@@ -5947,20 +5957,21 @@ select:focus {
 }
 
 .clarity-gremlin-modal {
-  width: min(760px, 96vw);
+  width: min(860px, 96vw);
+  padding: 24px;
 }
 
 .gremlin-subtitle {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
 }
 
 .gremlin-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: 18px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 20px;
 }
 
 .gremlin-toolbar-meta {
@@ -5970,10 +5981,25 @@ select:focus {
   align-items: center;
 }
 
+.gremlin-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.gremlin-current-page-chip {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .gremlin-layout {
   display: grid;
   grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
-  gap: 16px;
+  gap: 24px;
   align-items: start;
 }
 
@@ -6011,11 +6037,28 @@ select:focus {
   border: 1px solid #d9e5f1;
   border-radius: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-  padding: 11px 12px;
+  padding: 14px 14px;
   display: grid;
   gap: 8px;
   cursor: pointer;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.gremlin-history-item.is-locked {
+  cursor: default;
+}
+
+.gremlin-analysis-locked .clarity-gremlin-modal {
+  position: relative;
+}
+
+.gremlin-analysis-locked .clarity-gremlin-modal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
 }
 
 .gremlin-history-item:hover {
@@ -6065,7 +6108,7 @@ select:focus {
 
 .gremlin-body {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .gremlin-loading-card,
@@ -6106,9 +6149,9 @@ select:focus {
   border: 1px solid #d9e5f1;
   border-radius: 16px;
   background: linear-gradient(180deg, #fbfdff 0%, #f2f7fd 100%);
-  padding: 14px 16px;
+  padding: 18px 20px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .gremlin-summary-row {
@@ -6171,7 +6214,7 @@ select:focus {
 
 .gremlin-section {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .gremlin-section h3 {
@@ -6206,9 +6249,9 @@ select:focus {
   border: 1px solid #e4d2ba;
   border-radius: 14px;
   background: linear-gradient(180deg, #fffef9 0%, #f8efde 100%);
-  padding: 12px 14px;
+  padding: 14px 16px;
   display: grid;
-  gap: 5px;
+  gap: 7px;
 }
 
 .gremlin-improvement-card strong {

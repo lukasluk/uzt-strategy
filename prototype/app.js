@@ -8246,8 +8246,9 @@ function clarityGremlinHistoryMatchesContext(item, context) {
   return itemEntityId === contextEntityId;
 }
 
-function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui) {
+function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, options = {}) {
   const list = Array.isArray(items) ? items : [];
+  const locked = Boolean(options.locked);
   if (!list.length) {
     return `<div class="card guideline-empty gremlin-history-empty"><strong>${escapeHtml(ui.noHistory)}</strong></div>`;
   }
@@ -8262,8 +8263,9 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui) {
         return `
           <button
             type="button"
-            class="gremlin-history-item${isSelected ? ' is-selected' : ''}"
+            class="gremlin-history-item${isSelected ? ' is-selected' : ''}${locked ? ' is-locked' : ''}"
             data-gremlin-history-id="${escapeHtml(item.id)}"
+            ${locked ? 'disabled' : ''}
           >
             <div class="gremlin-history-item-top">
               <strong>${escapeHtml(item.contextLabel || item.pageLabel || item.view || '-')}</strong>
@@ -8304,7 +8306,10 @@ function showClarityGremlinModal() {
           <span class="tag tag-main">${escapeHtml(ui.currentContext)}: ${escapeHtml(initialContext.contextLabel || clarityGremlinPageLabel(initialContext.view))}</span>
           <span id="clarityGremlinUsage" class="tag"></span>
         </div>
-        <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
+        <div class="gremlin-toolbar-actions">
+          <span class="tag gremlin-current-page-chip">${escapeHtml(initialContext.contextLabel || clarityGremlinPageLabel(initialContext.view))}</span>
+          <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
+        </div>
       </div>
       <div class="gremlin-layout">
         <aside class="gremlin-history-panel">
@@ -8328,6 +8333,27 @@ function showClarityGremlinModal() {
   const usageNode = overlay.querySelector('#clarityGremlinUsage');
   let historyItems = [];
   let selectedHistoryId = '';
+  let isAnalyzing = false;
+
+  const syncBusyUi = () => {
+    overlay.classList.toggle('gremlin-analysis-locked', isAnalyzing);
+    if (closeButton instanceof HTMLButtonElement) {
+      closeButton.disabled = isAnalyzing;
+    }
+    if (runButton instanceof HTMLButtonElement) {
+      runButton.disabled = isAnalyzing || !resolveClarityGremlinContext().supported;
+    }
+    if (historyNode) {
+      historyNode.innerHTML = renderClarityGremlinHistoryListMarkup(
+        historyItems,
+        selectedHistoryId,
+        resolveClarityGremlinContext(),
+        ui,
+        { locked: isAnalyzing }
+      );
+      bindHistorySelection();
+    }
+  };
 
   const applyUsage = (usage) => {
     if (!usageNode) return;
@@ -8401,11 +8427,11 @@ function showClarityGremlinModal() {
       applyUsage(payload?.usage || null);
       const preferred = String(preferredHistoryId || '').trim();
       const matchingCurrent = historyItems.find((item) => clarityGremlinHistoryMatchesContext(item, context)) || null;
-      selectedHistoryId = preferred
+        selectedHistoryId = preferred
         || String(matchingCurrent?.id || '').trim()
         || String(historyItems[0]?.id || '').trim();
       if (historyNode) {
-        historyNode.innerHTML = renderClarityGremlinHistoryListMarkup(historyItems, selectedHistoryId, context, ui);
+        historyNode.innerHTML = renderClarityGremlinHistoryListMarkup(historyItems, selectedHistoryId, context, ui, { locked: isAnalyzing });
         bindHistorySelection();
       }
       if (context.supported !== true && !selectedHistoryId) {
@@ -8428,11 +8454,12 @@ function showClarityGremlinModal() {
     const context = resolveClarityGremlinContext();
     if (context.supported !== true) {
       renderUnsupported(context);
-      if (runButton instanceof HTMLButtonElement) runButton.disabled = true;
+      syncBusyUi();
       return;
     }
 
-    if (runButton instanceof HTMLButtonElement) runButton.disabled = true;
+    isAnalyzing = true;
+    syncBusyUi();
     if (body) {
       body.innerHTML = `
         <div class="gremlin-loading-card">
@@ -8458,22 +8485,20 @@ function showClarityGremlinModal() {
       }
       applyUsage(usage);
     } finally {
-      if (runButton instanceof HTMLButtonElement) {
-        runButton.disabled = !resolveClarityGremlinContext().supported;
-      }
+      isAnalyzing = false;
+      syncBusyUi();
     }
   };
 
   closeButton?.addEventListener('click', closeClarityGremlinModal);
   overlay.addEventListener('click', (event) => {
+    if (isAnalyzing) return;
     if (event.target === overlay) closeClarityGremlinModal();
   });
   runButton?.addEventListener('click', () => {
     void runAnalysis();
   });
-  if (runButton instanceof HTMLButtonElement) {
-    runButton.disabled = !initialContext.supported;
-  }
+  syncBusyUi();
   if (initialContext.supported !== true && !state.cycle?.id) {
     renderUnsupported(initialContext);
   }
