@@ -4051,12 +4051,8 @@ function renderGuidelineCard(guideline, options) {
         </div>
       ` : `
         <div class="vote-panel">
-          <div class="vote-panel-head">
-            <span class="vote-label">${langText('Viesas rezimas', 'Public mode')}</span>
-          </div>
           <div class="vote-panel-body">
             <div class="vote-total"><strong>${langText('Bendras balas', 'Total score')}: ${Number(guideline.totalScore || 0)}</strong></div>
-            <div class="vote-total">${langText('Rodomi tik agreguoti duomenys', 'Only aggregated data is shown')}</div>
           </div>
         </div>
       `}
@@ -4262,12 +4258,8 @@ function renderInitiativeCard(initiative, options) {
         </div>
       ` : `
         <div class="vote-panel">
-          <div class="vote-panel-head">
-            <span class="vote-label">${langText('Viesas rezimas', 'Public mode')}</span>
-          </div>
           <div class="vote-panel-body">
             <div class="vote-total"><strong>${langText('Bendras balas', 'Total score')}: ${Number(initiative.totalScore || 0)}</strong></div>
-            <div class="vote-total">${langText('Rodomi tik agreguoti duomenys', 'Only aggregated data is shown')}</div>
           </div>
         </div>
       `}
