@@ -4987,9 +4987,7 @@ function renderGuidelineDetailView() {
   const writable = member && cycleIsWritable();
   const cardUrl = guidelineShareUrl(guideline.id);
   const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
-  const relatedGuidelinesMarkup = member
-    ? renderGuidelineDetailRelatedGrid(guideline)
-    : renderGuidelineRelatedSection(guideline, { showHeading: true });
+  const relatedGuidelinesMarkup = renderGuidelineDetailRelatedGrid(guideline);
   const canManage = canManageSelectedInstitution();
   const canImport = canImportExternalItem(guideline);
   elements.stepView.innerHTML = `
