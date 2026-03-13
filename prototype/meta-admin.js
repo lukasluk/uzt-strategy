@@ -1291,24 +1291,48 @@ function renderDashboard() {
               const selectedDeleteCount = selectedDeleteIds.length;
               const gremlinExtraScans = Math.max(0, Number(institution?.clarityGremlinExtraScans || 0));
               const gremlinTotalLimit = 10 + gremlinExtraScans;
+              const gremlinUsed = strategies.reduce((sum, strategy) => sum + Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0)), 0);
+              const gremlinInstitutionLimit = gremlinTotalLimit * Math.max(0, strategies.length);
+              const gremlinRemaining = Math.max(0, gremlinInstitutionLimit - gremlinUsed);
               return `
                 <article class="card meta-admin-subcard">
-                  <div class="header-row">
-                    <strong>${escapeHtml(institution.name)}</strong>
+                  <div class="header-row meta-institution-header">
+                    <strong class="meta-institution-title">${escapeHtml(institution.name)}</strong>
                     <div class="meta-institution-tags">
                       ${renderTag(institution.slug, 'slug')}
-                      ${renderTag(`Gremlin: ${gremlinTotalLimit}`, 'count')}
+                      ${renderTag(`Limitas / strategijai: ${gremlinTotalLimit}`, 'count')}
+                    </div>
+                  </div>
+                  <div class="meta-institution-gremlin-summary">
+                    <div class="meta-institution-stat">
+                      <span class="meta-institution-stat-label">Panaudota</span>
+                      <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinUsed))}</strong>
+                    </div>
+                    <div class="meta-institution-stat">
+                      <span class="meta-institution-stat-label">Liko</span>
+                      <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinRemaining))}</strong>
+                    </div>
+                    <div class="meta-institution-stat">
+                      <span class="meta-institution-stat-label">Viso kvotos</span>
+                      <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinInstitutionLimit))}</strong>
+                    </div>
+                    <div class="meta-institution-stat">
+                      <span class="meta-institution-stat-label">Papildomai skirta</span>
+                      <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinExtraScans))}</strong>
                     </div>
                   </div>
                   <form class="institution-rename-form inline-form meta-institution-form" data-institution-id="${escapeHtml(institution.id)}">
-                    <input
-                      type="text"
-                      name="name"
-                      value="${escapeHtml(institution.name)}"
-                      placeholder="Naujas institucijos pavadinimas"
-                      required
-                      ${state.busy ? 'disabled' : ''}
-                    />
+                    <label class="meta-institution-main-field">
+                      <span>Institucijos pavadinimas</span>
+                      <input
+                        type="text"
+                        name="name"
+                        value="${escapeHtml(institution.name)}"
+                        placeholder="Naujas institucijos pavadinimas"
+                        required
+                        ${state.busy ? 'disabled' : ''}
+                      />
+                    </label>
                     <label class="meta-institution-quota-field">
                       <span>Papildomi Gremlin scanai</span>
                       <input
@@ -1320,14 +1344,17 @@ function renderDashboard() {
                         ${state.busy ? 'disabled' : ''}
                       />
                     </label>
-                    <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+                    <button type="submit" class="btn btn-ghost meta-institution-save-btn" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
                   </form>
                   <p class="prompt meta-institution-quota-note">
-                    Bazinis limitas: 10. Papildomai priskirta: ${escapeHtml(String(gremlinExtraScans))}. Is viso vienai strategijai sios institucijos ribose: ${escapeHtml(String(gremlinTotalLimit))}.
+                    Bazinis limitas vienai strategijai: 10. Su papildoma kvota kiekviena strategija sioje institucijoje gali tureti iki ${escapeHtml(String(gremlinTotalLimit))} analizu.
                   </p>
-                  <div class="card-section" style="margin-top:10px;">
-                    <strong>Strategijos</strong>
-                    <ul class="mini-list meta-strategy-list" style="margin-top:8px;">
+                  <div class="card-section meta-institution-strategies-section">
+                    <div class="header-row meta-institution-section-head">
+                      <strong>Strategijos</strong>
+                      ${renderTag(`${strategies.length} strategijos`, 'count')}
+                    </div>
+                    <ul class="mini-list meta-strategy-list">
                       ${strategies.length
                         ? strategies.map((strategy) => `
                           <li class="meta-strategy-item">
@@ -1337,6 +1364,7 @@ function renderDashboard() {
                                 <div class="meta-strategy-item-tags">
                                   <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
                                   ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
+                                  ${renderTag(`Gremlin: ${Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0))} / ${gremlinTotalLimit}`, 'count')}
                                 </div>
                               </div>
                               <form class="strategy-rename-form meta-strategy-rename-form" data-strategy-id="${escapeHtml(strategy.id)}">

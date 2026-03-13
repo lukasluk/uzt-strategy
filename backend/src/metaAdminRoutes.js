@@ -1166,7 +1166,14 @@ function registerMetaAdminRoutes({
        order by created_at desc`
     );
     const strategiesRes = await query(
-      `select id, institution_id, title, slug, status, is_default, created_at
+      `select id,
+              institution_id,
+              title,
+              slug,
+              status,
+              is_default,
+              created_at,
+              coalesce(clarity_gremlin_calls_used, 0)::int as clarity_gremlin_calls_used
        from institution_strategies
        order by created_at desc`
     );
@@ -1244,6 +1251,7 @@ function registerMetaAdminRoutes({
         slug: row.slug,
         status: row.status,
         isDefault: Boolean(row.is_default),
+        clarityGremlinCallsUsed: Number(row.clarity_gremlin_calls_used || 0),
         createdAt: row.created_at
       });
       return acc;

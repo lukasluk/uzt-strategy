@@ -7540,17 +7540,64 @@ body.meta-admin-page .stage {
   margin-right: 0;
 }
 
-.meta-institution-form {
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) auto;
-  align-items: end;
+.meta-institution-header {
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 4px;
 }
 
-.meta-institution-quota-field {
+.meta-institution-title {
+  font-size: 20px;
+  line-height: 1.2;
+  color: #203f68;
+}
+
+.meta-institution-gremlin-summary {
   display: grid;
-  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 4px 0 16px;
+}
+
+.meta-institution-stat {
+  border: 1px solid #d5e3f8;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
   min-width: 0;
 }
 
+.meta-institution-stat-label {
+  color: #6882a4;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.meta-institution-stat-value {
+  color: #203f68;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.meta-institution-form {
+  grid-template-columns: minmax(0, 1.5fr) minmax(220px, 260px) auto;
+  align-items: end;
+  gap: 14px;
+  margin-top: 0;
+}
+
+.meta-institution-main-field,
+.meta-institution-quota-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.meta-institution-main-field span,
 .meta-institution-quota-field span {
   color: #48698f;
   font-size: 12px;
@@ -7558,15 +7605,32 @@ body.meta-admin-page .stage {
   line-height: 1.2;
 }
 
+.inline-form .meta-institution-main-field input[type='text'],
 .inline-form .meta-institution-quota-field input[type='number'] {
   width: 100%;
   min-width: 0;
-  padding: 11px 14px;
+  padding: 12px 14px;
+}
+
+.meta-institution-save-btn {
+  min-height: 44px;
+  padding-inline: 20px;
 }
 
 .meta-institution-quota-note {
-  margin: 8px 0 0;
+  margin: 12px 0 0;
   color: #56769c;
+  line-height: 1.6;
+}
+
+.meta-institution-strategies-section {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.meta-institution-section-head {
+  margin-bottom: 0;
 }
 
 .meta-users-layout {
@@ -7819,14 +7883,14 @@ body.meta-admin-page .stage {
 
 .meta-strategy-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .meta-strategy-item {
   border: 1px solid #d3e3f7;
   border-radius: 12px;
   background: linear-gradient(180deg, #fcfeff 0%, #f5faff 100%);
-  padding: 10px;
+  padding: 14px;
 }
 
 .meta-strategy-item-head {
@@ -7862,7 +7926,7 @@ body.meta-admin-page .stage {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .meta-strategy-rename-row input[type="text"] {
@@ -7890,12 +7954,16 @@ body.meta-admin-page .stage {
 }
 
 .meta-strategy-delete-actions {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
   justify-content: flex-end;
 }
 
 @media (max-width: 960px) {
+  .meta-institution-gremlin-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .meta-institution-form {
     grid-template-columns: minmax(0, 1fr);
   }
