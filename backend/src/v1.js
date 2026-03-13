@@ -14,6 +14,7 @@ const { registerAuthRoutes } = require('./authRoutes');
 const { registerMemberRoutes } = require('./memberRoutes');
 const { registerAdminRoutes } = require('./adminRoutes');
 const { registerPolicyAlignmentRoutes } = require('./policyAlignmentRoutes');
+const { registerClarityGremlinRoutes } = require('./clarityGremlinRoutes');
 const { createV1Helpers } = require('./v1Helpers');
 
 function registerV1Routes({ app, query, broadcast, uuid }) {
@@ -283,6 +284,14 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     loadInitiativeContext,
     createGuidelineProposal,
     createInitiativeProposal
+  });
+
+  registerClarityGremlinRoutes({
+    app,
+    query,
+    requireAuth,
+    verifyCycleAccess,
+    memberWriteRateLimit
   });
 
   registerAdminRoutes({
