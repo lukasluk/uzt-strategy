@@ -1,3 +1,8 @@
+const {
+  buildAiProviderConfig,
+  requestAiCompletion
+} = require('./aiProviderService');
+
 function stripCodeFence(raw) {
   const text = String(raw || '').trim();
   if (!text.startsWith('```')) return text;
@@ -91,64 +96,18 @@ function safePreviewText(raw, maxLength = 800) {
     .slice(0, maxLength);
 }
 
-function extractOutputText(payload) {
-  if (!payload || typeof payload !== 'object') return '';
-  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
-
-  if (Array.isArray(payload.output)) {
-    const chunks = [];
-    payload.output.forEach((message) => {
-      const content = Array.isArray(message?.content) ? message.content : [];
-      content.forEach((part) => {
-        if (typeof part?.text === 'string' && part.text.trim()) {
-          chunks.push(part.text.trim());
-        } else if (typeof part?.output_text === 'string' && part.output_text.trim()) {
-          chunks.push(part.output_text.trim());
-        }
-      });
-    });
-    if (chunks.length) return chunks.join('\n').trim();
-  }
-
-  const legacy = payload?.choices?.[0]?.message?.content;
-  if (typeof legacy === 'string' && legacy.trim()) return legacy.trim();
-  return '';
-}
-
-function getPolicyAlignmentAiConfig() {
-  return {
-    apiKey: String(
-      process.env.POLICY_ALIGNMENT_API_KEY
-      || process.env.AI_STRATEGY_API_KEY
-      || process.env.OPENAI_API_KEY
-      || ''
-    ).trim(),
-    model: String(
-      process.env.POLICY_ALIGNMENT_MODEL
-      || process.env.AI_STRATEGY_MODEL
-      || process.env.OPENAI_MODEL
-      || 'gpt-5-mini'
-    ).trim(),
-    baseUrl: String(
-      process.env.POLICY_ALIGNMENT_API_BASE_URL
-      || process.env.AI_STRATEGY_API_BASE_URL
-      || process.env.OPENAI_API_BASE_URL
-      || 'https://api.openai.com/v1'
-    ).trim(),
-    timeoutMs: Math.max(
-      15000,
-      Number(
-        process.env.POLICY_ALIGNMENT_TIMEOUT_MS
-        || process.env.AI_STRATEGY_TIMEOUT_MS
-        || 120000
-      )
-    )
-  };
+function getPolicyAlignmentAiConfig({ provider } = {}) {
+  return buildAiProviderConfig(provider, {
+    apiKeyEnvNames: ['POLICY_ALIGNMENT_API_KEY', 'AI_STRATEGY_API_KEY'],
+    modelEnvNames: ['POLICY_ALIGNMENT_MODEL', 'AI_STRATEGY_MODEL'],
+    baseUrlEnvNames: ['POLICY_ALIGNMENT_API_BASE_URL', 'AI_STRATEGY_API_BASE_URL'],
+    timeoutMsEnvNames: ['POLICY_ALIGNMENT_TIMEOUT_MS', 'AI_STRATEGY_TIMEOUT_MS'],
+    defaultModel: provider === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini'
+  });
 }
 
 async function requestPolicyAlignmentJson({
+  provider,
   apiKey,
   model,
   baseUrl,
@@ -161,96 +120,50 @@ async function requestPolicyAlignmentJson({
   if (!finalApiKey) {
     throw new Error('ai api key not configured');
   }
-
-  const endpoint = `${String(baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '')}/responses`;
-  const finalModel = String(model || 'gpt-5-mini').trim() || 'gpt-5-mini';
+  const finalProvider = String(provider || 'openai').trim() || 'openai';
+  const finalModel = String(model || '').trim()
+    || (finalProvider === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini');
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Math.max(15000, Number(timeoutMs || 0)));
-    let response;
-
     try {
-      response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${finalApiKey}`
-        },
-        body: JSON.stringify({
-          model: finalModel,
-          max_output_tokens: 9000,
-          input: [
-            {
-              role: 'system',
-              content: [{
-                type: 'input_text',
-                text: attempt === 0
-                  ? String(systemText || '')
-                  : `${String(systemText || '')}\n\nCRITICAL: Return only one valid JSON object. No markdown. No commentary. No trailing text.`
-              }]
-            },
-            {
-              role: 'user',
-              content: [{
-                type: 'input_text',
-                text: attempt === 0
-                  ? String(userText || '')
-                  : `${String(userText || '')}\n\nReturn strictly valid JSON only.`
-              }]
-            }
-          ]
-        }),
-        signal: controller.signal
+      const response = await requestAiCompletion({
+        provider: finalProvider,
+        apiKey: finalApiKey,
+        model: finalModel,
+        baseUrl,
+        systemText: attempt === 0
+          ? String(systemText || '')
+          : `${String(systemText || '')}\n\nCRITICAL: Return only one valid JSON object. No markdown. No commentary. No trailing text.`,
+        userText: attempt === 0
+          ? String(userText || '')
+          : `${String(userText || '')}\n\nReturn strictly valid JSON only.`,
+        timeoutMs,
+        responseFormat: 'json',
+        maxOutputTokens: 9000
       });
-    } catch (error) {
-      if (String(error?.name || '').trim() === 'AbortError') {
-        throw new Error('ai request timed out');
+      const outputText = String(response.outputText || '').trim();
+
+      try {
+        const parsed = parseJsonResponseText(outputText);
+        return {
+          model: String(response.model || finalModel || '').trim() || null,
+          outputText,
+          parsed
+        };
+      } catch (error) {
+        if (attempt === 0) continue;
+        console.error('[policy-alignment] ai response parse failed', {
+          operationName,
+          provider: finalProvider,
+          model: String(response.model || finalModel || '').trim() || null,
+          preview: safePreviewText(outputText)
+        });
+        throw error;
       }
-      throw error;
-    } finally {
-      clearTimeout(timer);
-    }
-
-    let payload = null;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = null;
-    }
-
-    if (!response.ok) {
-      const apiError = String(payload?.error?.message || '').trim();
-      if (apiError) {
-        throw new Error(`ai provider error: ${apiError}`);
-      }
-      throw new Error(`ai provider error: HTTP ${response.status}`);
-    }
-
-    const outputText = extractOutputText(payload);
-    if (!outputText) {
-      if (attempt === 0) continue;
-      console.error('[policy-alignment] ai output missing', {
-        operationName,
-        model: String(payload?.model || finalModel || '').trim() || null
-      });
-      throw new Error('ai response invalid');
-    }
-
-    try {
-      const parsed = parseJsonResponseText(outputText);
-      return {
-        model: String(payload?.model || finalModel || '').trim() || null,
-        outputText,
-        parsed
-      };
     } catch (error) {
-      if (attempt === 0) continue;
-      console.error('[policy-alignment] ai response parse failed', {
-        operationName,
-        model: String(payload?.model || finalModel || '').trim() || null,
-        preview: safePreviewText(outputText)
-      });
+      if (String(error?.message || '').trim() === 'ai response invalid' && attempt === 0) {
+        continue;
+      }
       throw error;
     }
   }
@@ -261,7 +174,6 @@ async function requestPolicyAlignmentJson({
 module.exports = {
   getPolicyAlignmentAiConfig,
   requestPolicyAlignmentJson,
-  extractOutputText,
   stripCodeFence,
   extractBalancedJson,
   parseJsonResponseText

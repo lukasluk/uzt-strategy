@@ -1,4 +1,8 @@
 const pdfParse = require('pdf-parse');
+const {
+  buildAiProviderConfig,
+  requestAiCompletion
+} = require('./services/aiProviderService');
 
 function cleanText(value, maxLength = 4000) {
   const text = String(value || '')
@@ -30,30 +34,14 @@ function normalizeKey(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-function extractOutputText(payload) {
-  if (!payload || typeof payload !== 'object') return '';
-  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
-
-  if (Array.isArray(payload.output)) {
-    const chunks = [];
-    payload.output.forEach((message) => {
-      const content = Array.isArray(message?.content) ? message.content : [];
-      content.forEach((part) => {
-        if (typeof part?.text === 'string' && part.text.trim()) {
-          chunks.push(part.text.trim());
-        } else if (typeof part?.output_text === 'string' && part.output_text.trim()) {
-          chunks.push(part.output_text.trim());
-        }
-      });
-    });
-    if (chunks.length) return chunks.join('\n').trim();
-  }
-
-  const legacy = payload?.choices?.[0]?.message?.content;
-  if (typeof legacy === 'string' && legacy.trim()) return legacy.trim();
-  return '';
+function getAiStrategyConfig({ provider } = {}) {
+  return buildAiProviderConfig(provider, {
+    apiKeyEnvNames: ['AI_STRATEGY_API_KEY'],
+    modelEnvNames: ['AI_STRATEGY_MODEL'],
+    baseUrlEnvNames: ['AI_STRATEGY_API_BASE_URL'],
+    timeoutMsEnvNames: ['AI_STRATEGY_TIMEOUT_MS'],
+    defaultModel: provider === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini'
+  });
 }
 
 function normalizeGuidelines(guidelinesRaw) {
@@ -319,70 +307,29 @@ function looksLithuanianContent(text) {
 }
 
 async function requestAiText({
+  provider,
   apiKey,
   model,
-  endpoint,
+  baseUrl,
   systemText,
   userText,
   timeoutMs
 }) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), Math.max(15000, Number(timeoutMs || 0)));
-  let response;
-  try {
-    response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        max_output_tokens: 9000,
-        input: [
-          {
-            role: 'system',
-            content: [{ type: 'input_text', text: systemText }]
-          },
-          {
-            role: 'user',
-            content: [{ type: 'input_text', text: userText }]
-          }
-        ]
-      }),
-      signal: controller.signal
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
-
-  if (!response.ok) {
-    const apiError = String(payload?.error?.message || '').trim();
-    if (apiError) {
-      throw new Error(`ai provider error: ${apiError}`);
-    }
-    throw new Error(`ai provider error: HTTP ${response.status}`);
-  }
-
-  const outputText = extractOutputText(payload);
-  if (!outputText) {
-    throw new Error('ai response invalid');
-  }
-
-  return {
-    model: String(payload?.model || model || '').trim() || null,
-    outputText
-  };
+  return requestAiCompletion({
+    provider,
+    apiKey,
+    model,
+    baseUrl,
+    systemText,
+    userText,
+    timeoutMs,
+    responseFormat: 'json',
+    maxOutputTokens: 9000
+  });
 }
 
 async function generateStrategyFromAi({
+  provider = 'openai',
   apiKey,
   model,
   baseUrl,
@@ -391,7 +338,6 @@ async function generateStrategyFromAi({
   localeHint = 'lt',
   timeoutMs = 120000
 }) {
-  const endpoint = `${String(baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '')}/responses`;
   const locale = String(localeHint || 'lt').toLowerCase() === 'en' ? 'en' : 'lt';
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -401,9 +347,10 @@ async function generateStrategyFromAi({
       : `${prompt.user}\n\nCRITICAL RETRY RULE: Previous output was not in requested language. Output strictly in ${locale === 'en' ? 'English' : 'Lithuanian'} only.`;
 
     const aiResponse = await requestAiText({
+      provider,
       apiKey,
       model,
-      endpoint,
+      baseUrl,
       systemText: prompt.system,
       userText: enforcedUser,
       timeoutMs
@@ -441,6 +388,7 @@ async function generateStrategyFromAi({
 
 module.exports = {
   extractPdfTexts,
+  getAiStrategyConfig,
   generateStrategyFromAi,
   normalizeGeneratedStrategy,
   validateGeneratedStrategy

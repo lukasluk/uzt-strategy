@@ -730,14 +730,13 @@ function attachIds(items, makeId, options = {}) {
   })).filter((item) => item.id);
 }
 
-async function compareRequirementBatch({ requirements, sourceRefsById, localeHint, candidateContext }) {
+async function compareRequirementBatch({ requirements, sourceRefsById, localeHint, candidateContext, aiConfig }) {
   const { systemText, userText } = buildComparisonPrompt({
     localeHint,
     requirements,
     candidateContext,
     sourceRefsById
   });
-  const aiConfig = getPolicyAlignmentAiConfig();
   const response = await requestPolicyAlignmentJson({
     ...aiConfig,
     systemText,
@@ -796,9 +795,9 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
     }
   }
 
-  async function extractRequirementsFromTargetDocuments({ documents, localeHint = 'en' }) {
+  async function extractRequirementsFromTargetDocuments({ documents, localeHint = 'en', aiConfig = null }) {
     const chunks = buildDocumentChunks(documents);
-    const aiConfig = getPolicyAlignmentAiConfig();
+    const finalAiConfig = aiConfig || getPolicyAlignmentAiConfig();
     const chunkBatches = batchTargetChunksForExtraction(chunks);
     const allRequirements = [];
     const modelSet = new Set();
@@ -807,7 +806,7 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
       const batchResult = await extractRequirementBatchWithRetry({
         chunks: chunkBatches[index],
         localeHint,
-        aiConfig,
+        aiConfig: finalAiConfig,
         batchLabel: String(index + 1)
       });
       batchResult.models.forEach((model) => {
@@ -837,7 +836,7 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
     };
   }
 
-  async function compareRequirementsToSource({ requirements, sourceRefs, localeHint = 'en' }) {
+  async function compareRequirementsToSource({ requirements, sourceRefs, localeHint = 'en', aiConfig = null }) {
     // Requirement rows are persisted per analysis, so framework-owned ids must not be reused here.
     const comparableRequirements = dedupeComparableRequirements(requirements);
     const requirementsWithIds = attachIds(comparableRequirements, nextId, { preserveExisting: false });
@@ -853,6 +852,7 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
       Math.min(8, Number(process.env.POLICY_ALIGNMENT_REQUIREMENT_BATCH_SIZE || 6))
     );
     const batches = batchRequirements(requirementsWithIds, batchSize);
+    const finalAiConfig = aiConfig || getPolicyAlignmentAiConfig();
 
     const rawFindings = [];
     const modelSet = new Set();
@@ -866,7 +866,8 @@ function createPolicyAlignmentPipelineService({ query, uuid }) {
         requirements: batch,
         sourceRefsById,
         localeHint,
-        candidateContext: batchCandidateContext
+        candidateContext: batchCandidateContext,
+        aiConfig: finalAiConfig
       });
       if (batchResponse.model) modelSet.add(batchResponse.model);
       rawFindings.push(...normalizeComparisonFindings(batchResponse.parsed, requirementsById, sourceRefsById));

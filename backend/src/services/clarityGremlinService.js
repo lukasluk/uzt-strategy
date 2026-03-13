@@ -798,8 +798,8 @@ async function analyzeStrategyPage({
   };
 }
 
-function getClarityGremlinConfig() {
-  const base = getPolicyAlignmentAiConfig();
+function getClarityGremlinConfig({ provider } = {}) {
+  const base = getPolicyAlignmentAiConfig({ provider });
   return {
     ...base,
     model: String(

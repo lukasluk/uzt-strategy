@@ -363,7 +363,7 @@ function registerAuthRoutes({
   app.get('/api/v1/me/context', requireAuth, async (req, res) => {
     const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await query(
-      'select id, name, slug, status from institutions where id = $1',
+      'select id, name, slug, status, ai_provider from institutions where id = $1',
       [req.auth.institutionId]
     );
     if (institution.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
@@ -401,7 +401,13 @@ function registerAuthRoutes({
         email: userRes.rows[0].email,
         displayName: userRes.rows[0].display_name
       },
-      institution: institution.rows[0],
+      institution: {
+        id: institution.rows[0].id,
+        name: institution.rows[0].name,
+        slug: institution.rows[0].slug,
+        status: institution.rows[0].status,
+        aiProvider: institution.rows[0].ai_provider || 'openai'
+      },
       membership: membership.rows[0],
       strategy: strategy
         ? {

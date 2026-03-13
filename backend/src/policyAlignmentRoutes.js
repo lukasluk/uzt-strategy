@@ -7,6 +7,8 @@ const {
   createPolicyAlignmentPipelineService,
   normalizeLocaleHint
 } = require('./services/policyAlignmentPipelineService');
+const { getPolicyAlignmentAiConfig } = require('./services/policyAlignmentAiService');
+const { resolveInstitutionAiProvider } = require('./services/aiProviderService');
 
 function registerPolicyAlignmentRoutes({
   app,
@@ -74,6 +76,11 @@ function registerPolicyAlignmentRoutes({
 
   function createScopedPipeline(queryFn) {
     return createPolicyAlignmentPipelineService({ query: queryFn, uuid });
+  }
+
+  async function loadInstitutionAiConfig(institutionId) {
+    const provider = await resolveInstitutionAiProvider((text, params) => pool.query(text, params), institutionId);
+    return getPolicyAlignmentAiConfig({ provider });
   }
 
   async function withTransaction(task) {
@@ -207,7 +214,8 @@ function registerPolicyAlignmentRoutes({
     docs,
     localeHint,
     institutionId,
-    sourceHash
+    sourceHash,
+    aiConfig
   }) {
     Promise.resolve().then(async () => {
       try {
@@ -217,7 +225,8 @@ function registerPolicyAlignmentRoutes({
           const createdDocuments = Array.isArray(framework.documents) ? framework.documents : [];
           const extractedRequirements = await pipelineService.extractRequirementsFromTargetDocuments({
             documents: createdDocuments,
-            localeHint
+            localeHint,
+            aiConfig
           });
 
           await alignmentService.replaceRequirements({
@@ -262,7 +271,8 @@ function registerPolicyAlignmentRoutes({
     analysisId,
     localeHint,
     saveTargetAsFramework,
-    auth
+    auth,
+    aiConfig
   }) {
     Promise.resolve().then(async () => {
       try {
@@ -283,7 +293,8 @@ function registerPolicyAlignmentRoutes({
             if (!targetDocuments.length) throw new Error('target documents required');
             const targetExtraction = await pipelineService.extractRequirementsFromTargetDocuments({
               documents: targetDocuments,
-              localeHint
+              localeHint,
+              aiConfig
             });
             rawRequirements = targetExtraction.requirements;
             targetModel = targetExtraction.model;
@@ -301,7 +312,8 @@ function registerPolicyAlignmentRoutes({
           const comparison = await pipelineService.compareRequirementsToSource({
             requirements: rawRequirements,
             sourceRefs: sourceBundle.refs,
-            localeHint
+            localeHint,
+            aiConfig
           });
 
           await alignmentService.replaceSourceRefs({
@@ -627,7 +639,8 @@ function registerPolicyAlignmentRoutes({
         docs,
         localeHint,
         institutionId: req.auth.institutionId,
-        sourceHash: frameworkSourceHash
+        sourceHash: frameworkSourceHash,
+        aiConfig: await loadInstitutionAiConfig(req.auth.institutionId)
       });
 
       res.status(202).json({ ok: true, framework });
@@ -856,11 +869,13 @@ function registerPolicyAlignmentRoutes({
       });
       const alignmentService = createScopedService((text, params) => pool.query(text, params));
       const analysis = await alignmentService.getAnalysisById(analysisId);
+      const aiConfig = await loadInstitutionAiConfig(req.auth.institutionId);
       processAnalysisRunInBackground({
         analysisId,
         localeHint,
         saveTargetAsFramework,
-        auth: req.auth
+        auth: req.auth,
+        aiConfig
       });
       res.status(202).json({ ok: true, analysis });
     } catch (error) {

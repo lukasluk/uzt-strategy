@@ -6,8 +6,13 @@ const {
 } = require('./passwordResetService');
 const {
   extractPdfTexts,
+  getAiStrategyConfig,
   generateStrategyFromAi
 } = require('./aiStrategyService');
+const {
+  normalizeAiProvider,
+  resolveInstitutionAiProvider
+} = require('./services/aiProviderService');
 
 function registerAdminRoutes({
   app,
@@ -67,21 +72,6 @@ function registerAdminRoutes({
   const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 24 * 60);
   const PASSWORD_RESET_BASE_URL = String(process.env.PASSWORD_RESET_BASE_URL || '').trim();
   const INVITE_BASE_URL = String(process.env.INVITE_BASE_URL || PASSWORD_RESET_BASE_URL || '').trim();
-  const AI_STRATEGY_API_KEY = String(
-    process.env.AI_STRATEGY_API_KEY
-    || process.env.OPENAI_API_KEY
-    || ''
-  ).trim();
-  const AI_STRATEGY_MODEL = String(
-    process.env.AI_STRATEGY_MODEL
-    || process.env.OPENAI_MODEL
-    || 'gpt-5-mini'
-  ).trim();
-  const AI_STRATEGY_API_BASE_URL = String(
-    process.env.AI_STRATEGY_API_BASE_URL
-    || process.env.OPENAI_API_BASE_URL
-    || 'https://api.openai.com/v1'
-  ).trim();
   const AI_STRATEGY_TIMEOUT_MS = Math.max(15000, Number(process.env.AI_STRATEGY_TIMEOUT_MS || 120000));
   const AI_STRATEGY_MAX_FILES = Math.min(8, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILES || 4)));
   const AI_STRATEGY_MAX_FILE_MB = Math.min(20, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILE_MB || 20)));
@@ -141,6 +131,11 @@ function registerAdminRoutes({
 
   function normalizeLocaleHint(value) {
     return String(value || '').trim().toLowerCase() === 'en' ? 'en' : 'lt';
+  }
+
+  async function loadInstitutionAiConfig(institutionId) {
+    const provider = await resolveInstitutionAiProvider(query, institutionId);
+    return getAiStrategyConfig({ provider });
   }
 
   function normalizeLayoutLabel(value) {
@@ -474,6 +469,7 @@ function registerAdminRoutes({
   async function runInstitutionAdminAiGeneration({
     generationId,
     institutionId,
+    aiConfig,
     strategyTitleInput,
     strategySlugInput,
     strategyDescriptionInput,
@@ -497,13 +493,14 @@ function registerAdminRoutes({
       });
 
       const generatedResult = await generateStrategyFromAi({
-        apiKey: AI_STRATEGY_API_KEY,
-        model: AI_STRATEGY_MODEL,
-        baseUrl: AI_STRATEGY_API_BASE_URL,
+        provider: aiConfig.provider,
+        apiKey: aiConfig.apiKey,
+        model: aiConfig.model,
+        baseUrl: aiConfig.baseUrl,
         instruction: clarification,
         docs,
         localeHint,
-        timeoutMs: AI_STRATEGY_TIMEOUT_MS
+        timeoutMs: aiConfig.timeoutMs || AI_STRATEGY_TIMEOUT_MS
       });
 
       const generated = generatedResult.normalized;
@@ -743,7 +740,7 @@ function registerAdminRoutes({
                 chars: doc.chars
               }))
             ),
-            generatedResult.model || AI_STRATEGY_MODEL
+            generatedResult.model || aiConfig.model
           ]
         );
       } catch (error) {
@@ -886,6 +883,33 @@ function registerAdminRoutes({
       viewCount: Number(institutionEmbedStats.views || 0),
       lastViewedAt: institutionEmbedStats.lastViewedAt || null,
       totalEmbedViews: Number(embedSummary.totalViews || 0)
+    });
+  });
+
+  app.put('/api/v1/admin/institution/settings', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+
+    const aiProvider = normalizeAiProvider(req.body?.aiProvider);
+    const updated = await query(
+      `update institutions
+       set ai_provider = $2
+       where id = $1
+       returning id, name, slug, status, ai_provider`,
+      [req.auth.institutionId, aiProvider]
+    );
+    if (!updated.rowCount) {
+      return res.status(404).json({ error: 'institution not found' });
+    }
+
+    return res.json({
+      ok: true,
+      institution: {
+        id: updated.rows[0].id,
+        name: updated.rows[0].name,
+        slug: updated.rows[0].slug,
+        status: updated.rows[0].status,
+        aiProvider: updated.rows[0].ai_provider || 'openai'
+      }
     });
   });
 
@@ -1101,7 +1125,8 @@ function registerAdminRoutes({
     aiStrategyUploadMiddleware,
     async (req, res) => {
       if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
-      if (!AI_STRATEGY_API_KEY) {
+      const aiConfig = await loadInstitutionAiConfig(req.auth.institutionId);
+      if (!aiConfig.apiKey) {
         return res.status(503).json({ error: 'ai api key not configured' });
       }
 
@@ -1156,7 +1181,7 @@ function registerAdminRoutes({
               bytes: Number(file?.size || 0)
             }))
           ),
-          AI_STRATEGY_MODEL
+          aiConfig.model
         ]
       );
 
@@ -1173,6 +1198,7 @@ function registerAdminRoutes({
         runInstitutionAdminAiGeneration({
           generationId,
           institutionId: req.auth.institutionId,
+          aiConfig,
           strategyTitleInput,
           strategySlugInput,
           strategyDescriptionInput,

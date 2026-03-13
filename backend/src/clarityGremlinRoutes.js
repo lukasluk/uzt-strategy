@@ -2,6 +2,7 @@ const {
   analyzeStrategyPage,
   getClarityGremlinConfig
 } = require('./services/clarityGremlinService');
+const { resolveInstitutionAiProvider } = require('./services/aiProviderService');
 
 function registerClarityGremlinRoutes({
   app,
@@ -16,8 +17,6 @@ function registerClarityGremlinRoutes({
     : (_req, _res, next) => next();
 
   const baseLimitPerStrategy = Math.max(1, Number(process.env.CLARITY_GREMLIN_LIMIT_PER_STRATEGY || 10));
-  const aiConfig = getClarityGremlinConfig();
-
   async function loadStrategyUsage(strategyId) {
     const strategyRes = await query(
       `select s.id,
@@ -142,6 +141,8 @@ function registerClarityGremlinRoutes({
 
     const reserved = usageReservation.rows[0];
     try {
+      const provider = await resolveInstitutionAiProvider(query, req.auth.institutionId);
+      const aiConfig = getClarityGremlinConfig({ provider });
       const result = await analyzeStrategyPage({
         query,
         cycleId,

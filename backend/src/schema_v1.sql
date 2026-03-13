@@ -4,6 +4,7 @@ create table if not exists institutions (
   id uuid primary key,
   name text not null,
   slug text not null unique,
+  ai_provider text not null default 'openai',
   country_code text,
   website_url text,
   clarity_gremlin_extra_scans integer not null default 0,
@@ -237,6 +238,13 @@ alter table if exists strategy_cycles
   add column if not exists strategy_id uuid references institution_strategies(id) on delete set null;
 alter table if exists institution_strategies
   add column if not exists clarity_gremlin_calls_used integer not null default 0;
+alter table if exists institutions
+  add column if not exists ai_provider text not null default 'openai';
+alter table if exists institutions
+  drop constraint if exists institutions_ai_provider_check;
+alter table if exists institutions
+  add constraint institutions_ai_provider_check
+  check (ai_provider in ('openai', 'mistral'));
 create index if not exists idx_cycles_institution on strategy_cycles(institution_id);
 create index if not exists idx_cycles_strategy on strategy_cycles(strategy_id);
 create index if not exists idx_guidelines_cycle on strategy_guidelines(cycle_id);

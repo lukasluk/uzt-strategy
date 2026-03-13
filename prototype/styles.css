@@ -9121,3 +9121,11 @@ body.meta-admin-page .tag-slug {
     transform: rotate(360deg);
   }
 }
+.admin-ai-provider-row {
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.admin-ai-provider-row select {
+  min-width: 180px;
+}

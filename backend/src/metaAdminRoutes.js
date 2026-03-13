@@ -26,8 +26,12 @@ const {
 const { pool } = require('./db');
 const {
   extractPdfTexts,
+  getAiStrategyConfig,
   generateStrategyFromAi
 } = require('./aiStrategyService');
+const {
+  resolveInstitutionAiProvider
+} = require('./services/aiProviderService');
 const {
   refreshStrategyCatalogClassifications,
   loadStrategyCatalogClassificationSummary
@@ -58,21 +62,6 @@ function registerMetaAdminRoutes({
   const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 60);
   const PASSWORD_RESET_BASE_URL = String(process.env.PASSWORD_RESET_BASE_URL || '').trim();
   const INVITE_BASE_URL = String(process.env.INVITE_BASE_URL || PASSWORD_RESET_BASE_URL || '').trim();
-  const AI_STRATEGY_API_KEY = String(
-    process.env.AI_STRATEGY_API_KEY
-    || process.env.OPENAI_API_KEY
-    || ''
-  ).trim();
-  const AI_STRATEGY_MODEL = String(
-    process.env.AI_STRATEGY_MODEL
-    || process.env.OPENAI_MODEL
-    || 'gpt-5-mini'
-  ).trim();
-  const AI_STRATEGY_API_BASE_URL = String(
-    process.env.AI_STRATEGY_API_BASE_URL
-    || process.env.OPENAI_API_BASE_URL
-    || 'https://api.openai.com/v1'
-  ).trim();
   const AI_STRATEGY_TIMEOUT_MS = Math.max(15000, Number(process.env.AI_STRATEGY_TIMEOUT_MS || 120000));
   const AI_STRATEGY_MAX_FILES = Math.min(8, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILES || 4)));
   const AI_STRATEGY_MAX_FILE_MB = Math.min(20, Math.max(1, Number(process.env.AI_STRATEGY_MAX_FILE_MB || 20)));
@@ -189,6 +178,11 @@ function registerMetaAdminRoutes({
     const safeToken = encodeURIComponent(String(token || '').trim());
     const base = resolveAbsoluteBase(req, INVITE_BASE_URL);
     return `${base}/accept-invite.html?token=${safeToken}`;
+  }
+
+  async function loadInstitutionAiConfig(institutionId) {
+    const provider = await resolveInstitutionAiProvider(query, institutionId);
+    return getAiStrategyConfig({ provider });
   }
 
   async function createInstitutionWithDefaultCycle(name, slug) {
@@ -622,6 +616,7 @@ function registerMetaAdminRoutes({
 
   async function runMetaAdminAiGeneration({
     generationId,
+    aiConfig,
     institutionIdInput,
     institutionNameInput,
     strategyTitleInput,
@@ -649,13 +644,14 @@ function registerMetaAdminRoutes({
       });
 
       const generatedResult = await generateStrategyFromAi({
-        apiKey: AI_STRATEGY_API_KEY,
-        model: AI_STRATEGY_MODEL,
-        baseUrl: AI_STRATEGY_API_BASE_URL,
+        provider: aiConfig.provider,
+        apiKey: aiConfig.apiKey,
+        model: aiConfig.model,
+        baseUrl: aiConfig.baseUrl,
         instruction: clarification,
         docs,
         localeHint,
-        timeoutMs: AI_STRATEGY_TIMEOUT_MS
+        timeoutMs: aiConfig.timeoutMs || AI_STRATEGY_TIMEOUT_MS
       });
 
       const generated = generatedResult.normalized;
@@ -928,7 +924,7 @@ function registerMetaAdminRoutes({
                 chars: doc.chars
               }))
             ),
-            generatedResult.model || AI_STRATEGY_MODEL
+            generatedResult.model || aiConfig.model
           ]
         );
       } catch (error) {
@@ -954,7 +950,7 @@ function registerMetaAdminRoutes({
           strategyId,
           cycleId,
           strategySlug,
-          model: generatedResult.model || AI_STRATEGY_MODEL
+          model: generatedResult.model || aiConfig.model
         }
       });
     } catch (error) {
@@ -1784,10 +1780,6 @@ function registerMetaAdminRoutes({
     metaAdminStrategyCreateRateLimit,
     aiStrategyUploadMiddleware,
     async (req, res) => {
-      if (!AI_STRATEGY_API_KEY) {
-        return res.status(503).json({ error: 'ai api key not configured' });
-      }
-
       const institutionIdInput = String(req.body?.institutionId || '').trim();
       const institutionNameInput = String(req.body?.institutionName || '').trim();
       const strategyTitleInput = String(req.body?.strategyTitle || '').trim();
@@ -1820,6 +1812,13 @@ function registerMetaAdminRoutes({
         }
       }
 
+      const aiConfig = institutionIdInput
+        ? await loadInstitutionAiConfig(institutionIdInput)
+        : getAiStrategyConfig({ provider: 'openai' });
+      if (!aiConfig.apiKey) {
+        return res.status(503).json({ error: 'ai api key not configured' });
+      }
+
       const generationId = uuid();
       const startedAt = new Date().toISOString();
       await query(
@@ -1846,7 +1845,7 @@ function registerMetaAdminRoutes({
               bytes: Number(file?.size || 0)
             }))
           ),
-          AI_STRATEGY_MODEL
+          aiConfig.model
         ]
       );
 
@@ -1863,6 +1862,7 @@ function registerMetaAdminRoutes({
       setImmediate(() => {
         runMetaAdminAiGeneration({
           generationId,
+          aiConfig,
           institutionIdInput,
           institutionNameInput,
           strategyTitleInput,
