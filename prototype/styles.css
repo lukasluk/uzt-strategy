@@ -3737,6 +3737,10 @@ body.embed-map-page .map-fullscreen-watermark img {
   opacity: 0.08;
   transition: opacity 0.24s ease, filter 0.24s ease;
 }
+.strategy-map-viewport.map-layer-plan .strategy-map-edge:not([data-plan-date]) {
+  opacity: 0;
+  pointer-events: none;
+}
 .strategy-map-viewport.map-layer-plan .strategy-map-edge[data-plan-date].map-plan-visible {
   opacity: 1;
   filter: none;
@@ -7529,6 +7533,17 @@ body.meta-admin-page .stage {
   gap: 12px;
 }
 
+.meta-institutions-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+
+.meta-institution-card {
+  width: 100%;
+  padding: 20px 22px;
+}
+
 .meta-institution-tags {
   display: flex;
   align-items: center;
@@ -7543,7 +7558,7 @@ body.meta-admin-page .stage {
 .meta-institution-header {
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .meta-institution-title {
@@ -7554,18 +7569,18 @@ body.meta-admin-page .stage {
 
 .meta-institution-gremlin-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin: 4px 0 16px;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 8px 0 20px;
 }
 
 .meta-institution-stat {
   border: 1px solid #d5e3f8;
   border-radius: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-  padding: 12px 14px;
+  padding: 14px 16px;
   display: grid;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -7584,9 +7599,9 @@ body.meta-admin-page .stage {
 }
 
 .meta-institution-form {
-  grid-template-columns: minmax(0, 1.5fr) minmax(220px, 260px) auto;
+  grid-template-columns: minmax(280px, 1.8fr) minmax(220px, 280px) auto;
   align-items: end;
-  gap: 14px;
+  gap: 16px;
   margin-top: 0;
 }
 
@@ -7615,18 +7630,20 @@ body.meta-admin-page .stage {
 .meta-institution-save-btn {
   min-height: 44px;
   padding-inline: 20px;
+  align-self: stretch;
 }
 
 .meta-institution-quota-note {
-  margin: 12px 0 0;
+  max-width: 92ch;
+  margin: 14px 0 0;
   color: #56769c;
   line-height: 1.6;
 }
 
 .meta-institution-strategies-section {
-  margin-top: 18px;
+  margin-top: 22px;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .meta-institution-section-head {
@@ -7883,7 +7900,8 @@ body.meta-admin-page .stage {
 
 .meta-strategy-list {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
 }
 
 .meta-strategy-item {
@@ -7965,6 +7983,10 @@ body.meta-admin-page .stage {
   }
 
   .meta-institution-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .meta-strategy-list {
     grid-template-columns: minmax(0, 1fr);
   }
 }

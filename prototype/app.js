@@ -6912,7 +6912,16 @@ function bindGlobal() {
       const tagName = String(target.tagName || '').toLowerCase();
       if (target.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select') return;
     }
-    if (String(event.key || '').toLowerCase() !== 'j') return;
+    const key = String(event.key || '').toLowerCase();
+    if (key === 'i') {
+      if (state.mapLayer !== 'guidelines') return;
+      event.preventDefault();
+      if (typeof setMapLayerAndRender === 'function') {
+        setMapLayerAndRender('initiatives');
+      }
+      return;
+    }
+    if (key !== 'j') return;
     state.mapSecretAnthracite = !state.mapSecretAnthracite;
     const viewport = document.getElementById('strategyMapViewport');
     if (viewport instanceof HTMLElement) {

@@ -1283,7 +1283,7 @@ function renderDashboard() {
           <strong>Esamos institucijos</strong>
           ${renderTag(String(institutions.length), 'count')}
         </div>
-        <div class="card-list meta-admin-subgrid">
+        <div class="card-list meta-institutions-list">
           ${institutions.length
             ? institutions.map((institution) => {
               const strategies = Array.isArray(institution?.strategies) ? institution.strategies : [];
@@ -1295,7 +1295,7 @@ function renderDashboard() {
               const gremlinInstitutionLimit = gremlinTotalLimit * Math.max(0, strategies.length);
               const gremlinRemaining = Math.max(0, gremlinInstitutionLimit - gremlinUsed);
               return `
-                <article class="card meta-admin-subcard">
+                <article class="card meta-admin-subcard meta-institution-card">
                   <div class="header-row meta-institution-header">
                     <strong class="meta-institution-title">${escapeHtml(institution.name)}</strong>
                     <div class="meta-institution-tags">
