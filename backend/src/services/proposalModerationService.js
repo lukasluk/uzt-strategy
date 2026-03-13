@@ -607,6 +607,54 @@ function createProposalModerationService({ query, pool }) {
       });
     });
 
+    const gremlinAnalysisRes = await query(
+      `select a.id,
+              a.analysis_json,
+              a.created_by,
+              u.display_name as created_by_name,
+              u.email as created_by_email
+       from clarity_gremlin_analyses a
+       left join platform_users u on u.id = a.created_by
+       where a.cycle_id = $1`,
+      [cycleId]
+    );
+    gremlinAnalysisRes.rows.forEach((row) => {
+      const analysis = row.analysis_json && typeof row.analysis_json === 'object'
+        ? row.analysis_json
+        : {};
+      const drafts = Array.isArray(analysis.proposalDrafts) ? analysis.proposalDrafts : [];
+      drafts.forEach((draft, index) => {
+        const implemented = draft && typeof draft.implemented === 'object'
+          ? draft.implemented
+          : null;
+        const occurredAt = String(implemented?.appliedAt || '').trim();
+        const entityKind = String(implemented?.entityKind || draft?.entityKind || '').trim().toLowerCase();
+        const entityId = String(implemented?.entityId || '').trim();
+        if (!implemented || !occurredAt || !entityId || (entityKind !== 'guideline' && entityKind !== 'initiative')) return;
+        historyRows.push({
+          id: `${row.id}:gremlin-draft:${index}`,
+          occurredAt,
+          entityKind,
+          action: 'gremlin_draft_implemented',
+          entityId,
+          proposalId: null,
+          title: String(implemented?.entityTitle || draft?.title || entityId || '-').trim() || '-',
+          details: String(draft?.rationale || draft?.description || '').trim() || null,
+          actorId: implemented?.appliedBy || row.created_by || null,
+          actorName: historyActorName(
+            {
+              author_id: implemented?.appliedBy || row.created_by || null,
+              author_name: row.created_by_name,
+              author_email: row.created_by_email
+            },
+            'author_id',
+            'author_name',
+            'author_email'
+          )
+        });
+      });
+    });
+
     return historyRows.sort((left, right) => {
       const leftTs = Date.parse(String(left?.occurredAt || '')) || 0;
       const rightTs = Date.parse(String(right?.occurredAt || '')) || 0;

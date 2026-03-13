@@ -98,6 +98,69 @@ function registerClarityGremlinRoutes({
     }));
   }
 
+  async function markDraftImplemented({
+    cycleId,
+    analysisId,
+    draftIndex,
+    institutionId,
+    actorId,
+    entityKind,
+    entityId,
+    entityTitle
+  }) {
+    const analysisRes = await query(
+      `select id, institution_id, cycle_id, analysis_json
+       from clarity_gremlin_analyses
+       where id = $1
+         and cycle_id = $2
+       limit 1`,
+      [analysisId, cycleId]
+    );
+    const row = analysisRes.rows[0] || null;
+    if (!row) {
+      const error = new Error('analysis not found');
+      error.status = 404;
+      throw error;
+    }
+    if (String(row.institution_id || '').trim() !== String(institutionId || '').trim()) {
+      const error = new Error('cross-institution forbidden');
+      error.status = 403;
+      throw error;
+    }
+    const analysis = row.analysis_json && typeof row.analysis_json === 'object'
+      ? row.analysis_json
+      : {};
+    const drafts = Array.isArray(analysis.proposalDrafts) ? [...analysis.proposalDrafts] : [];
+    const index = Number.isInteger(Number(draftIndex)) ? Number(draftIndex) : -1;
+    if (index < 0 || index >= drafts.length) {
+      const error = new Error('draft not found');
+      error.status = 404;
+      throw error;
+    }
+    const draft = drafts[index] && typeof drafts[index] === 'object' ? { ...drafts[index] } : {};
+    draft.implemented = {
+      entityKind: String(entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline',
+      entityId: String(entityId || '').trim(),
+      entityTitle: String(entityTitle || draft.title || '').trim() || null,
+      appliedAt: new Date().toISOString(),
+      appliedBy: String(actorId || '').trim() || null
+    };
+    drafts[index] = draft;
+    analysis.proposalDrafts = drafts;
+    await query(
+      `update clarity_gremlin_analyses
+       set analysis_json = $2::jsonb
+       where id = $1`,
+      [analysisId, JSON.stringify(analysis)]
+    );
+    return {
+      ok: true,
+      analysisId,
+      draftIndex: index,
+      draft
+    };
+  }
+
   app.get('/api/v1/cycles/:cycleId/clarity-gremlin', requireAuth, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
@@ -240,6 +303,42 @@ function registerClarityGremlinRoutes({
         [strategyId]
       );
       return res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
+    }
+  });
+
+  app.post('/api/v1/cycles/:cycleId/clarity-gremlin/:analysisId/drafts/:draftIndex/implemented', requireAuth, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    const analysisId = String(req.params.analysisId || '').trim();
+    const draftIndex = Number(req.params.draftIndex);
+    const entityKind = String(req.body?.entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+    const entityId = String(req.body?.entityId || '').trim();
+    const entityTitle = String(req.body?.entityTitle || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+    if (!analysisId) return res.status(400).json({ error: 'analysisId required' });
+    if (!Number.isInteger(draftIndex) || draftIndex < 0) return res.status(400).json({ error: 'invalid draft index' });
+    if (!entityId) return res.status(400).json({ error: 'entityId required' });
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+
+    try {
+      const result = await markDraftImplemented({
+        cycleId,
+        analysisId,
+        draftIndex,
+        institutionId: req.auth.institutionId,
+        actorId: req.auth.sub,
+        entityKind,
+        entityId,
+        entityTitle
+      });
+      res.json(result);
+    } catch (error) {
+      const status = Number(error?.status || 0);
+      if (status >= 400 && status < 500) {
+        return res.status(status).json({ error: String(error?.message || 'draft update failed') });
+      }
+      return res.status(500).json({ error: String(error?.message || 'draft update failed') });
     }
   });
 }

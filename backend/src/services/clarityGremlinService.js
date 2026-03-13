@@ -670,7 +670,7 @@ function buildSystemPrompt(locale) {
     '- improvements: 2 to 5 items.',
     '- nextActions: 2 to 4 items.',
     '- dataGaps: 0 to 4 items.',
-    '- proposalDrafts: 0 to 2 items.',
+    '- proposalDrafts: 0 to 5 items.',
     '- strengths should usually describe topic coverage, strategic direction quality, or content coherence, not platform mechanics.',
     '- Each recommendation must be concrete and tied to the current page context.',
     '- Only return proposalDrafts when page.proposalDrafts.enabled is true.',
@@ -746,7 +746,7 @@ function normalizeAnalysis(raw) {
           };
         })
         .filter((item) => item.entityKind && item.title && item.description && (item.draftMode !== 'update' || item.targetTitle)),
-      2
+      5
     )
   };
 }

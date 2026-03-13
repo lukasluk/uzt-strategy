@@ -4720,6 +4720,9 @@ function clarityGremlinUiText() {
       draftProposals: 'Prepared draft proposals',
       createPendingDraft: 'Create proposal',
       creatingPendingDraft: 'Creating proposal...',
+      implementedDraft: 'Implemented',
+      openImplementedEntity: 'Open item',
+      gremlinImplementedHistory: 'Gremlin suggestion implemented',
       pendingDraftCreated: 'Proposal created and sent for admin approval.',
       applyUpdateDraft: 'Apply correction',
       updateDraftAdminOnly: 'Immediate correction is available only to institution admins.',
@@ -4770,6 +4773,9 @@ function clarityGremlinUiText() {
     draftProposals: 'Paruošti pasiūlymų juodraščiai',
     createPendingDraft: 'Sukurti pasiūlymą',
     creatingPendingDraft: 'Kuriamas pasiūlymas...',
+    implementedDraft: 'Įgyvendinta',
+    openImplementedEntity: 'Atidaryti kortelę',
+    gremlinImplementedHistory: 'Aiškumo nykštuko pasiūlymas įgyvendintas',
     pendingDraftCreated: 'Pasiūlymas sukurtas ir pateiktas administratoriaus tvirtinimui.',
     applyUpdateDraft: 'Pritaikyti koregavimą',
     updateDraftAdminOnly: 'Tiesioginis koregavimas galimas tik institucijos administratoriui.',
@@ -6276,6 +6282,7 @@ function historyEventLabel(action) {
   if (key === 'proposal_approved_with_changes') return langText('Pasiulymas patvirtintas su pakeitimais', 'Proposal approved with changes');
   if (key === 'proposal_rejected') return langText('Pasiulymas atmestas', 'Proposal rejected');
   if (key === 'proposal_cancelled') return langText('Irasas pasalintas administratoriaus', 'Entry deleted by admin');
+  if (key === 'gremlin_draft_implemented') return clarityGremlinUiText().gremlinImplementedHistory;
   if (key === 'guideline_commented') return langText('Gaire pakomentuota', 'Guideline commented');
   if (key === 'initiative_commented') return langText('Iniciatyva pakomentuota', 'Initiative commented');
   if (key === 'proposal_commented') return langText('Pasiulymas pakomentuotas', 'Proposal commented');
@@ -6286,6 +6293,7 @@ function historyActionPriority(action) {
   const key = String(action || '').trim().toLowerCase();
   if (key === 'strategy_created') return -100;
   if (key === 'proposal_submitted') return -10;
+  if (key === 'gremlin_draft_implemented') return 5;
   if (key.endsWith('_commented')) return 0;
   return 10;
 }
@@ -6384,7 +6392,8 @@ function historyRowNavigationTarget(row) {
   const entityId = String(item.entityId || '').trim();
   const proposalId = String(item.proposalId || '').trim();
   const fallbackAllowed = action === 'proposal_approved' || action === 'proposal_approved_with_changes';
-  const targetId = entityId || (fallbackAllowed ? proposalId : '');
+  const directEntityAllowed = action === 'gremlin_draft_implemented';
+  const targetId = entityId || (fallbackAllowed ? proposalId : '') || (directEntityAllowed ? entityId : '');
   if (!targetId) return null;
 
   return {
@@ -8645,6 +8654,15 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
           </section>`
       : ''}
 
+      ${dataGaps.length
+      ? `<section class="gremlin-section">
+            <h3>${escapeHtml(ui.dataGaps)}</h3>
+            <ul class="gremlin-list gremlin-list-muted">
+              ${dataGaps.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+            </ul>
+          </section>`
+      : ''}
+
       ${improvements.length
       ? `<section class="gremlin-section">
             <h3>${escapeHtml(ui.improvements)}</h3>
@@ -8656,15 +8674,6 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                 </article>
               `).join('')}
             </div>
-          </section>`
-      : ''}
-
-      ${nextActions.length
-      ? `<section class="gremlin-section">
-            <h3>${escapeHtml(ui.nextActions)}</h3>
-            <ul class="gremlin-list gremlin-list-actions">
-              ${nextActions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
-            </ul>
           </section>`
       : ''}
 
@@ -8695,6 +8704,9 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                 const guidelineTags = entityKind === 'initiative'
                   ? (Array.isArray(draft?.guidelineTitles) ? draft.guidelineTitles : []).map((title) => `<span class="tag">${escapeHtml(title)}</span>`).join('')
                   : '';
+                const implemented = draft?.implemented && typeof draft.implemented === 'object' ? draft.implemented : null;
+                const implementedEntityKind = String(implemented?.entityKind || entityKind).trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+                const implementedEntityId = String(implemented?.entityId || '').trim();
                 const targetHint = draftMode === 'update' && draft?.targetTitle
                   ? `<p class="gremlin-draft-meta">${escapeHtml(entityKind === 'initiative' ? langText('Koreguojama iniciatyva', 'Initiative to update') : langText('Koreguojama gairė', 'Guideline to update'))}: <strong>${escapeHtml(draft.targetTitle)}</strong></p>`
                   : '';
@@ -8719,14 +8731,27 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                     ${parentHint}
                     ${guidelineTags ? `<div class="gremlin-draft-tags">${guidelineTags}</div>` : ''}
                     <div class="gremlin-draft-actions">
-                      <button
-                        type="button"
-                        class="btn ${entityKind === 'initiative' ? 'btn-ghost gremlin-draft-initiative-btn' : 'btn-primary'}"
-                        data-gremlin-draft-index="${escapeHtml(index)}"
-                        ${historyItem ? `data-gremlin-history-entry="${escapeHtml(historyItem.id)}"` : ''}
-                        ${disabled ? 'disabled' : ''}
-                        title="${escapeHtml(buttonTitle)}"
-                      >${escapeHtml(buttonText)}</button>
+                      ${implemented && implementedEntityId
+                        ? `
+                          <span class="tag tag-main">${escapeHtml(ui.implementedDraft)}</span>
+                          <button
+                            type="button"
+                            class="btn btn-ghost"
+                            data-action="open-gremlin-implemented-entity"
+                            data-kind="${escapeHtml(implementedEntityKind)}"
+                            data-entity-id="${escapeHtml(implementedEntityId)}"
+                          >${escapeHtml(ui.openImplementedEntity)}</button>
+                        `
+                        : `
+                          <button
+                            type="button"
+                            class="btn ${entityKind === 'initiative' ? 'btn-ghost gremlin-draft-initiative-btn' : 'btn-primary'}"
+                            data-gremlin-draft-index="${escapeHtml(index)}"
+                            ${historyItem ? `data-gremlin-history-entry="${escapeHtml(historyItem.id)}"` : ''}
+                            ${disabled ? 'disabled' : ''}
+                            title="${escapeHtml(buttonTitle)}"
+                          >${escapeHtml(buttonText)}</button>
+                        `}
                     </div>
                   </article>
                 `;
@@ -8735,11 +8760,11 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
           </section>`
       : ''}
 
-      ${dataGaps.length
+      ${nextActions.length
       ? `<section class="gremlin-section">
-            <h3>${escapeHtml(ui.dataGaps)}</h3>
-            <ul class="gremlin-list gremlin-list-muted">
-              ${dataGaps.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+            <h3>${escapeHtml(ui.nextActions)}</h3>
+            <ul class="gremlin-list gremlin-list-actions">
+              ${nextActions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
             </ul>
           </section>`
       : ''}
@@ -9025,6 +9050,8 @@ function showClarityGremlinModal() {
     syncBusyUi();
 
     try {
+      let implementedEntityId = '';
+      let implementedEntityTitle = '';
       if (entityKind === 'guideline' && draftMode === 'update') {
         const targetGuideline = resolveGremlinDraftTargetGuideline(draft, selected);
         if (!targetGuideline?.id) {
@@ -9048,6 +9075,8 @@ function showClarityGremlinModal() {
           }
         });
         scheduleGuidelineFocus(targetGuideline.id);
+        implementedEntityId = String(targetGuideline.id || '').trim();
+        implementedEntityTitle = String(draft.title || targetGuideline.title || '').trim();
       } else if (entityKind === 'initiative' && draftMode === 'update') {
         const targetInitiative = resolveGremlinDraftTargetInitiative(draft, selected);
         if (!targetInitiative?.id) {
@@ -9070,6 +9099,8 @@ function showClarityGremlinModal() {
           }
         });
         scheduleInitiativeFocus(targetInitiative.id);
+        implementedEntityId = String(targetInitiative.id || '').trim();
+        implementedEntityTitle = String(draft.title || targetInitiative.title || '').trim();
       } else if (entityKind === 'initiative') {
         const guidelineIds = resolveGremlinDraftGuidelineIds(draft, selected);
         const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/initiatives`, {
@@ -9082,6 +9113,8 @@ function showClarityGremlinModal() {
           }
         });
         scheduleInitiativeFocus(payload?.initiativeId || '');
+        implementedEntityId = String(payload?.initiativeId || '').trim();
+        implementedEntityTitle = String(draft.title || '').trim();
       } else {
         const relationType = normalizeGuidelineRelation(draft.relationType || 'orphan');
         const parentGuidelineId = resolveGremlinDraftParentGuidelineId(draft, selected);
@@ -9096,6 +9129,20 @@ function showClarityGremlinModal() {
           }
         });
         scheduleGuidelineFocus(payload?.guidelineId || '');
+        implementedEntityId = String(payload?.guidelineId || '').trim();
+        implementedEntityTitle = String(draft.title || '').trim();
+      }
+
+      const historyEntryId = String(selected?.id || '').trim();
+      if (historyEntryId && implementedEntityId) {
+        await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/clarity-gremlin/${encodeURIComponent(historyEntryId)}/drafts/${encodeURIComponent(draftIndex)}/implemented`, {
+          method: 'POST',
+          body: {
+            entityKind,
+            entityId: implementedEntityId,
+            entityTitle: implementedEntityTitle
+          }
+        });
       }
 
       await Promise.all([refreshGuidelines(), refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
@@ -9124,6 +9171,18 @@ function showClarityGremlinModal() {
           Number(button.getAttribute('data-gremlin-draft-index') || 0),
           button
         );
+      });
+    });
+    body?.querySelectorAll('[data-action="open-gremlin-implemented-entity"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const entityKind = String(button.getAttribute('data-kind') || '').trim().toLowerCase();
+        const entityId = String(button.getAttribute('data-entity-id') || '').trim();
+        if (!entityId) return;
+        if (entityKind === 'initiative') {
+          openInitiativeDetail(entityId);
+          return;
+        }
+        openGuidelineDetail(entityId);
       });
     });
   };
