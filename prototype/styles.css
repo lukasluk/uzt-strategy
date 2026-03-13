@@ -116,6 +116,7 @@ body.embed-map-page .app {
   display: flex;
   align-items: center;
   gap: 12px;
+  align-self: center;
 }
 .brand-lockup {
   display: inline-flex;
@@ -220,10 +221,12 @@ body.embed-map-page .app {
   flex: 1 1 auto;
   min-width: 0;
   margin-left: auto;
+  align-self: center;
 }
 .user-bar-top {
   margin: 0;
   width: 100%;
+  align-self: center;
 }
 
 .user-bar-top .user-toolbar {
@@ -237,6 +240,7 @@ body.embed-map-page .app {
   width: 100%;
   justify-content: flex-end;
   flex-wrap: nowrap;
+  align-items: center;
 }
 
 .language-switch {
@@ -625,6 +629,7 @@ body.embed-map-page .stage {
   background: transparent;
   box-shadow: none;
   padding: 0;
+  align-self: center;
 }
 
 .strategy-switcher-summary {
@@ -669,7 +674,10 @@ body.embed-map-page .stage {
   box-sizing: border-box;
   height: 50px;
   padding: 9px 16px;
+  display: flex;
   align-items: center;
+  line-height: 1;
+  align-self: center;
 }
 
 .strategy-switcher-card-topbar.is-open .strategy-switcher-summary {
@@ -684,12 +692,13 @@ body.embed-map-page .stage {
   gap: 8px;
   width: auto;
   max-width: 100%;
+  height: 100%;
   min-width: 0;
 }
 
 .strategy-switcher-item {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   min-width: 0;
   flex: 0 1 auto;
@@ -711,6 +720,7 @@ body.embed-map-page .stage {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 11px;
+  line-height: 1;
   color: #5f799a;
   flex: 0 0 auto;
 }
@@ -718,7 +728,7 @@ body.embed-map-page .stage {
 .strategy-switcher-item > strong {
   min-width: 0;
   font-size: 13px;
-  line-height: 1.3;
+  line-height: 1;
   color: #1f3f69;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4972,6 +4982,7 @@ body.map-comment-modal-open {
   box-sizing: border-box;
   height: 50px;
   padding: 9px 16px;
+  align-self: center;
 }
 
 .user-bar-top .user-menu-panel,
@@ -6208,6 +6219,7 @@ select:focus {
 
 .gremlin-subtitle {
   margin: 6px 0 0;
+  max-width: 680px;
 }
 
 .gremlin-title-block {
@@ -6225,19 +6237,20 @@ select:focus {
 }
 
 .gremlin-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px 20px;
+  align-items: start;
+  margin: 18px 0 18px;
 }
 
 .gremlin-toolbar-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
+  align-content: start;
+  min-width: 0;
 }
 
 .gremlin-toolbar-actions {
@@ -6246,6 +6259,7 @@ select:focus {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-content: start;
 }
 
 .gremlin-current-page-chip {
@@ -6253,6 +6267,76 @@ select:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.gremlin-intro-card {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.95fr) minmax(0, 1.4fr);
+  gap: 18px 24px;
+  align-items: start;
+  border: 1px solid #d9e5f1;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f3f8ff 100%);
+  padding: 18px 20px;
+  margin-bottom: 22px;
+}
+
+.gremlin-intro-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.gremlin-intro-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #e9f1ff;
+  color: #33537e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gremlin-intro-lead {
+  margin: 0;
+  color: #536b8f;
+  line-height: 1.6;
+}
+
+.gremlin-intro-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gremlin-intro-step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid #dbe6f4;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #3c5477;
+  line-height: 1.5;
+}
+
+.gremlin-intro-step-index {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #3b6fe9 0%, #315de0 100%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(49, 93, 224, 0.18);
 }
 
 .gremlin-layout {
@@ -6273,10 +6357,15 @@ select:focus {
 
 .gremlin-detail-panel {
   min-height: 100%;
+  display: grid;
+  align-content: start;
 }
 
 .gremlin-panel-head {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
 }
 
 .gremlin-panel-head h3 {
@@ -6376,6 +6465,7 @@ select:focus {
 .gremlin-body {
   display: grid;
   gap: 18px;
+  align-content: start;
 }
 
 .gremlin-loading-card,
@@ -6390,6 +6480,30 @@ select:focus {
 .gremlin-history-empty,
 .gremlin-history-loading {
   min-height: 180px;
+}
+
+.gremlin-empty-state {
+  min-height: 192px;
+  padding: 24px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f8fe 100%);
+}
+
+.gremlin-empty-copy {
+  display: grid;
+  gap: 10px;
+  max-width: 460px;
+}
+
+.gremlin-empty-copy strong {
+  color: #2c4162;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.gremlin-empty-copy p {
+  margin: 0;
+  color: #637b9c;
+  line-height: 1.6;
 }
 
 .gremlin-loading-spinner {
@@ -6643,6 +6757,18 @@ select:focus {
     min-width: 0;
     max-width: 100vw;
     border-radius: 0;
+  }
+
+  .gremlin-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gremlin-intro-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gremlin-intro-steps {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .gremlin-layout {
@@ -8148,21 +8274,23 @@ body.meta-admin-page .stage {
 }
 
 .meta-institution-form {
-  grid-template-columns: minmax(280px, 1.8fr) minmax(220px, 280px) auto;
+  grid-template-columns: minmax(260px, 1.6fr) minmax(200px, 240px) minmax(220px, 260px) minmax(220px, 260px) auto;
   align-items: end;
   gap: 16px;
   margin-top: 0;
 }
 
 .meta-institution-main-field,
-.meta-institution-quota-field {
+.meta-institution-quota-field,
+.meta-institution-model-field {
   display: grid;
   gap: 8px;
   min-width: 0;
 }
 
 .meta-institution-main-field span,
-.meta-institution-quota-field span {
+.meta-institution-quota-field span,
+.meta-institution-model-field span {
   color: #48698f;
   font-size: 12px;
   font-weight: 700;
@@ -8170,7 +8298,8 @@ body.meta-admin-page .stage {
 }
 
 .inline-form .meta-institution-main-field input[type='text'],
-.inline-form .meta-institution-quota-field input[type='number'] {
+.inline-form .meta-institution-quota-field input[type='number'],
+.inline-form .meta-institution-model-field select {
   width: 100%;
   min-width: 0;
   padding: 12px 14px;
@@ -8185,6 +8314,13 @@ body.meta-admin-page .stage {
 .meta-institution-quota-note {
   max-width: 92ch;
   margin: 14px 0 0;
+  color: #56769c;
+  line-height: 1.6;
+}
+
+.meta-institution-ai-note {
+  max-width: 92ch;
+  margin: 8px 0 0;
   color: #56769c;
   line-height: 1.6;
 }

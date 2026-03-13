@@ -8,7 +8,10 @@ const {
   normalizeLocaleHint
 } = require('./services/policyAlignmentPipelineService');
 const { getPolicyAlignmentAiConfig } = require('./services/policyAlignmentAiService');
-const { resolveInstitutionAiProvider } = require('./services/aiProviderService');
+const {
+  resolveInstitutionAiSettings,
+  resolveInstitutionModelOverride
+} = require('./services/aiProviderService');
 
 function registerPolicyAlignmentRoutes({
   app,
@@ -79,8 +82,11 @@ function registerPolicyAlignmentRoutes({
   }
 
   async function loadInstitutionAiConfig(institutionId) {
-    const provider = await resolveInstitutionAiProvider((text, params) => pool.query(text, params), institutionId);
-    return getPolicyAlignmentAiConfig({ provider });
+    const settings = await resolveInstitutionAiSettings((text, params) => pool.query(text, params), institutionId);
+    return getPolicyAlignmentAiConfig({
+      provider: settings.provider,
+      modelOverride: resolveInstitutionModelOverride(settings, settings.provider)
+    });
   }
 
   async function withTransaction(task) {

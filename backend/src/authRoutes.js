@@ -366,7 +366,7 @@ function registerAuthRoutes({
   app.get('/api/v1/me/context', requireAuth, async (req, res) => {
     const requestedStrategySlug = String(req.query?.strategy || '').trim().toLowerCase();
     const institution = await query(
-      'select id, name, slug, status, ai_provider from institutions where id = $1',
+      'select id, name, slug, status, ai_provider, coalesce(ai_openai_model, \'\') as ai_openai_model, coalesce(ai_mistral_model, \'\') as ai_mistral_model from institutions where id = $1',
       [req.auth.institutionId]
     );
     if (institution.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
@@ -400,9 +400,12 @@ function registerAuthRoutes({
 
     const institutionRow = institution.rows[0];
     const aiProvider = institutionRow.ai_provider || 'openai';
-    const aiStrategyConfig = getAiStrategyConfig({ provider: aiProvider });
-    const policyAlignmentConfig = getPolicyAlignmentAiConfig({ provider: aiProvider });
-    const clarityGremlinConfig = getClarityGremlinConfig({ provider: aiProvider });
+    const modelOverride = aiProvider === 'mistral'
+      ? String(institutionRow.ai_mistral_model || '').trim()
+      : String(institutionRow.ai_openai_model || '').trim();
+    const aiStrategyConfig = getAiStrategyConfig({ provider: aiProvider, modelOverride });
+    const policyAlignmentConfig = getPolicyAlignmentAiConfig({ provider: aiProvider, modelOverride });
+    const clarityGremlinConfig = getClarityGremlinConfig({ provider: aiProvider, modelOverride });
 
     res.json({
       user: {
@@ -416,6 +419,8 @@ function registerAuthRoutes({
         slug: institutionRow.slug,
         status: institutionRow.status,
         aiProvider,
+        aiOpenaiModel: String(institutionRow.ai_openai_model || '').trim(),
+        aiMistralModel: String(institutionRow.ai_mistral_model || '').trim(),
         aiFeatures: {
           strategyGeneration: {
             provider: aiStrategyConfig.provider,

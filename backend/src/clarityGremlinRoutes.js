@@ -2,7 +2,10 @@ const {
   analyzeStrategyPage,
   getClarityGremlinConfig
 } = require('./services/clarityGremlinService');
-const { resolveInstitutionAiProvider } = require('./services/aiProviderService');
+const {
+  resolveInstitutionAiSettings,
+  resolveInstitutionModelOverride
+} = require('./services/aiProviderService');
 
 function registerClarityGremlinRoutes({
   app,
@@ -155,8 +158,12 @@ function registerClarityGremlinRoutes({
 
     const reserved = usageReservation.rows[0];
     try {
-      const provider = await resolveInstitutionAiProvider(query, req.auth.institutionId);
-      const aiConfig = getClarityGremlinConfig({ provider });
+      const aiSettings = await resolveInstitutionAiSettings(query, req.auth.institutionId);
+      const provider = aiSettings.provider;
+      const aiConfig = getClarityGremlinConfig({
+        provider,
+        modelOverride: resolveInstitutionModelOverride(aiSettings, provider)
+      });
       const result = await analyzeStrategyPage({
         query,
         cycleId,

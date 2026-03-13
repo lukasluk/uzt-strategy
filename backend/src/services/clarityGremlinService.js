@@ -813,8 +813,8 @@ async function analyzeStrategyPage({
   };
 }
 
-function getClarityGremlinConfig({ provider } = {}) {
-  const base = getPolicyAlignmentAiConfig({ provider });
+function getClarityGremlinConfig({ provider, modelOverride } = {}) {
+  const base = getPolicyAlignmentAiConfig({ provider, modelOverride });
   const fallbackModel = String(base.model || '').trim()
     || (String(provider || '').trim().toLowerCase() === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini');
   return {

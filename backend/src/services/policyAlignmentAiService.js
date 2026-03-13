@@ -96,13 +96,14 @@ function safePreviewText(raw, maxLength = 800) {
     .slice(0, maxLength);
 }
 
-function getPolicyAlignmentAiConfig({ provider } = {}) {
+function getPolicyAlignmentAiConfig({ provider, modelOverride } = {}) {
   return buildAiProviderConfig(provider, {
     apiKeyEnvNames: ['POLICY_ALIGNMENT_API_KEY', 'AI_STRATEGY_API_KEY'],
     modelEnvNames: ['POLICY_ALIGNMENT_MODEL', 'AI_STRATEGY_MODEL'],
     baseUrlEnvNames: ['POLICY_ALIGNMENT_API_BASE_URL', 'AI_STRATEGY_API_BASE_URL'],
     timeoutMsEnvNames: ['POLICY_ALIGNMENT_TIMEOUT_MS', 'AI_STRATEGY_TIMEOUT_MS'],
-    defaultModel: provider === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini'
+    defaultModel: provider === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini',
+    modelOverride
   });
 }
 

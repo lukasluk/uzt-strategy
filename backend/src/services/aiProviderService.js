@@ -44,6 +44,40 @@ async function resolveInstitutionAiProvider(query, institutionId) {
   return normalizeAiProvider(result.rows?.[0]?.ai_provider);
 }
 
+async function resolveInstitutionAiSettings(query, institutionId) {
+  const id = String(institutionId || '').trim();
+  if (!id || typeof query !== 'function') {
+    return {
+      provider: DEFAULT_AI_PROVIDER,
+      openaiModel: '',
+      mistralModel: ''
+    };
+  }
+  const result = await query(
+    `select ai_provider,
+            coalesce(ai_openai_model, '') as ai_openai_model,
+            coalesce(ai_mistral_model, '') as ai_mistral_model
+     from institutions
+     where id = $1
+     limit 1`,
+    [id]
+  );
+  const row = result.rows?.[0] || {};
+  return {
+    provider: normalizeAiProvider(row.ai_provider),
+    openaiModel: String(row.ai_openai_model || '').trim(),
+    mistralModel: String(row.ai_mistral_model || '').trim()
+  };
+}
+
+function resolveInstitutionModelOverride(settings, provider) {
+  const resolvedProvider = normalizeAiProvider(provider || settings?.provider);
+  if (resolvedProvider === 'mistral') {
+    return String(settings?.mistralModel || '').trim();
+  }
+  return String(settings?.openaiModel || '').trim();
+}
+
 function pickEnvValue(names, fallback = '') {
   const list = Array.isArray(names) ? names : [];
   for (const name of list) {
@@ -75,7 +109,8 @@ function buildAiProviderConfig(provider, {
   modelEnvNames = [],
   baseUrlEnvNames = [],
   timeoutMsEnvNames = [],
-  defaultModel = ''
+  defaultModel = '',
+  modelOverride = ''
 } = {}) {
   const resolvedProvider = normalizeAiProvider(provider);
   const providerApiKeyEnv = resolvedProvider === 'mistral' ? 'MISTRAL_API_KEY' : 'OPENAI_API_KEY';
@@ -86,7 +121,8 @@ function buildAiProviderConfig(provider, {
     ? 'https://api.mistral.ai/v1'
     : 'https://api.openai.com/v1';
   const providerOnlyModel = pickEnvValue([providerModelEnv], defaultModel || providerDefaultModel);
-  const preferredModel = pickEnvValue([providerModelEnv, ...modelEnvNames], providerOnlyModel);
+  const explicitModelOverride = String(modelOverride || '').trim();
+  const preferredModel = explicitModelOverride || pickEnvValue([providerModelEnv, ...modelEnvNames], providerOnlyModel);
 
   return {
     provider: resolvedProvider,
@@ -245,6 +281,8 @@ module.exports = {
   normalizeAiProvider,
   isProviderCompatibleModel,
   resolveInstitutionAiProvider,
+  resolveInstitutionAiSettings,
+  resolveInstitutionModelOverride,
   resolveProviderCompatibleModel,
   buildAiProviderConfig,
   requestAiCompletion,

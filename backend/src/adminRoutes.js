@@ -11,7 +11,8 @@ const {
 } = require('./aiStrategyService');
 const {
   normalizeAiProvider,
-  resolveInstitutionAiProvider
+  resolveInstitutionAiSettings,
+  resolveInstitutionModelOverride
 } = require('./services/aiProviderService');
 
 function registerAdminRoutes({
@@ -134,8 +135,11 @@ function registerAdminRoutes({
   }
 
   async function loadInstitutionAiConfig(institutionId) {
-    const provider = await resolveInstitutionAiProvider(query, institutionId);
-    return getAiStrategyConfig({ provider });
+    const settings = await resolveInstitutionAiSettings(query, institutionId);
+    return getAiStrategyConfig({
+      provider: settings.provider,
+      modelOverride: resolveInstitutionModelOverride(settings, settings.provider)
+    });
   }
 
   function normalizeLayoutLabel(value) {

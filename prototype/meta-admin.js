@@ -33,6 +33,8 @@ const AI_GENERATION_STEPS = [
 const AI_GENERATION_MIN_DURATION_MS = 5000;
 const AI_GENERATION_POLL_TIMEOUT_MS = 10 * 60 * 1000;
 const AI_GENERATION_POLL_INTERVAL_MS = 1500;
+const META_ADMIN_OPENAI_MODELS = ['gpt-5-mini', 'gpt-5', 'gpt-5-nano'];
+const META_ADMIN_MISTRAL_MODELS = ['mistral-small-latest', 'mistral-medium-latest', 'mistral-large-latest'];
 
 bootstrap();
 
@@ -58,6 +60,15 @@ function renderTag(value, type = 'default') {
   const token = normalizeTagToken(value);
   const typeToken = normalizeTagToken(type);
   return `<span class="tag tag-${typeToken} tag-${typeToken}-${token}">${escapeHtml(value)}</span>`;
+}
+
+function renderModelOptions(options, selectedValue, defaultLabel) {
+  const current = String(selectedValue || '').trim();
+  const list = Array.isArray(options) ? options : [];
+  return [
+    `<option value="">${escapeHtml(defaultLabel)}</option>`,
+    ...list.map((value) => `<option value="${escapeHtml(value)}" ${value === current ? 'selected' : ''}>${escapeHtml(value)}</option>`)
+  ].join('');
 }
 
 function getSelectedStrategyIdsForInstitution(institutionId) {
@@ -1294,12 +1305,16 @@ function renderDashboard() {
               const gremlinUsed = strategies.reduce((sum, strategy) => sum + Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0)), 0);
               const gremlinInstitutionLimit = gremlinTotalLimit * Math.max(0, strategies.length);
               const gremlinRemaining = Math.max(0, gremlinInstitutionLimit - gremlinUsed);
+              const aiProvider = String(institution?.aiProvider || 'openai').trim().toLowerCase() === 'mistral' ? 'mistral' : 'openai';
+              const aiOpenaiModel = String(institution?.aiOpenaiModel || '').trim();
+              const aiMistralModel = String(institution?.aiMistralModel || '').trim();
               return `
                 <article class="card meta-admin-subcard meta-institution-card">
                   <div class="header-row meta-institution-header">
                     <strong class="meta-institution-title">${escapeHtml(institution.name)}</strong>
                     <div class="meta-institution-tags">
                       ${renderTag(institution.slug, 'slug')}
+                      ${renderTag(aiProvider === 'mistral' ? 'Mistral' : 'OpenAI', 'scope')}
                       ${renderTag(`Limitas / strategijai: ${gremlinTotalLimit}`, 'count')}
                     </div>
                   </div>
@@ -1344,10 +1359,27 @@ function renderDashboard() {
                         ${state.busy ? 'disabled' : ''}
                       />
                     </label>
+                    <label class="meta-institution-model-field">
+                      <span>OpenAI modelis</span>
+                      <select name="aiOpenaiModel" ${state.busy ? 'disabled' : ''}>
+                        ${renderModelOptions(META_ADMIN_OPENAI_MODELS, aiOpenaiModel, 'Default (gpt-5-mini)')}
+                      </select>
+                    </label>
+                    <label class="meta-institution-model-field">
+                      <span>Mistral modelis</span>
+                      <select name="aiMistralModel" ${state.busy ? 'disabled' : ''}>
+                        ${renderModelOptions(META_ADMIN_MISTRAL_MODELS, aiMistralModel, 'Default (mistral-small-latest)')}
+                      </select>
+                    </label>
                     <button type="submit" class="btn btn-ghost meta-institution-save-btn" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
                   </form>
                   <p class="prompt meta-institution-quota-note">
                     Bazinis limitas vienai strategijai: 10. Su papildoma kvota kiekviena strategija sioje institucijoje gali tureti iki ${escapeHtml(String(gremlinTotalLimit))} analizu.
+                  </p>
+                  <p class="prompt meta-institution-ai-note">
+                    Aktyvus tiekejas: <strong>${escapeHtml(aiProvider === 'mistral' ? 'Mistral' : 'OpenAI')}</strong>.
+                    OpenAI: <strong>${escapeHtml(aiOpenaiModel || 'gpt-5-mini')}</strong>.
+                    Mistral: <strong>${escapeHtml(aiMistralModel || 'mistral-small-latest')}</strong>.
                   </p>
                   <div class="card-section meta-institution-strategies-section">
                     <div class="header-row meta-institution-section-head">
@@ -2031,6 +2063,8 @@ function bindDashboardEvents() {
       const formData = new FormData(form);
       const name = String(formData.get('name') || '').trim();
       const clarityGremlinExtraScans = Number(formData.get('clarityGremlinExtraScans'));
+      const aiOpenaiModel = String(formData.get('aiOpenaiModel') || '').trim();
+      const aiMistralModel = String(formData.get('aiMistralModel') || '').trim();
       if (!institutionId || !name) return;
       if (!Number.isFinite(clarityGremlinExtraScans) || clarityGremlinExtraScans < 0) return;
 
@@ -2039,7 +2073,9 @@ function bindDashboardEvents() {
           method: 'PUT',
           body: {
             name,
-            clarityGremlinExtraScans: Math.trunc(clarityGremlinExtraScans)
+            clarityGremlinExtraScans: Math.trunc(clarityGremlinExtraScans),
+            aiOpenaiModel,
+            aiMistralModel
           }
         });
         setNotice('Institucijos nustatymai atnaujinti.');

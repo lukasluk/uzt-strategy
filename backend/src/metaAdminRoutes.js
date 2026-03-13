@@ -30,7 +30,8 @@ const {
   generateStrategyFromAi
 } = require('./aiStrategyService');
 const {
-  resolveInstitutionAiProvider
+  resolveInstitutionAiSettings,
+  resolveInstitutionModelOverride
 } = require('./services/aiProviderService');
 const {
   refreshStrategyCatalogClassifications,
@@ -181,8 +182,11 @@ function registerMetaAdminRoutes({
   }
 
   async function loadInstitutionAiConfig(institutionId) {
-    const provider = await resolveInstitutionAiProvider(query, institutionId);
-    return getAiStrategyConfig({ provider });
+    const settings = await resolveInstitutionAiSettings(query, institutionId);
+    return getAiStrategyConfig({
+      provider: settings.provider,
+      modelOverride: resolveInstitutionModelOverride(settings, settings.provider)
+    });
   }
 
   async function createInstitutionWithDefaultCycle(name, slug) {
@@ -1157,7 +1161,10 @@ function registerMetaAdminRoutes({
               slug,
               status,
               created_at,
-              coalesce(clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans
+              coalesce(clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans,
+              ai_provider,
+              coalesce(ai_openai_model, '') as ai_openai_model,
+              coalesce(ai_mistral_model, '') as ai_mistral_model
        from institutions
        order by created_at desc`
     );
@@ -1293,6 +1300,9 @@ function registerMetaAdminRoutes({
         slug: row.slug,
         status: row.status,
         createdAt: row.created_at,
+        aiProvider: row.ai_provider || 'openai',
+        aiOpenaiModel: String(row.ai_openai_model || '').trim(),
+        aiMistralModel: String(row.ai_mistral_model || '').trim(),
         clarityGremlinExtraScans: Number(row.clarity_gremlin_extra_scans || 0),
         strategies: strategiesByInstitution[row.id] || []
       })),
@@ -1561,6 +1571,8 @@ function registerMetaAdminRoutes({
     const institutionId = String(req.params.institutionId || '').trim();
     const name = String(req.body?.name || '').trim();
     const rawExtraScans = req.body?.clarityGremlinExtraScans;
+    const aiOpenaiModel = String(req.body?.aiOpenaiModel || '').trim();
+    const aiMistralModel = String(req.body?.aiMistralModel || '').trim();
     if (!institutionId || !name) {
       return res.status(400).json({ error: 'institutionId and name required' });
     }
@@ -1576,13 +1588,19 @@ function registerMetaAdminRoutes({
     const result = await query(
       `update institutions
        set name = $1,
-           clarity_gremlin_extra_scans = coalesce($2::integer, clarity_gremlin_extra_scans)
-       where id = $3
-       returning coalesce(clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans`,
-      [name, clarityGremlinExtraScans, institutionId]
+           clarity_gremlin_extra_scans = coalesce($2::integer, clarity_gremlin_extra_scans),
+           ai_openai_model = nullif($3, ''),
+           ai_mistral_model = nullif($4, '')
+       where id = $5
+       returning coalesce(clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans,
+                 coalesce(ai_openai_model, '') as ai_openai_model,
+                 coalesce(ai_mistral_model, '') as ai_mistral_model`,
+      [name, clarityGremlinExtraScans, aiOpenaiModel, aiMistralModel, institutionId]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
     const updatedExtraScans = Number(result.rows[0]?.clarity_gremlin_extra_scans || 0);
+    const updatedOpenaiModel = String(result.rows[0]?.ai_openai_model || '').trim();
+    const updatedMistralModel = String(result.rows[0]?.ai_mistral_model || '').trim();
 
     await logAuditEvent({
       query,
@@ -1593,7 +1611,9 @@ function registerMetaAdminRoutes({
       entityId: institutionId,
       payload: metaAuditPayload(req, {
         name,
-        clarityGremlinExtraScans: updatedExtraScans
+        clarityGremlinExtraScans: updatedExtraScans,
+        aiOpenaiModel: updatedOpenaiModel,
+        aiMistralModel: updatedMistralModel
       })
     });
 
@@ -1601,7 +1621,9 @@ function registerMetaAdminRoutes({
       ok: true,
       institutionId,
       name,
-      clarityGremlinExtraScans: updatedExtraScans
+      clarityGremlinExtraScans: updatedExtraScans,
+      aiOpenaiModel: updatedOpenaiModel,
+      aiMistralModel: updatedMistralModel
     });
   });
 

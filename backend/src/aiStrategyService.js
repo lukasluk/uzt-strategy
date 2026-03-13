@@ -34,13 +34,14 @@ function normalizeKey(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-function getAiStrategyConfig({ provider } = {}) {
+function getAiStrategyConfig({ provider, modelOverride } = {}) {
   return buildAiProviderConfig(provider, {
     apiKeyEnvNames: ['AI_STRATEGY_API_KEY'],
     modelEnvNames: ['AI_STRATEGY_MODEL'],
     baseUrlEnvNames: ['AI_STRATEGY_API_BASE_URL'],
     timeoutMsEnvNames: ['AI_STRATEGY_TIMEOUT_MS'],
-    defaultModel: provider === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini'
+    defaultModel: provider === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini',
+    modelOverride
   });
 }
 

@@ -4704,11 +4704,17 @@ function clarityGremlinUiText() {
       noCycle: 'Open a strategy cycle first to run analysis.',
       currentContext: 'Current context',
       usage: 'Usage',
+      howItWorks: 'How it works',
+      howItWorksLead: 'Clarity Gremlin reviews only the page that is currently open and keeps recent analyses for this strategy.',
+      howStepCurrent: 'Reads the current page context, visible content, and linked strategy data.',
+      howStepHistory: 'Keeps recent analyses on the left so you can reopen or compare them later.',
+      howStepConsume: 'Uses one scan only when you click Analyze current page.',
       score: 'Clarity score',
       scoreTooltip: 'Rates this page from 1 to 10 based on content clarity, specificity, topic coverage, and execution readiness. 1 means weak and unclear; 10 means strong, clear, and actionable.',
       history: 'Recent analyses',
       noHistory: 'No recent Clarity Gremlin analyses yet. Click Analyze current page to create the first one.',
       emptySelection: 'Select a previous analysis or run a new one for the current page.',
+      emptySelectionBody: 'Pick an item from Recent analyses or create a fresh review for the current page.',
       createdBy: 'Created by',
       createdAt: 'Created',
       provider: 'Provider',
@@ -4740,11 +4746,17 @@ function clarityGremlinUiText() {
     noCycle: 'Pirmiausia atverkite strategijos ciklą, kad būtų galima paleisti analizę.',
     currentContext: 'Dabartinis kontekstas',
     usage: 'Naudojimas',
+    howItWorks: 'Kaip tai veikia',
+    howItWorksLead: 'Aiškumo nykštukas vertina tik šiuo metu atvertą puslapį ir išsaugo naujausias šios strategijos analizes.',
+    howStepCurrent: 'Perskaito dabartinio puslapio kontekstą, matomą turinį ir susietus strategijos duomenis.',
+    howStepHistory: 'Kairėje saugo naujausias analizes, kad galėtumėte jas bet kada vėl atsidaryti ir palyginti.',
+    howStepConsume: 'Vienas scan sunaudojamas tik tada, kai paspaudžiate „Analizuoti dabartinį puslapį“.',
     score: 'Clarity score',
     scoreTooltip: 'Vertina šį puslapį nuo 1 iki 10 pagal turinio aiškumą, konkretumą, temos padengimą ir vykdomumą. 1 reiškia silpną ir neaiškų turinį, 10 reiškia stiprų, aiškų ir lengvai įgyvendinamą turinį.',
     history: 'Naujausios analizės',
     noHistory: 'Dar nėra ankstesnių Aiškumo nykštuko analizių. Paspauskite „Analizuoti dabartinį puslapį“ ir sukurkite pirmąją.',
     emptySelection: 'Pasirinkite ankstesnę analizę arba paleiskite naują dabartiniam puslapiui.',
+    emptySelectionBody: 'Kairėje pasirinkite jau sukurtą analizę arba sukurkite naują dabartiniam puslapiui.',
     createdBy: 'Sukūrė',
     createdAt: 'Sukurta',
     provider: 'Tiekėjas',
@@ -8507,6 +8519,26 @@ function showClarityGremlinModal() {
           <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
         </div>
       </div>
+      <section class="gremlin-intro-card" aria-label="${escapeHtml(ui.howItWorks)}">
+        <div class="gremlin-intro-copy">
+          <span class="gremlin-intro-eyebrow">${escapeHtml(ui.howItWorks)}</span>
+          <p class="gremlin-intro-lead">${escapeHtml(ui.howItWorksLead)}</p>
+        </div>
+        <div class="gremlin-intro-steps">
+          <div class="gremlin-intro-step">
+            <span class="gremlin-intro-step-index">1</span>
+            <span>${escapeHtml(ui.howStepCurrent)}</span>
+          </div>
+          <div class="gremlin-intro-step">
+            <span class="gremlin-intro-step-index">2</span>
+            <span>${escapeHtml(ui.howStepHistory)}</span>
+          </div>
+          <div class="gremlin-intro-step">
+            <span class="gremlin-intro-step-index">3</span>
+            <span>${escapeHtml(ui.howStepConsume)}</span>
+          </div>
+        </div>
+      </section>
       <div class="gremlin-layout">
         <aside class="gremlin-history-panel">
           <div class="gremlin-panel-head">
@@ -8587,7 +8619,13 @@ function showClarityGremlinModal() {
     const selected = historyItems.find((item) => String(item?.id || '').trim() === String(selectedHistoryId || '').trim()) || null;
     if (!body) return;
     if (!selected) {
-      body.innerHTML = `<div class="card guideline-empty gremlin-empty"><strong>${escapeHtml(ui.emptySelection)}</strong></div>`;
+      body.innerHTML = `
+        <div class="card guideline-empty gremlin-empty gremlin-empty-state">
+          <div class="gremlin-empty-copy">
+            <strong>${escapeHtml(ui.emptySelection)}</strong>
+            <p>${escapeHtml(ui.emptySelectionBody || ui.emptySelection)}</p>
+          </div>
+        </div>`;
       return;
     }
     body.innerHTML = renderClarityGremlinResultMarkup({

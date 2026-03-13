@@ -241,6 +241,10 @@ alter table if exists institution_strategies
 alter table if exists institutions
   add column if not exists ai_provider text not null default 'openai';
 alter table if exists institutions
+  add column if not exists ai_openai_model text;
+alter table if exists institutions
+  add column if not exists ai_mistral_model text;
+alter table if exists institutions
   drop constraint if exists institutions_ai_provider_check;
 alter table if exists institutions
   add constraint institutions_ai_provider_check
