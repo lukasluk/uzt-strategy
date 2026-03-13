@@ -6297,6 +6297,13 @@ select:focus {
   padding: 18px 20px;
 }
 
+.gremlin-info-model-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .gremlin-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

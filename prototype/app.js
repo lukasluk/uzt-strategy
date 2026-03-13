@@ -8515,6 +8515,9 @@ function showClarityGremlinModal() {
                 >i</button>
                 <div id="clarityGremlinInfoPanel" class="gremlin-info-panel" hidden>
                   <span class="gremlin-intro-eyebrow">${escapeHtml(ui.howItWorks)}</span>
+                  <div class="gremlin-info-model-row">
+                    <span class="tag gremlin-model-chip">${escapeHtml(ui.modelLabel)}: ${escapeHtml(formatFeatureAiLabel('clarityGremlin'))}</span>
+                  </div>
                   <p class="gremlin-intro-lead">${escapeHtml(ui.howItWorksLead)}</p>
                   <div class="gremlin-intro-steps">
                     <div class="gremlin-intro-step">
@@ -8545,7 +8548,6 @@ function showClarityGremlinModal() {
         </div>
         <div class="gremlin-toolbar-actions">
           <span class="tag gremlin-current-page-chip">${escapeHtml(initialContext.contextLabel || clarityGremlinPageLabel(initialContext.view))}</span>
-          <span class="tag gremlin-model-chip">${escapeHtml(ui.modelLabel)}: ${escapeHtml(formatFeatureAiLabel('clarityGremlin'))}</span>
           <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
         </div>
       </div>
