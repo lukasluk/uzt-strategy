@@ -7696,6 +7696,48 @@ async function recoverAiGenerationAfterGatewayTimeout({
   return null;
 }
 
+function clarityGremlinHistoryEntryMatchesContext(item, context, sinceIso = '') {
+  if (!item || !context) return false;
+  if (!clarityGremlinHistoryMatchesContext(item, context)) return false;
+  const createdTs = Date.parse(String(item.createdAt || '')) || 0;
+  const sinceTs = Date.parse(String(sinceIso || '')) || 0;
+  return createdTs >= sinceTs;
+}
+
+async function recoverClarityGremlinAfterGatewayTimeout({
+  cycleId,
+  context,
+  sinceIso,
+  timeoutMs = 90000,
+  pollMs = 1800
+} = {}) {
+  const normalizedCycleId = String(cycleId || '').trim();
+  if (!normalizedCycleId || !context) return null;
+  const deadline = Date.now() + Math.max(5000, Number(timeoutMs) || 0);
+
+  while (Date.now() < deadline) {
+    let payload = null;
+    try {
+      payload = await api(`/api/v1/cycles/${encodeURIComponent(normalizedCycleId)}/clarity-gremlin`);
+    } catch {
+      payload = null;
+    }
+
+    const history = Array.isArray(payload?.history) ? payload.history : [];
+    const match = history.find((item) => clarityGremlinHistoryEntryMatchesContext(item, context, sinceIso)) || null;
+    if (match) {
+      return {
+        historyEntryId: String(match.id || '').trim(),
+        usage: payload?.usage || null
+      };
+    }
+
+    await waitMs(pollMs);
+  }
+
+  return null;
+}
+
 async function waitForAdminAiGenerationById({
   generationId,
   timeoutMs = 10 * 60 * 1000,
@@ -8733,7 +8775,10 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                     <div class="gremlin-draft-actions">
                       ${implemented && implementedEntityId
                         ? `
-                          <span class="tag tag-main">${escapeHtml(ui.implementedDraft)}</span>
+                          <span class="gremlin-draft-status gremlin-draft-status-implemented">
+                            <span class="gremlin-draft-status-icon" aria-hidden="true">✓</span>
+                            <span>${escapeHtml(ui.implementedDraft)}</span>
+                          </span>
                           <button
                             type="button"
                             class="btn btn-ghost"
@@ -9143,6 +9188,43 @@ function showClarityGremlinModal() {
             entityTitle: implementedEntityTitle
           }
         });
+        const implementedPayload = {
+          entityKind,
+          entityId: implementedEntityId,
+          entityTitle: implementedEntityTitle,
+          appliedAt: new Date().toISOString(),
+          appliedBy: state.user?.name || state.user?.email || ''
+        };
+        historyItems = historyItems.map((item) => {
+          if (String(item?.id || '').trim() !== historyEntryId) return item;
+          const itemAnalysis = item?.analysis && typeof item.analysis === 'object' ? item.analysis : {};
+          const itemDrafts = Array.isArray(itemAnalysis.proposalDrafts) ? [...itemAnalysis.proposalDrafts] : [];
+          if (!itemDrafts[Number(draftIndex)]) return item;
+          itemDrafts[Number(draftIndex)] = {
+            ...itemDrafts[Number(draftIndex)],
+            implemented: implementedPayload
+          };
+          return {
+            ...item,
+            analysis: {
+              ...itemAnalysis,
+              proposalDrafts: itemDrafts
+            }
+          };
+        });
+        selected.analysis = selected?.analysis && typeof selected.analysis === 'object'
+          ? {
+            ...selected.analysis,
+            proposalDrafts: Array.isArray(selected.analysis.proposalDrafts)
+              ? selected.analysis.proposalDrafts.map((itemDraft, itemIndex) => (
+                itemIndex === Number(draftIndex)
+                  ? { ...itemDraft, implemented: implementedPayload }
+                  : itemDraft
+              ))
+              : selected.analysis.proposalDrafts
+          }
+          : selected.analysis;
+        renderSelection();
       }
 
       await Promise.all([refreshGuidelines(), refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
@@ -9260,6 +9342,7 @@ function showClarityGremlinModal() {
         </div>
       `;
     }
+    const startedAtIso = new Date().toISOString();
     try {
       const payload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycleId)}/clarity-gremlin`, {
         method: 'POST',
@@ -9271,6 +9354,26 @@ function showClarityGremlinModal() {
       });
       await loadHistory(String(payload?.historyEntryId || '').trim());
     } catch (error) {
+      if (isGatewayTimeoutError(error)) {
+        if (body) {
+          body.innerHTML = `
+            <div class="gremlin-loading-card">
+              <div class="gremlin-loading-spinner" aria-hidden="true"></div>
+              <strong>${escapeHtml(toUserMessage(error))}</strong>
+            </div>
+          `;
+        }
+        const recovered = await recoverClarityGremlinAfterGatewayTimeout({
+          cycleId: context.cycleId,
+          context,
+          sinceIso: startedAtIso
+        });
+        if (recovered?.historyEntryId) {
+          await loadHistory(recovered.historyEntryId);
+          applyUsage(recovered.usage || null);
+          return;
+        }
+      }
       const usage = error?.payload?.usage || null;
       if (body) {
         body.innerHTML = `<div class="card guideline-empty gremlin-empty"><strong>${escapeHtml(toUserMessage(error))}</strong></div>`;
