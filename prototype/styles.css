@@ -484,6 +484,21 @@ body.embed-map-page .stage {
   border-color: #b9d7bf;
 }
 
+.step-icon-asset {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.step-pill-gremlin .step-icon {
+  overflow: hidden;
+}
+
+.step-icon-asset-gremlin {
+  transform: scale(1.26);
+}
+
 .step-pill-gremlin:hover:not(:disabled) {
   border-color: #a8cdb0;
   background: linear-gradient(180deg, #ffffff 0%, #f3fbf3 100%);
@@ -5998,6 +6013,20 @@ select:focus {
   margin: 6px 0 0;
 }
 
+.gremlin-title-block {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.gremlin-title-icon {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(72, 124, 199, 0.22));
+}
+
 .gremlin-toolbar {
   display: flex;
   justify-content: space-between;
@@ -6240,8 +6269,7 @@ select:focus {
 .gremlin-backdrop-rune-grid,
 .gremlin-backdrop-sigil,
 .gremlin-backdrop-flare,
-.gremlin-backdrop-stars,
-.gremlin-backdrop-copy {
+.gremlin-backdrop-stars {
   position: absolute;
 }
 
@@ -6375,29 +6403,6 @@ select:focus {
 .gremlin-backdrop-stars span:nth-child(11) { left: 74%; bottom: 31%; animation-delay: 0.2s; }
 .gremlin-backdrop-stars span:nth-child(12) { left: 84%; bottom: 22%; animation-delay: 1.2s; }
 
-.gremlin-backdrop-copy {
-  left: 10%;
-  right: 10%;
-  bottom: 9%;
-  display: grid;
-  gap: 8px;
-  text-align: center;
-  color: rgba(245, 250, 255, 0.96);
-  text-shadow: 0 4px 22px rgba(11, 21, 38, 0.45);
-}
-
-.gremlin-backdrop-copy strong {
-  font-size: clamp(22px, 2vw, 30px);
-  line-height: 1.08;
-  letter-spacing: 0.01em;
-}
-
-.gremlin-backdrop-copy span {
-  font-size: 15px;
-  line-height: 1.5;
-  color: rgba(224, 237, 255, 0.9);
-}
-
 @keyframes gremlinAuraDriftOne {
   from { transform: translate3d(-10px, -8px, 0) scale(0.94); }
   to { transform: translate3d(18px, 12px, 0) scale(1.08); }
@@ -6445,6 +6450,16 @@ select:focus {
 
   .gremlin-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gremlin-title-block {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .gremlin-title-icon {
+    width: 44px;
+    height: 44px;
   }
 
   .gremlin-backdrop-stage {

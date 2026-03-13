@@ -2838,14 +2838,7 @@ function stepIconMarkup(stepId) {
   }
 
   if (id === 'clarity-gremlin') {
-    return wrap(`
-      <path d="M7.3 8.8c0-3 1.9-4.9 4.7-4.9 2.8 0 4.7 1.9 4.7 4.9v1.3c0 .8.3 1.5.9 2.1l.8.8c.7.7.3 1.9-.7 2l-1.6.2c-.4 2.7-2.3 4.3-4.1 4.3s-3.7-1.6-4.1-4.3l-1.6-.2c-1-.1-1.4-1.3-.7-2l.8-.8c.6-.6.9-1.3.9-2.1z"></path>
-      <circle cx="10.2" cy="11.3" r="1.1"></circle>
-      <circle cx="13.8" cy="11.3" r="1.1"></circle>
-      <path d="M9.8 14.5c.7.6 1.4.9 2.2.9.8 0 1.5-.3 2.2-.9"></path>
-      <path d="M9.1 4.6l-1.4-1.5"></path>
-      <path d="M14.9 4.6l1.4-1.5"></path>
-    `);
+    return '<img class="step-icon-asset step-icon-asset-gremlin" src="assets/clarity_gremlin.svg" alt="" />';
   }
 
   if (id === 'history') {
@@ -8307,9 +8300,12 @@ function showClarityGremlinModal() {
   overlay.innerHTML = `
     <div class="modal-card clarity-gremlin-modal" role="dialog" aria-modal="true" aria-labelledby="clarityGremlinTitle">
       <div class="header-row">
-        <div>
+        <div class="gremlin-title-block">
+          <img class="gremlin-title-icon" src="assets/clarity_gremlin.svg" alt="" aria-hidden="true" />
+          <div>
           <h2 id="clarityGremlinTitle">${escapeHtml(ui.title)}</h2>
           <p class="prompt gremlin-subtitle">${escapeHtml(ui.subtitle)}</p>
+          </div>
         </div>
         <button id="closeClarityGremlinModal" class="btn btn-ghost" type="button">${escapeHtml(ui.close)}</button>
       </div>
@@ -8347,10 +8343,6 @@ function showClarityGremlinModal() {
       <div class="gremlin-backdrop-stars">
         <span></span><span></span><span></span><span></span><span></span><span></span>
         <span></span><span></span><span></span><span></span><span></span><span></span>
-      </div>
-      <div class="gremlin-backdrop-copy">
-        <strong>${escapeHtml(langText('Gremlin skenuoja strateginį lauką', 'Gremlin is scanning the strategy field'))}</strong>
-        <span>${escapeHtml(langText('Ieškomi signalai, spragos ir paslėpti ryšiai', 'Searching for signals, gaps, and hidden links'))}</span>
       </div>
     </div>
   `;
