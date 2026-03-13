@@ -6974,6 +6974,29 @@ select:focus {
   box-shadow: 0 12px 28px rgba(34, 67, 111, 0.08);
 }
 
+.gremlin-draft-card-tone-initiative {
+  border-color: #e1c8a2;
+  background: linear-gradient(180deg, #fffaf2 0%, #f7ead7 100%);
+  box-shadow: 0 12px 28px rgba(112, 81, 35, 0.08);
+}
+
+.gremlin-draft-card-tone-initiative .gremlin-draft-title {
+  color: #5a4425;
+}
+
+.gremlin-draft-card-tone-initiative .gremlin-draft-description,
+.gremlin-draft-card-tone-initiative .gremlin-draft-meta {
+  color: #6e5739;
+}
+
+.gremlin-draft-card-tone-initiative .gremlin-draft-rationale {
+  color: #7b5c32;
+}
+
+.gremlin-draft-card-mode-update {
+  border-style: solid;
+}
+
 .gremlin-draft-head {
   display: flex;
   align-items: center;
@@ -7013,6 +7036,17 @@ select:focus {
 
 .gremlin-draft-actions .btn[disabled] {
   opacity: 0.66;
+}
+
+.gremlin-draft-initiative-btn {
+  border-color: #d2b189;
+  background: linear-gradient(180deg, #fff8ee 0%, #f7e6cf 100%);
+  color: #5b472c;
+}
+
+.gremlin-draft-initiative-btn:hover:not(:disabled) {
+  border-color: #bf9a77;
+  background: linear-gradient(180deg, #fffdf8 0%, #f7e3cc 100%);
 }
 
 .guideline-card.guideline-focus-pulse {

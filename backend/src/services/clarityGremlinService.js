@@ -350,6 +350,7 @@ async function buildViewPayload(query, snapshot, view, entityId) {
         entityKind: 'guideline',
         goal: 'Prepare draft guideline proposals that fill the most important content gaps revealed on this guideline page.',
         rules: [
+          'You may either propose a new guideline draft or a revision draft for an existing guideline already visible in this page context.',
           'Prefer drafts that sharpen or extend the current strategic topic rather than duplicating the current guideline.',
           'If the current guideline is a parent guideline, prefer child guideline drafts that make the topic more actionable.',
           'Use relationType child only when there is a clearly suitable existing parent guideline in this page context.',
@@ -439,6 +440,7 @@ async function buildViewPayload(query, snapshot, view, entityId) {
         entityKind: 'guideline',
         goal: 'Prepare draft guideline proposals that fill major thematic or structural gaps in the guideline set.',
         rules: [
+          'You may either propose a new guideline draft or a revision draft for an existing guideline already present in the list.',
           'Prefer gaps in strategic coverage, missing sub-themes, or clearer hierarchy.',
           'Do not duplicate existing guidelines or rename them trivially.',
           'Use child relation only if an obvious parent guideline exists in the provided context.'
@@ -647,6 +649,8 @@ function buildSystemPrompt(locale) {
     '  "proposalDrafts": [',
     '    {',
     '      "entityKind": "guideline|initiative",',
+    '      "draftMode": "create|update",',
+    '      "targetTitle": "string|null",',
     '      "title": "string",',
     '      "description": "string",',
     '      "rationale": "string",',
@@ -670,6 +674,9 @@ function buildSystemPrompt(locale) {
     '- Only return proposalDrafts when page.proposalDrafts.enabled is true.',
     '- If page.proposalDrafts.entityKind is guideline, return only guideline drafts.',
     '- If page.proposalDrafts.entityKind is initiative, return only initiative drafts.',
+    '- Use draftMode "update" only when revising an existing guideline already visible in the page context; in that case targetTitle must match the guideline to change.',
+    '- Use draftMode "create" for genuinely new proposals.',
+    '- For initiative pages, prefer create drafts rather than revisions unless the needed change is obviously to sharpen one existing initiative.',
     '- If proposalDrafts are disabled for this page, return an empty array.',
     '- proposalDraft titles must be distinct from obvious existing titles in the context.',
     '- proposalDraft descriptions must be specific enough to submit as moderated pending proposals.',
@@ -718,6 +725,8 @@ function normalizeAnalysis(raw) {
           const entityKind = String(item?.entityKind || '').trim().toLowerCase();
           return {
             entityKind: entityKind === 'initiative' ? 'initiative' : entityKind === 'guideline' ? 'guideline' : '',
+            draftMode: String(item?.draftMode || '').trim().toLowerCase() === 'update' ? 'update' : 'create',
+            targetTitle: cleanText(item?.targetTitle, 160) || null,
             title: cleanText(item?.title, 160),
             description: cleanText(item?.description, 1200),
             rationale: cleanText(item?.rationale, 260),
@@ -734,7 +743,7 @@ function normalizeAnalysis(raw) {
             )
           };
         })
-        .filter((item) => item.entityKind && item.title && item.description),
+        .filter((item) => item.entityKind && item.title && item.description && (item.draftMode !== 'update' || item.targetTitle)),
       2
     )
   };

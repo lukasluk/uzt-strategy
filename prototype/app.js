@@ -4718,9 +4718,14 @@ function clarityGremlinUiText() {
       improvements: 'What should improve',
       nextActions: 'Concrete next actions',
       draftProposals: 'Prepared draft proposals',
-      createPendingDraft: 'Create pending draft',
-      creatingPendingDraft: 'Creating pending draft...',
-      pendingDraftCreated: 'Draft proposal created and sent for admin approval.',
+      createPendingDraft: 'Create proposal',
+      creatingPendingDraft: 'Creating proposal...',
+      pendingDraftCreated: 'Proposal created and sent for admin approval.',
+      applyUpdateDraft: 'Apply correction',
+      updateDraftAdminOnly: 'Immediate correction is available only to institution admins.',
+      confirmUpdateDraftTitle: 'Apply this correction now?',
+      confirmUpdateDraftBody: 'This will update the existing guideline immediately. You can review the text before confirming.',
+      updateDraftApplied: 'Guideline correction applied immediately.',
       draftUnavailable: 'Draft creation is available only in a writable strategy cycle.',
       dataGaps: 'Potential gaps',
       remainingCalls: 'Remaining analyses',
@@ -4760,9 +4765,14 @@ function clarityGremlinUiText() {
     improvements: 'Ką verta pagerinti',
     nextActions: 'Konkretūs kiti žingsniai',
     draftProposals: 'Paruošti pasiūlymų juodraščiai',
-    createPendingDraft: 'Sukurti laukiantį pasiūlymą',
-    creatingPendingDraft: 'Kuriamas laukiantis pasiūlymas...',
+    createPendingDraft: 'Sukurti pasiūlymą',
+    creatingPendingDraft: 'Kuriamas pasiūlymas...',
     pendingDraftCreated: 'Pasiūlymas sukurtas ir pateiktas administratoriaus tvirtinimui.',
+    applyUpdateDraft: 'Pritaikyti koregavimą',
+    updateDraftAdminOnly: 'Tiesioginis koregavimas galimas tik institucijos administratoriui.',
+    confirmUpdateDraftTitle: 'Pritaikyti šį koregavimą dabar?',
+    confirmUpdateDraftBody: 'Šis veiksmas iš karto atnaujins esamą gairę. Prieš tęsdami įsitikinkite, kad tikrai norite pritaikyti pakeitimus.',
+    updateDraftApplied: 'Gairės koregavimas pritaikytas iš karto.',
     draftUnavailable: 'Juodraščio kūrimas galimas tik redaguojamame strategijos cikle.',
     dataGaps: 'Galimos spragos',
     remainingCalls: 'Likę kvietimai',
@@ -4910,6 +4920,17 @@ function resolveGremlinDraftGuidelineIds(draft, historyItem) {
       .filter(Boolean);
   }
   return [];
+}
+
+function resolveGremlinDraftTargetGuideline(draft, historyItem) {
+  const targetByTitle = findActiveGuidelineByNormalizedTitle(draft?.targetTitle);
+  if (targetByTitle) return targetByTitle;
+
+  const view = String(historyItem?.view || '').trim().toLowerCase();
+  if (view === 'guideline-detail') {
+    return findGuidelineById(historyItem?.entityId);
+  }
+  return null;
 }
 
 function normalizeImportComparableText(value) {
@@ -8375,9 +8396,13 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
             <div class="gremlin-draft-list">
               ${draftProposals.map((draft, index) => {
                 const entityKind = String(draft?.entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+                const draftMode = String(draft?.draftMode || '').trim().toLowerCase() === 'update' ? 'update' : 'create';
                 const kindLabel = entityKind === 'initiative'
                   ? langText('Iniciatyvos pasiūlymas', 'Initiative proposal')
                   : langText('Gairės pasiūlymas', 'Guideline proposal');
+                const modeLabel = draftMode === 'update'
+                  ? langText('Esamos gairės koregavimas', 'Existing guideline correction')
+                  : kindLabel;
                 const relationLabel = entityKind === 'guideline' && draft?.relationType
                   ? ` · ${escapeHtml(
                     draft.relationType === 'child'
@@ -8390,28 +8415,38 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                 const guidelineTags = entityKind === 'initiative'
                   ? (Array.isArray(draft?.guidelineTitles) ? draft.guidelineTitles : []).map((title) => `<span class="tag">${escapeHtml(title)}</span>`).join('')
                   : '';
+                const targetHint = draftMode === 'update' && draft?.targetTitle
+                  ? `<p class="gremlin-draft-meta">${escapeHtml(langText('Koreguojama gairė', 'Guideline to update'))}: <strong>${escapeHtml(draft.targetTitle)}</strong></p>`
+                  : '';
                 const parentHint = entityKind === 'guideline' && draft?.relationType === 'child' && draft?.parentGuidelineTitle
                   ? `<p class="gremlin-draft-meta">${escapeHtml(langText('Siūloma priskirti prie', 'Suggested parent'))}: <strong>${escapeHtml(draft.parentGuidelineTitle)}</strong></p>`
                   : '';
+                const requiresImmediateApply = entityKind === 'guideline' && draftMode === 'update';
+                const buttonText = requiresImmediateApply ? ui.applyUpdateDraft : ui.createPendingDraft;
+                const buttonTitle = draftButtonsDisabled
+                  ? ui.draftUnavailable
+                  : (requiresImmediateApply && !canOpenAdminView() ? ui.updateDraftAdminOnly : '');
+                const disabled = draftButtonsDisabled || (requiresImmediateApply && !canOpenAdminView());
                 return `
-                  <article class="gremlin-draft-card">
+                  <article class="gremlin-draft-card gremlin-draft-card-tone-${escapeHtml(entityKind)}${draftMode === 'update' ? ' gremlin-draft-card-mode-update' : ''}">
                     <div class="gremlin-draft-head">
-                      <span class="tag tag-main">${escapeHtml(kindLabel)}${relationLabel}</span>
+                      <span class="tag ${entityKind === 'initiative' ? '' : 'tag-main'}">${escapeHtml(modeLabel)}${draftMode === 'create' ? relationLabel : ''}</span>
                     </div>
                     <strong class="gremlin-draft-title">${escapeHtml(draft?.title || '')}</strong>
                     <p class="gremlin-draft-description">${escapeHtml(draft?.description || '')}</p>
                     ${draft?.rationale ? `<p class="gremlin-draft-rationale">${escapeHtml(draft.rationale)}</p>` : ''}
+                    ${targetHint}
                     ${parentHint}
                     ${guidelineTags ? `<div class="gremlin-draft-tags">${guidelineTags}</div>` : ''}
                     <div class="gremlin-draft-actions">
                       <button
                         type="button"
-                        class="btn btn-primary"
+                        class="btn ${entityKind === 'initiative' ? 'btn-ghost gremlin-draft-initiative-btn' : 'btn-primary'}"
                         data-gremlin-draft-index="${escapeHtml(index)}"
                         ${historyItem ? `data-gremlin-history-entry="${escapeHtml(historyItem.id)}"` : ''}
-                        ${draftButtonsDisabled ? 'disabled' : ''}
-                        title="${draftButtonsDisabled ? escapeHtml(ui.draftUnavailable) : ''}"
-                      >${escapeHtml(ui.createPendingDraft)}</button>
+                        ${disabled ? 'disabled' : ''}
+                        title="${escapeHtml(buttonTitle)}"
+                      >${escapeHtml(buttonText)}</button>
                     </div>
                   </article>
                 `;
@@ -8700,16 +8735,40 @@ function showClarityGremlinModal() {
     const cycleId = String(state.cycle?.id || '').trim();
     if (!cycleId) return;
     const entityKind = String(draft.entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+    const draftMode = String(draft.draftMode || '').trim().toLowerCase() === 'update' ? 'update' : 'create';
 
     draftSubmitInProgress = true;
     if (button instanceof HTMLButtonElement) {
       button.disabled = true;
-      button.textContent = ui.creatingPendingDraft;
+      button.textContent = draftMode === 'update' ? ui.applyUpdateDraft : ui.creatingPendingDraft;
     }
     syncBusyUi();
 
     try {
-      if (entityKind === 'initiative') {
+      if (entityKind === 'guideline' && draftMode === 'update') {
+        const targetGuideline = resolveGremlinDraftTargetGuideline(draft, selected);
+        if (!targetGuideline?.id) {
+          throw new Error(langText('Nepavyko rasti koreguojamos gairės.', 'Could not find the guideline to update.'));
+        }
+        const confirmed = window.confirm(`${ui.confirmUpdateDraftTitle}\n\n${ui.confirmUpdateDraftBody}`);
+        if (!confirmed) {
+          return;
+        }
+        await api(`/api/v1/admin/guidelines/${encodeURIComponent(targetGuideline.id)}`, {
+          method: 'PUT',
+          body: {
+            title: String(draft.title || '').trim(),
+            description: String(draft.description || '').trim(),
+            status: String(targetGuideline.status || 'active').trim() || 'active',
+            relationType: normalizeGuidelineRelation(draft.relationType || targetGuideline.relationType || 'orphan'),
+            lineSide: normalizeLineSide(targetGuideline.lineSide || 'auto') || 'auto',
+            parentGuidelineId: resolveGremlinDraftParentGuidelineId(draft, selected) || targetGuideline.parentGuidelineId || null,
+            implementationDate: targetGuideline.implementationDate || null,
+            implementationOwner: String(targetGuideline.implementationOwner || '').trim() || null
+          }
+        });
+        scheduleGuidelineFocus(targetGuideline.id);
+      } else if (entityKind === 'initiative') {
         const guidelineIds = resolveGremlinDraftGuidelineIds(draft, selected);
         const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/initiatives`, {
           method: 'POST',
@@ -8738,7 +8797,7 @@ function showClarityGremlinModal() {
       }
 
       await Promise.all([refreshGuidelines(), refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
-      notifySuccess(ui.pendingDraftCreated);
+      notifySuccess(entityKind === 'guideline' && draftMode === 'update' ? ui.updateDraftApplied : ui.pendingDraftCreated);
     } catch (error) {
       notifyError(toUserMessage(error));
     } finally {
