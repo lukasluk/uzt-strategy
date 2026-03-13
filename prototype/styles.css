@@ -26,6 +26,10 @@
   --guideline-orphan-border: #f0d2c7;
   --guideline-orphan-surface: #fff6f1;
   --guideline-orphan-shadow: rgba(216, 107, 75, 0.14);
+  --initiative-accent: #c88527;
+  --initiative-border: #e2c89f;
+  --initiative-surface: #fff8ee;
+  --initiative-shadow: rgba(160, 104, 29, 0.14);
   --pastel-soft: #edf1ff;
   --pastel-soft-border: #d8def4;
   --border-soft: #dbe2ee;
@@ -1745,13 +1749,21 @@ textarea {
 
 .detail-related-group {
   margin-top: 12px;
+  display: grid;
+  gap: 12px;
+  min-height: 100%;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 250, 255, 0.94) 100%);
+  box-shadow: 0 14px 30px rgba(36, 54, 87, 0.06);
 }
 
 .detail-related-grid {
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
-  gap: 16px;
-  align-items: start;
+  gap: 18px;
+  align-items: stretch;
 }
 
 .detail-related-grid .detail-related-group {
@@ -1760,19 +1772,50 @@ textarea {
 
 .detail-related-grid .guideline-group-header {
   align-items: baseline;
+  margin-bottom: 2px;
 }
 
 .detail-related-grid .guideline-group h3 {
-  font-family: 'Inter', sans-serif;
-  font-size: 11px;
+  font-family: var(--font-display);
+  font-size: 12px;
   line-height: 1.2;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .detail-related-group-initiative {
   margin-top: 8px;
+}
+
+.detail-related-group-tone-guideline {
+  border-color: var(--guideline-parent-border);
+  background: linear-gradient(180deg, #ffffff 0%, var(--guideline-parent-surface) 100%);
+  box-shadow: 0 14px 30px rgba(72, 104, 168, 0.08);
+}
+
+.detail-related-group-tone-initiative {
+  border-color: var(--initiative-border);
+  background: linear-gradient(180deg, #ffffff 0%, var(--initiative-surface) 100%);
+  box-shadow: 0 14px 30px rgba(160, 104, 29, 0.08);
+}
+
+.detail-related-count {
+  min-width: 28px;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.detail-related-group-tone-guideline .detail-related-count {
+  background: #edf3ff;
+  border-color: #d0ddf4;
+  color: #355789;
+}
+
+.detail-related-group-tone-initiative .detail-related-count {
+  background: #faedd9;
+  border-color: #e7cda9;
+  color: #855a22;
 }
 
 .detail-related-heading-compact {
@@ -1792,24 +1835,48 @@ textarea {
   border-radius: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
   color: #1f4775;
-  padding: 11px 14px;
+  padding: 12px 14px 12px 16px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.35;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+  box-shadow: 0 8px 18px rgba(37, 61, 101, 0.05);
 }
 
 .detail-related-link:hover {
   border-color: #abc6ec;
   background: #ffffff;
   transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(37, 61, 101, 0.08);
 }
 
 .detail-related-link:focus-visible {
   outline: 2px solid rgba(63, 143, 230, 0.35);
   outline-offset: 1px;
+}
+
+.detail-related-link-guideline {
+  border-color: #cddcf4;
+  border-left: 4px solid var(--guideline-parent-accent);
+  background: linear-gradient(180deg, #ffffff 0%, #f2f7ff 100%);
+  color: #274975;
+}
+
+.detail-related-link-guideline:hover {
+  border-color: #b4caed;
+}
+
+.detail-related-link-initiative {
+  border-color: #e3c9a4;
+  border-left: 4px solid var(--initiative-accent);
+  background: linear-gradient(180deg, #fffefb 0%, #fbf1e1 100%);
+  color: #6e4f24;
+}
+
+.detail-related-link-initiative:hover {
+  border-color: #d6b482;
 }
 
 @media (max-width: 920px) {
@@ -5543,12 +5610,32 @@ select:focus {
 .implementation-detail-meta {
   margin-bottom: 14px;
 }
+.guideline-groups[data-detail-view="1"] {
+  margin-bottom: 18px;
+}
+.guideline-groups[data-detail-view="1"] .guideline-card {
+  box-shadow: 0 18px 34px rgba(37, 63, 103, 0.08);
+}
+.guideline-groups[data-detail-view="1"] .guideline-card .card-top {
+  gap: 10px;
+  padding-left: 14px;
+  border-left-width: 5px;
+}
+.guideline-groups[data-detail-view="1"] .guideline-card .title-row {
+  gap: 12px;
+  align-items: flex-start;
+}
 .guideline-groups[data-detail-view="1"] .guideline-card .card-top h4 {
   font-size: 32px;
   line-height: 1.08;
 }
 .guideline-groups[data-detail-view="1"] .guideline-card .card-top p {
-  color: #000000;
+  color: #22344c;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.guideline-groups[data-detail-view="1"] .guideline-card .vote-panel {
+  margin-top: 2px;
 }
 .modal-overlay {
   position: fixed;

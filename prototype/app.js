@@ -4806,19 +4806,21 @@ function renderRelatedDetailSectionMarkup({
   sectionClass = '',
   headingClass = '',
   action = 'open-related-guideline-detail',
-  idAttribute = 'data-guideline-id'
+  idAttribute = 'data-guideline-id',
+  tone = 'guideline'
 }) {
   const cards = Array.isArray(items) ? items : [];
   const safeSectionClass = String(sectionClass || '').trim();
   const safeHeadingClass = String(headingClass || '').trim();
   const safeAction = String(action || 'open-related-guideline-detail').trim() || 'open-related-guideline-detail';
   const safeIdAttribute = String(idAttribute || 'data-guideline-id').trim() || 'data-guideline-id';
+  const safeTone = String(tone || 'guideline').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
   return `
-    <section class="guideline-group detail-related-group ${escapeHtml(safeSectionClass)}">
+    <section class="guideline-group detail-related-group detail-related-group-tone-${escapeHtml(safeTone)} ${escapeHtml(safeSectionClass)}">
       ${showHeading ? `
         <div class="guideline-group-header">
           <h3 class="${escapeHtml(safeHeadingClass)}">${escapeHtml(heading)}</h3>
-          <span class="tag">${cards.length}</span>
+          <span class="tag detail-related-count">${cards.length}</span>
         </div>
       ` : ''}
       ${cards.length
@@ -4826,7 +4828,7 @@ function renderRelatedDetailSectionMarkup({
             ${cards.map((card) => `
               <button
                 type="button"
-                class="detail-related-link"
+                class="detail-related-link detail-related-link-${escapeHtml(safeTone)}"
                 data-action="${escapeHtml(safeAction)}"
                 ${safeIdAttribute}="${escapeHtml(card.id)}"
               >${escapeHtml(card.title || card.id)}</button>
@@ -4858,7 +4860,8 @@ function renderInitiativeRelatedGuidelinesSection(initiative) {
     emptyLabel: langText('Susietu gairiu nerasta.', 'No linked guidelines found.'),
     items: sortCardsByTitle(Array.from(uniqueById.values())),
     sectionClass: 'detail-related-group-initiative',
-    headingClass: 'detail-related-heading-compact'
+    headingClass: 'detail-related-heading-compact',
+    tone: 'guideline'
   });
 }
 
@@ -4870,11 +4873,14 @@ function renderGuidelineDetailRelatedGrid(guideline) {
     showHeading: true,
     sectionClass: 'detail-related-group-initiative',
     action: 'open-related-initiative-detail',
-    idAttribute: 'data-initiative-id'
+    idAttribute: 'data-initiative-id',
+    tone: 'initiative'
   })}
       ${renderRelatedDetailSectionMarkup({
     ...resolveGuidelineRelatedItems(guideline),
-    showHeading: true
+    showHeading: true,
+    sectionClass: 'detail-related-group-guideline',
+    tone: 'guideline'
   })}
     </div>
   `;
