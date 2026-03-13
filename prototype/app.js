@@ -1279,6 +1279,13 @@ function toUserMessage(error) {
     'notes too long': 'Papildoma informacija per ilga.',
     'invalid implementation date': 'Neteisinga įgyvendinimo data.',
     'ai api key not configured': 'AI API raktas nesukonfigÅ«ruotas serveryje.',
+    'ai request timed out': 'AI tiekėjas neatsakė laiku. Pabandykite dar kartą.',
+    'ai provider error: HTTP 400': 'AI tiekėjas atmetė užklausą (400). Patikrinkite modelio suderinamumą.',
+    'ai provider error: HTTP 401': 'AI tiekėjas atmetė API raktą (401).',
+    'ai provider error: HTTP 403': 'AI tiekėjas atmetė prieigą (403).',
+    'ai provider error: HTTP 404': 'Nurodytas AI modelis arba endpoint nerastas (404).',
+    'ai provider error: HTTP 429': 'AI tiekėjas laikinai riboja užklausas (429).',
+    'ai provider error: HTTP 500': 'AI tiekėjas laikinai nepasiekiamas (500).',
     'clarification required': 'Nurodykite AI patikslinimÄ….',
     'at least one pdf file required': 'Ä®kelkite bent vienÄ… PDF failÄ….',
     'only pdf files allowed': 'LeidÅ¾iami tik PDF failai.',
@@ -4728,6 +4735,7 @@ function clarityGremlinUiText() {
       actionLabel: 'Clarity Gremlin',
       close: 'Close',
       analyze: 'Analyze current page',
+      modelLabel: 'Model',
       loading: 'Clarity Gremlin is inspecting this page...',
       unsupported: 'This page is not supported yet. Open Guidelines, Initiatives, Strategy map, or Implementation plan.',
       disabledView: 'Analysis is disabled on Admin and Policy Alignment pages.',
@@ -4742,6 +4750,7 @@ function clarityGremlinUiText() {
       emptySelection: 'Select a previous analysis or run a new one for the current page.',
       createdBy: 'Created by',
       createdAt: 'Created',
+      provider: 'Provider',
       currentPage: 'Current page',
       strengths: 'What looks strong',
       improvements: 'What should improve',
@@ -4762,6 +4771,7 @@ function clarityGremlinUiText() {
     actionLabel: 'Aiškumo nykštukas',
     close: 'Uždaryti',
     analyze: 'Analizuoti dabartinį puslapį',
+    modelLabel: 'Modelis',
     loading: 'Aiškumo nykštukas analizuoja šį puslapį...',
     unsupported: 'Šis puslapis kol kas nepalaikomas. Atverkite Gaires, Iniciatyvas, Strategijų žemėlapį arba Įgyvendinimo planą.',
     disabledView: 'Analizė išjungta Admin ir Politikos atitikties puslapiuose.',
@@ -4776,6 +4786,7 @@ function clarityGremlinUiText() {
     emptySelection: 'Pasirinkite ankstesnę analizę arba paleiskite naują dabartiniam puslapiui.',
     createdBy: 'Sukūrė',
     createdAt: 'Sukurta',
+    provider: 'Tiekėjas',
     currentPage: 'Dabartinis puslapis',
     strengths: 'Kas atrodo stipru',
     improvements: 'Ką verta pagerinti',
@@ -4789,6 +4800,36 @@ function clarityGremlinUiText() {
     remainingCalls: 'Likę kvietimai',
     page: 'Puslapis'
   };
+}
+
+function getFeatureAiInfo(featureKey) {
+  const institution = state.context?.institution;
+  const features = institution?.aiFeatures && typeof institution.aiFeatures === 'object'
+    ? institution.aiFeatures
+    : {};
+  const feature = features?.[featureKey] && typeof features[featureKey] === 'object'
+    ? features[featureKey]
+    : {};
+  const provider = String(feature.provider || institution?.aiProvider || 'openai').trim().toLowerCase() === 'mistral'
+    ? 'mistral'
+    : 'openai';
+  const model = String(feature.model || '').trim();
+  return { provider, model };
+}
+
+function formatFeatureAiLabel(featureKey) {
+  const info = getFeatureAiInfo(featureKey);
+  if (info.model) return info.model;
+  return info.provider === 'mistral' ? 'Mistral' : 'OpenAI';
+}
+
+function formatAiProviderLabel(provider, model = '') {
+  const modelText = String(model || '').trim();
+  const providerToken = String(provider || '').trim().toLowerCase();
+  const normalizedProvider = providerToken === 'mistral' || /mistral/i.test(modelText) ? 'mistral' : 'openai';
+  const providerLabel = normalizedProvider === 'mistral' ? 'Mistral' : 'OpenAI';
+  if (!modelText) return providerLabel;
+  return `${providerLabel} · ${modelText}`;
 }
 
 function clarityGremlinPageLabel(view = state.activeView) {
@@ -8386,6 +8427,7 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
         const score = Math.max(1, Math.min(10, Number(analysis.score || 0) || 0));
         const isSelected = String(item?.id || '').trim() === String(selectedId || '').trim();
         const isCurrentContext = clarityGremlinHistoryMatchesContext(item, context);
+        const providerLabel = formatAiProviderLabel(item?.provider, item?.model);
         return `
           <button
             type="button"
@@ -8399,6 +8441,7 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
             </div>
             <div class="gremlin-history-meta">
               <span>${escapeHtml(formatCommentDateTime(item.createdAt) || String(item.createdAt || ''))}</span>
+              <span>${escapeHtml(ui.provider)}: ${escapeHtml(providerLabel)}</span>
               ${item.createdByName ? `<span>${escapeHtml(item.createdByName)}</span>` : ''}
               ${isCurrentContext ? `<span class="tag tag-main">${escapeHtml(ui.currentPage)}</span>` : ''}
             </div>
@@ -8437,6 +8480,7 @@ function showClarityGremlinModal() {
         </div>
         <div class="gremlin-toolbar-actions">
           <span class="tag gremlin-current-page-chip">${escapeHtml(initialContext.contextLabel || clarityGremlinPageLabel(initialContext.view))}</span>
+          <span class="tag gremlin-model-chip">${escapeHtml(ui.modelLabel)}: ${escapeHtml(formatFeatureAiLabel('clarityGremlin'))}</span>
           <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
         </div>
       </div>

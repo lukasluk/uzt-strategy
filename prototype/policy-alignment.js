@@ -127,6 +127,13 @@ function policyAlignmentSuggestionKindLabel(kind) {
     : langText('Gairės juodraštis', 'Guideline draft');
 }
 
+function policyAlignmentAiModelLabel() {
+  if (typeof formatFeatureAiLabel === 'function') {
+    return formatFeatureAiLabel('policyAlignment');
+  }
+  return 'OpenAI';
+}
+
 function normalizePolicyAlignmentFramework(value) {
   if (!value || typeof value !== 'object') return null;
   return {
@@ -981,6 +988,7 @@ function openPolicyAlignmentFrameworkCreateModal() {
         <div id="policyAlignmentFrameworkCreateError" class="auth-error" style="display:none;"></div>
         <div class="form-actions">
           <button type="submit" id="policyAlignmentFrameworkCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Kurti politikos karkasą', 'Build policy framework'))}</button>
+          <span class="tag">${escapeHtml(policyAlignmentAiModelLabel())}</span>
         </div>
       </form>
     </div>
@@ -1167,6 +1175,7 @@ function openPolicyAlignmentCreateModalLegacy() {
         <div id="policyAlignmentCreateError" class="auth-error" style="display:none;"></div>
         <div class="form-actions">
           <button type="submit" id="policyAlignmentCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Run analysis', 'Run analysis'))}</button>
+          <span class="tag">${escapeHtml(policyAlignmentAiModelLabel())}</span>
         </div>
       </form>
     </div>
@@ -1393,6 +1402,7 @@ function openPolicyAlignmentStrategyCreateModal() {
         <div id="policyAlignmentCreateError" class="auth-error" style="display:none;"></div>
         <div class="form-actions">
           <button type="submit" id="policyAlignmentCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Run analysis', 'Run analysis'))}</button>
+          <span class="tag">${escapeHtml(policyAlignmentAiModelLabel())}</span>
         </div>
       </form>
     </div>
@@ -1609,6 +1619,7 @@ function openPolicyAlignmentExternalCreateModal() {
         <div id="policyAlignmentCreateError" class="auth-error" style="display:none;"></div>
         <div class="form-actions">
           <button type="submit" id="policyAlignmentCreateSubmit" class="btn btn-primary">${escapeHtml(langText('Run analysis', 'Run analysis'))}</button>
+          <span class="tag">${escapeHtml(policyAlignmentAiModelLabel())}</span>
         </div>
       </form>
     </div>
@@ -1919,6 +1930,7 @@ function renderPolicyAlignmentView() {
                 </div>
                 <div class="policy-alignment-sidebar-actions">
                   <button id="openPolicyAlignmentFrameworkCreateBtn" class="btn btn-primary" ${state.role === 'institution_admin' ? '' : 'disabled'}>${escapeHtml(langText('Naujas politikos karkasas', 'New policy framework'))}</button>
+                  <span class="tag">${escapeHtml(policyAlignmentAiModelLabel())}</span>
                 </div>
                 ${state.policyAlignmentFrameworkError ? `<p class="prompt">${escapeHtml(state.policyAlignmentFrameworkError)}</p>` : ''}
                 ${frameworks.length
@@ -1962,6 +1974,7 @@ function renderPolicyAlignmentView() {
                   <button id="openPolicyAlignmentCreateBtn" class="btn btn-primary" ${(state.role === 'institution_admin' && frameworks.some((item) => policyAlignmentFrameworkReady(item))) ? '' : 'disabled'}>${escapeHtml(activeTab === 'external-analysis'
                     ? langText('Nauja išorinė analizė', 'New external analysis')
                     : langText('Nauja analizė', 'New analysis'))}</button>
+                  <span class="tag">${escapeHtml(policyAlignmentAiModelLabel())}</span>
                 </div>
                 ${analyses.length
                   ? `<div class="policy-alignment-analysis-list">

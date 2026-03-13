@@ -97,6 +97,9 @@ function extractAiText(payload) {
   if (typeof content === 'string' && content.trim()) {
     return content.trim();
   }
+  if (content && typeof content === 'object' && typeof content.text === 'string' && content.text.trim()) {
+    return content.text.trim();
+  }
   if (Array.isArray(content)) {
     const text = content
       .map((part) => {
@@ -144,7 +147,6 @@ async function requestAiCompletion({
           model: String(model || 'mistral-small-latest').trim() || 'mistral-small-latest',
           temperature: 0.2,
           max_tokens: Math.max(512, Number(maxOutputTokens || 0)),
-          ...(responseFormat === 'json' ? { response_format: { type: 'json_object' } } : {}),
           messages: [
             { role: 'system', content: String(systemText || '') },
             { role: 'user', content: String(userText || '') }

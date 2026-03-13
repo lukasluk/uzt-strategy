@@ -17,6 +17,18 @@ function registerClarityGremlinRoutes({
     : (_req, _res, next) => next();
 
   const baseLimitPerStrategy = Math.max(1, Number(process.env.CLARITY_GREMLIN_LIMIT_PER_STRATEGY || 10));
+
+  function mapErrorStatus(error) {
+    const message = String(error?.message || '').trim();
+    if (!message) return 500;
+    if (message === 'cycleId required' || message === 'view required') return 400;
+    if (message === 'cycle not found' || message === 'strategy not found') return 404;
+    if (message === 'clarity gremlin unsupported view') return 400;
+    if (message === 'ai api key not configured') return 503;
+    if (message.startsWith('ai provider error:')) return 502;
+    if (message === 'ai request timed out') return 504;
+    return 500;
+  }
   async function loadStrategyUsage(strategyId) {
     const strategyRes = await query(
       `select s.id,
@@ -53,6 +65,7 @@ function registerClarityGremlinRoutes({
               a.page_label,
               a.context_label,
               a.locale,
+              a.provider,
               a.model,
               a.analysis_json,
               a.created_at,
@@ -72,6 +85,7 @@ function registerClarityGremlinRoutes({
       pageLabel: row.page_label || '',
       contextLabel: row.context_label || row.page_label || '',
       locale: row.locale || 'lt',
+      provider: row.provider || null,
       model: row.model || null,
       createdAt: row.created_at,
       createdByName: row.created_by_name || null,
@@ -166,11 +180,12 @@ function registerClarityGremlinRoutes({
              page_label,
              context_label,
              locale,
+             provider,
              model,
              analysis_json,
              created_by
            ) values (
-             $1, $2, $3, $4, $5, $6, $7::uuid, $8, $9, $10, $11, $12::jsonb, $13
+             $1, $2, $3, $4, $5, $6, $7::uuid, $8, $9, $10, $11, $12, $13::jsonb, $14
            )`,
           [
             analysisRecordId,
@@ -183,6 +198,7 @@ function registerClarityGremlinRoutes({
             result.page?.label || result.analysis?.pageLabel || result.page?.view || view,
             result.page?.contextLabel || result.page?.label || result.page?.view || view,
             locale,
+            aiConfig.provider || provider,
             result.model || null,
             JSON.stringify(result.analysis || {}),
             req.auth.sub
@@ -216,7 +232,7 @@ function registerClarityGremlinRoutes({
          where id = $1`,
         [strategyId]
       );
-      throw error;
+      return res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
     }
   });
 }

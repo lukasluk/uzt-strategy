@@ -778,11 +778,15 @@ create table if not exists clarity_gremlin_analyses (
   page_label text not null,
   context_label text not null,
   locale text not null default 'lt',
+  provider text not null default 'openai',
   model text,
   analysis_json jsonb not null default '{}'::jsonb,
   created_by uuid references platform_users(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+alter table if exists clarity_gremlin_analyses
+  add column if not exists provider text not null default 'openai';
 
 create index if not exists idx_clarity_gremlin_strategy
   on clarity_gremlin_analyses(strategy_id, created_at desc);

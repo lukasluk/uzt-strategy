@@ -10,6 +10,9 @@ const {
   getActivePasswordResetTokenInfo,
   consumePasswordResetTokenAndSetPassword
 } = require('./passwordResetService');
+const { getAiStrategyConfig } = require('./aiStrategyService');
+const { getPolicyAlignmentAiConfig } = require('./services/policyAlignmentAiService');
+const { getClarityGremlinConfig } = require('./services/clarityGremlinService');
 
 const DUMMY_PASSWORD_SALT = '00000000000000000000000000000000';
 const DUMMY_PASSWORD_HASH = hashPassword('invalid-password-placeholder', DUMMY_PASSWORD_SALT);
@@ -395,6 +398,12 @@ function registerAuthRoutes({
       return res.status(403).json({ error: 'membership inactive' });
     }
 
+    const institutionRow = institution.rows[0];
+    const aiProvider = institutionRow.ai_provider || 'openai';
+    const aiStrategyConfig = getAiStrategyConfig({ provider: aiProvider });
+    const policyAlignmentConfig = getPolicyAlignmentAiConfig({ provider: aiProvider });
+    const clarityGremlinConfig = getClarityGremlinConfig({ provider: aiProvider });
+
     res.json({
       user: {
         id: userRes.rows[0].id,
@@ -402,11 +411,25 @@ function registerAuthRoutes({
         displayName: userRes.rows[0].display_name
       },
       institution: {
-        id: institution.rows[0].id,
-        name: institution.rows[0].name,
-        slug: institution.rows[0].slug,
-        status: institution.rows[0].status,
-        aiProvider: institution.rows[0].ai_provider || 'openai'
+        id: institutionRow.id,
+        name: institutionRow.name,
+        slug: institutionRow.slug,
+        status: institutionRow.status,
+        aiProvider,
+        aiFeatures: {
+          strategyGeneration: {
+            provider: aiStrategyConfig.provider,
+            model: aiStrategyConfig.model
+          },
+          policyAlignment: {
+            provider: policyAlignmentConfig.provider,
+            model: policyAlignmentConfig.model
+          },
+          clarityGremlin: {
+            provider: clarityGremlinConfig.provider,
+            model: clarityGremlinConfig.model
+          }
+        }
       },
       membership: membership.rows[0],
       strategy: strategy
