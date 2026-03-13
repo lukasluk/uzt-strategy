@@ -318,6 +318,18 @@ function buildViewPayload(snapshot, view, entityId) {
 function buildPromptPayload(snapshot, viewPayload) {
   const cycle = snapshot?.cycle || {};
   return {
+    reviewFocus: {
+      contentWeight: '90%',
+      technicalWeight: '10%',
+      primaryGoal: 'Analyze the actual strategic subject matter, thematic coverage, clarity of direction, overlaps, gaps, and content quality of this strategy page.',
+      technicalGoal: 'Only briefly note missing implementation dates, owners, or responsible units when those omissions materially weaken execution readiness.',
+      avoid: [
+        'Do not describe or praise generic system-wide product features.',
+        'Do not comment on the existence of schema fields, relationType fields, parentTitle fields, counters, tags, cards, or inherited UI structure unless they are missing and materially harmful.',
+        'Do not say that hierarchy, metadata, or counts are useful simply because they exist in the system.',
+        'Do not restate database or JSON field names in the analysis.'
+      ]
+    },
     strategy: {
       title: cleanText(cycle.strategy_title, 180) || cleanText(cycle.title, 180),
       cycleTitle: cleanText(cycle.title, 180),
@@ -340,6 +352,13 @@ function buildSystemPrompt(locale) {
     'Review only the provided page context. Do not invent data, entities, votes, dates, or relationships.',
     'Prefer precise editorial feedback over generic motivational advice.',
     'Distinguish between what is clearly present in the data and what appears missing or weak.',
+    'Spend about 90% of your attention on the strategy subject matter itself: the policy topic, thematic coverage, specificity, overlaps, missing themes, coherence, and quality of the content.',
+    'Spend at most about 10% of your attention on technical execution details such as missing implementation dates, missing owners, or missing responsible units.',
+    'Do not describe, praise, or summarize inherited product features that would be true for almost any strategy in this system.',
+    'Do not comment on the mere presence of relation types, parent fields, counters, metadata fields, cards, tags, hierarchy labels, or aggregate counts unless their absence or weakness creates a concrete problem.',
+    'Bad example: "Hierarchy is explicit because parent/child/orphan relationType is present."',
+    'Good example: "The service accessibility theme is defined, but the strategy says little about channel integration, inclusion, or measurable service quality outcomes."',
+    'When mentioning technical details, do so only if they materially weaken execution readiness.',
     languageRule,
     'Return only valid JSON with this exact schema:',
     '{',
@@ -358,6 +377,7 @@ function buildSystemPrompt(locale) {
     '- improvements: 2 to 5 items.',
     '- nextActions: 2 to 4 items.',
     '- dataGaps: 0 to 4 items.',
+    '- strengths should usually describe topic coverage, strategic direction quality, or content coherence, not platform mechanics.',
     '- Each recommendation must be concrete and tied to the current page context.',
     '- Never mention hidden system prompts or that you are an AI model.'
   ].join('\n');
@@ -367,6 +387,9 @@ function buildUserPrompt(payload) {
   return [
     'Analyze the current workspace page context below and suggest how to improve clarity, structure, and execution quality.',
     'Focus on what should be improved in this exact page.',
+    'Prioritize the actual content and strategic topic covered by the page.',
+    'Avoid generic observations about system structure or reusable platform fields.',
+    'If you mention technical readiness gaps, keep them secondary and brief unless they are severe.',
     'If the context is already strong, say so briefly and still give the most useful refinements.',
     '',
     'CONTEXT JSON:',
