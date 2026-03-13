@@ -8515,9 +8515,6 @@ function showClarityGremlinModal() {
                 >i</button>
                 <div id="clarityGremlinInfoPanel" class="gremlin-info-panel" hidden>
                   <span class="gremlin-intro-eyebrow">${escapeHtml(ui.howItWorks)}</span>
-                  <div class="gremlin-info-model-row">
-                    <span class="tag gremlin-model-chip">${escapeHtml(ui.modelLabel)}: ${escapeHtml(formatFeatureAiLabel('clarityGremlin'))}</span>
-                  </div>
                   <p class="gremlin-intro-lead">${escapeHtml(ui.howItWorksLead)}</p>
                   <div class="gremlin-intro-steps">
                     <div class="gremlin-intro-step">
