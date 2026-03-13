@@ -4866,15 +4866,15 @@ function renderGuidelineDetailRelatedGrid(guideline) {
   return `
     <div class="detail-related-grid">
       ${renderRelatedDetailSectionMarkup({
-    ...resolveGuidelineRelatedItems(guideline),
-    showHeading: true
-  })}
-      ${renderRelatedDetailSectionMarkup({
     ...resolveGuidelineRelatedInitiatives(guideline),
     showHeading: true,
     sectionClass: 'detail-related-group-initiative',
     action: 'open-related-initiative-detail',
     idAttribute: 'data-initiative-id'
+  })}
+      ${renderRelatedDetailSectionMarkup({
+    ...resolveGuidelineRelatedItems(guideline),
+    showHeading: true
   })}
     </div>
   `;

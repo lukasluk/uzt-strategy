@@ -1749,13 +1749,26 @@ textarea {
 
 .detail-related-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
   gap: 16px;
   align-items: start;
 }
 
 .detail-related-grid .detail-related-group {
   margin-top: 0;
+}
+
+.detail-related-grid .guideline-group-header {
+  align-items: baseline;
+}
+
+.detail-related-grid .guideline-group h3 {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .detail-related-group-initiative {
@@ -1767,22 +1780,23 @@ textarea {
   line-height: 1.15;
 }
 
-.detail-related-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.detail-related-grid .detail-related-links {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .detail-related-link {
   appearance: none;
   border: 1px solid #c9dbf4;
-  border-radius: 999px;
+  border-radius: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
   color: #1f4775;
-  padding: 7px 12px;
+  padding: 11px 14px;
   font: inherit;
   font-size: 13px;
-  line-height: 1.2;
+  line-height: 1.35;
+  text-align: left;
   cursor: pointer;
   transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
 }
