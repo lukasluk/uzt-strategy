@@ -104,6 +104,15 @@ function ensureMapPlanAudioContext() {
   return mapPlanAudioContext;
 }
 
+function primeMapPlanAudioContext() {
+  const audioContext = ensureMapPlanAudioContext();
+  if (!audioContext) return;
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().catch(() => {});
+  }
+  mapPlanLastSoundAt = 0;
+}
+
 function resolveMapPlanRevealKind(node) {
   if (!(node instanceof HTMLElement)) return 'initiative';
   if (!node.classList.contains('guideline-node')) return 'initiative';
@@ -450,6 +459,9 @@ function bindMapPlanTimeline(viewport, world, stepView) {
       stopMapPlanPlayback();
       sync();
       return;
+    }
+    if (state.mapPlanSoundEnabled) {
+      primeMapPlanAudioContext();
     }
     startPlayback();
   });

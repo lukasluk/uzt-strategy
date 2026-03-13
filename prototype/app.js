@@ -4279,11 +4279,6 @@ function renderInitiativeCard(initiative, options) {
         </div>
         <p>${escapeHtml(initiative.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
         ${shareMarkup}
-        <div class="header-stack">
-          ${(linkedNames.length
-            ? linkedNames.map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join('')
-            : `<span class="tag">${langText('Nepriskirta gairiu', 'No linked guidelines')}</span>`)}
-        </div>
       </div>
       ${options.member ? `
         <div class="vote-panel">
@@ -8448,6 +8443,23 @@ function clarityGremlinHistoryMatchesContext(item, context) {
   return itemEntityId === contextEntityId;
 }
 
+function getClarityGremlinHistoryKind(view) {
+  const normalized = String(view || '').trim().toLowerCase();
+  if (normalized === 'guidelines' || normalized === 'guideline-detail') {
+    return { key: 'guidelines', icon: '◎', label: langText('Gairės', 'Guidelines') };
+  }
+  if (normalized === 'initiatives' || normalized === 'initiative-detail') {
+    return { key: 'initiatives', icon: '◉', label: langText('Iniciatyvos', 'Initiatives') };
+  }
+  if (normalized === 'implementation-plan') {
+    return { key: 'implementation-plan', icon: '▦', label: langText('Planas', 'Plan') };
+  }
+  if (normalized === 'map') {
+    return { key: 'map', icon: '◇', label: langText('Žemėlapis', 'Map') };
+  }
+  return { key: 'default', icon: '•', label: langText('Puslapis', 'Page') };
+}
+
 function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, options = {}) {
   const list = Array.isArray(items) ? items : [];
   const locked = Boolean(options.locked);
@@ -8461,7 +8473,7 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
         const analysis = item?.analysis && typeof item.analysis === 'object' ? item.analysis : {};
         const score = Math.max(1, Math.min(10, Number(analysis.score || 0) || 0));
         const isSelected = String(item?.id || '').trim() === String(selectedId || '').trim();
-        const isCurrentContext = clarityGremlinHistoryMatchesContext(item, context);
+        const kind = getClarityGremlinHistoryKind(item?.view);
         const providerLabel = formatAiProviderLabel(item?.provider, item?.model);
         return `
           <button
@@ -8471,14 +8483,20 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
             ${locked ? 'disabled' : ''}
           >
             <div class="gremlin-history-item-top">
-              <strong>${escapeHtml(item.contextLabel || item.pageLabel || item.view || '-')}</strong>
+              <div class="gremlin-history-item-title">
+                <span
+                  class="gremlin-history-kind gremlin-history-kind-${escapeHtml(kind.key)}"
+                  title="${escapeHtml(kind.label)}"
+                  aria-label="${escapeHtml(kind.label)}"
+                >${escapeHtml(kind.icon)}</span>
+                <strong>${escapeHtml(item.contextLabel || item.pageLabel || item.view || '-')}</strong>
+              </div>
               ${score ? `<span class="gremlin-history-score">${escapeHtml(`${score}/10`)}</span>` : ''}
             </div>
             <div class="gremlin-history-meta">
               <span>${escapeHtml(formatCommentDateTime(item.createdAt) || String(item.createdAt || ''))}</span>
               <span>${escapeHtml(ui.provider)}: ${escapeHtml(providerLabel)}</span>
               ${item.createdByName ? `<span>${escapeHtml(item.createdByName)}</span>` : ''}
-              ${isCurrentContext ? `<span class="tag tag-main">${escapeHtml(ui.currentPage)}</span>` : ''}
             </div>
           </button>
         `;
@@ -8544,7 +8562,7 @@ function showClarityGremlinModal() {
           <span id="clarityGremlinUsage" class="tag"></span>
         </div>
         <div class="gremlin-toolbar-actions">
-          <span class="tag gremlin-current-page-chip">${escapeHtml(initialContext.contextLabel || clarityGremlinPageLabel(initialContext.view))}</span>
+          <span class="tag gremlin-model-toolbar-chip">${escapeHtml(ui.modelLabel)}: ${escapeHtml(formatFeatureAiLabel('clarityGremlin'))}</span>
           <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
         </div>
       </div>
