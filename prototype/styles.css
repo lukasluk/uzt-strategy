@@ -6465,41 +6465,9 @@ select:focus {
 }
 
 .gremlin-history-kind {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 800;
-  border: 1px solid currentColor;
-}
-
-.gremlin-history-kind-guidelines {
-  color: #4c68b4;
-  background: #edf2ff;
-}
-
-.gremlin-history-kind-initiatives {
-  color: #0d8f7a;
-  background: #e9faf5;
-}
-
-.gremlin-history-kind-implementation-plan {
-  color: #a96a16;
-  background: #fff4e5;
-}
-
-.gremlin-history-kind-map {
-  color: #7c58ba;
-  background: #f3edff;
-}
-
-.gremlin-history-kind-default {
-  color: #60728f;
-  background: #eef3fb;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
 }
 
 .gremlin-history-item.is-locked {

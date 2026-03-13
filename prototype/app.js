@@ -8446,18 +8446,18 @@ function clarityGremlinHistoryMatchesContext(item, context) {
 function getClarityGremlinHistoryKind(view) {
   const normalized = String(view || '').trim().toLowerCase();
   if (normalized === 'guidelines' || normalized === 'guideline-detail') {
-    return { key: 'guidelines', icon: '◎', label: langText('Gairės', 'Guidelines') };
+    return { key: 'guidelines', stepId: 'guidelines', label: langText('Gairės', 'Guidelines') };
   }
   if (normalized === 'initiatives' || normalized === 'initiative-detail') {
-    return { key: 'initiatives', icon: '◉', label: langText('Iniciatyvos', 'Initiatives') };
+    return { key: 'initiatives', stepId: 'initiatives', label: langText('Iniciatyvos', 'Initiatives') };
   }
   if (normalized === 'implementation-plan') {
-    return { key: 'implementation-plan', icon: '▦', label: langText('Planas', 'Plan') };
+    return { key: 'implementation-plan', stepId: 'implementation-plan', label: langText('Planas', 'Plan') };
   }
   if (normalized === 'map') {
-    return { key: 'map', icon: '◇', label: langText('Žemėlapis', 'Map') };
+    return { key: 'map', stepId: 'map', label: langText('Žemėlapis', 'Map') };
   }
-  return { key: 'default', icon: '•', label: langText('Puslapis', 'Page') };
+  return { key: 'default', stepId: 'guidelines', label: langText('Puslapis', 'Page') };
 }
 
 function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, options = {}) {
@@ -8485,10 +8485,10 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
             <div class="gremlin-history-item-top">
               <div class="gremlin-history-item-title">
                 <span
-                  class="gremlin-history-kind gremlin-history-kind-${escapeHtml(kind.key)}"
+                  class="step-icon gremlin-history-kind"
                   title="${escapeHtml(kind.label)}"
                   aria-label="${escapeHtml(kind.label)}"
-                >${escapeHtml(kind.icon)}</span>
+                >${stepIconMarkup(kind.stepId)}</span>
                 <strong>${escapeHtml(item.contextLabel || item.pageLabel || item.view || '-')}</strong>
               </div>
               ${score ? `<span class="gremlin-history-score">${escapeHtml(`${score}/10`)}</span>` : ''}
