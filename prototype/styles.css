@@ -5975,15 +5975,15 @@ select:focus {
 }
 
 .clarity-gremlin-modal {
-  width: min(34vw, 560px);
-  min-width: 420px;
-  max-width: calc(100vw - 56px);
+  width: min(58vw, 980px);
+  min-width: 760px;
+  max-width: calc(100vw - 120px);
   height: 100vh;
   max-height: 100vh;
   margin: 0;
   border-left: 0;
   border-radius: 0 22px 22px 0;
-  padding: 24px 22px 26px;
+  padding: 24px 24px 28px;
   box-shadow: 20px 0 48px rgba(21, 45, 74, 0.22);
 }
 
@@ -5991,6 +5991,7 @@ select:focus {
   align-items: stretch;
   justify-content: flex-start;
   padding: 0;
+  overflow: hidden;
 }
 
 .gremlin-subtitle {
@@ -6030,14 +6031,22 @@ select:focus {
 
 .gremlin-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+  gap: 22px;
   align-items: start;
 }
 
 .gremlin-history-panel,
 .gremlin-detail-panel {
   min-width: 0;
+}
+
+.gremlin-history-panel {
+  padding-right: 4px;
+}
+
+.gremlin-detail-panel {
+  min-height: 100%;
 }
 
 .gremlin-panel-head {
@@ -6202,12 +6211,244 @@ select:focus {
   color: #6b84a5;
 }
 
+.gremlin-backdrop-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.gremlin-analysis-locked .gremlin-backdrop-stage {
+  opacity: 1;
+}
+
+.gremlin-backdrop-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(99, 166, 255, 0.12), transparent 34%),
+    radial-gradient(circle at 76% 34%, rgba(120, 234, 214, 0.12), transparent 28%),
+    radial-gradient(circle at 58% 76%, rgba(255, 189, 91, 0.11), transparent 26%);
+  opacity: 0.8;
+}
+
+.gremlin-backdrop-aura,
+.gremlin-backdrop-rune-grid,
+.gremlin-backdrop-sigil,
+.gremlin-backdrop-flare,
+.gremlin-backdrop-stars,
+.gremlin-backdrop-copy {
+  position: absolute;
+}
+
+.gremlin-backdrop-aura {
+  border-radius: 999px;
+  filter: blur(22px);
+  mix-blend-mode: screen;
+  opacity: 0.38;
+}
+
+.gremlin-backdrop-aura-one {
+  width: 42%;
+  height: 34%;
+  left: 8%;
+  top: 12%;
+  background: radial-gradient(circle, rgba(103, 153, 255, 0.34) 0%, rgba(103, 153, 255, 0.06) 58%, transparent 76%);
+  animation: gremlinAuraDriftOne 5.8s ease-in-out infinite alternate;
+}
+
+.gremlin-backdrop-aura-two {
+  width: 38%;
+  height: 30%;
+  right: 14%;
+  top: 24%;
+  background: radial-gradient(circle, rgba(118, 232, 214, 0.3) 0%, rgba(118, 232, 214, 0.05) 56%, transparent 76%);
+  animation: gremlinAuraDriftTwo 6.4s ease-in-out infinite alternate;
+}
+
+.gremlin-backdrop-aura-three {
+  width: 46%;
+  height: 42%;
+  left: 28%;
+  bottom: 10%;
+  background: radial-gradient(circle, rgba(255, 183, 86, 0.24) 0%, rgba(255, 183, 86, 0.04) 58%, transparent 76%);
+  animation: gremlinAuraPulse 4.4s ease-in-out infinite;
+}
+
+.gremlin-backdrop-rune-grid {
+  inset: 8% 7% 10% 9%;
+  border-radius: 32px;
+  background-image:
+    linear-gradient(rgba(135, 163, 201, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(135, 163, 201, 0.1) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.78) 46%, transparent 88%);
+  animation: gremlinGridFloat 8s linear infinite;
+}
+
+.gremlin-backdrop-sigil {
+  width: 340px;
+  height: 340px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(171, 194, 227, 0.18);
+  box-shadow:
+    0 0 0 24px rgba(121, 158, 219, 0.03),
+    0 0 0 72px rgba(121, 158, 219, 0.025);
+  background:
+    radial-gradient(circle at center, rgba(130, 162, 215, 0.12) 0%, rgba(130, 162, 215, 0.02) 48%, transparent 76%);
+  animation: gremlinSigilSpin 14s linear infinite;
+}
+
+.gremlin-backdrop-sigil::before,
+.gremlin-backdrop-sigil::after {
+  content: '';
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  border: 1px solid rgba(196, 214, 240, 0.2);
+}
+
+.gremlin-backdrop-sigil::after {
+  inset: 34%;
+}
+
+.gremlin-backdrop-flare {
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.92), rgba(110, 192, 255, 0.8), transparent);
+  opacity: 0;
+  filter: blur(0.2px);
+}
+
+.gremlin-backdrop-flare-one {
+  width: 42%;
+  left: 16%;
+  top: 24%;
+  animation: gremlinFlareSweep 2.7s ease-in-out infinite;
+}
+
+.gremlin-backdrop-flare-two {
+  width: 36%;
+  right: 10%;
+  top: 52%;
+  animation: gremlinFlareSweep 3.2s ease-in-out infinite 0.9s;
+}
+
+.gremlin-backdrop-flare-three {
+  width: 48%;
+  left: 28%;
+  bottom: 24%;
+  animation: gremlinFlareSweep 3.6s ease-in-out infinite 1.4s;
+}
+
+.gremlin-backdrop-stars {
+  inset: 0;
+}
+
+.gremlin-backdrop-stars span {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(143, 205, 255, 0.55) 46%, transparent 76%);
+  box-shadow: 0 0 12px rgba(147, 200, 255, 0.4);
+  animation: gremlinStarBlink 2.4s ease-in-out infinite;
+}
+
+.gremlin-backdrop-stars span:nth-child(1) { left: 18%; top: 18%; animation-delay: 0s; }
+.gremlin-backdrop-stars span:nth-child(2) { left: 27%; top: 42%; animation-delay: 0.35s; }
+.gremlin-backdrop-stars span:nth-child(3) { left: 39%; top: 22%; animation-delay: 0.7s; }
+.gremlin-backdrop-stars span:nth-child(4) { left: 54%; top: 36%; animation-delay: 1.1s; }
+.gremlin-backdrop-stars span:nth-child(5) { left: 66%; top: 19%; animation-delay: 0.5s; }
+.gremlin-backdrop-stars span:nth-child(6) { left: 78%; top: 44%; animation-delay: 1.6s; }
+.gremlin-backdrop-stars span:nth-child(7) { left: 22%; bottom: 24%; animation-delay: 1s; }
+.gremlin-backdrop-stars span:nth-child(8) { left: 36%; bottom: 18%; animation-delay: 1.9s; }
+.gremlin-backdrop-stars span:nth-child(9) { left: 51%; bottom: 28%; animation-delay: 0.85s; }
+.gremlin-backdrop-stars span:nth-child(10) { left: 63%; bottom: 19%; animation-delay: 1.45s; }
+.gremlin-backdrop-stars span:nth-child(11) { left: 74%; bottom: 31%; animation-delay: 0.2s; }
+.gremlin-backdrop-stars span:nth-child(12) { left: 84%; bottom: 22%; animation-delay: 1.2s; }
+
+.gremlin-backdrop-copy {
+  left: 10%;
+  right: 10%;
+  bottom: 9%;
+  display: grid;
+  gap: 8px;
+  text-align: center;
+  color: rgba(245, 250, 255, 0.96);
+  text-shadow: 0 4px 22px rgba(11, 21, 38, 0.45);
+}
+
+.gremlin-backdrop-copy strong {
+  font-size: clamp(22px, 2vw, 30px);
+  line-height: 1.08;
+  letter-spacing: 0.01em;
+}
+
+.gremlin-backdrop-copy span {
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(224, 237, 255, 0.9);
+}
+
+@keyframes gremlinAuraDriftOne {
+  from { transform: translate3d(-10px, -8px, 0) scale(0.94); }
+  to { transform: translate3d(18px, 12px, 0) scale(1.08); }
+}
+
+@keyframes gremlinAuraDriftTwo {
+  from { transform: translate3d(8px, -10px, 0) scale(0.96); }
+  to { transform: translate3d(-22px, 16px, 0) scale(1.06); }
+}
+
+@keyframes gremlinAuraPulse {
+  0%, 100% { transform: scale(0.94); opacity: 0.26; }
+  50% { transform: scale(1.08); opacity: 0.46; }
+}
+
+@keyframes gremlinGridFloat {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(36px, 36px, 0); }
+}
+
+@keyframes gremlinSigilSpin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes gremlinFlareSweep {
+  0%, 100% { opacity: 0; transform: scaleX(0.72) translateX(-28px); }
+  28% { opacity: 0.95; }
+  55% { opacity: 0.25; transform: scaleX(1.08) translateX(22px); }
+}
+
+@keyframes gremlinStarBlink {
+  0%, 100% { opacity: 0.18; transform: scale(0.7); }
+  35% { opacity: 1; transform: scale(1.25); }
+  62% { opacity: 0.44; transform: scale(0.88); }
+}
+
 @media (max-width: 900px) {
   .clarity-gremlin-modal {
     width: min(100vw, 560px);
     min-width: 0;
     max-width: 100vw;
     border-radius: 0;
+  }
+
+  .gremlin-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gremlin-backdrop-stage {
+    display: none;
   }
 
   .gremlin-analysis-locked .clarity-gremlin-modal::after {

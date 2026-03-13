@@ -8335,6 +8335,24 @@ function showClarityGremlinModal() {
         </section>
       </div>
     </div>
+    <div class="gremlin-backdrop-stage" aria-hidden="true">
+      <div class="gremlin-backdrop-aura gremlin-backdrop-aura-one"></div>
+      <div class="gremlin-backdrop-aura gremlin-backdrop-aura-two"></div>
+      <div class="gremlin-backdrop-aura gremlin-backdrop-aura-three"></div>
+      <div class="gremlin-backdrop-rune-grid"></div>
+      <div class="gremlin-backdrop-sigil"></div>
+      <div class="gremlin-backdrop-flare gremlin-backdrop-flare-one"></div>
+      <div class="gremlin-backdrop-flare gremlin-backdrop-flare-two"></div>
+      <div class="gremlin-backdrop-flare gremlin-backdrop-flare-three"></div>
+      <div class="gremlin-backdrop-stars">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="gremlin-backdrop-copy">
+        <strong>${escapeHtml(langText('Gremlin skenuoja strateginį lauką', 'Gremlin is scanning the strategy field'))}</strong>
+        <span>${escapeHtml(langText('Ieškomi signalai, spragos ir paslėpti ryšiai', 'Searching for signals, gaps, and hidden links'))}</span>
+      </div>
+    </div>
   `;
   document.body.appendChild(overlay);
 
