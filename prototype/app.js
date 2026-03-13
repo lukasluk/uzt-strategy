@@ -279,7 +279,8 @@ const state = {
   pendingMapFocusKind: '',
   pendingMapFocusId: '',
   mapInstitutionPulseUntil: 0,
-  mapInstitutionPulseTimerId: 0
+  mapInstitutionPulseTimerId: 0,
+  userMenuOpen: false
 };
 let adminAppLoadPromise = null;
 let implementationPlanCalendarConnectorFrameId = 0;
@@ -2895,31 +2896,22 @@ function renderSteps() {
   const canOpenAdmin = canOpenAdminView();
   const canOpenHistory = isLoggedIn();
   const canOpenPolicyAlignment = isLoggedIn();
-  const openPendingProposalCount = canOpenAdmin
-    ? (Array.isArray(state.historyEntries)
-      ? state.historyEntries.filter((item) => String(item?.status || '').trim().toLowerCase() === 'pending').length
-      : 0)
-    : 0;
   const items = [
     { id: 'guidelines', title: langText('GairÄ—s', 'Guidelines'), locked: false },
     { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
-    { id: 'history', title: langText('Istorija', 'History'), locked: !canOpenHistory },
-    { id: 'admin', title: 'Admin', locked: !canOpenAdmin, alert: openPendingProposalCount > 0 },
     { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false },
     { id: 'implementation-plan', title: langText('Įgyvendinimo planas', 'Implementation plan'), locked: false }
   ];
 
   const visibleItems = state.embedMapMode
     ? items.filter((item) => item.id === 'map')
-    : (isEmbeddedContext()
-      ? items.filter((item) => item.id !== 'admin' && item.id !== 'history')
-      : items);
+    : items;
 
-  if (state.activeView === 'admin' && !visibleItems.some((item) => item.id === 'admin')) {
+  if (state.activeView === 'admin' && !canOpenAdmin) {
     clearRouteEntityForView('guidelines');
     state.activeView = 'guidelines';
   }
-  if (state.activeView === 'history' && !visibleItems.some((item) => item.id === 'history')) {
+  if (state.activeView === 'history' && !canOpenHistory) {
     clearRouteEntityForView('guidelines');
     state.activeView = 'guidelines';
   }
@@ -3040,67 +3032,6 @@ function renderSteps() {
   });
 
   if (!state.embedMapMode) {
-    const alignmentShell = document.createElement('div');
-    alignmentShell.className = 'step-utility-shell';
-
-    const alignmentCard = document.createElement('div');
-    alignmentCard.className = `step-utility-card policy-alignment-nav-card${state.activeView === 'policy-alignment' ? ' active' : ''}${canOpenPolicyAlignment ? '' : ' locked'}`;
-
-    const currentPolicyAlignmentTabRaw = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase();
-    const currentPolicyAlignmentTab = ['frameworks', 'strategy-analysis', 'external-analysis'].includes(currentPolicyAlignmentTabRaw)
-      ? currentPolicyAlignmentTabRaw
-      : 'frameworks';
-    const disabledAttr = canOpenPolicyAlignment ? '' : 'disabled';
-    const lockHint = canOpenPolicyAlignment
-      ? ''
-      : ` title="${escapeHtml(langText('Sis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only'))}"`;
-
-    alignmentCard.innerHTML = sidebarCollapsed
-      ? `
-        <button type="button" class="step-pill ${state.activeView === 'policy-alignment' ? 'active' : ''}${canOpenPolicyAlignment ? '' : ' locked'}" data-policy-alignment-nav="${escapeHtml(currentPolicyAlignmentTab)}"${disabledAttr}${lockHint} title="${escapeHtml(langText('Politikos atitiktis', 'Policy Alignment'))}">
-          <div class="step-pill-head">
-            <span class="step-icon" aria-hidden="true">${stepIconMarkup('policy-alignment')}</span>
-            <h4>${escapeHtml(langText('Politikos atitiktis', 'Policy Alignment'))}</h4>
-          </div>
-        </button>
-      `
-      : `
-        <div class="policy-alignment-nav-header">
-          <div class="step-pill-head">
-            <span class="step-icon" aria-hidden="true">${stepIconMarkup('policy-alignment')}</span>
-            <h4>${escapeHtml(langText('Politikos atitiktis', 'Policy Alignment'))}</h4>
-          </div>
-        </div>
-        <div class="policy-alignment-nav-actions">
-          <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'frameworks' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="frameworks"${disabledAttr}${lockHint}>${escapeHtml(langText('Politikos karkasas', 'Policy framework'))}</button>
-          <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'strategy-analysis' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="strategy-analysis"${disabledAttr}${lockHint}>${escapeHtml(langText('Strategijos analizė', 'Strategy analysis'))}</button>
-          <button type="button" class="btn ${state.activeView === 'policy-alignment' && currentPolicyAlignmentTab === 'external-analysis' ? 'btn-primary' : 'btn-ghost'}" data-policy-alignment-nav="external-analysis"${disabledAttr}${lockHint}>${escapeHtml(langText('Išorinė analizė', 'External analysis'))}</button>
-        </div>
-      `;
-
-    alignmentShell.appendChild(alignmentCard);
-    elements.steps.appendChild(alignmentShell);
-
-    alignmentCard.querySelectorAll('[data-policy-alignment-nav]').forEach((button) => {
-      button.addEventListener('click', () => {
-        if (!canOpenPolicyAlignment) return;
-        const nextTab = String(button.getAttribute('data-policy-alignment-nav') || 'frameworks').trim().toLowerCase();
-        state.policyAlignmentWorkspaceTab = ['frameworks', 'strategy-analysis', 'external-analysis'].includes(nextTab)
-          ? nextTab
-          : 'frameworks';
-        state.policyAlignmentAnalysisSubview = 'overview';
-        state.policyAlignmentSelectedId = '';
-        state.policyAlignmentCurrent = null;
-        state.expandedStepId = '';
-        if (state.activeView === 'policy-alignment') {
-          syncRouteState();
-          render();
-          return;
-        }
-        setActiveView('policy-alignment');
-      });
-    });
-
     const gremlinShell = document.createElement('div');
     gremlinShell.className = 'step-utility-shell';
     const gremlinButton = document.createElement('button');
@@ -3153,6 +3084,25 @@ function applyIntroGuideState() {
       : langText('Suskleisti naudojimosi gida', 'Collapse user guide');
     toggleIntroBtn.classList.toggle('pulse', state.introTogglePulse);
   }
+}
+
+function navigateToPolicyAlignmentTab(nextTab = 'frameworks') {
+  if (!isLoggedIn()) return;
+  const normalizedTab = String(nextTab || 'frameworks').trim().toLowerCase();
+  state.policyAlignmentWorkspaceTab = ['frameworks', 'strategy-analysis', 'external-analysis'].includes(normalizedTab)
+    ? normalizedTab
+    : 'frameworks';
+  state.policyAlignmentAnalysisSubview = 'overview';
+  state.policyAlignmentSelectedId = '';
+  state.policyAlignmentCurrent = null;
+  state.expandedStepId = '';
+  state.userMenuOpen = false;
+  if (state.activeView === 'policy-alignment') {
+    syncRouteState();
+    render();
+    return;
+  }
+  setActiveView('policy-alignment');
 }
 
 function pulseIntroToggleButton() {
@@ -6847,6 +6797,7 @@ function renderUserBar() {
   if (state.embedMapMode) {
     container.hidden = true;
     container.innerHTML = '';
+    state.userMenuOpen = false;
     return;
   }
   container.hidden = false;
@@ -6873,24 +6824,88 @@ function renderUserBar() {
   const roleLabel = state.role === 'institution_admin'
     ? langText('Administratorius', 'Administrator')
     : langText('Narys', 'Member');
+  const canOpenAdmin = canOpenAdminView();
+  const canOpenHistory = isLoggedIn();
+  const canOpenPolicyAlignment = isLoggedIn();
+  const currentPolicyAlignmentTabRaw = String(state.policyAlignmentWorkspaceTab || 'frameworks').trim().toLowerCase();
+  const currentPolicyAlignmentTab = ['frameworks', 'strategy-analysis', 'external-analysis'].includes(currentPolicyAlignmentTabRaw)
+    ? currentPolicyAlignmentTabRaw
+    : 'frameworks';
+  const userMenuLabel = langText('Naudotojo meniu', 'User menu');
+  const currentUtilityView = state.activeView === 'policy-alignment'
+    ? currentPolicyAlignmentTab
+    : state.activeView;
 
   container.innerHTML = `
     <div class="user-toolbar user-toolbar-main">
       ${strategySwitcherCardMarkup({ topbar: true })}
-      <div class="user-chip">
-        <span>${escapeHtml(displayName)}</span>
-        <span class="tag">${escapeHtml(roleLabel)}</span>
+      <div class="user-menu-shell">
+        <button id="userMenuToggle" class="user-chip user-menu-trigger${state.userMenuOpen ? ' active' : ''}" type="button" aria-haspopup="menu" aria-expanded="${state.userMenuOpen ? 'true' : 'false'}" aria-label="${escapeHtml(userMenuLabel)}">
+          <span>${escapeHtml(displayName)}</span>
+          <span class="tag">${escapeHtml(roleLabel)}</span>
+          <span class="user-menu-caret" aria-hidden="true">
+            <svg viewBox="0 0 20 20" class="user-menu-caret-svg">
+              <path d="M5 7.5l5 5 5-5"></path>
+            </svg>
+          </span>
+        </button>
+        <div class="user-menu-panel${state.userMenuOpen ? ' open' : ''}" role="menu" aria-label="${escapeHtml(userMenuLabel)}"${state.userMenuOpen ? '' : ' hidden'}>
+          <div class="user-menu-section">
+            <button type="button" class="user-menu-item${currentUtilityView === 'history' ? ' active' : ''}" data-user-nav="history"${canOpenHistory ? '' : ' disabled'}>${escapeHtml(langText('Istorija', 'History'))}</button>
+            <button type="button" class="user-menu-item${currentUtilityView === 'admin' ? ' active' : ''}" data-user-nav="admin"${canOpenAdmin ? '' : ' disabled'}>${escapeHtml(langText('Admin', 'Admin'))}</button>
+          </div>
+          <div class="user-menu-section">
+            <div class="user-menu-section-label">${escapeHtml(langText('Politikos atitiktis', 'Policy Alignment'))}</div>
+            <button type="button" class="user-menu-item${currentUtilityView === 'frameworks' ? ' active' : ''}" data-policy-alignment-nav="frameworks"${canOpenPolicyAlignment ? '' : ' disabled'}>${escapeHtml(langText('Politikos karkasas', 'Policy framework'))}</button>
+            <button type="button" class="user-menu-item${currentUtilityView === 'strategy-analysis' ? ' active' : ''}" data-policy-alignment-nav="strategy-analysis"${canOpenPolicyAlignment ? '' : ' disabled'}>${escapeHtml(langText('Strategijos analizė', 'Strategy analysis'))}</button>
+            <button type="button" class="user-menu-item${currentUtilityView === 'external-analysis' ? ' active' : ''}" data-policy-alignment-nav="external-analysis"${canOpenPolicyAlignment ? '' : ' disabled'}>${escapeHtml(langText('Išorinė analizė', 'External analysis'))}</button>
+          </div>
+          <div class="user-menu-section user-menu-section-signout">
+            <button id="logoutBtn" type="button" class="user-menu-item user-menu-item-signout">${escapeHtml(langText('Atsijungti', 'Sign out'))}</button>
+          </div>
+        </div>
       </div>
-      <button id="logoutBtn" class="btn btn-ghost">${langText('Atsijungti', 'Sign out')}</button>
     </div>
   `;
   bindStrategySwitcherDialog(container);
   bindInstitutionSwitch(container);
   bindStrategySwitch(container);
 
+  const userMenuToggle = container.querySelector('#userMenuToggle');
+  if (userMenuToggle) {
+    userMenuToggle.addEventListener('click', () => {
+      state.userMenuOpen = !state.userMenuOpen;
+      renderUserBar();
+    });
+  }
+
+  container.querySelectorAll('[data-user-nav]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.hasAttribute('disabled')) return;
+      const nextView = String(button.getAttribute('data-user-nav') || '').trim().toLowerCase();
+      if (!nextView) return;
+      state.userMenuOpen = false;
+      state.expandedStepId = '';
+      if (state.activeView === nextView) {
+        syncRouteState();
+        render();
+        return;
+      }
+      setActiveView(nextView);
+    });
+  });
+
+  container.querySelectorAll('[data-policy-alignment-nav]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.hasAttribute('disabled')) return;
+      navigateToPolicyAlignmentTab(button.getAttribute('data-policy-alignment-nav'));
+    });
+  });
+
   const logoutBtn = container.querySelector('#logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
+      state.userMenuOpen = false;
       clearSession();
       bootstrap();
     });
@@ -6991,6 +7006,13 @@ function bindGlobal() {
   window.addEventListener('uzt-language-changed', () => {
     render();
   });
+  document.addEventListener('click', (event) => {
+    if (!state.userMenuOpen) return;
+    const userBar = document.getElementById('userBar');
+    if (userBar && event.target instanceof Node && userBar.contains(event.target)) return;
+    state.userMenuOpen = false;
+    renderUserBar();
+  });
   window.addEventListener('resize', () => {
     if (state.activeView !== 'implementation-plan' || state.implementationPlanSubview !== 'calendar') return;
     scheduleImplementationPlanCalendarConnectorRender();
@@ -7004,6 +7026,11 @@ function bindGlobal() {
     fitMapToCurrentNodes(viewport, world);
   });
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.userMenuOpen) {
+      state.userMenuOpen = false;
+      renderUserBar();
+      return;
+    }
     if (state.activeView !== 'map') return;
     if (event.defaultPrevented || event.repeat) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;

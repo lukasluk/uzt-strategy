@@ -852,6 +852,11 @@ body.embed-map-page .stage {
   flex: 0 0 auto;
 }
 
+.user-menu-shell {
+  position: relative;
+  flex: 0 0 auto;
+}
+
 .strategy-switcher-dialog[hidden] {
   display: none;
 }
@@ -4874,6 +4879,115 @@ body.map-comment-modal-open {
   align-items: center;
   flex-wrap: wrap;
   font-size: 13px;
+}
+
+.user-menu-trigger {
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.user-menu-trigger:hover {
+  border-color: #c7d7ef;
+  background: #fbfdff;
+}
+
+.user-menu-trigger.active {
+  border-color: #a8bdf0;
+  background: linear-gradient(180deg, #f5f8ff 0%, #edf2ff 100%);
+  box-shadow: 0 10px 20px rgba(37, 83, 232, 0.08);
+}
+
+.user-menu-caret {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #5f799a;
+}
+
+.user-menu-caret-svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.user-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 260px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 44px rgba(34, 52, 84, 0.14);
+  display: grid;
+  gap: 10px;
+  z-index: 50;
+}
+
+.user-menu-panel[hidden] {
+  display: none;
+}
+
+.user-menu-section {
+  display: grid;
+  gap: 6px;
+}
+
+.user-menu-section + .user-menu-section {
+  padding-top: 10px;
+  border-top: 1px solid #e6edf8;
+}
+
+.user-menu-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b84a6;
+  padding: 0 4px 2px;
+}
+
+.user-menu-item {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.user-menu-item:hover:not(:disabled) {
+  border-color: #d2ddf4;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f8fe 100%);
+  transform: translateX(2px);
+}
+
+.user-menu-item.active {
+  border-color: #a8bdf0;
+  background: linear-gradient(180deg, #f5f8ff 0%, #edf2ff 100%);
+  color: #1d4f92;
+}
+
+.user-menu-item:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.user-menu-item-signout {
+  color: #223456;
 }
 .step-header-actions {
   justify-content: flex-end;
