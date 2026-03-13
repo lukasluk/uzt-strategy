@@ -106,15 +106,15 @@ body.embed-map-page .app {
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   position: relative;
   z-index: 13;
 }
 .topbar-main {
-  flex: 1 1 620px;
+  flex: 0 0 auto;
   min-width: 0;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 12px;
 }
 .brand-lockup {
@@ -216,22 +216,27 @@ body.embed-map-page .app {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  flex-wrap: wrap;
-  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  flex: 1 1 auto;
   min-width: 0;
+  margin-left: auto;
 }
 .user-bar-top {
   margin: 0;
+  width: 100%;
 }
 
 .user-bar-top .user-toolbar {
-  min-height: 0;
+  min-height: 50px;
   background: transparent;
   border: none;
   border-radius: 0;
   padding: 0;
   box-shadow: none;
   gap: 12px;
+  width: 100%;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 
 .language-switch {
@@ -647,6 +652,11 @@ body.embed-map-page .stage {
   border-color: var(--border-strong);
   background: #ffffff;
   box-shadow: 0 12px 24px rgba(43, 96, 182, 0.14);
+}
+
+.strategy-switcher-card-topbar .strategy-switcher-summary:hover {
+  border-color: #c7d7ef;
+  background: #fbfdff;
 }
 
 .strategy-switcher-card-topbar .strategy-switcher-summary {
@@ -4924,6 +4934,11 @@ body.map-comment-modal-open {
 
 .user-bar-top .user-menu-trigger {
   min-height: 50px;
+}
+
+.user-bar-top .user-menu-panel,
+.strategy-switcher-card-topbar .strategy-switcher-dialog {
+  top: calc(100% + 10px);
 }
 
 .user-menu-caret {
