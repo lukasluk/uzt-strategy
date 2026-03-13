@@ -2899,8 +2899,8 @@ function renderSteps() {
   const items = [
     { id: 'guidelines', title: langText('GairÄ—s', 'Guidelines'), locked: false },
     { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
-    { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false },
-    { id: 'implementation-plan', title: langText('Įgyvendinimo planas', 'Implementation plan'), locked: false }
+    { id: 'implementation-plan', title: langText('Įgyvendinimo planas', 'Implementation plan'), locked: false },
+    { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -6873,14 +6873,16 @@ function renderUserBar() {
 
   const userMenuToggle = container.querySelector('#userMenuToggle');
   if (userMenuToggle) {
-    userMenuToggle.addEventListener('click', () => {
+    userMenuToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
       state.userMenuOpen = !state.userMenuOpen;
       renderUserBar();
     });
   }
 
   container.querySelectorAll('[data-user-nav]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
       if (button.hasAttribute('disabled')) return;
       const nextView = String(button.getAttribute('data-user-nav') || '').trim().toLowerCase();
       if (!nextView) return;
@@ -6896,7 +6898,8 @@ function renderUserBar() {
   });
 
   container.querySelectorAll('[data-policy-alignment-nav]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
       if (button.hasAttribute('disabled')) return;
       navigateToPolicyAlignmentTab(button.getAttribute('data-policy-alignment-nav'));
     });
@@ -6904,7 +6907,8 @@ function renderUserBar() {
 
   const logoutBtn = container.querySelector('#logoutBtn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
+    logoutBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
       state.userMenuOpen = false;
       clearSession();
       bootstrap();
