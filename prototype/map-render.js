@@ -597,10 +597,13 @@ function buildMapViewShellMarkup({
   embedBranding
 }) {
   const secretMapClass = state.mapSecretAnthracite ? ' map-secret-anthracite' : '';
+  const guidelineOverlayClass = activeLayer === 'guidelines' && state.mapGuidelinesShowInitiatives
+    ? ' map-guidelines-show-initiatives'
+    : '';
   return `
     <section class="map-view-shell">
       ${mapHeader}
-      <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer} ${editable ? 'map-editable' : ''}${secretMapClass}">
+      <section id="strategyMapViewport" class="strategy-map-viewport map-layer-${activeLayer} ${editable ? 'map-editable' : ''}${secretMapClass}${guidelineOverlayClass}">
         ${mapToolbar}
         ${strategicNoLinksMarkup}
         <div id="strategyMapWorld" class="strategy-map-world" style="width:${graph.width}px;height:${graph.height}px;">

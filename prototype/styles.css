@@ -3596,6 +3596,18 @@ body.embed-map-page .map-fullscreen-watermark img {
   opacity: 0;
   pointer-events: none;
 }
+.strategy-map-viewport.map-layer-guidelines.map-guidelines-show-initiatives .initiative-lines,
+.strategy-map-viewport.map-layer-guidelines.map-guidelines-show-initiatives .initiative-node {
+  opacity: 1;
+  pointer-events: auto;
+}
+.strategy-map-viewport.map-layer-guidelines.map-guidelines-show-initiatives .initiative-lines {
+  z-index: 5;
+}
+.strategy-map-viewport.map-layer-guidelines.map-guidelines-show-initiatives .initiative-node {
+  z-index: 8;
+  box-shadow: 0 14px 28px rgba(160, 104, 29, 0.2);
+}
 .strategy-map-viewport.map-editable.map-layer-guidelines .guideline-node {
   cursor: move;
 }

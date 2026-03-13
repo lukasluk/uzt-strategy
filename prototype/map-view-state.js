@@ -74,6 +74,7 @@ function setMapLayerAndRender(nextLayer) {
   state.mapPlanPlaying = false;
   state.mapPlanPlaybackStartedAt = 0;
   state.mapLayer = nextLayer;
+  state.mapGuidelinesShowInitiatives = false;
   state.mapPlanProgress = 0;
   resetMapInitiativeFocusState();
   renderStepView();
@@ -90,6 +91,7 @@ function focusGuidelineInitiativesInMap(guidelineId) {
   state.mapPlanPlaybackStartedAt = 0;
   state.mapPlanProgress = 0;
   state.mapLayer = 'initiatives';
+  state.mapGuidelinesShowInitiatives = false;
   resetMapInitiativeFocusState();
   state.pendingMapFocusKind = 'guideline';
   state.pendingMapFocusId = nextId;

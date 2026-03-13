@@ -248,6 +248,7 @@ const state = {
   historyCycleId: '',
   historySortOrder: 'desc',
   mapLayer: 'guidelines',
+  mapGuidelinesShowInitiatives: false,
   implementationPlanLayer: resolveInitialImplementationPlanLayer(),
   implementationPlanSubview: resolveInitialImplementationPlanSubview(),
   mapStrategicLinksData: null,
@@ -6916,8 +6917,10 @@ function bindGlobal() {
     if (key === 'i') {
       if (state.mapLayer !== 'guidelines') return;
       event.preventDefault();
-      if (typeof setMapLayerAndRender === 'function') {
-        setMapLayerAndRender('initiatives');
+      state.mapGuidelinesShowInitiatives = !state.mapGuidelinesShowInitiatives;
+      const viewport = document.getElementById('strategyMapViewport');
+      if (viewport instanceof HTMLElement) {
+        viewport.classList.toggle('map-guidelines-show-initiatives', state.mapGuidelinesShowInitiatives);
       }
       return;
     }
