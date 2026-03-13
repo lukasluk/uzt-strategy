@@ -4847,14 +4847,18 @@ function renderInitiativeRelatedGuidelinesSection(initiative) {
     if (uniqueById.has(cardId)) return;
     uniqueById.set(cardId, card);
   });
-  return renderRelatedDetailSectionMarkup({
+  return `
+    <div class="detail-related-grid detail-related-grid-single">
+      ${renderRelatedDetailSectionMarkup({
     heading: langText('Palaikomos gaires', 'Supported guidelines'),
     emptyLabel: langText('Susietu gairiu nerasta.', 'No linked guidelines found.'),
     items: sortCardsByTitle(Array.from(uniqueById.values())),
-    sectionClass: 'detail-related-group-initiative',
+    sectionClass: 'detail-related-group-guideline',
     headingClass: 'detail-related-heading-compact',
     tone: 'guideline'
-  });
+  })}
+    </div>
+  `;
 }
 
 function renderGuidelineDetailRelatedGrid(guideline) {
@@ -6121,9 +6125,7 @@ function renderStepView() {
                     })}
                   </div>
                   <div class="relationship-child-stack">
-                    <div class="relationship-child-label">
-                      <span class="tag">${langText('Vaikines gaires', 'Child guidelines')}: ${group.children.length}</span>
-                    </div>
+                    <div class="relationship-child-label">${langText('Vaikines gaires', 'Child guidelines')}: ${group.children.length}</div>
                     ${group.children.length
                       ? `<div class="card-list relationship-child-grid">
                           ${group.children.map((child) => renderGuidelineCard(child, {

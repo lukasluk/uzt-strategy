@@ -1765,6 +1765,10 @@ textarea {
   align-items: stretch;
 }
 
+.detail-related-grid-single {
+  grid-template-columns: 1fr;
+}
+
 .detail-related-grid .detail-related-group {
   margin-top: 0;
 }
@@ -3530,6 +3534,12 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategy-map-viewport.map-layer-plan .strategy-map-node.map-plan-dated.map-plan-visible {
   opacity: 1;
   filter: none;
+}
+.strategy-map-viewport.map-layer-plan.map-plan-started .guideline-node:not([data-plan-date]),
+.strategy-map-viewport.map-layer-plan.map-plan-started .initiative-node:not([data-plan-date]) {
+  opacity: 0.22;
+  filter: saturate(0.28);
+  transition: opacity 0.24s ease, filter 0.24s ease, box-shadow 0.24s ease;
 }
 .strategy-map-viewport.map-layer-plan .strategy-map-edge[data-plan-date] {
   opacity: 0.08;

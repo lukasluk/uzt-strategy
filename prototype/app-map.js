@@ -266,6 +266,7 @@ function mapPlanCurrentDateText(firstDate, lastDate, progress) {
 function applyMapPlanTimelineState(viewport, world, timelineRoot) {
   if (!(viewport instanceof HTMLElement) || !(world instanceof HTMLElement) || !(timelineRoot instanceof HTMLElement)) return;
   const progress = Math.max(0, Math.min(1, Number(state.mapPlanProgress || 0)));
+  const planStarted = state.mapPlanPlaying || progress > 0;
   const firstDate = String(timelineRoot.dataset.planFirstDate || '').trim();
   const lastDate = String(timelineRoot.dataset.planLastDate || '').trim();
   const first = parseMapPlanDateValue(firstDate);
@@ -275,6 +276,8 @@ function applyMapPlanTimelineState(viewport, world, timelineRoot) {
   const range = timelineRoot.querySelector('#mapPlanTimelineRange');
   const playButton = timelineRoot.querySelector('[data-map-plan-play]');
   const soundButton = timelineRoot.querySelector('[data-map-plan-sound]');
+
+  viewport.classList.toggle('map-plan-started', planStarted);
 
   if (range instanceof HTMLInputElement) {
     range.value = String(Math.round(progress * 1000));
