@@ -67,6 +67,24 @@ function truncateList(items, maxItems = 40) {
   return list.slice(0, Math.max(0, Number(maxItems) || 0));
 }
 
+function createPageReviewIntent(config) {
+  return {
+    primaryPurpose: cleanText(config?.primaryPurpose, 260),
+    primaryQuestions: truncateList(
+      normalizeArray(config?.primaryQuestions).map((item) => cleanText(item, 220)).filter(Boolean),
+      6
+    ),
+    prioritize: truncateList(
+      normalizeArray(config?.prioritize).map((item) => cleanText(item, 180)).filter(Boolean),
+      6
+    ),
+    avoid: truncateList(
+      normalizeArray(config?.avoid).map((item) => cleanText(item, 180)).filter(Boolean),
+      6
+    )
+  };
+}
+
 function clampScore(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -289,6 +307,25 @@ async function buildViewPayload(query, snapshot, view, entityId) {
     return {
       view,
       pageLabel: 'Guideline detail',
+      reviewIntent: createPageReviewIntent({
+        primaryPurpose: 'Review this one guideline as a strategic direction: whether it is clear, focused, non-overlapping, and well supported by child guidelines or initiatives.',
+        primaryQuestions: [
+          'Is the guideline conceptually clear and strategically meaningful?',
+          'Is it too broad, too vague, or mixing several themes at once?',
+          'Are child guidelines or linked initiatives sufficient and coherent for this guideline?'
+        ],
+        prioritize: [
+          'title clarity',
+          'description specificity',
+          'theme coherence',
+          'fit within hierarchy',
+          'supporting initiatives'
+        ],
+        avoid: [
+          'do not treat this page as an implementation calendar',
+          'do not over-focus on missing dates unless they block execution'
+        ]
+      }),
       focusGuideline: focus,
       parentGuideline: parent,
       childGuidelines: truncateList(relatedChildren, 12),
@@ -313,6 +350,25 @@ async function buildViewPayload(query, snapshot, view, entityId) {
     return {
       view,
       pageLabel: 'Initiative detail',
+      reviewIntent: createPageReviewIntent({
+        primaryPurpose: 'Review this initiative as a concrete action: whether it is specific, actionable, relevant to the strategy, and well connected to the supported guidelines.',
+        primaryQuestions: [
+          'Is the initiative concrete enough to be understood and executed?',
+          'Does it clearly contribute to the linked guidelines?',
+          'Is it duplicative, too broad, or missing a sharper delivery focus?'
+        ],
+        prioritize: [
+          'actionability',
+          'scope clarity',
+          'fit to guidelines',
+          'distinctiveness',
+          'expected strategic contribution'
+        ],
+        avoid: [
+          'do not treat initiative detail as a whole-program roadmap',
+          'keep missing dates or owners secondary unless severe'
+        ]
+      }),
       focusInitiative: focus,
       linkedGuidelines: truncateList(linkedGuidelines, 12),
       counts
@@ -323,6 +379,25 @@ async function buildViewPayload(query, snapshot, view, entityId) {
     return {
       view,
       pageLabel: 'Guidelines list',
+      reviewIntent: createPageReviewIntent({
+        primaryPurpose: 'Review the full guideline set as a strategic architecture: thematic coverage, hierarchy quality, overlaps, gaps, and clarity of strategic direction.',
+        primaryQuestions: [
+          'Do the guidelines cover the right strategic themes for this strategy?',
+          'Are parent and child guidelines logically structured and non-overlapping?',
+          'Are there missing themes, duplicated topics, or vague formulations?'
+        ],
+        prioritize: [
+          'thematic coverage',
+          'hierarchy logic',
+          'duplication',
+          'gaps',
+          'clarity of strategic directions'
+        ],
+        avoid: [
+          'do not judge this page mainly by implementation dates',
+          'do not treat the guideline list as an implementation plan'
+        ]
+      }),
       counts,
       guidelines: truncateList(guidelines, 40)
     };
@@ -332,6 +407,26 @@ async function buildViewPayload(query, snapshot, view, entityId) {
     return {
       view,
       pageLabel: 'Initiatives list',
+      reviewIntent: createPageReviewIntent({
+        primaryPurpose: 'Review the initiative portfolio as a set of actions: thematic spread, redundancy, specificity, portfolio balance, and how well initiatives operationalize the guidelines.',
+        primaryQuestions: [
+          'Do the initiatives collectively translate the strategy into a coherent action portfolio?',
+          'Are there duplicate, overlapping, fragmented, or vague initiatives?',
+          'Do initiatives cover the most important guideline themes, or are some themes under-served?'
+        ],
+        prioritize: [
+          'initiative portfolio coherence',
+          'topic overlap',
+          'initiative specificity',
+          'coverage of guideline themes',
+          'balance across strategic priorities'
+        ],
+        avoid: [
+          'do not treat the initiatives list as an implementation plan or calendar',
+          'do not make missing dates, owners, or departments the main conclusion on this page',
+          'only mention execution metadata briefly if it materially limits portfolio usefulness'
+        ]
+      }),
       counts,
       initiatives: truncateList(initiatives, 40)
     };
@@ -357,6 +452,23 @@ async function buildViewPayload(query, snapshot, view, entityId) {
     return {
       view,
       pageLabel: 'Implementation plan',
+      reviewIntent: createPageReviewIntent({
+        primaryPurpose: 'Review execution readiness, sequencing, ownership, and timeline quality across the plan.',
+        primaryQuestions: [
+          'Is the plan scheduled and sequenced in a believable way?',
+          'Are major items missing dates or owners?',
+          'Does execution support the strategy in a balanced way?'
+        ],
+        prioritize: [
+          'timeline quality',
+          'sequencing',
+          'owners',
+          'coverage of execution'
+        ],
+        avoid: [
+          'do not spend most of the analysis on abstract thematic critique'
+        ]
+      }),
       counts,
       planRows: truncateList([...guidelineRows, ...initiativeRows], 80)
     };
@@ -371,6 +483,23 @@ async function buildViewPayload(query, snapshot, view, entityId) {
     return {
       view,
       pageLabel: 'Strategy map',
+      reviewIntent: createPageReviewIntent({
+        primaryPurpose: 'Review the structural coherence of the strategy landscape: connections, clusters, isolation, and whether the map reflects a sensible strategic system.',
+        primaryQuestions: [
+          'Are important guidelines supported by enough initiatives?',
+          'Are there isolated initiatives or weakly connected areas?',
+          'Does the map reveal imbalance or fragmentation in the strategy?'
+        ],
+        prioritize: [
+          'connectivity',
+          'coverage',
+          'isolated nodes',
+          'cluster balance'
+        ],
+        avoid: [
+          'do not over-focus on text quality if the map is the main context'
+        ]
+      }),
       counts: {
         ...counts,
         initiativesWithDates
@@ -420,6 +549,8 @@ function buildSystemPrompt(locale) {
     'Review only the provided page context. Do not invent data, entities, votes, dates, or relationships.',
     'Prefer precise editorial feedback over generic motivational advice.',
     'Distinguish between what is clearly present in the data and what appears missing or weak.',
+    'First identify the purpose of the current page and evaluate it against that purpose, not against some other page type.',
+    'For example: an initiatives list is an action portfolio page, not an implementation calendar; a guideline list is a strategic architecture page, not a task tracker.',
     'Spend about 90% of your attention on the strategy subject matter itself: the policy topic, thematic coverage, specificity, overlaps, missing themes, coherence, and quality of the content.',
     'Spend at most about 10% of your attention on technical execution details such as missing implementation dates, missing owners, or missing responsible units.',
     'Do not describe, praise, or summarize inherited product features that would be true for almost any strategy in this system.',
@@ -458,6 +589,8 @@ function buildUserPrompt(payload) {
   return [
     'Analyze the current workspace page context below and suggest how to improve clarity, structure, and execution quality.',
     'Focus on what should be improved in this exact page.',
+    'Use the page purpose and reviewIntent in the context as the main evaluation frame.',
+    'Judge the page by what it is supposed to do in the workflow, not by what another page in the product is supposed to do.',
     'Prioritize the actual content and strategic topic covered by the page.',
     'Avoid generic observations about system structure or reusable platform fields.',
     'If you mention technical readiness gaps, keep them secondary and brief unless they are severe.',
