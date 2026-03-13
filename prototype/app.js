@@ -7269,30 +7269,30 @@ function strategyCreateUiText() {
     };
   }
   return {
-    title: 'Sukurti strategijÄ…',
-    subtitle: 'Sukurkite naujÄ… strategijÄ… pasirinktai institucijai.',
-    close: 'UÅ¾daryti',
+    title: 'Sukurti strategiją',
+    subtitle: 'Sukurkite naują strategiją pasirinktai institucijai.',
+    close: 'Uždaryti',
     manualTab: 'Rankinis',
-    aiTab: 'AI iÅ¡ PDF',
+    aiTab: 'AI iš PDF',
     strategySetup: 'Strategijos nustatymai',
     aiSetup: 'AI generavimo nustatymai',
     strategyTitle: 'Strategijos pavadinimas',
-    strategySlug: 'Strategijos slug (nebÅ«tina)',
-    strategyDescription: 'Trumpas apraÅ¡ymas (nebÅ«tina)',
-    createManual: 'Sukurti strategijÄ…',
+    strategySlug: 'Strategijos slug (nebūtina)',
+    strategyDescription: 'Trumpas aprašymas (nebūtina)',
+    createManual: 'Sukurti strategiją',
     localeHint: 'Rezultato kalba',
     clarification: 'AI patikslinimas',
     clarificationPlaceholder: 'Koks lygis, tonas, prioritetai, ko vengti.',
     documents: 'PDF dokumentai',
-    createAi: 'Generuoti strategijÄ… su AI',
+    createAi: 'Generuoti strategiją su AI',
     progressTitle: 'AI generavimas vyksta',
-    progressUploading: 'Ä®keliami dokumentai',
+    progressUploading: 'Įkeliami dokumentai',
     progressAnalyses: 'Analizuojama su AI',
-    progressPreparing: 'RuoÅ¡iamas digistrategy.eu formatas',
-    progressDone: 'UÅ¾baigiama',
+    progressPreparing: 'Ruošiamas digistrategy.eu formatas',
+    progressDone: 'Užbaigiama',
     progressRecovering: 'Laukiamas serverio patvirtinimas',
     successManual: 'Strategija sukurta:',
-    successAi: 'AI sugeneravo strategijÄ…:'
+    successAi: 'AI sugeneravo strategiją:'
   };
 }
 

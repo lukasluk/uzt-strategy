@@ -349,6 +349,110 @@ h3 {
   max-width: 31ch;
 }
 
+.hero-ai-partners {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 16px 18px;
+  border: 1px solid rgba(47, 91, 255, 0.14);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(244, 248, 255, 0.92) 100%);
+  box-shadow: 0 16px 34px rgba(20, 45, 87, 0.08);
+  width: fit-content;
+  max-width: min(100%, 560px);
+}
+
+.hero-ai-lead {
+  color: var(--landing-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.hero-ai-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero-ai-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 16px 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--landing-line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.hero-ai-pill-mistral {
+  border-color: rgba(239, 111, 56, 0.22);
+}
+
+.hero-ai-pill-openai {
+  border-color: rgba(11, 18, 32, 0.12);
+}
+
+.hero-ai-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--landing-ink);
+  letter-spacing: -0.02em;
+}
+
+.hero-ai-logo {
+  flex: 0 0 auto;
+}
+
+.hero-ai-logo-mistral {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2px;
+}
+
+.hero-ai-logo-mistral span {
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ff9c52 0%, #ef6f38 100%);
+  box-shadow: 0 2px 5px rgba(239, 111, 56, 0.2);
+}
+
+.hero-ai-logo-mistral span:nth-child(1) { grid-column: 1; grid-row: 1; }
+.hero-ai-logo-mistral span:nth-child(2) { grid-column: 2; grid-row: 1; }
+.hero-ai-logo-mistral span:nth-child(3) { grid-column: 3; grid-row: 1; }
+.hero-ai-logo-mistral span:nth-child(4) { grid-column: 1; grid-row: 2; }
+.hero-ai-logo-mistral span:nth-child(5) { grid-column: 3; grid-row: 2; }
+.hero-ai-logo-mistral span:nth-child(6) { grid-column: 1 / span 3; grid-row: 3; }
+
+.hero-ai-logo-openai {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.hero-ai-logo-openai span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px;
+  border: 2px solid #0f1c3f;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.hero-ai-logo-openai span:nth-child(1) { transform: translate(0, -8px); }
+.hero-ai-logo-openai span:nth-child(2) { transform: translate(7px, -4px); }
+.hero-ai-logo-openai span:nth-child(3) { transform: translate(7px, 4px); }
+.hero-ai-logo-openai span:nth-child(4) { transform: translate(0, 8px); }
+.hero-ai-logo-openai span:nth-child(5) { transform: translate(-7px, 4px); }
+.hero-ai-logo-openai span:nth-child(6) { transform: translate(-7px, -4px); }
+
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1427,6 +1531,10 @@ h3 {
     max-width: 48ch;
   }
 
+  .hero-ai-partners {
+    max-width: 100%;
+  }
+
   .hero-visual {
     justify-content: start;
   }
@@ -1531,6 +1639,15 @@ h3 {
   .hero-actions,
   .final-actions {
     width: 100%;
+  }
+
+  .hero-ai-logos {
+    width: 100%;
+  }
+
+  .hero-ai-pill {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .hero-actions .btn,
