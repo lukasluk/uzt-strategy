@@ -8501,9 +8501,39 @@ function showClarityGremlinModal() {
       <div class="header-row">
         <div class="gremlin-title-block">
           <img class="gremlin-title-icon" src="assets/clarity_gremlin2_ui.png" alt="" aria-hidden="true" />
-          <div>
-          <h2 id="clarityGremlinTitle">${escapeHtml(ui.title)}</h2>
-          <p class="prompt gremlin-subtitle">${escapeHtml(ui.subtitle)}</p>
+          <div class="gremlin-title-copy">
+            <div class="gremlin-title-row">
+              <h2 id="clarityGremlinTitle">${escapeHtml(ui.title)}</h2>
+              <div class="gremlin-info-wrap">
+                <button
+                  id="clarityGremlinInfoToggle"
+                  class="gremlin-info-toggle"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="clarityGremlinInfoPanel"
+                  aria-label="${escapeHtml(ui.howItWorks)}"
+                >i</button>
+                <div id="clarityGremlinInfoPanel" class="gremlin-info-panel" hidden>
+                  <span class="gremlin-intro-eyebrow">${escapeHtml(ui.howItWorks)}</span>
+                  <p class="gremlin-intro-lead">${escapeHtml(ui.howItWorksLead)}</p>
+                  <div class="gremlin-intro-steps">
+                    <div class="gremlin-intro-step">
+                      <span class="gremlin-intro-step-index">1</span>
+                      <span>${escapeHtml(ui.howStepCurrent)}</span>
+                    </div>
+                    <div class="gremlin-intro-step">
+                      <span class="gremlin-intro-step-index">2</span>
+                      <span>${escapeHtml(ui.howStepHistory)}</span>
+                    </div>
+                    <div class="gremlin-intro-step">
+                      <span class="gremlin-intro-step-index">3</span>
+                      <span>${escapeHtml(ui.howStepConsume)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="prompt gremlin-subtitle">${escapeHtml(ui.subtitle)}</p>
           </div>
         </div>
         <button id="closeClarityGremlinModal" class="btn btn-ghost" type="button">${escapeHtml(ui.close)}</button>
@@ -8519,26 +8549,6 @@ function showClarityGremlinModal() {
           <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
         </div>
       </div>
-      <section class="gremlin-intro-card" aria-label="${escapeHtml(ui.howItWorks)}">
-        <div class="gremlin-intro-copy">
-          <span class="gremlin-intro-eyebrow">${escapeHtml(ui.howItWorks)}</span>
-          <p class="gremlin-intro-lead">${escapeHtml(ui.howItWorksLead)}</p>
-        </div>
-        <div class="gremlin-intro-steps">
-          <div class="gremlin-intro-step">
-            <span class="gremlin-intro-step-index">1</span>
-            <span>${escapeHtml(ui.howStepCurrent)}</span>
-          </div>
-          <div class="gremlin-intro-step">
-            <span class="gremlin-intro-step-index">2</span>
-            <span>${escapeHtml(ui.howStepHistory)}</span>
-          </div>
-          <div class="gremlin-intro-step">
-            <span class="gremlin-intro-step-index">3</span>
-            <span>${escapeHtml(ui.howStepConsume)}</span>
-          </div>
-        </div>
-      </section>
       <div class="gremlin-layout">
         <aside class="gremlin-history-panel">
           <div class="gremlin-panel-head">
@@ -8573,10 +8583,20 @@ function showClarityGremlinModal() {
   const closeButton = overlay.querySelector('#closeClarityGremlinModal');
   const runButton = overlay.querySelector('#runClarityGremlinBtn');
   const usageNode = overlay.querySelector('#clarityGremlinUsage');
+  const infoToggle = overlay.querySelector('#clarityGremlinInfoToggle');
+  const infoPanel = overlay.querySelector('#clarityGremlinInfoPanel');
   let historyItems = [];
   let selectedHistoryId = '';
   let isAnalyzing = false;
   let draftSubmitInProgress = false;
+  let infoOpen = false;
+
+  const syncInfoPanel = () => {
+    if (!(infoToggle instanceof HTMLButtonElement) || !(infoPanel instanceof HTMLElement)) return;
+    infoToggle.setAttribute('aria-expanded', infoOpen ? 'true' : 'false');
+    infoPanel.hidden = !infoOpen;
+    infoToggle.classList.toggle('is-open', infoOpen);
+  };
 
   const syncBusyUi = () => {
     overlay.classList.toggle('gremlin-analysis-locked', isAnalyzing);
@@ -8820,13 +8840,42 @@ function showClarityGremlinModal() {
   };
 
   closeButton?.addEventListener('click', closeClarityGremlinModal);
+  infoToggle?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (isAnalyzing) return;
+    infoOpen = !infoOpen;
+    syncInfoPanel();
+  });
+  infoPanel?.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
   overlay.addEventListener('click', (event) => {
     if (isAnalyzing) return;
+    if (infoOpen) {
+      const insideInfo = event.target instanceof Node
+        && ((infoToggle instanceof HTMLElement && infoToggle.contains(event.target))
+          || (infoPanel instanceof HTMLElement && infoPanel.contains(event.target)));
+      if (!insideInfo) {
+        infoOpen = false;
+        syncInfoPanel();
+      }
+    }
     if (event.target === overlay) closeClarityGremlinModal();
   });
   runButton?.addEventListener('click', () => {
     void runAnalysis();
   });
+  document.addEventListener('keydown', function handleGremlinInfoEscape(event) {
+    if (!document.body.contains(overlay)) {
+      document.removeEventListener('keydown', handleGremlinInfoEscape);
+      return;
+    }
+    if (event.key === 'Escape' && infoOpen && !isAnalyzing) {
+      infoOpen = false;
+      syncInfoPanel();
+    }
+  });
+  syncInfoPanel();
   syncBusyUi();
   if (initialContext.supported !== true && !state.cycle?.id) {
     renderUnsupported(initialContext);
