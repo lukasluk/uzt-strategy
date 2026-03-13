@@ -2630,20 +2630,26 @@ function strategySwitcherCardMarkup(options = {}) {
 function bindStrategySwitcherDialog(container) {
   const toggleButton = container.querySelector('#toggleStrategySwitcherDialogBtn');
   if (!toggleButton) return;
-  toggleButton.addEventListener('click', () => {
+  toggleButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (state.userMenuOpen) {
+      state.userMenuOpen = false;
+    }
     state.strategySwitcherDialogOpen = !state.strategySwitcherDialogOpen;
     render();
   });
   const guideButton = container.querySelector('#openGuideFromSwitcherBtn');
   if (guideButton) {
-    guideButton.addEventListener('click', () => {
+    guideButton.addEventListener('click', (event) => {
+      event.stopPropagation();
       state.strategySwitcherDialogOpen = false;
       setActiveView('guide');
     });
   }
   const createStrategyButton = container.querySelector('#openStrategyCreateModalBtn');
   if (createStrategyButton) {
-    createStrategyButton.addEventListener('click', () => {
+    createStrategyButton.addEventListener('click', (event) => {
+      event.stopPropagation();
       showStrategyCreateModal();
     });
   }
@@ -6985,6 +6991,14 @@ function bindGlobal() {
     state.userMenuOpen = false;
     renderUserBar();
   });
+  document.addEventListener('click', (event) => {
+    if (!state.strategySwitcherDialogOpen) return;
+    const userBar = document.getElementById('userBar');
+    const switcher = userBar?.querySelector('.strategy-switcher-card-topbar');
+    if (switcher && event.target instanceof Node && switcher.contains(event.target)) return;
+    state.strategySwitcherDialogOpen = false;
+    renderUserBar();
+  });
   window.addEventListener('resize', () => {
     if (state.activeView !== 'implementation-plan' || state.implementationPlanSubview !== 'calendar') return;
     scheduleImplementationPlanCalendarConnectorRender();
@@ -6998,6 +7012,11 @@ function bindGlobal() {
     fitMapToCurrentNodes(viewport, world);
   });
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.strategySwitcherDialogOpen) {
+      state.strategySwitcherDialogOpen = false;
+      renderUserBar();
+      return;
+    }
     if (event.key === 'Escape' && state.userMenuOpen) {
       state.userMenuOpen = false;
       renderUserBar();
