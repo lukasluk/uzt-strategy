@@ -4723,9 +4723,12 @@ function clarityGremlinUiText() {
       pendingDraftCreated: 'Proposal created and sent for admin approval.',
       applyUpdateDraft: 'Apply correction',
       updateDraftAdminOnly: 'Immediate correction is available only to institution admins.',
-      confirmUpdateDraftTitle: 'Apply this correction now?',
-      confirmUpdateDraftBody: 'This will update the existing guideline immediately. You can review the text before confirming.',
-      updateDraftApplied: 'Guideline correction applied immediately.',
+      confirmGuidelineUpdateDraftTitle: 'Apply this guideline correction now?',
+      confirmGuidelineUpdateDraftBody: 'This will update the existing guideline immediately. You can review the text before confirming.',
+      confirmInitiativeUpdateDraftTitle: 'Apply this initiative correction now?',
+      confirmInitiativeUpdateDraftBody: 'This will update the existing initiative immediately. You can review the text before confirming.',
+      updateGuidelineDraftApplied: 'Guideline correction applied immediately.',
+      updateInitiativeDraftApplied: 'Initiative correction applied immediately.',
       draftUnavailable: 'Draft creation is available only in a writable strategy cycle.',
       dataGaps: 'Potential gaps',
       remainingCalls: 'Remaining analyses',
@@ -4770,9 +4773,12 @@ function clarityGremlinUiText() {
     pendingDraftCreated: 'Pasiūlymas sukurtas ir pateiktas administratoriaus tvirtinimui.',
     applyUpdateDraft: 'Pritaikyti koregavimą',
     updateDraftAdminOnly: 'Tiesioginis koregavimas galimas tik institucijos administratoriui.',
-    confirmUpdateDraftTitle: 'Pritaikyti šį koregavimą dabar?',
-    confirmUpdateDraftBody: 'Šis veiksmas iš karto atnaujins esamą gairę. Prieš tęsdami įsitikinkite, kad tikrai norite pritaikyti pakeitimus.',
-    updateDraftApplied: 'Gairės koregavimas pritaikytas iš karto.',
+    confirmGuidelineUpdateDraftTitle: 'Pritaikyti šį gairės koregavimą dabar?',
+    confirmGuidelineUpdateDraftBody: 'Šis veiksmas iš karto atnaujins esamą gairę. Prieš tęsdami įsitikinkite, kad tikrai norite pritaikyti pakeitimus.',
+    confirmInitiativeUpdateDraftTitle: 'Pritaikyti šį iniciatyvos koregavimą dabar?',
+    confirmInitiativeUpdateDraftBody: 'Šis veiksmas iš karto atnaujins esamą iniciatyvą. Prieš tęsdami įsitikinkite, kad tikrai norite pritaikyti pakeitimus.',
+    updateGuidelineDraftApplied: 'Gairės koregavimas pritaikytas iš karto.',
+    updateInitiativeDraftApplied: 'Iniciatyvos koregavimas pritaikytas iš karto.',
     draftUnavailable: 'Juodraščio kūrimas galimas tik redaguojamame strategijos cikle.',
     dataGaps: 'Galimos spragos',
     remainingCalls: 'Likę kvietimai',
@@ -4929,6 +4935,24 @@ function resolveGremlinDraftTargetGuideline(draft, historyItem) {
   const view = String(historyItem?.view || '').trim().toLowerCase();
   if (view === 'guideline-detail') {
     return findGuidelineById(historyItem?.entityId);
+  }
+  return null;
+}
+
+function resolveGremlinDraftTargetInitiative(draft, historyItem) {
+  const targetTitle = normalizeImportComparableText(draft?.targetTitle);
+  if (targetTitle) {
+    const matched = (Array.isArray(state.initiatives) ? state.initiatives : []).find((initiative) => {
+      const status = String(initiative?.status || 'active').trim().toLowerCase();
+      if (status !== 'active') return false;
+      return normalizeImportComparableText(initiative?.title) === targetTitle;
+    });
+    if (matched) return matched;
+  }
+
+  const view = String(historyItem?.view || '').trim().toLowerCase();
+  if (view === 'initiative-detail') {
+    return findInitiativeById(historyItem?.entityId);
   }
   return null;
 }
@@ -8401,7 +8425,9 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                   ? langText('Iniciatyvos pasiūlymas', 'Initiative proposal')
                   : langText('Gairės pasiūlymas', 'Guideline proposal');
                 const modeLabel = draftMode === 'update'
-                  ? langText('Esamos gairės koregavimas', 'Existing guideline correction')
+                  ? entityKind === 'initiative'
+                    ? langText('Esamos iniciatyvos koregavimas', 'Existing initiative correction')
+                    : langText('Esamos gairės koregavimas', 'Existing guideline correction')
                   : kindLabel;
                 const relationLabel = entityKind === 'guideline' && draft?.relationType
                   ? ` · ${escapeHtml(
@@ -8416,12 +8442,12 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                   ? (Array.isArray(draft?.guidelineTitles) ? draft.guidelineTitles : []).map((title) => `<span class="tag">${escapeHtml(title)}</span>`).join('')
                   : '';
                 const targetHint = draftMode === 'update' && draft?.targetTitle
-                  ? `<p class="gremlin-draft-meta">${escapeHtml(langText('Koreguojama gairė', 'Guideline to update'))}: <strong>${escapeHtml(draft.targetTitle)}</strong></p>`
+                  ? `<p class="gremlin-draft-meta">${escapeHtml(entityKind === 'initiative' ? langText('Koreguojama iniciatyva', 'Initiative to update') : langText('Koreguojama gairė', 'Guideline to update'))}: <strong>${escapeHtml(draft.targetTitle)}</strong></p>`
                   : '';
                 const parentHint = entityKind === 'guideline' && draft?.relationType === 'child' && draft?.parentGuidelineTitle
                   ? `<p class="gremlin-draft-meta">${escapeHtml(langText('Siūloma priskirti prie', 'Suggested parent'))}: <strong>${escapeHtml(draft.parentGuidelineTitle)}</strong></p>`
                   : '';
-                const requiresImmediateApply = entityKind === 'guideline' && draftMode === 'update';
+                const requiresImmediateApply = draftMode === 'update';
                 const buttonText = requiresImmediateApply ? ui.applyUpdateDraft : ui.createPendingDraft;
                 const buttonTitle = draftButtonsDisabled
                   ? ui.draftUnavailable
@@ -8750,7 +8776,7 @@ function showClarityGremlinModal() {
         if (!targetGuideline?.id) {
           throw new Error(langText('Nepavyko rasti koreguojamos gairės.', 'Could not find the guideline to update.'));
         }
-        const confirmed = window.confirm(`${ui.confirmUpdateDraftTitle}\n\n${ui.confirmUpdateDraftBody}`);
+        const confirmed = window.confirm(`${ui.confirmGuidelineUpdateDraftTitle}\n\n${ui.confirmGuidelineUpdateDraftBody}`);
         if (!confirmed) {
           return;
         }
@@ -8768,6 +8794,28 @@ function showClarityGremlinModal() {
           }
         });
         scheduleGuidelineFocus(targetGuideline.id);
+      } else if (entityKind === 'initiative' && draftMode === 'update') {
+        const targetInitiative = resolveGremlinDraftTargetInitiative(draft, selected);
+        if (!targetInitiative?.id) {
+          throw new Error(langText('Nepavyko rasti koreguojamos iniciatyvos.', 'Could not find the initiative to update.'));
+        }
+        const confirmed = window.confirm(`${ui.confirmInitiativeUpdateDraftTitle}\n\n${ui.confirmInitiativeUpdateDraftBody}`);
+        if (!confirmed) {
+          return;
+        }
+        await api(`/api/v1/admin/initiatives/${encodeURIComponent(targetInitiative.id)}`, {
+          method: 'PUT',
+          body: {
+            title: String(draft.title || '').trim(),
+            description: String(draft.description || '').trim(),
+            status: String(targetInitiative.status || 'active').trim() || 'active',
+            lineSide: normalizeLineSide(targetInitiative.lineSide || 'auto') || 'auto',
+            guidelineIds: resolveGremlinDraftGuidelineIds(draft, selected),
+            implementationDate: targetInitiative.implementationDate || null,
+            implementationOwner: String(targetInitiative.implementationOwner || '').trim() || null
+          }
+        });
+        scheduleInitiativeFocus(targetInitiative.id);
       } else if (entityKind === 'initiative') {
         const guidelineIds = resolveGremlinDraftGuidelineIds(draft, selected);
         const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/initiatives`, {
@@ -8797,7 +8845,13 @@ function showClarityGremlinModal() {
       }
 
       await Promise.all([refreshGuidelines(), refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
-      notifySuccess(entityKind === 'guideline' && draftMode === 'update' ? ui.updateDraftApplied : ui.pendingDraftCreated);
+      notifySuccess(
+        entityKind === 'guideline' && draftMode === 'update'
+          ? ui.updateGuidelineDraftApplied
+          : entityKind === 'initiative' && draftMode === 'update'
+            ? ui.updateInitiativeDraftApplied
+            : ui.pendingDraftCreated
+      );
     } catch (error) {
       notifyError(toUserMessage(error));
     } finally {

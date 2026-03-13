@@ -403,6 +403,7 @@ async function buildViewPayload(query, snapshot, view, entityId) {
         entityKind: 'initiative',
         goal: 'Prepare draft initiative proposals that fill execution or topic gaps around this initiative.',
         rules: [
+          'You may either propose a new initiative draft or a revision draft for an existing initiative already visible in this page context.',
           'Propose concrete initiatives, not KPIs or vague themes.',
           'Link each initiative draft to one or more clearly relevant existing guidelines from this page context.',
           'Avoid duplicating the current initiative; fill a missing action, audience, capability, or delivery gap instead.'
@@ -480,6 +481,7 @@ async function buildViewPayload(query, snapshot, view, entityId) {
         entityKind: 'initiative',
         goal: 'Prepare draft initiative proposals that close the most important action gaps in the initiative portfolio.',
         rules: [
+          'You may either propose a new initiative draft or a revision draft for an existing initiative already present in the list.',
           'Prefer missing actions, weakly covered delivery areas, or important audiences not yet served.',
           'Do not propose another broad strategic theme; propose a concrete initiative.',
           'Attach each draft to one or more existing guideline titles from the provided context.'
@@ -676,7 +678,7 @@ function buildSystemPrompt(locale) {
     '- If page.proposalDrafts.entityKind is initiative, return only initiative drafts.',
     '- Use draftMode "update" only when revising an existing guideline already visible in the page context; in that case targetTitle must match the guideline to change.',
     '- Use draftMode "create" for genuinely new proposals.',
-    '- For initiative pages, prefer create drafts rather than revisions unless the needed change is obviously to sharpen one existing initiative.',
+    '- For initiative pages, create drafts are preferred, but you may use update when one visible initiative clearly needs direct sharpening.',
     '- If proposalDrafts are disabled for this page, return an empty array.',
     '- proposalDraft titles must be distinct from obvious existing titles in the context.',
     '- proposalDraft descriptions must be specific enough to submit as moderated pending proposals.',
