@@ -1156,7 +1156,14 @@ function registerMetaAdminRoutes({
 
   app.get('/api/v1/meta-admin/overview', requireMetaAdminSession, async (_req, res) => {
     const institutionsRes = await query(
-      'select id, name, slug, status, created_at from institutions order by created_at desc'
+      `select id,
+              name,
+              slug,
+              status,
+              created_at,
+              coalesce(clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans
+       from institutions
+       order by created_at desc`
     );
     const strategiesRes = await query(
       `select id, institution_id, title, slug, status, is_default, created_at
@@ -1282,6 +1289,7 @@ function registerMetaAdminRoutes({
         slug: row.slug,
         status: row.status,
         createdAt: row.created_at,
+        clarityGremlinExtraScans: Number(row.clarity_gremlin_extra_scans || 0),
         strategies: strategiesByInstitution[row.id] || []
       })),
       users: usersRes.rows.map((row) => ({
@@ -1548,17 +1556,29 @@ function registerMetaAdminRoutes({
   app.put('/api/v1/meta-admin/institutions/:institutionId', requireMetaAdminSession, async (req, res) => {
     const institutionId = String(req.params.institutionId || '').trim();
     const name = String(req.body?.name || '').trim();
+    const rawExtraScans = req.body?.clarityGremlinExtraScans;
     if (!institutionId || !name) {
       return res.status(400).json({ error: 'institutionId and name required' });
+    }
+    let clarityGremlinExtraScans = null;
+    if (rawExtraScans !== undefined) {
+      const parsed = Number(rawExtraScans);
+      if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+        return res.status(400).json({ error: 'invalid clarityGremlinExtraScans' });
+      }
+      clarityGremlinExtraScans = parsed;
     }
 
     const result = await query(
       `update institutions
-       set name = $1
-       where id = $2`,
-      [name, institutionId]
+       set name = $1,
+           clarity_gremlin_extra_scans = coalesce($2::integer, clarity_gremlin_extra_scans)
+       where id = $3
+       returning coalesce(clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans`,
+      [name, clarityGremlinExtraScans, institutionId]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
+    const updatedExtraScans = Number(result.rows[0]?.clarity_gremlin_extra_scans || 0);
 
     await logAuditEvent({
       query,
@@ -1567,10 +1587,18 @@ function registerMetaAdminRoutes({
       action: 'meta_admin.institution.updated',
       entityType: 'institution',
       entityId: institutionId,
-      payload: metaAuditPayload(req, { name })
+      payload: metaAuditPayload(req, {
+        name,
+        clarityGremlinExtraScans: updatedExtraScans
+      })
     });
 
-    res.json({ ok: true, institutionId, name });
+    res.json({
+      ok: true,
+      institutionId,
+      name,
+      clarityGremlinExtraScans: updatedExtraScans
+    });
   });
 
   app.put('/api/v1/meta-admin/strategies/:strategyId', requireMetaAdminSession, async (req, res) => {

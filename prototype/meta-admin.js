@@ -187,6 +187,7 @@ function toUserMessage(error) {
     'ai provider error: HTTP 429': 'AI tiekejas laikinai riboja uzklausas (429).',
     'ai provider error: HTTP 500': 'AI tiekejas laikinai nepasiekiamas (500).',
     'strategy limit reached': 'Siai institucijai jau pasiektas maksimalus strategiju limitas (5).',
+    'invalid clarityGremlinExtraScans': 'Papildomu Clarity Gremlin analizių skaicius turi buti sveikas teigiamas skaicius arba nulis.',
     'generationId required': 'Truksta generavimo uzklausos ID.',
     'generation not found': 'AI generavimo uzklausa nerasta.',
     'ai generation timeout': 'AI generavimas uztruko ilgiau nei tiketasi. Patikrinkite po keliu sekundziu.',
@@ -1288,13 +1289,18 @@ function renderDashboard() {
               const strategies = Array.isArray(institution?.strategies) ? institution.strategies : [];
               const selectedDeleteIds = getSelectedStrategyIdsForInstitution(institution.id);
               const selectedDeleteCount = selectedDeleteIds.length;
+              const gremlinExtraScans = Math.max(0, Number(institution?.clarityGremlinExtraScans || 0));
+              const gremlinTotalLimit = 10 + gremlinExtraScans;
               return `
                 <article class="card meta-admin-subcard">
                   <div class="header-row">
                     <strong>${escapeHtml(institution.name)}</strong>
-                    ${renderTag(institution.slug, 'slug')}
+                    <div class="meta-institution-tags">
+                      ${renderTag(institution.slug, 'slug')}
+                      ${renderTag(`Gremlin: ${gremlinTotalLimit}`, 'count')}
+                    </div>
                   </div>
-                  <form class="institution-rename-form inline-form" data-institution-id="${escapeHtml(institution.id)}">
+                  <form class="institution-rename-form inline-form meta-institution-form" data-institution-id="${escapeHtml(institution.id)}">
                     <input
                       type="text"
                       name="name"
@@ -1303,8 +1309,22 @@ function renderDashboard() {
                       required
                       ${state.busy ? 'disabled' : ''}
                     />
+                    <label class="meta-institution-quota-field">
+                      <span>Papildomi Gremlin scanai</span>
+                      <input
+                        type="number"
+                        name="clarityGremlinExtraScans"
+                        min="0"
+                        step="1"
+                        value="${escapeHtml(String(gremlinExtraScans))}"
+                        ${state.busy ? 'disabled' : ''}
+                      />
+                    </label>
                     <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
                   </form>
+                  <p class="prompt meta-institution-quota-note">
+                    Bazinis limitas: 10. Papildomai priskirta: ${escapeHtml(String(gremlinExtraScans))}. Is viso vienai strategijai sios institucijos ribose: ${escapeHtml(String(gremlinTotalLimit))}.
+                  </p>
                   <div class="card-section" style="margin-top:10px;">
                     <strong>Strategijos</strong>
                     <ul class="mini-list meta-strategy-list" style="margin-top:8px;">
@@ -1980,15 +2000,21 @@ function bindDashboardEvents() {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const institutionId = String(form.dataset.institutionId || '').trim();
-      const name = String(new FormData(form).get('name') || '').trim();
+      const formData = new FormData(form);
+      const name = String(formData.get('name') || '').trim();
+      const clarityGremlinExtraScans = Number(formData.get('clarityGremlinExtraScans'));
       if (!institutionId || !name) return;
+      if (!Number.isFinite(clarityGremlinExtraScans) || clarityGremlinExtraScans < 0) return;
 
       await runBusy(async () => {
         await api(`/api/v1/meta-admin/institutions/${encodeURIComponent(institutionId)}`, {
           method: 'PUT',
-          body: { name }
+          body: {
+            name,
+            clarityGremlinExtraScans: Math.trunc(clarityGremlinExtraScans)
+          }
         });
-        setNotice('Institucijos pavadinimas atnaujintas.');
+        setNotice('Institucijos nustatymai atnaujinti.');
         await loadOverview();
       });
     });

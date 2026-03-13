@@ -6,6 +6,7 @@ create table if not exists institutions (
   slug text not null unique,
   country_code text,
   website_url text,
+  clarity_gremlin_extra_scans integer not null default 0,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now()
 );
@@ -483,6 +484,9 @@ alter table if exists institutions
 
 alter table if exists institutions
   add column if not exists website_url text;
+
+alter table if exists institutions
+  add column if not exists clarity_gremlin_extra_scans integer not null default 0;
 
 create table if not exists strategy_ai_generations (
   id uuid primary key,

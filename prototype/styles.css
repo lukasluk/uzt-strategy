@@ -682,11 +682,11 @@ body.embed-map-page .stage {
   min-width: 0;
   min-height: 34px;
   padding: 5px 10px 5px 8px;
-  border: 1px solid #d8c08d;
+  border: 1px solid var(--border-soft);
   border-radius: 999px;
-  background: linear-gradient(180deg, #fff7df 0%, #f6e5b7 100%);
-  color: #6b4a16;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+  color: #1f3f69;
+  box-shadow: none;
 }
 
 .strategy-vote-budget-icon {
@@ -696,6 +696,7 @@ body.embed-map-page .stage {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  color: #5b7da6;
 }
 
 .strategy-vote-budget-icon-svg {
@@ -710,6 +711,7 @@ body.embed-map-page .stage {
   font-weight: 800;
   letter-spacing: 0.01em;
   white-space: nowrap;
+  color: inherit;
 }
 
 .strategy-switcher-dialog {
@@ -7527,6 +7529,46 @@ body.meta-admin-page .stage {
   gap: 12px;
 }
 
+.meta-institution-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.meta-institution-tags .tag {
+  margin-right: 0;
+}
+
+.meta-institution-form {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) auto;
+  align-items: end;
+}
+
+.meta-institution-quota-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.meta-institution-quota-field span {
+  color: #48698f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.inline-form .meta-institution-quota-field input[type='number'] {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 14px;
+}
+
+.meta-institution-quota-note {
+  margin: 8px 0 0;
+  color: #56769c;
+}
+
 .meta-users-layout {
   display: grid;
   grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
@@ -7851,6 +7893,12 @@ body.meta-admin-page .stage {
   margin-top: 8px;
   display: flex;
   justify-content: flex-end;
+}
+
+@media (max-width: 960px) {
+  .meta-institution-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 780px) {

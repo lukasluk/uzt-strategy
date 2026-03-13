@@ -15,24 +15,31 @@ function registerClarityGremlinRoutes({
     ? memberWriteRateLimit
     : (_req, _res, next) => next();
 
-  const limitPerStrategy = Math.max(1, Number(process.env.CLARITY_GREMLIN_LIMIT_PER_STRATEGY || 10));
+  const baseLimitPerStrategy = Math.max(1, Number(process.env.CLARITY_GREMLIN_LIMIT_PER_STRATEGY || 10));
   const aiConfig = getClarityGremlinConfig();
 
   async function loadStrategyUsage(strategyId) {
     const strategyRes = await query(
       `select id,
               title,
-              coalesce(clarity_gremlin_calls_used, 0)::int as clarity_gremlin_calls_used
-       from institution_strategies
-       where id = $1
+              coalesce(s.clarity_gremlin_calls_used, 0)::int as clarity_gremlin_calls_used,
+              coalesce(i.clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans
+       from institution_strategies s
+       join institutions i on i.id = s.institution_id
+       where s.id = $1
        limit 1`,
       [strategyId]
     );
     const strategy = strategyRes.rows[0] || null;
+    const used = Number(strategy?.clarity_gremlin_calls_used || 0);
+    const extra = Math.max(0, Number(strategy?.clarity_gremlin_extra_scans || 0));
+    const limit = baseLimitPerStrategy + extra;
     return {
-      used: Number(strategy?.clarity_gremlin_calls_used || 0),
-      limit: limitPerStrategy,
-      remaining: Math.max(0, limitPerStrategy - Number(strategy?.clarity_gremlin_calls_used || 0)),
+      used,
+      limit,
+      baseLimit: baseLimitPerStrategy,
+      extraAllocated: extra,
+      remaining: Math.max(0, limit - used),
       strategyId,
       strategyTitle: strategy?.title || null
     };
@@ -113,14 +120,17 @@ function registerClarityGremlinRoutes({
     }
 
     const usageReservation = await query(
-      `update institution_strategies
-       set clarity_gremlin_calls_used = clarity_gremlin_calls_used + 1
-       where id = $1
-         and coalesce(clarity_gremlin_calls_used, 0) < $2
-       returning id,
-                 title,
-                 coalesce(clarity_gremlin_calls_used, 0)::int as clarity_gremlin_calls_used`,
-      [strategyId, limitPerStrategy]
+      `update institution_strategies s
+       set clarity_gremlin_calls_used = coalesce(s.clarity_gremlin_calls_used, 0) + 1
+       from institutions i
+       where s.id = $1
+         and i.id = s.institution_id
+         and coalesce(s.clarity_gremlin_calls_used, 0) < ($2 + coalesce(i.clarity_gremlin_extra_scans, 0))
+       returning s.id,
+                 s.title,
+                 coalesce(s.clarity_gremlin_calls_used, 0)::int as clarity_gremlin_calls_used,
+                 coalesce(i.clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans`,
+      [strategyId, baseLimitPerStrategy]
     );
 
     if (!usageReservation.rowCount) {
@@ -180,6 +190,8 @@ function registerClarityGremlinRoutes({
       }
 
       const used = Number(reserved?.clarity_gremlin_calls_used || 0);
+      const extra = Math.max(0, Number(reserved?.clarity_gremlin_extra_scans || 0));
+      const limit = baseLimitPerStrategy + extra;
       return res.json({
         ok: true,
         analysis: result.analysis,
@@ -188,8 +200,10 @@ function registerClarityGremlinRoutes({
         historyEntryId: analysisRecordId,
         usage: {
           used,
-          limit: limitPerStrategy,
-          remaining: Math.max(0, limitPerStrategy - used),
+          limit,
+          baseLimit: baseLimitPerStrategy,
+          extraAllocated: extra,
+          remaining: Math.max(0, limit - used),
           strategyId,
           strategyTitle: reserved?.title || null
         }
