@@ -6025,6 +6025,44 @@ select:focus {
   color: #6b84a5;
 }
 
+.gremlin-summary-label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gremlin-help-dot {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid #c6d7eb;
+  background: #f7fbff;
+  color: #53739a;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+}
+
+.gremlin-score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  min-height: 34px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #cadcf2;
+  background: linear-gradient(180deg, #ffffff 0%, #edf4ff 100%);
+  color: #1f4678;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
 .gremlin-summary-text {
   margin: 0;
 }

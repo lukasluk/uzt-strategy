@@ -24,6 +24,24 @@ function cleanText(value, maxLength = 4000) {
   return text.slice(0, maxLength).trim();
 }
 
+function cleanPreviewText(value, maxLength = 400) {
+  const text = cleanText(value, 4000);
+  const limit = Math.max(40, Number(maxLength) || 400);
+  if (!text || text.length <= limit) return text;
+
+  const slice = text.slice(0, limit);
+  const boundaryIndex = Math.max(
+    slice.lastIndexOf('. '),
+    slice.lastIndexOf('! '),
+    slice.lastIndexOf('? '),
+    slice.lastIndexOf('; '),
+    slice.lastIndexOf(', '),
+    slice.lastIndexOf(' ')
+  );
+  const safeIndex = boundaryIndex >= 120 ? boundaryIndex : limit;
+  return `${slice.slice(0, safeIndex).trim()}…`;
+}
+
 function formatDate(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -49,11 +67,17 @@ function truncateList(items, maxItems = 40) {
   return list.slice(0, Math.max(0, Number(maxItems) || 0));
 }
 
+function clampScore(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(1, Math.min(10, Math.round(numeric)));
+}
+
 function summarizeGuideline(item) {
   return {
     id: item.id,
     title: cleanText(item.title, 160),
-    description: cleanText(item.description, 400),
+    description: cleanPreviewText(item.description, 400),
     relationType: cleanText(item.relation_type || item.relationType, 40) || 'orphan',
     parentTitle: cleanText(item.parent_title || item.parentTitle, 160) || null,
     implementationDate: formatDate(item.implementation_target_date || item.implementationDate),
@@ -69,7 +93,7 @@ function summarizeInitiative(item) {
   return {
     id: item.id,
     title: cleanText(item.title, 160),
-    description: cleanText(item.description, 400),
+    description: cleanPreviewText(item.description, 400),
     implementationDate: formatDate(item.implementation_target_date || item.implementationDate),
     implementationOwner: cleanText(item.implementation_owner || item.implementationOwner, 120),
     totalScore: Number(item.total_score || item.totalScore || 0),
@@ -193,6 +217,36 @@ async function loadCycleSnapshot(query, cycleId) {
   };
 }
 
+async function loadFullEntityDescription(query, { kind, entityId }) {
+  const normalizedKind = String(kind || '').trim().toLowerCase();
+  const id = String(entityId || '').trim();
+  if (!id) return '';
+
+  if (normalizedKind === 'guideline') {
+    const res = await query(
+      `select description
+       from strategy_guidelines
+       where id = $1
+       limit 1`,
+      [id]
+    );
+    return cleanText(res.rows[0]?.description, 6000);
+  }
+
+  if (normalizedKind === 'initiative') {
+    const res = await query(
+      `select description
+       from strategy_initiatives
+       where id = $1
+       limit 1`,
+      [id]
+    );
+    return cleanText(res.rows[0]?.description, 6000);
+  }
+
+  return '';
+}
+
 function buildCounts(snapshot) {
   const guidelines = normalizeArray(snapshot?.guidelines);
   const initiatives = normalizeArray(snapshot?.initiatives);
@@ -208,7 +262,7 @@ function buildCounts(snapshot) {
   };
 }
 
-function buildViewPayload(snapshot, view, entityId) {
+async function buildViewPayload(query, snapshot, view, entityId) {
   const guidelines = normalizeArray(snapshot?.guidelines);
   const initiatives = normalizeArray(snapshot?.initiatives);
   const guidelineById = createTitleLookup(guidelines);
@@ -216,7 +270,14 @@ function buildViewPayload(snapshot, view, entityId) {
   const counts = buildCounts(snapshot);
 
   if (view === 'guideline-detail') {
-    const focus = guidelineById.get(String(entityId || '').trim()) || null;
+    const focusBase = guidelineById.get(String(entityId || '').trim()) || null;
+    const focus = focusBase
+      ? {
+          ...focusBase,
+          description: await loadFullEntityDescription(query, { kind: 'guideline', entityId })
+            || focusBase.description
+        }
+      : null;
     if (!focus) throw new Error('guideline not found');
     const relatedChildren = guidelines.filter((item) => String(item.parentTitle || '').trim() === String(focus.title || '').trim());
     const parent = focus.parentTitle
@@ -237,7 +298,14 @@ function buildViewPayload(snapshot, view, entityId) {
   }
 
   if (view === 'initiative-detail') {
-    const focus = initiativeById.get(String(entityId || '').trim()) || null;
+    const focusBase = initiativeById.get(String(entityId || '').trim()) || null;
+    const focus = focusBase
+      ? {
+          ...focusBase,
+          description: await loadFullEntityDescription(query, { kind: 'initiative', entityId })
+            || focusBase.description
+        }
+      : null;
     if (!focus) throw new Error('initiative not found');
     const linkedGuidelines = guidelines.filter((item) =>
       normalizeArray(focus.linkedGuidelines).includes(item.title)
@@ -363,6 +431,7 @@ function buildSystemPrompt(locale) {
     'Return only valid JSON with this exact schema:',
     '{',
     '  "pageLabel": "string",',
+    '  "score": 1,',
     '  "summary": "string",',
     '  "strengths": ["string"],',
     '  "improvements": [',
@@ -372,6 +441,8 @@ function buildSystemPrompt(locale) {
     '  "dataGaps": ["string"]',
     '}',
     'Rules:',
+    '- score must be an integer from 1 to 10.',
+    '- score should reflect the quality of this page content itself: strategic clarity, content specificity, thematic completeness, and execution readiness.',
     '- summary must be 1 short paragraph.',
     '- strengths: 0 to 3 items.',
     '- improvements: 2 to 5 items.',
@@ -401,6 +472,7 @@ function normalizeAnalysis(raw) {
   const value = raw && typeof raw === 'object' ? raw : {};
   return {
     pageLabel: cleanText(value.pageLabel, 120),
+    score: clampScore(value.score),
     summary: cleanText(value.summary, 900),
     strengths: truncateList(normalizeArray(value.strengths).map((item) => cleanText(item, 220)).filter(Boolean), 3),
     improvements: truncateList(
@@ -418,6 +490,9 @@ function normalizeAnalysis(raw) {
 }
 
 function validateAnalysis(value) {
+  if (!Number.isInteger(value.score) || value.score < 1 || value.score > 10) {
+    throw new Error('ai response invalid');
+  }
   if (!value.summary) throw new Error('ai response invalid');
   if (!Array.isArray(value.improvements) || value.improvements.length < 1) {
     throw new Error('ai response invalid');
@@ -445,7 +520,7 @@ async function analyzeStrategyPage({
     throw new Error('cycle not found');
   }
 
-  const viewPayload = buildViewPayload(snapshot, normalizedView, entityId);
+  const viewPayload = await buildViewPayload(query, snapshot, normalizedView, entityId);
   const promptPayload = buildPromptPayload(snapshot, viewPayload);
   const response = await requestPolicyAlignmentJson({
     ...aiConfig,

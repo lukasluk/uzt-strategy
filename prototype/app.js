@@ -4740,6 +4740,8 @@ function clarityGremlinUiText() {
       noCycle: 'Open a strategy cycle first to run analysis.',
       currentContext: 'Current context',
       usage: 'Usage',
+      score: 'Clarity score',
+      scoreTooltip: 'Rates this page from 1 to 10 based on content clarity, specificity, topic coverage, and execution readiness. 1 means weak and unclear; 10 means strong, clear, and actionable.',
       strengths: 'What looks strong',
       improvements: 'What should improve',
       nextActions: 'Concrete next actions',
@@ -4760,6 +4762,8 @@ function clarityGremlinUiText() {
     noCycle: 'Pirmiausia atverkite strategijos ciklą, kad būtų galima paleisti analizę.',
     currentContext: 'Dabartinis kontekstas',
     usage: 'Naudojimas',
+    score: 'Clarity score',
+    scoreTooltip: 'Vertina šį puslapį nuo 1 iki 10 pagal turinio aiškumą, konkretumą, temos padengimą ir vykdomumą. 1 reiškia silpną ir neaiškų turinį, 10 reiškia stiprų, aiškų ir lengvai įgyvendinamą turinį.',
     strengths: 'Kas atrodo stipru',
     improvements: 'Ką verta pagerinti',
     nextActions: 'Konkretūs kiti žingsniai',
@@ -8141,6 +8145,7 @@ function closeClarityGremlinModal() {
 function renderClarityGremlinResultMarkup(result, ui) {
   const analysis = result?.analysis && typeof result.analysis === 'object' ? result.analysis : {};
   const usage = result?.usage && typeof result.usage === 'object' ? result.usage : null;
+  const score = Math.max(1, Math.min(10, Number(analysis.score || 0) || 0));
   const strengths = Array.isArray(analysis.strengths) ? analysis.strengths : [];
   const improvements = Array.isArray(analysis.improvements) ? analysis.improvements : [];
   const nextActions = Array.isArray(analysis.nextActions) ? analysis.nextActions : [];
@@ -8156,6 +8161,15 @@ function renderClarityGremlinResultMarkup(result, ui) {
           <span class="gremlin-summary-label">${escapeHtml(ui.page)}</span>
           <strong>${escapeHtml(analysis.pageLabel || result?.page?.label || '-')}</strong>
         </div>
+        ${score
+      ? `<div class="gremlin-summary-row">
+            <span class="gremlin-summary-label gremlin-summary-label-with-help">
+              ${escapeHtml(ui.score)}
+              <span class="gremlin-help-dot" title="${escapeHtml(ui.scoreTooltip)}" aria-label="${escapeHtml(ui.scoreTooltip)}">?</span>
+            </span>
+            <strong class="gremlin-score-badge">${escapeHtml(`${score}/10`)}</strong>
+          </div>`
+      : ''}
         ${usage
       ? `<div class="gremlin-summary-row">
             <span class="gremlin-summary-label">${escapeHtml(ui.remainingCalls)}</span>
