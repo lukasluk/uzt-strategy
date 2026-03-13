@@ -731,28 +731,117 @@ function openPolicyAlignmentFrameworkDocumentModal(framework, documentRecord) {
   });
 }
 
+function normalizePolicyAlignmentMatchText(value) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function findPolicyAlignmentHighlightRange(sourceText, highlightText) {
+  const rawSource = String(sourceText || '');
+  const rawHighlight = String(highlightText || '');
+  if (!rawSource || !rawHighlight.trim()) return null;
+
+  const sourceChars = [];
+  let normalizedSource = '';
+  let lastWasSpace = false;
+
+  for (let index = 0; index < rawSource.length; index += 1) {
+    const char = rawSource[index];
+    if (/\s/.test(char)) {
+      if (!lastWasSpace && normalizedSource.length) {
+        sourceChars.push(index);
+        normalizedSource += ' ';
+        lastWasSpace = true;
+      }
+      continue;
+    }
+    sourceChars.push(index);
+    normalizedSource += char.toLowerCase();
+    lastWasSpace = false;
+  }
+
+  const normalizedHighlight = normalizePolicyAlignmentMatchText(rawHighlight);
+  if (!normalizedSource || !normalizedHighlight) return null;
+
+  const start = normalizedSource.indexOf(normalizedHighlight);
+  if (start < 0) return null;
+
+  const end = start + normalizedHighlight.length - 1;
+  const sourceStart = sourceChars[start];
+  const sourceEnd = sourceChars[end];
+  if (!Number.isInteger(sourceStart) || !Number.isInteger(sourceEnd)) return null;
+
+  return {
+    start: sourceStart,
+    end: sourceEnd + 1
+  };
+}
+
 function highlightPolicyAlignmentQuote(text, quote) {
   const sourceText = String(text || '');
   const sourceQuote = String(quote || '').trim();
   const escapedText = escapeHtml(sourceText);
   if (!sourceQuote) return escapedText;
 
-  const lowerText = sourceText.toLowerCase();
-  const lowerQuote = sourceQuote.toLowerCase();
-  const start = lowerText.indexOf(lowerQuote);
-  if (start < 0) return escapedText;
+  const range = findPolicyAlignmentHighlightRange(sourceText, sourceQuote);
+  if (!range) return escapedText;
 
-  const before = sourceText.slice(0, start);
-  const matched = sourceText.slice(start, start + sourceQuote.length);
-  const after = sourceText.slice(start + sourceQuote.length);
+  const before = sourceText.slice(0, range.start);
+  const matched = sourceText.slice(range.start, range.end);
+  const after = sourceText.slice(range.end);
   return `${escapeHtml(before)}<mark class="policy-alignment-highlight" data-policy-alignment-highlight="true">${escapeHtml(matched)}</mark>${escapeHtml(after)}`;
+}
+
+function normalizePolicyAlignmentDocumentText(value) {
+  const raw = String(value || '').replace(/\r\n/g, '\n');
+  if (!raw.trim()) return '';
+
+  const lines = raw.split('\n');
+  const paragraphs = [];
+  let currentParagraph = [];
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (currentParagraph.length) {
+        paragraphs.push(currentParagraph.join(' '));
+        currentParagraph = [];
+      }
+      return;
+    }
+
+    if (/^[-*•]\s/.test(trimmed) || /^\d+[\.\)]\s/.test(trimmed)) {
+      if (currentParagraph.length) {
+        paragraphs.push(currentParagraph.join(' '));
+        currentParagraph = [];
+      }
+      paragraphs.push(trimmed);
+      return;
+    }
+
+    currentParagraph.push(trimmed);
+  });
+
+  if (currentParagraph.length) {
+    paragraphs.push(currentParagraph.join(' '));
+  }
+
+  return paragraphs.join('\n\n');
 }
 
 function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
   const currentFramework = framework && typeof framework === 'object' ? framework : null;
   const targetDocumentId = String(options?.documentId || '').trim();
   const targetChunkOrdinal = Number.isFinite(Number(options?.chunkOrdinal)) ? Number(options.chunkOrdinal) : null;
-  const highlightQuote = String(options?.quote || '').trim();
+  const highlightQuote = String(
+    options?.quote
+    || options?.chunkTextExcerpt
+    || options?.requirementTitle
+    || options?.requirementDescription
+    || ''
+  ).trim();
   const documentItem = (Array.isArray(currentFramework?.documents) ? currentFramework.documents : [])
     .find((item) => String(item?.id || '').trim() === targetDocumentId)
     || (Array.isArray(currentFramework?.documents) ? currentFramework.documents[0] : null);
@@ -764,7 +853,7 @@ function openPolicyAlignmentFrameworkEvidenceModal(framework, options = {}) {
     : frameworkChunks.find((item) => Number(item?.ordinal) === targetChunkOrdinal && String(item?.documentId || '').trim() === String(documentItem.id || '').trim())
       || frameworkChunks.find((item) => Number(item?.ordinal) === targetChunkOrdinal)
       || null;
-  const fullDocumentText = String(documentItem.extractedText || '').trim();
+  const fullDocumentText = normalizePolicyAlignmentDocumentText(documentItem.extractedText);
   const bodyHtml = `
     <div class="policy-alignment-evidence-focus">
       <div class="policy-alignment-document-body" data-policy-alignment-document-body="true">
@@ -1945,10 +2034,6 @@ function renderPolicyAlignmentView() {
                       <span>${escapeHtml(langText('Analyses', 'Analyses'))}</span>
                       <strong>${Number(frameworkAnalyses.length || 0)}</strong>
                     </div>
-                    <div class="policy-alignment-summary-card">
-                      <span>${escapeHtml(langText('Next step', 'Next step'))}</span>
-                      <button type="button" class="btn btn-primary policy-alignment-inline-btn" data-action="open-analysis-create-from-framework" ${(state.role === 'institution_admin' && policyAlignmentFrameworkReady(framework)) ? '' : 'disabled'}>${escapeHtml(langText('Create analysis', 'Create analysis'))}</button>
-                    </div>
                   </div>
                 </section>
 
@@ -2059,7 +2144,9 @@ function renderPolicyAlignmentView() {
                                                 data-document-id="${escapeHtml(String(ref.document?.id || ''))}"
                                                 data-chunk-ordinal="${escapeHtml(String(ref.chunkOrdinal))}"
                                                 data-quote="${escapeHtml(ref.quote || '')}"
+                                                data-chunk-text-excerpt="${escapeHtml(String(ref.chunk?.textExcerpt || '').trim())}"
                                                 data-requirement-title="${escapeHtml(requirement.title || '')}"
+                                                data-requirement-description="${escapeHtml(requirement.description || '')}"
                                                 title="${escapeHtml(ref.document?.filename || langText('Source reference', 'Source reference'))}"
                                               >${escapeHtml(String(ref.chunkOrdinal))}</button>
                                             `).join('')}
@@ -2427,7 +2514,9 @@ function renderPolicyAlignmentView() {
         documentId: String(button.dataset.documentId || '').trim(),
         chunkOrdinal: Number(button.dataset.chunkOrdinal),
         quote: String(button.dataset.quote || '').trim(),
-        requirementTitle: String(button.dataset.requirementTitle || '').trim()
+        chunkTextExcerpt: String(button.dataset.chunkTextExcerpt || '').trim(),
+        requirementTitle: String(button.dataset.requirementTitle || '').trim(),
+        requirementDescription: String(button.dataset.requirementDescription || '').trim()
       });
     });
   });
