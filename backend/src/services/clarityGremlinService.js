@@ -651,7 +651,7 @@ function buildSystemPrompt(locale) {
     '  "proposalDrafts": [',
     '    {',
     '      "entityKind": "guideline|initiative",',
-    '      "draftMode": "create|update",',
+    '      "draftMode": "create|update|delete",',
     '      "targetTitle": "string|null",',
     '      "title": "string",',
     '      "description": "string",',
@@ -676,7 +676,8 @@ function buildSystemPrompt(locale) {
     '- Only return proposalDrafts when page.proposalDrafts.enabled is true.',
     '- If page.proposalDrafts.entityKind is guideline, return only guideline drafts.',
     '- If page.proposalDrafts.entityKind is initiative, return only initiative drafts.',
-    '- Use draftMode "update" only when revising an existing guideline already visible in the page context; in that case targetTitle must match the guideline to change.',
+    '- Use draftMode "update" only when revising an existing visible item; in that case targetTitle must match the item to change.',
+    '- Use draftMode "delete" only when an existing visible item should be removed because it is duplicate, redundant, out of scope, or misleading; in that case targetTitle must match the item to remove.',
     '- Use draftMode "create" for genuinely new proposals.',
     '- For initiative pages, create drafts are preferred, but you may use update when one visible initiative clearly needs direct sharpening.',
     '- If proposalDrafts are disabled for this page, return an empty array.',
@@ -727,7 +728,10 @@ function normalizeAnalysis(raw) {
           const entityKind = String(item?.entityKind || '').trim().toLowerCase();
           return {
             entityKind: entityKind === 'initiative' ? 'initiative' : entityKind === 'guideline' ? 'guideline' : '',
-            draftMode: String(item?.draftMode || '').trim().toLowerCase() === 'update' ? 'update' : 'create',
+            draftMode: (() => {
+              const draftMode = String(item?.draftMode || '').trim().toLowerCase();
+              return draftMode === 'update' || draftMode === 'delete' ? draftMode : 'create';
+            })(),
             targetTitle: cleanText(item?.targetTitle, 160) || null,
             title: cleanText(item?.title, 160),
             description: cleanText(item?.description, 1200),
@@ -745,7 +749,7 @@ function normalizeAnalysis(raw) {
             )
           };
         })
-        .filter((item) => item.entityKind && item.title && item.description && (item.draftMode !== 'update' || item.targetTitle)),
+        .filter((item) => item.entityKind && item.title && item.description && ((item.draftMode !== 'update' && item.draftMode !== 'delete') || item.targetTitle)),
       5
     )
   };

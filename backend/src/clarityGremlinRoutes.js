@@ -106,7 +106,8 @@ function registerClarityGremlinRoutes({
     actorId,
     entityKind,
     entityId,
-    entityTitle
+    entityTitle,
+    deleted = false
   }) {
     const analysisRes = await query(
       `select id, institution_id, cycle_id, analysis_json
@@ -142,6 +143,7 @@ function registerClarityGremlinRoutes({
       entityKind: String(entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline',
       entityId: String(entityId || '').trim(),
       entityTitle: String(entityTitle || draft.title || '').trim() || null,
+      deleted: deleted === true,
       appliedAt: new Date().toISOString(),
       appliedBy: String(actorId || '').trim() || null
     };
@@ -313,6 +315,7 @@ function registerClarityGremlinRoutes({
     const entityKind = String(req.body?.entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
     const entityId = String(req.body?.entityId || '').trim();
     const entityTitle = String(req.body?.entityTitle || '').trim();
+    const deleted = req.body?.deleted === true;
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
     if (!analysisId) return res.status(400).json({ error: 'analysisId required' });
     if (!Number.isInteger(draftIndex) || draftIndex < 0) return res.status(400).json({ error: 'invalid draft index' });
@@ -330,7 +333,8 @@ function registerClarityGremlinRoutes({
         actorId: req.auth.sub,
         entityKind,
         entityId,
-        entityTitle
+        entityTitle,
+        deleted
       });
       res.json(result);
     } catch (error) {

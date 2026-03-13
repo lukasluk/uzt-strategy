@@ -4725,13 +4725,21 @@ function clarityGremlinUiText() {
       gremlinImplementedHistory: 'Gremlin suggestion implemented',
       pendingDraftCreated: 'Proposal created and sent for admin approval.',
       applyUpdateDraft: 'Apply correction',
+      applyDeleteDraft: 'Apply deletion',
       updateDraftAdminOnly: 'Immediate correction is available only to institution admins.',
+      deleteDraftAdminOnly: 'Immediate deletion is available only to institution admins.',
       confirmGuidelineUpdateDraftTitle: 'Apply this guideline correction now?',
       confirmGuidelineUpdateDraftBody: 'This will update the existing guideline immediately. You can review the text before confirming.',
       confirmInitiativeUpdateDraftTitle: 'Apply this initiative correction now?',
       confirmInitiativeUpdateDraftBody: 'This will update the existing initiative immediately. You can review the text before confirming.',
+      confirmGuidelineDeleteDraftTitle: 'Delete this guideline now?',
+      confirmGuidelineDeleteDraftBody: 'This will delete the existing guideline immediately. Please confirm only if you want to remove it right away.',
+      confirmInitiativeDeleteDraftTitle: 'Delete this initiative now?',
+      confirmInitiativeDeleteDraftBody: 'This will delete the existing initiative immediately. Please confirm only if you want to remove it right away.',
       updateGuidelineDraftApplied: 'Guideline correction applied immediately.',
       updateInitiativeDraftApplied: 'Initiative correction applied immediately.',
+      deleteGuidelineDraftApplied: 'Guideline deleted immediately.',
+      deleteInitiativeDraftApplied: 'Initiative deleted immediately.',
       draftUnavailable: 'Draft creation is available only in a writable strategy cycle.',
       dataGaps: 'Potential gaps',
       remainingCalls: 'Remaining analyses',
@@ -4778,13 +4786,21 @@ function clarityGremlinUiText() {
     gremlinImplementedHistory: 'Aiškumo nykštuko pasiūlymas įgyvendintas',
     pendingDraftCreated: 'Pasiūlymas sukurtas ir pateiktas administratoriaus tvirtinimui.',
     applyUpdateDraft: 'Pritaikyti koregavimą',
+    applyDeleteDraft: 'Pritaikyti ištrynimą',
     updateDraftAdminOnly: 'Tiesioginis koregavimas galimas tik institucijos administratoriui.',
+    deleteDraftAdminOnly: 'Tiesioginis ištrynimas galimas tik institucijos administratoriui.',
     confirmGuidelineUpdateDraftTitle: 'Pritaikyti šį gairės koregavimą dabar?',
     confirmGuidelineUpdateDraftBody: 'Šis veiksmas iš karto atnaujins esamą gairę. Prieš tęsdami įsitikinkite, kad tikrai norite pritaikyti pakeitimus.',
     confirmInitiativeUpdateDraftTitle: 'Pritaikyti šį iniciatyvos koregavimą dabar?',
     confirmInitiativeUpdateDraftBody: 'Šis veiksmas iš karto atnaujins esamą iniciatyvą. Prieš tęsdami įsitikinkite, kad tikrai norite pritaikyti pakeitimus.',
+    confirmGuidelineDeleteDraftTitle: 'Ištrinti šią gairę dabar?',
+    confirmGuidelineDeleteDraftBody: 'Šis veiksmas iš karto ištrins esamą gairę. Prieš tęsdami įsitikinkite, kad tikrai norite ją pašalinti.',
+    confirmInitiativeDeleteDraftTitle: 'Ištrinti šią iniciatyvą dabar?',
+    confirmInitiativeDeleteDraftBody: 'Šis veiksmas iš karto ištrins esamą iniciatyvą. Prieš tęsdami įsitikinkite, kad tikrai norite ją pašalinti.',
     updateGuidelineDraftApplied: 'Gairės koregavimas pritaikytas iš karto.',
     updateInitiativeDraftApplied: 'Iniciatyvos koregavimas pritaikytas iš karto.',
+    deleteGuidelineDraftApplied: 'Gairė ištrinta iš karto.',
+    deleteInitiativeDraftApplied: 'Iniciatyva ištrinta iš karto.',
     draftUnavailable: 'Juodraščio kūrimas galimas tik redaguojamame strategijos cikle.',
     dataGaps: 'Galimos spragos',
     remainingCalls: 'Likę kvietimai',
@@ -8725,7 +8741,10 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
             <div class="gremlin-draft-list">
               ${draftProposals.map((draft, index) => {
                 const entityKind = String(draft?.entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
-                const draftMode = String(draft?.draftMode || '').trim().toLowerCase() === 'update' ? 'update' : 'create';
+                const draftMode = (() => {
+                  const mode = String(draft?.draftMode || '').trim().toLowerCase();
+                  return mode === 'update' || mode === 'delete' ? mode : 'create';
+                })();
                 const kindLabel = entityKind === 'initiative'
                   ? langText('Iniciatyvos pasiūlymas', 'Initiative proposal')
                   : langText('Gairės pasiūlymas', 'Guideline proposal');
@@ -8733,7 +8752,11 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                   ? entityKind === 'initiative'
                     ? langText('Esamos iniciatyvos koregavimas', 'Existing initiative correction')
                     : langText('Esamos gairės koregavimas', 'Existing guideline correction')
-                  : kindLabel;
+                  : draftMode === 'delete'
+                    ? entityKind === 'initiative'
+                      ? langText('Esamos iniciatyvos ištrynimas', 'Existing initiative deletion')
+                      : langText('Esamos gairės ištrynimas', 'Existing guideline deletion')
+                    : kindLabel;
                 const relationLabel = entityKind === 'guideline' && draft?.relationType
                   ? ` · ${escapeHtml(
                     draft.relationType === 'child'
@@ -8749,36 +8772,58 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                 const implemented = draft?.implemented && typeof draft.implemented === 'object' ? draft.implemented : null;
                 const implementedEntityKind = String(implemented?.entityKind || entityKind).trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
                 const implementedEntityId = String(implemented?.entityId || '').trim();
-                const targetHint = draftMode === 'update' && draft?.targetTitle
-                  ? `<p class="gremlin-draft-meta">${escapeHtml(entityKind === 'initiative' ? langText('Koreguojama iniciatyva', 'Initiative to update') : langText('Koreguojama gairė', 'Guideline to update'))}: <strong>${escapeHtml(draft.targetTitle)}</strong></p>`
+                const targetHint = (draftMode === 'update' || draftMode === 'delete') && draft?.targetTitle
+                  ? `<p class="gremlin-draft-meta">${escapeHtml(
+                    draftMode === 'delete'
+                      ? (entityKind === 'initiative'
+                        ? langText('Siūloma ištrinti iniciatyvą', 'Initiative to delete')
+                        : langText('Siūloma ištrinti gairę', 'Guideline to delete'))
+                      : (entityKind === 'initiative'
+                        ? langText('Koreguojama iniciatyva', 'Initiative to update')
+                        : langText('Koreguojama gairė', 'Guideline to update'))
+                  )}: <strong>${escapeHtml(draft.targetTitle)}</strong></p>`
                   : '';
                 const parentHint = entityKind === 'guideline' && draft?.relationType === 'child' && draft?.parentGuidelineTitle
                   ? `<p class="gremlin-draft-meta">${escapeHtml(langText('Siūloma priskirti prie', 'Suggested parent'))}: <strong>${escapeHtml(draft.parentGuidelineTitle)}</strong></p>`
                   : '';
-                const requiresImmediateApply = draftMode === 'update';
-                const buttonText = requiresImmediateApply ? ui.applyUpdateDraft : ui.createPendingDraft;
+                const requiresImmediateApply = draftMode === 'update' || draftMode === 'delete';
+                const buttonText = draftMode === 'delete'
+                  ? ui.applyDeleteDraft
+                  : requiresImmediateApply
+                    ? ui.applyUpdateDraft
+                    : ui.createPendingDraft;
                 const buttonTitle = draftButtonsDisabled
                   ? ui.draftUnavailable
-                  : (requiresImmediateApply && !canOpenAdminView() ? ui.updateDraftAdminOnly : '');
+                  : (requiresImmediateApply && !canOpenAdminView()
+                    ? (draftMode === 'delete' ? ui.deleteDraftAdminOnly : ui.updateDraftAdminOnly)
+                    : '');
                 const disabled = draftButtonsDisabled || (requiresImmediateApply && !canOpenAdminView());
+                const actionButtonClass = implemented && implementedEntityId
+                  ? ''
+                  : draftMode === 'delete'
+                    ? 'btn btn-danger gremlin-draft-delete-btn'
+                    : entityKind === 'initiative'
+                      ? 'btn btn-ghost gremlin-draft-initiative-btn'
+                      : 'btn btn-primary';
                 return `
-                  <article class="gremlin-draft-card gremlin-draft-card-tone-${escapeHtml(entityKind)}${draftMode === 'update' ? ' gremlin-draft-card-mode-update' : ''}">
+                  <article class="gremlin-draft-card gremlin-draft-card-tone-${escapeHtml(entityKind)}${draftMode !== 'create' ? ' gremlin-draft-card-mode-update' : ''}${draftMode === 'delete' ? ' gremlin-draft-card-mode-delete' : ''}">
                     <div class="gremlin-draft-head">
                       <span class="tag ${entityKind === 'initiative' ? '' : 'tag-main'}">${escapeHtml(modeLabel)}${draftMode === 'create' ? relationLabel : ''}</span>
                     </div>
-                    <strong class="gremlin-draft-title">${escapeHtml(draft?.title || '')}</strong>
+                    <strong class="gremlin-draft-title">${escapeHtml((draftMode === 'delete' ? draft?.targetTitle : draft?.title) || draft?.title || '')}</strong>
                     <p class="gremlin-draft-description">${escapeHtml(draft?.description || '')}</p>
                     ${draft?.rationale ? `<p class="gremlin-draft-rationale">${escapeHtml(draft.rationale)}</p>` : ''}
                     ${targetHint}
                     ${parentHint}
                     ${guidelineTags ? `<div class="gremlin-draft-tags">${guidelineTags}</div>` : ''}
                     <div class="gremlin-draft-actions">
-                      ${implemented && implementedEntityId
+                      ${implemented
                         ? `
                           <span class="gremlin-draft-status gremlin-draft-status-implemented">
                             <span class="gremlin-draft-status-icon" aria-hidden="true">✓</span>
                             <span>${escapeHtml(ui.implementedDraft)}</span>
                           </span>
+                          ${implemented?.deleted === true ? '' : `
                           <button
                             type="button"
                             class="btn btn-ghost"
@@ -8786,11 +8831,12 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                             data-kind="${escapeHtml(implementedEntityKind)}"
                             data-entity-id="${escapeHtml(implementedEntityId)}"
                           >${escapeHtml(ui.openImplementedEntity)}</button>
+                          `}
                         `
                         : `
                           <button
                             type="button"
-                            class="btn ${entityKind === 'initiative' ? 'btn-ghost gremlin-draft-initiative-btn' : 'btn-primary'}"
+                            class="${actionButtonClass}"
                             data-gremlin-draft-index="${escapeHtml(index)}"
                             ${historyItem ? `data-gremlin-history-entry="${escapeHtml(historyItem.id)}"` : ''}
                             ${disabled ? 'disabled' : ''}
@@ -9085,18 +9131,26 @@ function showClarityGremlinModal() {
     const cycleId = String(state.cycle?.id || '').trim();
     if (!cycleId) return;
     const entityKind = String(draft.entityKind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
-    const draftMode = String(draft.draftMode || '').trim().toLowerCase() === 'update' ? 'update' : 'create';
+    const draftMode = (() => {
+      const mode = String(draft.draftMode || '').trim().toLowerCase();
+      return mode === 'update' || mode === 'delete' ? mode : 'create';
+    })();
 
     draftSubmitInProgress = true;
     if (button instanceof HTMLButtonElement) {
       button.disabled = true;
-      button.textContent = draftMode === 'update' ? ui.applyUpdateDraft : ui.creatingPendingDraft;
+      button.textContent = draftMode === 'delete'
+        ? ui.applyDeleteDraft
+        : draftMode === 'update'
+          ? ui.applyUpdateDraft
+          : ui.creatingPendingDraft;
     }
     syncBusyUi();
 
     try {
       let implementedEntityId = '';
       let implementedEntityTitle = '';
+      let implementedDeleted = false;
       if (entityKind === 'guideline' && draftMode === 'update') {
         const targetGuideline = resolveGremlinDraftTargetGuideline(draft, selected);
         if (!targetGuideline?.id) {
@@ -9122,6 +9176,19 @@ function showClarityGremlinModal() {
         scheduleGuidelineFocus(targetGuideline.id);
         implementedEntityId = String(targetGuideline.id || '').trim();
         implementedEntityTitle = String(draft.title || targetGuideline.title || '').trim();
+      } else if (entityKind === 'guideline' && draftMode === 'delete') {
+        const targetGuideline = resolveGremlinDraftTargetGuideline(draft, selected);
+        if (!targetGuideline?.id) {
+          throw new Error(langText('Nepavyko rasti ištrinamos gairės.', 'Could not find the guideline to delete.'));
+        }
+        const confirmed = window.confirm(`${ui.confirmGuidelineDeleteDraftTitle}\n\n${ui.confirmGuidelineDeleteDraftBody}`);
+        if (!confirmed) {
+          return;
+        }
+        await api(`/api/v1/admin/guidelines/${encodeURIComponent(targetGuideline.id)}`, { method: 'DELETE' });
+        implementedEntityId = String(targetGuideline.id || '').trim();
+        implementedEntityTitle = String(targetGuideline.title || draft.targetTitle || '').trim();
+        implementedDeleted = true;
       } else if (entityKind === 'initiative' && draftMode === 'update') {
         const targetInitiative = resolveGremlinDraftTargetInitiative(draft, selected);
         if (!targetInitiative?.id) {
@@ -9146,6 +9213,19 @@ function showClarityGremlinModal() {
         scheduleInitiativeFocus(targetInitiative.id);
         implementedEntityId = String(targetInitiative.id || '').trim();
         implementedEntityTitle = String(draft.title || targetInitiative.title || '').trim();
+      } else if (entityKind === 'initiative' && draftMode === 'delete') {
+        const targetInitiative = resolveGremlinDraftTargetInitiative(draft, selected);
+        if (!targetInitiative?.id) {
+          throw new Error(langText('Nepavyko rasti ištrinamos iniciatyvos.', 'Could not find the initiative to delete.'));
+        }
+        const confirmed = window.confirm(`${ui.confirmInitiativeDeleteDraftTitle}\n\n${ui.confirmInitiativeDeleteDraftBody}`);
+        if (!confirmed) {
+          return;
+        }
+        await api(`/api/v1/admin/initiatives/${encodeURIComponent(targetInitiative.id)}`, { method: 'DELETE' });
+        implementedEntityId = String(targetInitiative.id || '').trim();
+        implementedEntityTitle = String(targetInitiative.title || draft.targetTitle || '').trim();
+        implementedDeleted = true;
       } else if (entityKind === 'initiative') {
         const guidelineIds = resolveGremlinDraftGuidelineIds(draft, selected);
         const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/initiatives`, {
@@ -9185,13 +9265,15 @@ function showClarityGremlinModal() {
           body: {
             entityKind,
             entityId: implementedEntityId,
-            entityTitle: implementedEntityTitle
+            entityTitle: implementedEntityTitle,
+            deleted: implementedDeleted
           }
         });
         const implementedPayload = {
           entityKind,
           entityId: implementedEntityId,
           entityTitle: implementedEntityTitle,
+          deleted: implementedDeleted,
           appliedAt: new Date().toISOString(),
           appliedBy: state.user?.name || state.user?.email || ''
         };
@@ -9229,7 +9311,11 @@ function showClarityGremlinModal() {
 
       await Promise.all([refreshGuidelines(), refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
       notifySuccess(
-        entityKind === 'guideline' && draftMode === 'update'
+        entityKind === 'guideline' && draftMode === 'delete'
+          ? ui.deleteGuidelineDraftApplied
+          : entityKind === 'initiative' && draftMode === 'delete'
+            ? ui.deleteInitiativeDraftApplied
+          : entityKind === 'guideline' && draftMode === 'update'
           ? ui.updateGuidelineDraftApplied
           : entityKind === 'initiative' && draftMode === 'update'
             ? ui.updateInitiativeDraftApplied

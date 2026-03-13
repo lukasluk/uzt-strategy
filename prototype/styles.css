@@ -7230,6 +7230,15 @@ select:focus {
   background: linear-gradient(180deg, #fffdf8 0%, #f7e3cc 100%);
 }
 
+.gremlin-draft-card-mode-delete {
+  border-color: #e5b7b2;
+  background: linear-gradient(180deg, #fff9f8 0%, #fff1ef 100%);
+}
+
+.gremlin-draft-delete-btn {
+  min-width: 178px;
+}
+
 .guideline-card.guideline-focus-pulse {
   animation: guidelineFocusPulse 1.1s ease;
 }
