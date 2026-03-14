@@ -124,6 +124,38 @@ function clampScore(value) {
   return Math.max(1, Math.min(10, Math.round(numeric)));
 }
 
+function hasMergeOrDedupSignal(value) {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) return false;
+  return [
+    'merge',
+    'merged',
+    'merging',
+    'consolidate',
+    'consolidating',
+    'deduplicate',
+    'deduplication',
+    'remove duplication',
+    'duplicate',
+    'redundant',
+    'retire',
+    'sujung',
+    'konsolid',
+    'dubli',
+    'perteklin',
+    'atsisaky',
+    'ištrint',
+    'istrint'
+  ].some((token) => text.includes(token));
+}
+
+function analysisRequiresDeleteDraft(value) {
+  const improvements = normalizeArray(value?.improvements);
+  const nextActions = normalizeArray(value?.nextActions);
+  return improvements.some((item) => hasMergeOrDedupSignal(item?.issue) || hasMergeOrDedupSignal(item?.recommendation))
+    || nextActions.some((item) => hasMergeOrDedupSignal(item));
+}
+
 function summarizeGuideline(item) {
   return {
     id: item.id,
@@ -661,7 +693,14 @@ function buildSystemPrompt(locale) {
     '}',
     'Rules:',
     '- score must be an integer from 1 to 10.',
-    '- score should reflect the quality of this page content itself: strategic clarity, content specificity, thematic completeness, and execution readiness.',
+    '- score should reflect the quality of this strategy review target: strategic clarity, specificity, thematic completeness, coherence between guidelines and initiatives, and execution readiness.',
+    '- Use the full scale progressively, not conservatively.',
+    '- 5 to 6 means mixed quality with multiple important structural weaknesses.',
+    '- 7 means solid but still with several notable overlaps, gaps, vague areas, or execution weaknesses.',
+    '- 8 means strong and mostly coherent, with only a few moderate issues remaining.',
+    '- 9 means mission and vision are almost fully translated into a clear, non-duplicative, actionable guideline + initiative system, with only minor refinements left.',
+    '- 10 is allowed when the strategy is exceptionally clear, coherent, non-duplicative, and fully aligned with mission and vision, with only negligible improvements remaining.',
+    '- If the visible strategy appears improved and previously typical issues are no longer present, raise the score accordingly rather than defaulting to 7.',
     '- summary must be 1 short paragraph.',
     '- strengths: 0 to 3 items.',
     '- improvements: 2 to 5 items.',
@@ -678,8 +717,9 @@ function buildSystemPrompt(locale) {
     '- Use draftMode "delete" only when an existing visible item should be removed because it is duplicate, redundant, out of scope, or misleading; in that case targetTitle must match the item to remove.',
     '- Use draftMode "create" for genuinely new proposals.',
     '- For initiative pages, create drafts are preferred, but you may use update when one visible initiative clearly needs direct sharpening.',
-    '- If you recommend merging, consolidating, removing duplication, deleting redundancy, or retiring a visible item, you must include at least one matching proposalDraft with draftMode "delete" or "update" that operationalizes that recommendation.',
-    '- Do not say that an item should be merged, consolidated, removed, or retired without also providing the concrete draft action in proposalDrafts when proposalDrafts are enabled.',
+    '- If you recommend merging, consolidating, removing duplication, deleting redundancy, or retiring a visible item, you must include at least one matching proposalDraft with draftMode "delete".',
+    '- Do not say that an item should be merged, consolidated, removed, or retired without also providing the concrete delete draft in proposalDrafts when proposalDrafts are enabled.',
+    '- If you suggest combining two or more visible items into one clearer structure, the draft set should normally include both the replacement create/update draft and at least one delete draft for the redundant item.',
     '- If a recommendation says to split one broad visible item into several narrower items, prefer a combination of update/create drafts, and add delete only when the original item should truly be removed rather than rewritten.',
     '- If proposalDrafts are disabled for this page, return an empty array.',
     '- proposalDraft titles must be distinct from obvious existing titles in the context.',
@@ -695,6 +735,8 @@ function buildUserPrompt(payload) {
     'Use the current page only as the focus point that should receive the strongest emphasis.',
     'Use the page purpose and reviewIntent in the context as the main evaluation frame.',
     'Prioritize the actual strategic content and the quality of the whole guideline + initiative system.',
+    'The practical goal is to move the strategy as close as possible toward 10/10 clarity by fully expressing mission and vision through a coherent, actionable structure.',
+    'If the strategy already looks materially improved, reflect that improvement in the score instead of repeating a default mid-level rating.',
     'Avoid generic observations about system structure or reusable platform fields.',
     'If you mention technical readiness gaps, keep them secondary and brief unless they are severe.',
     'If the context is already strong, say so briefly and still give the most useful refinements.',
@@ -756,7 +798,7 @@ function normalizeAnalysis(raw) {
   };
 }
 
-function validateAnalysis(value, locale = 'lt') {
+function validateAnalysis(value, locale = 'lt', viewPayload = null) {
   const requiredLanguage = String(locale || '').trim().toLowerCase() === 'en' ? 'en' : 'lt';
   if (value.responseLanguage !== requiredLanguage) {
     throw new Error('ai response language mismatch');
@@ -770,6 +812,13 @@ function validateAnalysis(value, locale = 'lt') {
   }
   if (!Array.isArray(value.nextActions) || value.nextActions.length < 1) {
     throw new Error('ai response invalid');
+  }
+  const draftsEnabled = Boolean(viewPayload?.proposalDrafts?.enabled);
+  if (draftsEnabled && analysisRequiresDeleteDraft(value)) {
+    const hasDeleteDraft = normalizeArray(value.proposalDrafts).some((item) => String(item?.draftMode || '').trim().toLowerCase() === 'delete');
+    if (!hasDeleteDraft) {
+      throw new Error('ai response missing delete draft');
+    }
   }
 }
 
@@ -806,7 +855,7 @@ async function analyzeStrategyPage({
   });
 
   const analysis = normalizeAnalysis(response?.parsed);
-  validateAnalysis(analysis, locale);
+  validateAnalysis(analysis, locale, viewPayload);
 
   return {
     model: response?.model || null,
