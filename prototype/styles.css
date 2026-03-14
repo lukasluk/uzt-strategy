@@ -6473,6 +6473,54 @@ select:focus {
   align-content: start;
 }
 
+.gremlin-entity-panel {
+  margin: 0 0 18px;
+}
+
+.gremlin-entity-picker {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid #d9e5f1;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fcfdff 0%, #f3f8ff 100%);
+}
+
+.gremlin-entity-picker-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.gremlin-entity-picker-copy .prompt {
+  margin: 0;
+}
+
+.gremlin-entity-picker-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gremlin-entity-picker-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.gremlin-entity-picker-select-wrap {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gremlin-entity-picker-empty {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #647d9f;
+}
+
 .gremlin-model-toolbar-chip {
   max-width: 320px;
   overflow: hidden;
@@ -6602,12 +6650,52 @@ select:focus {
 .gremlin-history-item-title {
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
 .gremlin-history-item-title strong {
   min-width: 0;
+}
+
+.gremlin-history-item-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.gremlin-history-item-copy strong {
+  display: block;
+}
+
+.gremlin-history-type {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.gremlin-history-type-strategy {
+  background: #edf4ff;
+  color: #1f4678;
+}
+
+.gremlin-history-type-guideline {
+  background: #eef3ff;
+  color: #2f57c8;
+}
+
+.gremlin-history-type-initiative {
+  background: #ebfbf7;
+  color: #127d68;
+}
+
+.gremlin-history-context {
+  color: #5f789b;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .gremlin-history-kind {
@@ -6989,6 +7077,10 @@ select:focus {
   }
 
   .gremlin-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gremlin-entity-picker-controls {
     grid-template-columns: minmax(0, 1fr);
   }
 

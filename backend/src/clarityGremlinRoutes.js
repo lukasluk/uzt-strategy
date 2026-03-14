@@ -188,6 +188,7 @@ function registerClarityGremlinRoutes({
     const cycleId = String(req.params.cycleId || '').trim();
     const view = String(req.body?.view || '').trim();
     const entityId = String(req.body?.entityId || '').trim();
+    const mode = String(req.body?.mode || '').trim().toLowerCase() === 'entity' ? 'entity' : 'strategy';
     const locale = String(req.body?.locale || 'lt').trim().toLowerCase() === 'en' ? 'en' : 'lt';
     if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
     if (!view) return res.status(400).json({ error: 'view required' });
@@ -235,7 +236,8 @@ function registerClarityGremlinRoutes({
         view,
         entityId,
         locale,
-        aiConfig
+        aiConfig,
+        mode
       });
 
       const analysisRecordId = typeof uuid === 'function' ? uuid() : null;

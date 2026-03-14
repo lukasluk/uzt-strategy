@@ -4687,12 +4687,28 @@ function clarityGremlinUiText() {
   if (currentLanguage() === 'en') {
     return {
       title: 'Clarity Gremlin',
-      subtitle: 'Contextual AI review of the whole strategy, using the currently open page as the focus point.',
+      subtitle: 'AI review for either the full strategy or one selected guideline / initiative.',
       actionLabel: 'Clarity Gremlin',
       close: 'Close',
       analyze: 'Analyze strategy',
+      analyzeEntity: 'Analyze individual guideline/initiative',
+      selectorLead: 'Choose exactly which item you want to review.',
+      selectorGuidelines: 'Guidelines',
+      selectorInitiatives: 'Initiatives',
+      selectorChooseGuideline: 'Choose guideline',
+      selectorChooseInitiative: 'Choose initiative',
+      selectorRunGuideline: 'Analyze selected guideline',
+      selectorRunInitiative: 'Analyze selected initiative',
+      selectorNoGuidelines: 'No guidelines available in this strategy yet.',
+      selectorNoInitiatives: 'No initiatives available in this strategy yet.',
+      analysisTypeStrategy: 'Whole strategy',
+      analysisTypeGuideline: 'Guideline',
+      analysisTypeInitiative: 'Initiative',
+      strategyFocus: 'Launch focus',
+      entityTarget: 'Analyzed item',
       modelLabel: 'Model',
-      loading: 'Clarity Gremlin is reviewing the whole strategy...',
+      loading: 'Clarity Gremlin is reviewing the strategy...',
+      loadingEntity: 'Clarity Gremlin is reviewing the selected item...',
       unsupported: 'This page is not supported yet. Open Guidelines, Initiatives, Strategy map, or Implementation plan.',
       disabledView: 'Analysis is disabled on Admin and Policy Alignment pages.',
       loginRequired: 'Sign in to use Clarity Gremlin.',
@@ -4700,16 +4716,16 @@ function clarityGremlinUiText() {
       currentContext: 'Current focus',
       usage: 'Usage',
       howItWorks: 'How it works',
-      howItWorksLead: 'Clarity Gremlin reviews the whole strategy system and uses the currently open page only as the focus point.',
-      howStepCurrent: 'Reads all visible guidelines and initiatives, then uses the current page as the main focus lens.',
+      howItWorksLead: 'Run either a whole-strategy review or a focused review for one selected guideline or initiative.',
+      howStepCurrent: 'Analyze strategy reviews the whole guideline and initiative system in one pass.',
       howStepHistory: 'Keeps recent analyses on the left so you can reopen or compare them later.',
-      howStepConsume: 'Uses one scan only when you click Analyze strategy.',
+      howStepConsume: 'Analyze individual guideline/initiative opens one more step where you choose the exact card to review.',
       score: 'Clarity score',
       scoreTooltip: 'Rates the strategy from 1 to 10 based on content clarity, specificity, topic coverage, coherence between guidelines and initiatives, and execution readiness.',
       history: 'Recent analyses',
       noHistory: 'No recent Clarity Gremlin analyses yet. Click Analyze strategy to create the first one.',
       emptySelection: 'Select a previous analysis or run a new strategy review.',
-      emptySelectionBody: 'Pick an item from Recent analyses or create a fresh whole-strategy review from the current focus point.',
+      emptySelectionBody: 'Pick an item from Recent analyses or start either a whole-strategy or individual review.',
       createdBy: 'Created by',
       createdAt: 'Created',
       provider: 'Provider',
@@ -4719,16 +4735,21 @@ function clarityGremlinUiText() {
       improvements: 'What should improve',
       nextActions: 'Concrete next actions',
       draftProposals: 'Prepared draft proposals',
-      createPendingDraft: 'Create proposal',
-      creatingPendingDraft: 'Creating proposal...',
+      createPendingDraft: 'Apply proposal',
+      creatingPendingDraft: 'Applying proposal...',
       implementedDraft: 'Implemented',
       openImplementedEntity: 'Open item',
       gremlinImplementedHistory: 'Gremlin suggestion implemented',
-      pendingDraftCreated: 'Proposal created and sent for admin approval.',
+      pendingDraftCreated: 'Suggestion applied immediately.',
       applyUpdateDraft: 'Apply correction',
       applyDeleteDraft: 'Apply deletion',
+      createDraftAdminOnly: 'Immediate creation is available only to institution admins.',
       updateDraftAdminOnly: 'Immediate correction is available only to institution admins.',
       deleteDraftAdminOnly: 'Immediate deletion is available only to institution admins.',
+      confirmGuidelineCreateDraftTitle: 'Create this guideline now?',
+      confirmGuidelineCreateDraftBody: 'This will create the suggested guideline immediately. Please confirm that you want to add it right away.',
+      confirmInitiativeCreateDraftTitle: 'Create this initiative now?',
+      confirmInitiativeCreateDraftBody: 'This will create the suggested initiative immediately. Please confirm that you want to add it right away.',
       confirmGuidelineUpdateDraftTitle: 'Apply this guideline correction now?',
       confirmGuidelineUpdateDraftBody: 'This will update the existing guideline immediately. You can review the text before confirming.',
       confirmInitiativeUpdateDraftTitle: 'Apply this initiative correction now?',
@@ -4737,6 +4758,8 @@ function clarityGremlinUiText() {
       confirmGuidelineDeleteDraftBody: 'This will delete the existing guideline immediately. Please confirm only if you want to remove it right away.',
       confirmInitiativeDeleteDraftTitle: 'Delete this initiative now?',
       confirmInitiativeDeleteDraftBody: 'This will delete the existing initiative immediately. Please confirm only if you want to remove it right away.',
+      createGuidelineDraftApplied: 'Guideline created immediately.',
+      createInitiativeDraftApplied: 'Initiative created immediately.',
       updateGuidelineDraftApplied: 'Guideline correction applied immediately.',
       updateInitiativeDraftApplied: 'Initiative correction applied immediately.',
       deleteGuidelineDraftApplied: 'Guideline deleted immediately.',
@@ -4749,12 +4772,28 @@ function clarityGremlinUiText() {
   }
   return {
     title: 'Aiškumo nykštukas',
-    subtitle: 'Kontekstinis AI vertinimas visai strategijai, naudojant šiuo metu atvertą puslapį kaip fokusavimo tašką.',
+    subtitle: 'AI vertinimas visai strategijai arba vienai pasirinktai gairei / iniciatyvai.',
     actionLabel: 'Aiškumo nykštukas',
     close: 'Uždaryti',
     analyze: 'Analizuoti strategiją',
+    analyzeEntity: 'Analizuoti atskirą gairę / iniciatyvą',
+    selectorLead: 'Pasirinkite, kurią konkrečią kortelę norite analizuoti.',
+    selectorGuidelines: 'Gairės',
+    selectorInitiatives: 'Iniciatyvos',
+    selectorChooseGuideline: 'Pasirinkite gairę',
+    selectorChooseInitiative: 'Pasirinkite iniciatyvą',
+    selectorRunGuideline: 'Analizuoti pasirinktą gairę',
+    selectorRunInitiative: 'Analizuoti pasirinktą iniciatyvą',
+    selectorNoGuidelines: 'Šioje strategijoje dar nėra gairių.',
+    selectorNoInitiatives: 'Šioje strategijoje dar nėra iniciatyvų.',
+    analysisTypeStrategy: 'Visa strategija',
+    analysisTypeGuideline: 'Gairė',
+    analysisTypeInitiative: 'Iniciatyva',
+    strategyFocus: 'Paleidimo fokusas',
+    entityTarget: 'Analizuota kortelė',
     modelLabel: 'Modelis',
-    loading: 'Aiškumo nykštukas analizuoja visą strategiją...',
+    loading: 'Aiškumo nykštukas analizuoja strategiją...',
+    loadingEntity: 'Aiškumo nykštukas analizuoja pasirinktą kortelę...',
     unsupported: 'Šis puslapis kol kas nepalaikomas. Atverkite Gaires, Iniciatyvas, Strategijų žemėlapį arba Įgyvendinimo planą.',
     disabledView: 'Analizė išjungta Admin ir Politikos atitikties puslapiuose.',
     loginRequired: 'Prisijunkite, kad galėtumėte naudoti Aiškumo nykštuką.',
@@ -4762,16 +4801,16 @@ function clarityGremlinUiText() {
     currentContext: 'Dabartinis fokusas',
     usage: 'Naudojimas',
     howItWorks: 'Kaip tai veikia',
-    howItWorksLead: 'Aiškumo nykštukas vertina visą strategijos sistemą ir naudoja šiuo metu atvertą puslapį tik kaip fokusavimo tašką.',
-    howStepCurrent: 'Perskaito visas matomas gaires ir iniciatyvas, o dabartinį puslapį naudoja tam, kad paryškintų svarbiausią analizės kryptį.',
+    howItWorksLead: 'Galite paleisti arba visos strategijos analizę, arba fokusuotą vienos pasirinktos gairės / iniciatyvos analizę.',
+    howStepCurrent: '„Analizuoti strategiją“ peržiūri visą gairių ir iniciatyvų sistemą vienu metu.',
     howStepHistory: 'Kairėje saugo naujausias analizes, kad galėtumėte jas bet kada vėl atsidaryti ir palyginti.',
-    howStepConsume: 'Vienas scan sunaudojamas tik tada, kai paspaudžiate „Analizuoti strategiją“.',
+    howStepConsume: '„Analizuoti atskirą gairę / iniciatyvą“ atveria papildomą žingsnį, kuriame pasirenkate tikslią kortelę.',
     score: 'Clarity score',
     scoreTooltip: 'Vertina visą strategiją nuo 1 iki 10 pagal turinio aiškumą, konkretumą, temos padengimą, gairių ir iniciatyvų suderinamumą bei vykdomumą.',
     history: 'Naujausios analizės',
     noHistory: 'Dar nėra ankstesnių Aiškumo nykštuko analizių. Paspauskite „Analizuoti strategiją“ ir sukurkite pirmąją.',
     emptySelection: 'Pasirinkite ankstesnę analizę arba paleiskite naują strategijos analizę.',
-    emptySelectionBody: 'Kairėje pasirinkite jau sukurtą analizę arba sukurkite naują visos strategijos analizę iš dabartinio fokusavimo taško.',
+    emptySelectionBody: 'Kairėje pasirinkite ankstesnę analizę arba paleiskite naują visos strategijos ar vienos kortelės analizę.',
     createdBy: 'Sukūrė',
     createdAt: 'Sukurta',
     provider: 'Tiekėjas',
@@ -4781,16 +4820,21 @@ function clarityGremlinUiText() {
     improvements: 'Ką verta pagerinti',
     nextActions: 'Konkretūs kiti žingsniai',
     draftProposals: 'Paruošti pasiūlymų juodraščiai',
-    createPendingDraft: 'Sukurti pasiūlymą',
-    creatingPendingDraft: 'Kuriamas pasiūlymas...',
+    createPendingDraft: 'Pritaikyti pasiūlymą',
+    creatingPendingDraft: 'Pritaikomas pasiūlymas...',
     implementedDraft: 'Įgyvendinta',
     openImplementedEntity: 'Atidaryti kortelę',
     gremlinImplementedHistory: 'Aiškumo nykštuko pasiūlymas įgyvendintas',
-    pendingDraftCreated: 'Pasiūlymas sukurtas ir pateiktas administratoriaus tvirtinimui.',
+    pendingDraftCreated: 'Pasiūlymas pritaikytas iš karto.',
     applyUpdateDraft: 'Pritaikyti koregavimą',
     applyDeleteDraft: 'Pritaikyti ištrynimą',
+    createDraftAdminOnly: 'Tiesioginis sukūrimas galimas tik institucijos administratoriui.',
     updateDraftAdminOnly: 'Tiesioginis koregavimas galimas tik institucijos administratoriui.',
     deleteDraftAdminOnly: 'Tiesioginis ištrynimas galimas tik institucijos administratoriui.',
+    confirmGuidelineCreateDraftTitle: 'Sukurti šią gairę dabar?',
+    confirmGuidelineCreateDraftBody: 'Šis veiksmas iš karto sukurs siūlomą gairę. Prieš tęsdami įsitikinkite, kad tikrai norite ją pridėti.',
+    confirmInitiativeCreateDraftTitle: 'Sukurti šią iniciatyvą dabar?',
+    confirmInitiativeCreateDraftBody: 'Šis veiksmas iš karto sukurs siūlomą iniciatyvą. Prieš tęsdami įsitikinkite, kad tikrai norite ją pridėti.',
     confirmGuidelineUpdateDraftTitle: 'Pritaikyti šį gairės koregavimą dabar?',
     confirmGuidelineUpdateDraftBody: 'Šis veiksmas iš karto atnaujins esamą gairę. Prieš tęsdami įsitikinkite, kad tikrai norite pritaikyti pakeitimus.',
     confirmInitiativeUpdateDraftTitle: 'Pritaikyti šį iniciatyvos koregavimą dabar?',
@@ -4799,6 +4843,8 @@ function clarityGremlinUiText() {
     confirmGuidelineDeleteDraftBody: 'Šis veiksmas iš karto ištrins esamą gairę. Prieš tęsdami įsitikinkite, kad tikrai norite ją pašalinti.',
     confirmInitiativeDeleteDraftTitle: 'Ištrinti šią iniciatyvą dabar?',
     confirmInitiativeDeleteDraftBody: 'Šis veiksmas iš karto ištrins esamą iniciatyvą. Prieš tęsdami įsitikinkite, kad tikrai norite ją pašalinti.',
+    createGuidelineDraftApplied: 'Gairė sukurta iš karto.',
+    createInitiativeDraftApplied: 'Iniciatyva sukurta iš karto.',
     updateGuidelineDraftApplied: 'Gairės koregavimas pritaikytas iš karto.',
     updateInitiativeDraftApplied: 'Iniciatyvos koregavimas pritaikytas iš karto.',
     deleteGuidelineDraftApplied: 'Gairė ištrinta iš karto.',
@@ -8675,6 +8721,26 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
   const draftProposals = Array.isArray(analysis.proposalDrafts) ? analysis.proposalDrafts : [];
   const analysisScopeLabel = String(analysis.pageLabel || result?.page?.label || '-').trim() || '-';
   const focusLabel = String(result?.page?.contextLabel || historyItem?.contextLabel || '').trim();
+  const analysisEntityKind = String(result?.page?.entityKind || historyItem?.entityKind || '').trim().toLowerCase();
+  const focusTitle = (() => {
+    const colonIndex = focusLabel.indexOf(':');
+    if (colonIndex >= 0 && colonIndex < focusLabel.length - 1) {
+      return focusLabel.slice(colonIndex + 1).trim() || focusLabel;
+    }
+    return focusLabel;
+  })();
+  const scopeLabel = analysisEntityKind === 'guideline' || analysisEntityKind === 'initiative'
+    ? ui.entityTarget
+    : ui.page;
+  const summaryPrimaryValue = analysisEntityKind === 'guideline' || analysisEntityKind === 'initiative'
+    ? (focusTitle || analysisScopeLabel)
+    : analysisScopeLabel;
+  const contextSummaryLabel = analysisEntityKind === 'guideline' || analysisEntityKind === 'initiative'
+    ? ui.page
+    : ui.strategyFocus;
+  const contextSummaryValue = analysisEntityKind === 'guideline' || analysisEntityKind === 'initiative'
+    ? analysisScopeLabel
+    : focusLabel;
   const usageText = usage
     ? `${Math.max(0, Number(usage.remaining || 0))} / ${Math.max(0, Number(usage.limit || 0))}`
     : '';
@@ -8686,13 +8752,13 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
     <div class="gremlin-result">
       <div class="gremlin-summary-card">
         <div class="gremlin-summary-row">
-          <span class="gremlin-summary-label">${escapeHtml(ui.page)}</span>
-          <strong>${escapeHtml(analysisScopeLabel)}</strong>
+          <span class="gremlin-summary-label">${escapeHtml(scopeLabel)}</span>
+          <strong>${escapeHtml(summaryPrimaryValue)}</strong>
         </div>
-        ${focusLabel && focusLabel !== analysisScopeLabel
+        ${contextSummaryValue && contextSummaryValue !== summaryPrimaryValue && contextSummaryLabel
       ? `<div class="gremlin-summary-row">
-            <span class="gremlin-summary-label">${escapeHtml(ui.focus)}</span>
-            <strong>${escapeHtml(focusLabel)}</strong>
+            <span class="gremlin-summary-label">${escapeHtml(contextSummaryLabel)}</span>
+            <strong>${escapeHtml(contextSummaryValue)}</strong>
           </div>`
       : ''}
         ${score
@@ -8804,10 +8870,14 @@ function renderClarityGremlinResultMarkup(result, ui, options = {}) {
                     : ui.createPendingDraft;
                 const buttonTitle = draftButtonsDisabled
                   ? ui.draftUnavailable
-                  : (requiresImmediateApply && !canOpenAdminView()
-                    ? (draftMode === 'delete' ? ui.deleteDraftAdminOnly : ui.updateDraftAdminOnly)
+                  : ((!canOpenAdminView())
+                    ? (draftMode === 'delete'
+                      ? ui.deleteDraftAdminOnly
+                      : requiresImmediateApply
+                        ? ui.updateDraftAdminOnly
+                        : ui.createDraftAdminOnly)
                     : '');
-                const disabled = draftButtonsDisabled || (requiresImmediateApply && !canOpenAdminView());
+                const disabled = draftButtonsDisabled || !canOpenAdminView();
                 const actionButtonClass = implemented && implementedEntityId
                   ? ''
                   : draftMode === 'delete'
@@ -8901,6 +8971,49 @@ function getClarityGremlinHistoryKind(view) {
   return { key: 'default', stepId: 'guidelines', label: langText('Puslapis', 'Page') };
 }
 
+function getClarityGremlinAnalysisType(item, ui) {
+  const kind = String(item?.entityKind || '').trim().toLowerCase();
+  if (kind === 'guideline') {
+    return {
+      key: 'guideline',
+      label: ui.analysisTypeGuideline,
+      stepId: 'guidelines'
+    };
+  }
+  if (kind === 'initiative') {
+    return {
+      key: 'initiative',
+      label: ui.analysisTypeInitiative,
+      stepId: 'initiatives'
+    };
+  }
+  return {
+    key: 'strategy',
+    label: ui.analysisTypeStrategy,
+    stepId: 'strategy-map'
+  };
+}
+
+function getClarityGremlinHistoryTitle(item, ui) {
+  const kind = getClarityGremlinAnalysisType(item, ui);
+  const contextLabel = String(item?.contextLabel || '').trim();
+  if (kind.key === 'strategy') return kind.label;
+  const colonIndex = contextLabel.indexOf(':');
+  if (colonIndex >= 0 && colonIndex < contextLabel.length - 1) {
+    return contextLabel.slice(colonIndex + 1).trim() || contextLabel;
+  }
+  return contextLabel || item?.pageLabel || item?.view || '-';
+}
+
+function getClarityGremlinHistoryContext(item, ui) {
+  const kind = getClarityGremlinAnalysisType(item, ui);
+  const contextLabel = String(item?.contextLabel || '').trim();
+  if (kind.key === 'strategy') {
+    return contextLabel ? `${ui.focus}: ${contextLabel}` : '';
+  }
+  return kind.label;
+}
+
 function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, options = {}) {
   const list = Array.isArray(items) ? items : [];
   const locked = Boolean(options.locked);
@@ -8914,7 +9027,9 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
         const analysis = item?.analysis && typeof item.analysis === 'object' ? item.analysis : {};
         const score = Math.max(1, Math.min(10, Number(analysis.score || 0) || 0));
         const isSelected = String(item?.id || '').trim() === String(selectedId || '').trim();
-        const kind = getClarityGremlinHistoryKind(item?.view);
+        const kind = getClarityGremlinAnalysisType(item, ui);
+        const title = getClarityGremlinHistoryTitle(item, ui);
+        const contextText = getClarityGremlinHistoryContext(item, ui);
         const providerLabel = formatAiProviderLabel(item?.provider, item?.model);
         return `
           <button
@@ -8930,7 +9045,11 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
                   title="${escapeHtml(kind.label)}"
                   aria-label="${escapeHtml(kind.label)}"
                 >${stepIconMarkup(kind.stepId)}</span>
-                <strong>${escapeHtml(item.contextLabel || item.pageLabel || item.view || '-')}</strong>
+                <div class="gremlin-history-item-copy">
+                  <strong>${escapeHtml(title)}</strong>
+                  <span class="gremlin-history-type gremlin-history-type-${escapeHtml(kind.key)}">${escapeHtml(kind.label)}</span>
+                  ${contextText ? `<span class="gremlin-history-context">${escapeHtml(contextText)}</span>` : ''}
+                </div>
               </div>
               ${score ? `<span class="gremlin-history-score">${escapeHtml(`${score}/10`)}</span>` : ''}
             </div>
@@ -8999,14 +9118,14 @@ function showClarityGremlinModal() {
       </div>
       <div class="gremlin-toolbar">
         <div class="gremlin-toolbar-meta">
-          <span class="tag tag-main">${escapeHtml(ui.currentContext)}: ${escapeHtml(initialContext.contextLabel || clarityGremlinPageLabel(initialContext.view))}</span>
           <span id="clarityGremlinUsage" class="tag"></span>
         </div>
         <div class="gremlin-toolbar-actions">
-          <span class="tag gremlin-model-toolbar-chip">${escapeHtml(ui.modelLabel)}: ${escapeHtml(formatFeatureAiLabel('clarityGremlin'))}</span>
-          <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
+          <button id="runClarityGremlinStrategyBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
+          <button id="toggleClarityGremlinEntityBtn" class="btn btn-ghost" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyzeEntity)}</button>
         </div>
       </div>
+      <div id="clarityGremlinEntityPanel" class="gremlin-entity-panel" hidden></div>
       <div class="gremlin-layout">
         <aside class="gremlin-history-panel">
           <div class="gremlin-panel-head">
@@ -9039,7 +9158,9 @@ function showClarityGremlinModal() {
   const body = overlay.querySelector('#clarityGremlinBody');
   const historyNode = overlay.querySelector('#clarityGremlinHistory');
   const closeButton = overlay.querySelector('#closeClarityGremlinModal');
-  const runButton = overlay.querySelector('#runClarityGremlinBtn');
+  const runStrategyButton = overlay.querySelector('#runClarityGremlinStrategyBtn');
+  const toggleEntityButton = overlay.querySelector('#toggleClarityGremlinEntityBtn');
+  const entityPanel = overlay.querySelector('#clarityGremlinEntityPanel');
   const usageNode = overlay.querySelector('#clarityGremlinUsage');
   const infoToggle = overlay.querySelector('#clarityGremlinInfoToggle');
   const infoPanel = overlay.querySelector('#clarityGremlinInfoPanel');
@@ -9048,6 +9169,9 @@ function showClarityGremlinModal() {
   let isAnalyzing = false;
   let draftSubmitInProgress = false;
   let infoOpen = false;
+  let entityPickerOpen = false;
+  let entityPickerKind = initialContext.view === 'initiative-detail' ? 'initiative' : 'guideline';
+  let entityPickerId = initialContext.entityId || '';
 
   const syncInfoPanel = () => {
     if (!(infoToggle instanceof HTMLButtonElement) || !(infoPanel instanceof HTMLElement)) return;
@@ -9062,9 +9186,17 @@ function showClarityGremlinModal() {
     if (closeButton instanceof HTMLButtonElement) {
       closeButton.disabled = isAnalyzing;
     }
-    if (runButton instanceof HTMLButtonElement) {
-      runButton.disabled = isAnalyzing || draftSubmitInProgress || !currentContext.supported;
-      runButton.title = currentContext.reason === 'disabled-view'
+    if (runStrategyButton instanceof HTMLButtonElement) {
+      runStrategyButton.disabled = isAnalyzing || draftSubmitInProgress || !currentContext.supported;
+      runStrategyButton.title = currentContext.reason === 'disabled-view'
+        ? ui.disabledView
+        : currentContext.supported
+          ? ''
+          : ui.unsupported;
+    }
+    if (toggleEntityButton instanceof HTMLButtonElement) {
+      toggleEntityButton.disabled = isAnalyzing || draftSubmitInProgress || !currentContext.supported;
+      toggleEntityButton.title = currentContext.reason === 'disabled-view'
         ? ui.disabledView
         : currentContext.supported
           ? ''
@@ -9080,6 +9212,7 @@ function showClarityGremlinModal() {
       );
       bindHistorySelection();
     }
+    renderEntityPanel();
   };
 
   const applyUsage = (usage) => {
@@ -9131,6 +9264,79 @@ function showClarityGremlinModal() {
         renderSelection();
       });
     });
+  };
+
+  const getEntityOptions = (kind) => {
+    if (kind === 'initiative') {
+      return (Array.isArray(state.initiatives) ? state.initiatives : [])
+        .map((item) => ({ id: String(item?.id || '').trim(), title: String(item?.title || '').trim() }))
+        .filter((item) => item.id && item.title);
+    }
+    return (Array.isArray(state.guidelines) ? state.guidelines : [])
+      .map((item) => ({ id: String(item?.id || '').trim(), title: String(item?.title || '').trim() }))
+      .filter((item) => item.id && item.title);
+  };
+
+  const renderEntityPanel = () => {
+    if (!(entityPanel instanceof HTMLElement)) return;
+    if (!entityPickerOpen) {
+      entityPanel.hidden = true;
+      entityPanel.innerHTML = '';
+      return;
+    }
+    const options = getEntityOptions(entityPickerKind);
+    if (!options.some((item) => item.id === entityPickerId)) {
+      entityPickerId = options[0]?.id || '';
+    }
+    const hasOptions = options.length > 0;
+    entityPanel.hidden = false;
+    entityPanel.innerHTML = `
+      <div class="gremlin-entity-picker">
+        <div class="gremlin-entity-picker-copy">
+          <span class="gremlin-intro-eyebrow">${escapeHtml(ui.analyzeEntity)}</span>
+          <p class="prompt">${escapeHtml(ui.selectorLead)}</p>
+        </div>
+        <div class="gremlin-entity-picker-kinds">
+          <button type="button" class="tag${entityPickerKind === 'guideline' ? ' tag-main' : ''}" data-gremlin-entity-kind="guideline">${escapeHtml(ui.selectorGuidelines)}</button>
+          <button type="button" class="tag${entityPickerKind === 'initiative' ? ' tag-main' : ''}" data-gremlin-entity-kind="initiative">${escapeHtml(ui.selectorInitiatives)}</button>
+        </div>
+        ${hasOptions ? `
+          <div class="gremlin-entity-picker-controls">
+            <label class="gremlin-entity-picker-select-wrap">
+              <span class="gremlin-summary-label">${escapeHtml(entityPickerKind === 'initiative' ? ui.selectorChooseInitiative : ui.selectorChooseGuideline)}</span>
+              <select id="clarityGremlinEntitySelect" class="input">
+                ${options.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === entityPickerId ? 'selected' : ''}>${escapeHtml(item.title)}</option>`).join('')}
+              </select>
+            </label>
+            <button id="runClarityGremlinEntityBtn" class="btn btn-primary" type="button" ${isAnalyzing || draftSubmitInProgress ? 'disabled' : ''}>
+              ${escapeHtml(entityPickerKind === 'initiative' ? ui.selectorRunInitiative : ui.selectorRunGuideline)}
+            </button>
+          </div>
+        ` : `<div class="gremlin-entity-picker-empty">${escapeHtml(entityPickerKind === 'initiative' ? ui.selectorNoInitiatives : ui.selectorNoGuidelines)}</div>`}
+      </div>
+    `;
+    entityPanel.querySelectorAll('[data-gremlin-entity-kind]').forEach((button) => {
+      button.addEventListener('click', () => {
+        entityPickerKind = String(button.getAttribute('data-gremlin-entity-kind') || 'guideline');
+        renderEntityPanel();
+      });
+    });
+    const select = entityPanel.querySelector('#clarityGremlinEntitySelect');
+    if (select instanceof HTMLSelectElement) {
+      select.addEventListener('change', () => {
+        entityPickerId = String(select.value || '').trim();
+      });
+    }
+    const runEntityButton = entityPanel.querySelector('#runClarityGremlinEntityBtn');
+    if (runEntityButton instanceof HTMLButtonElement) {
+      runEntityButton.addEventListener('click', () => {
+        void runAnalysis({
+          mode: 'entity',
+          view: entityPickerKind === 'initiative' ? 'initiative-detail' : 'guideline-detail',
+          entityId: entityPickerId
+        });
+      });
+    }
   };
 
   const submitDraftProposal = async (selected, draftIndex, button) => {
@@ -9237,6 +9443,10 @@ function showClarityGremlinModal() {
         implementedEntityTitle = String(targetInitiative.title || draft.targetTitle || '').trim();
         implementedDeleted = true;
       } else if (entityKind === 'initiative') {
+        const confirmed = window.confirm(`${ui.confirmInitiativeCreateDraftTitle}\n\n${ui.confirmInitiativeCreateDraftBody}`);
+        if (!confirmed) {
+          return;
+        }
         const guidelineIds = resolveGremlinDraftGuidelineIds(draft, selected);
         const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/initiatives`, {
           method: 'POST',
@@ -9251,6 +9461,10 @@ function showClarityGremlinModal() {
         implementedEntityId = String(payload?.initiativeId || '').trim();
         implementedEntityTitle = String(draft.title || '').trim();
       } else {
+        const confirmed = window.confirm(`${ui.confirmGuidelineCreateDraftTitle}\n\n${ui.confirmGuidelineCreateDraftBody}`);
+        if (!confirmed) {
+          return;
+        }
         const relationType = normalizeGuidelineRelation(draft.relationType || 'orphan');
         const parentGuidelineId = resolveGremlinDraftParentGuidelineId(draft, selected);
         const effectiveRelation = relationType === 'child' && !parentGuidelineId ? 'orphan' : relationType;
@@ -9325,11 +9539,13 @@ function showClarityGremlinModal() {
           ? ui.deleteGuidelineDraftApplied
           : entityKind === 'initiative' && draftMode === 'delete'
             ? ui.deleteInitiativeDraftApplied
-          : entityKind === 'guideline' && draftMode === 'update'
-          ? ui.updateGuidelineDraftApplied
-          : entityKind === 'initiative' && draftMode === 'update'
-            ? ui.updateInitiativeDraftApplied
-            : ui.pendingDraftCreated
+            : entityKind === 'guideline' && draftMode === 'update'
+              ? ui.updateGuidelineDraftApplied
+              : entityKind === 'initiative' && draftMode === 'update'
+                ? ui.updateInitiativeDraftApplied
+                : entityKind === 'guideline'
+                  ? ui.createGuidelineDraftApplied
+                  : ui.createInitiativeDraftApplied
       );
     } catch (error) {
       notifyError(toUserMessage(error));
@@ -9420,11 +9636,17 @@ function showClarityGremlinModal() {
     }
   };
 
-  const runAnalysis = async () => {
+  const runAnalysis = async (options = {}) => {
     const context = resolveClarityGremlinContext();
+    const mode = String(options.mode || 'strategy').trim().toLowerCase() === 'entity' ? 'entity' : 'strategy';
+    const requestView = String(options.view || context.view || '').trim().toLowerCase();
+    const requestEntityId = String(options.entityId || '').trim();
     if (context.supported !== true) {
       renderUnsupported(context);
       syncBusyUi();
+      return;
+    }
+    if (mode === 'entity' && (!requestEntityId || (requestView !== 'guideline-detail' && requestView !== 'initiative-detail'))) {
       return;
     }
 
@@ -9434,7 +9656,7 @@ function showClarityGremlinModal() {
       body.innerHTML = `
         <div class="gremlin-loading-card">
           <div class="gremlin-loading-spinner" aria-hidden="true"></div>
-          <strong>${escapeHtml(ui.loading)}</strong>
+          <strong>${escapeHtml(mode === 'entity' ? ui.loadingEntity : ui.loading)}</strong>
         </div>
       `;
     }
@@ -9443,8 +9665,9 @@ function showClarityGremlinModal() {
       const payload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycleId)}/clarity-gremlin`, {
         method: 'POST',
         body: {
-          view: context.view,
-          entityId: context.entityId,
+          mode,
+          view: requestView || context.view,
+          entityId: mode === 'entity' ? requestEntityId : '',
           locale: currentLanguage()
         }
       });
@@ -9461,7 +9684,9 @@ function showClarityGremlinModal() {
         }
         const recovered = await recoverClarityGremlinAfterGatewayTimeout({
           cycleId: context.cycleId,
-          context,
+          context: mode === 'entity'
+            ? { ...context, view: requestView, entityId: requestEntityId }
+            : { ...context, entityId: '' },
           sinceIso: startedAtIso
         });
         if (recovered?.historyEntryId) {
@@ -9504,8 +9729,14 @@ function showClarityGremlinModal() {
     }
     if (event.target === overlay) closeClarityGremlinModal();
   });
-  runButton?.addEventListener('click', () => {
-    void runAnalysis();
+  runStrategyButton?.addEventListener('click', () => {
+    entityPickerOpen = false;
+    renderEntityPanel();
+    void runAnalysis({ mode: 'strategy', view: initialContext.view, entityId: '' });
+  });
+  toggleEntityButton?.addEventListener('click', () => {
+    entityPickerOpen = !entityPickerOpen;
+    renderEntityPanel();
   });
   document.addEventListener('keydown', function handleGremlinInfoEscape(event) {
     if (!document.body.contains(overlay)) {

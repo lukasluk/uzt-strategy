@@ -313,12 +313,144 @@ function buildCounts(snapshot) {
   };
 }
 
-async function buildViewPayload(query, snapshot, view, entityId, locale = 'lt') {
+function buildGuidelineEntityPayload({ guidelines, initiatives, focus, counts, locale, view }) {
+  const relatedChildren = guidelines.filter((item) => String(item.parentTitle || '').trim() === String(focus.title || '').trim());
+  const parent = focus.parentTitle
+    ? guidelines.find((item) => String(item.title || '').trim() === String(focus.parentTitle || '').trim()) || null
+    : null;
+  const relatedInitiatives = initiatives.filter((item) => normalizeArray(item.linkedGuidelines).includes(focus.title));
+  return {
+    view,
+    pageLabel: String(locale || '').trim().toLowerCase() === 'en' ? 'Guideline analysis' : 'Gairės analizė',
+    focusLabel: gremlinLocalizedFocusLabel(view, locale),
+    reviewIntent: createPageReviewIntent({
+      primaryPurpose: 'Review this one guideline as a strategic direction: whether it is clear, focused, non-overlapping, and well supported by child guidelines or initiatives.',
+      primaryQuestions: [
+        'Is the guideline conceptually clear and strategically meaningful?',
+        'Is it too broad, too vague, or mixing several themes at once?',
+        'Are child guidelines or linked initiatives sufficient and coherent for this guideline?'
+      ],
+      prioritize: [
+        'title clarity',
+        'description specificity',
+        'theme coherence',
+        'fit within hierarchy',
+        'supporting initiatives'
+      ],
+      avoid: [
+        'do not treat this analysis as a whole-strategy portfolio review',
+        'do not over-focus on missing dates unless they block execution'
+      ]
+    }),
+    proposalDrafts: createProposalDraftConfig({
+      enabled: true,
+      entityKind: 'guideline',
+      goal: 'Prepare draft guideline proposals that improve this specific guideline and its immediate structure.',
+      rules: [
+        'Return only guideline drafts for this analysis.',
+        'You may create, update, or delete guidelines, but keep changes tightly connected to this guideline.',
+        'If the current guideline is a parent guideline, child guideline drafts are preferred when they make the topic more actionable.',
+        'Use relationType child only when there is a clearly suitable existing parent guideline in this immediate context.'
+      ]
+    }),
+    counts,
+    focusGuideline: focus,
+    focusInitiative: null,
+    focusSummary: {
+      focusKind: 'guideline',
+      focusTitle: focus.title,
+      parentGuideline: parent,
+      childGuidelines: truncateList(relatedChildren, 12),
+      linkedInitiatives: truncateList(relatedInitiatives, 12)
+    },
+    guidelines: truncateList(guidelines, 60),
+    initiatives: truncateList(initiatives, 60)
+  };
+}
+
+function buildInitiativeEntityPayload({ guidelines, initiatives, focus, counts, locale, view }) {
+  const linkedGuidelines = guidelines.filter((item) => normalizeArray(focus.linkedGuidelines).includes(item.title));
+  return {
+    view,
+    pageLabel: String(locale || '').trim().toLowerCase() === 'en' ? 'Initiative analysis' : 'Iniciatyvos analizė',
+    focusLabel: gremlinLocalizedFocusLabel(view, locale),
+    reviewIntent: createPageReviewIntent({
+      primaryPurpose: 'Review this initiative as a concrete action: whether it is specific, actionable, relevant to the strategy, and well connected to the supported guidelines.',
+      primaryQuestions: [
+        'Is the initiative concrete enough to be understood and executed?',
+        'Does it clearly contribute to the linked guidelines?',
+        'Is it duplicative, too broad, or missing a sharper delivery focus?'
+      ],
+      prioritize: [
+        'actionability',
+        'scope clarity',
+        'fit to guidelines',
+        'distinctiveness',
+        'expected strategic contribution'
+      ],
+      avoid: [
+        'do not treat this analysis as a whole-strategy portfolio review',
+        'keep missing dates or owners secondary unless severe'
+      ]
+    }),
+    proposalDrafts: createProposalDraftConfig({
+      enabled: true,
+      entityKind: 'initiative',
+      goal: 'Prepare draft initiative proposals that improve this specific initiative and its immediate execution fit.',
+      rules: [
+        'Return only initiative drafts for this analysis.',
+        'You may create, update, or delete initiatives, but keep changes tightly connected to this initiative.',
+        'Propose concrete initiatives, not KPIs or vague themes.',
+        'Link each initiative draft to one or more clearly relevant existing guidelines from this immediate context.'
+      ]
+    }),
+    counts,
+    focusGuideline: null,
+    focusInitiative: focus,
+    focusSummary: {
+      focusKind: 'initiative',
+      focusTitle: focus.title,
+      linkedGuidelines: truncateList(linkedGuidelines, 12)
+    },
+    guidelines: truncateList(guidelines, 60),
+    initiatives: truncateList(initiatives, 60)
+  };
+}
+
+async function buildViewPayload(query, snapshot, view, entityId, locale = 'lt', mode = 'strategy') {
   const guidelines = normalizeArray(snapshot?.guidelines);
   const initiatives = normalizeArray(snapshot?.initiatives);
   const guidelineById = createTitleLookup(guidelines);
   const initiativeById = createTitleLookup(initiatives);
   const counts = buildCounts(snapshot);
+  const normalizedMode = String(mode || '').trim().toLowerCase() === 'entity' ? 'entity' : 'strategy';
+
+  if (normalizedMode === 'entity') {
+    if (view === 'guideline-detail') {
+      const focusBase = guidelineById.get(String(entityId || '').trim()) || null;
+      const focus = focusBase
+        ? {
+          ...focusBase,
+          description: await loadFullEntityDescription(query, { kind: 'guideline', entityId }) || focusBase.description
+        }
+        : null;
+      if (!focus) throw new Error('guideline not found');
+      return buildGuidelineEntityPayload({ guidelines, initiatives, focus, counts, locale, view });
+    }
+    if (view === 'initiative-detail') {
+      const focusBase = initiativeById.get(String(entityId || '').trim()) || null;
+      const focus = focusBase
+        ? {
+          ...focusBase,
+          description: await loadFullEntityDescription(query, { kind: 'initiative', entityId }) || focusBase.description
+        }
+        : null;
+      if (!focus) throw new Error('initiative not found');
+      return buildInitiativeEntityPayload({ guidelines, initiatives, focus, counts, locale, view });
+    }
+    throw new Error('clarity gremlin unsupported entity mode');
+  }
+
   let focusGuideline = null;
   let focusInitiative = null;
   let focusSummary = null;
@@ -647,9 +779,11 @@ async function analyzeStrategyPage({
   view,
   entityId,
   locale,
-  aiConfig
+  aiConfig,
+  mode = 'strategy'
 }) {
   const normalizedView = normalizeView(view);
+  const normalizedMode = String(mode || '').trim().toLowerCase() === 'entity' ? 'entity' : 'strategy';
   if (!SUPPORTED_VIEWS.has(normalizedView)) {
     throw new Error('clarity gremlin unsupported view');
   }
@@ -659,7 +793,7 @@ async function analyzeStrategyPage({
     throw new Error('cycle not found');
   }
 
-  const viewPayload = await buildViewPayload(query, snapshot, normalizedView, entityId, locale);
+  const viewPayload = await buildViewPayload(query, snapshot, normalizedView, entityId, locale, normalizedMode);
   const promptPayload = buildPromptPayload(snapshot, {
     ...viewPayload,
     responseLanguage: locale
@@ -679,20 +813,23 @@ async function analyzeStrategyPage({
     analysis,
     page: {
       view: normalizedView,
+      mode: normalizedMode,
       label: viewPayload.pageLabel || analysis.pageLabel || normalizedView,
       contextLabel: (
-        normalizedView === 'guideline-detail'
+        normalizedMode === 'strategy'
+          ? (viewPayload.focusLabel || viewPayload.pageLabel || analysis.pageLabel || normalizedView)
+          : normalizedView === 'guideline-detail'
           ? `${viewPayload.focusLabel || gremlinLocalizedFocusLabel('guideline-detail', locale)}: ${viewPayload.focusGuideline?.title || entityId}`
           : normalizedView === 'initiative-detail'
             ? `${viewPayload.focusLabel || gremlinLocalizedFocusLabel('initiative-detail', locale)}: ${viewPayload.focusInitiative?.title || entityId}`
             : viewPayload.focusLabel || viewPayload.pageLabel || normalizedView
       ),
-      entityKind: normalizedView === 'guideline-detail'
+      entityKind: normalizedMode === 'entity' && normalizedView === 'guideline-detail'
         ? 'guideline'
-        : normalizedView === 'initiative-detail'
+        : normalizedMode === 'entity' && normalizedView === 'initiative-detail'
           ? 'initiative'
           : null,
-      entityId: String(entityId || '').trim() || null
+      entityId: normalizedMode === 'entity' ? (String(entityId || '').trim() || null) : null
     }
   };
 }
