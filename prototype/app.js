@@ -4870,8 +4870,8 @@ function getGremlinStrategyLoadingLabel() {
       : 'Aiškumo nykštukas analizuoja strategiją...';
   }
   return currentLanguage() === 'en'
-    ? `Clarity Gremlin is reviewing "${strategyTitle}"...`
-    : `Aiškumo nykštukas analizuoja „${strategyTitle}“...`;
+    ? `Clarity Gremlin is reviewing the strategy "${strategyTitle}"...`
+    : `Aiškumo nykštukas analizuoja strategiją „${strategyTitle}“...`;
 }
 
 function getFeatureAiInfo(featureKey) {
