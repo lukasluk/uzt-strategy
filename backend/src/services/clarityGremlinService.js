@@ -746,6 +746,25 @@ function buildUserPrompt(payload) {
   ].join('\n');
 }
 
+function buildDeleteDraftRetryPrompt(locale) {
+  const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
+  return isEnglish
+    ? [
+        'RETRY REQUIREMENT:',
+        'Your previous response was rejected because it recommended merging, consolidation, deduplication, retirement, or removal, but did not include the required delete draft.',
+        'Regenerate the full JSON from scratch.',
+        'If any recommendation or next action implies merging, consolidating, removing duplication, retiring, or deleting a visible guideline or initiative, you must include at least one matching proposalDraft with draftMode "delete" and targetTitle pointing to the visible redundant item.',
+        'Do not mention that this is a retry.'
+      ].join('\n')
+    : [
+        'PAKARTOTINIO BANDYMO TAISYKLĖ:',
+        'Ankstesnis atsakymas buvo atmestas, nes jame buvo rekomenduojamas sujungimas, konsolidavimas, dubliavimo šalinimas ar objekto atsisakymas, bet nebuvo pateiktas privalomas delete tipo juodraštis.',
+        'Sugeneruokite visą JSON iš naujo.',
+        'Jei bent viena rekomendacija ar kitas žingsnis reiškia sujungimą, konsolidavimą, dubliavimo šalinimą, atsisakymą ar ištrynimą, privalote įtraukti bent vieną matching proposalDraft su draftMode "delete" ir targetTitle, nurodančiu konkretų matomą perteklinį objektą.',
+        'Neminekite, kad tai pakartotinis bandymas.'
+      ].join('\n');
+}
+
 function normalizeAnalysis(raw) {
   const value = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -847,15 +866,32 @@ async function analyzeStrategyPage({
     ...viewPayload,
     responseLanguage: locale
   });
-  const response = await requestPolicyAlignmentJson({
-    ...aiConfig,
-    systemText: buildSystemPrompt(locale),
-    userText: buildUserPrompt(promptPayload),
-    operationName: `clarity-gremlin:${normalizedView}`
-  });
+  const systemText = buildSystemPrompt(locale);
+  const baseUserText = buildUserPrompt(promptPayload);
+  const requestAnalysis = async (retryDeleteDraft = false) => {
+    const response = await requestPolicyAlignmentJson({
+      ...aiConfig,
+      systemText,
+      userText: retryDeleteDraft
+        ? `${baseUserText}\n\n${buildDeleteDraftRetryPrompt(locale)}`
+        : baseUserText,
+      operationName: `clarity-gremlin:${normalizedView}${retryDeleteDraft ? ':retry-delete-draft' : ''}`
+    });
+    const analysis = normalizeAnalysis(response?.parsed);
+    validateAnalysis(analysis, locale, viewPayload);
+    return { response, analysis };
+  };
 
-  const analysis = normalizeAnalysis(response?.parsed);
-  validateAnalysis(analysis, locale, viewPayload);
+  let response;
+  let analysis;
+  try {
+    ({ response, analysis } = await requestAnalysis(false));
+  } catch (error) {
+    if (String(error?.message || '').trim() !== 'ai response missing delete draft') {
+      throw error;
+    }
+    ({ response, analysis } = await requestAnalysis(true));
+  }
 
   return {
     model: response?.model || null,

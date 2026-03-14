@@ -1296,6 +1296,9 @@ function toUserMessage(error) {
     'pdf content too large': 'PDF turinys per didelÄ—s apimties.',
     'ai response invalid': 'AI atsakymas netinkamo formato.',
     'ai response language mismatch': 'AI atsakymas ne ta kalba. Pabandykite dar kartÄ….',
+    'ai response missing delete draft': currentLanguage() === 'en'
+      ? 'The AI response was incomplete. Please run the analysis again.'
+      : 'AI atsakymas buvo nepilnas. Paleiskite analizÄ™ dar kartÄ….',
     'generated guidelines missing': 'AI nesugeneravo pakankamai gairiÅ³.',
     'generated initiatives missing': 'AI nesugeneravo pakankamai iniciatyvÅ³.',
     'generationId required': 'TrÅ«ksta generavimo uÅ¾klausos ID.',
