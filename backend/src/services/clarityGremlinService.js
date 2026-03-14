@@ -124,7 +124,7 @@ function clampScore(value) {
   return Math.max(1, Math.min(10, Math.round(numeric)));
 }
 
-function hasMergeOrDedupSignal(value) {
+function hasDeleteActionSignal(value) {
   const text = String(value || '').trim().toLowerCase();
   if (!text) return false;
   return [
@@ -134,16 +134,18 @@ function hasMergeOrDedupSignal(value) {
     'consolidate',
     'consolidating',
     'deduplicate',
-    'deduplication',
     'remove duplication',
-    'duplicate',
-    'redundant',
+    'combine',
+    'remove',
+    'delete',
     'retire',
+    'drop',
     'sujung',
     'konsolid',
-    'dubli',
-    'perteklin',
     'atsisaky',
+    'pašalin',
+    'pasalin',
+    'panaikin',
     'ištrint',
     'istrint'
   ].some((token) => text.includes(token));
@@ -152,8 +154,8 @@ function hasMergeOrDedupSignal(value) {
 function analysisRequiresDeleteDraft(value) {
   const improvements = normalizeArray(value?.improvements);
   const nextActions = normalizeArray(value?.nextActions);
-  return improvements.some((item) => hasMergeOrDedupSignal(item?.issue) || hasMergeOrDedupSignal(item?.recommendation))
-    || nextActions.some((item) => hasMergeOrDedupSignal(item));
+  return improvements.some((item) => hasDeleteActionSignal(item?.recommendation))
+    || nextActions.some((item) => hasDeleteActionSignal(item));
 }
 
 function summarizeGuideline(item) {
