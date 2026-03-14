@@ -858,6 +858,27 @@ function buildDeleteDraftRetryPrompt(locale) {
       ].join('\n');
 }
 
+function buildSchemaRetryPrompt(locale) {
+  const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
+  return isEnglish
+    ? [
+        'RETRY REQUIREMENT:',
+        'Your previous response was rejected because the JSON schema was incomplete or invalid.',
+        'Regenerate the full JSON from scratch.',
+        'You must include all required top-level keys: responseLanguage, pageLabel, score, summary, strengths, improvements, nextActions, dataGaps, proposalDrafts.',
+        'You must include at least one improvement and at least one nextAction.',
+        'Return only one valid JSON object with no markdown, no explanation, and no trailing text.'
+      ].join('\n')
+    : [
+        'PAKARTOTINIO BANDYMO TAISYKLĖ:',
+        'Ankstesnis atsakymas buvo atmestas, nes JSON schema buvo nepilna arba netinkama.',
+        'Sugeneruokite visą JSON iš naujo.',
+        'Privalote įtraukti visus privalomus viršutinio lygio laukus: responseLanguage, pageLabel, score, summary, strengths, improvements, nextActions, dataGaps, proposalDrafts.',
+        'Privalote pateikti bent vieną improvement ir bent vieną nextAction.',
+        'Grąžinkite tik vieną validų JSON objektą be markdown, be paaiškinimų ir be papildomo teksto.'
+      ].join('\n');
+}
+
 function normalizeAnalysis(raw) {
   const value = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -961,14 +982,12 @@ async function analyzeStrategyPage({
   });
   const systemText = buildSystemPrompt(locale);
   const baseUserText = buildUserPrompt(promptPayload, aiConfig?.provider);
-  const requestAnalysis = async (retryDeleteDraft = false) => {
+  const requestAnalysis = async (extraPrompt = '', operationSuffix = '') => {
     const response = await requestPolicyAlignmentJson({
       ...aiConfig,
       systemText,
-      userText: retryDeleteDraft
-        ? `${baseUserText}\n\n${buildDeleteDraftRetryPrompt(locale)}`
-        : baseUserText,
-      operationName: `clarity-gremlin:${normalizedView}${retryDeleteDraft ? ':retry-delete-draft' : ''}`
+      userText: extraPrompt ? `${baseUserText}\n\n${extraPrompt}` : baseUserText,
+      operationName: `clarity-gremlin:${normalizedView}${operationSuffix}`
     });
     const analysis = normalizeAnalysis(response?.parsed);
     validateAnalysis(analysis, locale, viewPayload);
@@ -978,12 +997,16 @@ async function analyzeStrategyPage({
   let response;
   let analysis;
   try {
-    ({ response, analysis } = await requestAnalysis(false));
+    ({ response, analysis } = await requestAnalysis('', ''));
   } catch (error) {
-    if (String(error?.message || '').trim() !== 'ai response missing delete draft') {
+    const message = String(error?.message || '').trim();
+    if (message === 'ai response invalid') {
+      ({ response, analysis } = await requestAnalysis(buildSchemaRetryPrompt(locale), ':retry-schema'));
+    } else if (message === 'ai response missing delete draft') {
+      ({ response, analysis } = await requestAnalysis(buildDeleteDraftRetryPrompt(locale), ':retry-delete-draft'));
+    } else {
       throw error;
     }
-    ({ response, analysis } = await requestAnalysis(true));
   }
 
   return {
