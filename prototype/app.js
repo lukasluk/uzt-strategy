@@ -1308,6 +1308,9 @@ function toUserMessage(error) {
     'ai generation timeout': currentLanguage() === 'en'
       ? 'AI generation is still running. Please wait and try again shortly.'
       : 'AI generavimas vis dar vyksta. Pabandykite dar po keliÅ³ sekundÅ¾iÅ³.',
+    'ai request timed out': currentLanguage() === 'en'
+      ? 'AI provider did not respond in time. Please try again.'
+      : 'AI tiekÄ—jas neatsakÄ— laiku. Pabandykite dar kartÄ….',
     'ai generation failed': currentLanguage() === 'en'
       ? 'AI generation failed.'
       : 'AI generavimas nepavyko.',
@@ -4859,6 +4862,18 @@ function clarityGremlinUiText() {
   };
 }
 
+function getGremlinStrategyLoadingLabel() {
+  const strategyTitle = String(state.strategy?.title || state.accountContext?.strategy?.title || state.strategySlug || '').trim();
+  if (!strategyTitle) {
+    return currentLanguage() === 'en'
+      ? 'Clarity Gremlin is reviewing the strategy...'
+      : 'Aiškumo nykštukas analizuoja strategiją...';
+  }
+  return currentLanguage() === 'en'
+    ? `Clarity Gremlin is reviewing "${strategyTitle}"...`
+    : `Aiškumo nykštukas analizuoja „${strategyTitle}“...`;
+}
+
 function getFeatureAiInfo(featureKey) {
   const institution = state.context?.institution;
   const features = institution?.aiFeatures && typeof institution.aiFeatures === 'object'
@@ -7805,6 +7820,33 @@ async function recoverClarityGremlinAfterGatewayTimeout({
   return null;
 }
 
+async function pollClarityGremlinJob({
+  cycleId,
+  jobId,
+  timeoutMs = 10 * 60 * 1000,
+  intervalMs = 1500
+} = {}) {
+  const normalizedCycleId = String(cycleId || '').trim();
+  const normalizedJobId = String(jobId || '').trim();
+  if (!normalizedCycleId || !normalizedJobId) {
+    throw new Error('job not found');
+  }
+  const deadline = Date.now() + Math.max(10000, Number(timeoutMs) || 0);
+  while (Date.now() < deadline) {
+    const payload = await api(`/api/v1/cycles/${encodeURIComponent(normalizedCycleId)}/clarity-gremlin/jobs/${encodeURIComponent(normalizedJobId)}`);
+    if (payload?.status === 'completed' || payload?.pending === false && payload?.ok === true) {
+      return payload;
+    }
+    if (payload?.status === 'failed' || payload?.ok === false) {
+      const error = new Error(String(payload?.error || 'internal server error'));
+      error.payload = payload;
+      throw error;
+    }
+    await waitMs(intervalMs);
+  }
+  throw new Error('ai request timed out');
+}
+
 async function waitForAdminAiGenerationById({
   generationId,
   timeoutMs = 10 * 60 * 1000,
@@ -9659,7 +9701,7 @@ function showClarityGremlinModal() {
       body.innerHTML = `
         <div class="gremlin-loading-card">
           <div class="gremlin-loading-spinner" aria-hidden="true"></div>
-          <strong>${escapeHtml(mode === 'entity' ? ui.loadingEntity : ui.loading)}</strong>
+          <strong>${escapeHtml(mode === 'entity' ? ui.loadingEntity : getGremlinStrategyLoadingLabel())}</strong>
         </div>
       `;
     }
@@ -9674,6 +9716,15 @@ function showClarityGremlinModal() {
           locale: currentLanguage()
         }
       });
+      if (payload?.pending && payload?.jobId) {
+        const completed = await pollClarityGremlinJob({
+          cycleId: context.cycleId,
+          jobId: payload.jobId
+        });
+        await loadHistory(String(completed?.historyEntryId || '').trim());
+        applyUsage(completed?.usage || null);
+        return;
+      }
       await loadHistory(String(payload?.historyEntryId || '').trim());
     } catch (error) {
       if (isGatewayTimeoutError(error)) {

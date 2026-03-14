@@ -15,11 +15,32 @@ function registerClarityGremlinRoutes({
   verifyCycleAccess,
   memberWriteRateLimit
 }) {
+  const pendingJobs = new Map();
   const requestGuard = typeof memberWriteRateLimit === 'function'
     ? memberWriteRateLimit
     : (_req, _res, next) => next();
 
   const baseLimitPerStrategy = Math.max(1, Number(process.env.CLARITY_GREMLIN_LIMIT_PER_STRATEGY || 10));
+
+  function prunePendingJobs() {
+    const cutoff = Date.now() - 15 * 60 * 1000;
+    pendingJobs.forEach((job, jobId) => {
+      const updatedAt = Date.parse(job?.updatedAt || job?.createdAt || 0);
+      if (Number.isFinite(updatedAt) && updatedAt < cutoff) {
+        pendingJobs.delete(jobId);
+      }
+    });
+  }
+
+  function setPendingJob(jobId, patch) {
+    prunePendingJobs();
+    const current = pendingJobs.get(jobId) || {};
+    pendingJobs.set(jobId, {
+      ...current,
+      ...patch,
+      updatedAt: new Date().toISOString()
+    });
+  }
 
   function mapErrorStatus(error) {
     const message = String(error?.message || '').trim();
@@ -184,6 +205,48 @@ function registerClarityGremlinRoutes({
     });
   });
 
+  app.get('/api/v1/cycles/:cycleId/clarity-gremlin/jobs/:jobId', requireAuth, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    const jobId = String(req.params.jobId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+    if (!jobId) return res.status(400).json({ error: 'jobId required' });
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+
+    prunePendingJobs();
+    const job = pendingJobs.get(jobId) || null;
+    if (!job
+      || String(job.cycleId || '').trim() !== cycleId
+      || String(job.institutionId || '').trim() !== String(req.auth.institutionId || '').trim()) {
+      return res.status(404).json({ error: 'job not found' });
+    }
+
+    if (job.status === 'completed') {
+      return res.json({
+        ...job.payload,
+        ok: true,
+        pending: false,
+        status: 'completed'
+      });
+    }
+    if (job.status === 'failed') {
+      return res.json({
+        ok: false,
+        pending: false,
+        status: 'failed',
+        error: String(job.error || 'internal server error'),
+        usage: job.usage || null
+      });
+    }
+    return res.json({
+      ok: true,
+      pending: true,
+      status: 'running',
+      usage: job.usage || null
+    });
+  });
+
   app.post('/api/v1/cycles/:cycleId/clarity-gremlin', requireAuth, requestGuard, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
     const view = String(req.body?.view || '').trim();
@@ -223,91 +286,121 @@ function registerClarityGremlinRoutes({
     }
 
     const reserved = usageReservation.rows[0];
-    try {
-      const aiSettings = await resolveInstitutionAiSettings(query, req.auth.institutionId);
-      const provider = aiSettings.provider;
-      const aiConfig = getClarityGremlinConfig({
-        provider,
-        modelOverride: resolveInstitutionModelOverride(aiSettings, provider)
-      });
-      const result = await analyzeStrategyPage({
-        query,
-        cycleId,
-        view,
-        entityId,
-        locale,
-        aiConfig,
-        mode
-      });
+    const used = Number(reserved?.clarity_gremlin_calls_used || 0);
+    const extra = Math.max(0, Number(reserved?.clarity_gremlin_extra_scans || 0));
+    const limit = baseLimitPerStrategy + extra;
+    const usage = {
+      used,
+      limit,
+      baseLimit: baseLimitPerStrategy,
+      extraAllocated: extra,
+      remaining: Math.max(0, limit - used),
+      strategyId,
+      strategyTitle: reserved?.title || null
+    };
+    const jobId = typeof uuid === 'function'
+      ? uuid()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-      const analysisRecordId = typeof uuid === 'function' ? uuid() : null;
-      if (analysisRecordId) {
-        await query(
-          `insert into clarity_gremlin_analyses (
-             id,
-             institution_id,
-             strategy_id,
-             cycle_id,
-             view,
-             entity_kind,
-             entity_id,
-             page_label,
-             context_label,
-             locale,
-             provider,
-             model,
-             analysis_json,
-             created_by
-           ) values (
-             $1, $2, $3, $4, $5, $6, $7::uuid, $8, $9, $10, $11, $12, $13::jsonb, $14
-           )`,
-          [
-            analysisRecordId,
-            req.auth.institutionId,
-            strategyId,
-            cycleId,
-            result.page?.view || view,
-            result.page?.entityKind || null,
-            result.page?.entityId || null,
-            result.page?.label || result.analysis?.pageLabel || result.page?.view || view,
-            result.page?.contextLabel || result.page?.label || result.page?.view || view,
-            locale,
-            aiConfig.provider || provider,
-            result.model || null,
-            JSON.stringify(result.analysis || {}),
-            req.auth.sub
-          ]
-        );
-      }
+    setPendingJob(jobId, {
+      status: 'running',
+      institutionId: req.auth.institutionId,
+      cycleId,
+      strategyId,
+      createdAt: new Date().toISOString(),
+      usage
+    });
 
-      const used = Number(reserved?.clarity_gremlin_calls_used || 0);
-      const extra = Math.max(0, Number(reserved?.clarity_gremlin_extra_scans || 0));
-      const limit = baseLimitPerStrategy + extra;
-      return res.json({
-        ok: true,
-        analysis: result.analysis,
-        page: result.page,
-        model: result.model,
-        historyEntryId: analysisRecordId,
-        usage: {
-          used,
-          limit,
-          baseLimit: baseLimitPerStrategy,
-          extraAllocated: extra,
-          remaining: Math.max(0, limit - used),
-          strategyId,
-          strategyTitle: reserved?.title || null
+    Promise.resolve().then(async () => {
+      try {
+        const aiSettings = await resolveInstitutionAiSettings(query, req.auth.institutionId);
+        const provider = aiSettings.provider;
+        const aiConfig = getClarityGremlinConfig({
+          provider,
+          modelOverride: resolveInstitutionModelOverride(aiSettings, provider)
+        });
+        const result = await analyzeStrategyPage({
+          query,
+          cycleId,
+          view,
+          entityId,
+          locale,
+          aiConfig,
+          mode
+        });
+
+        const analysisRecordId = typeof uuid === 'function' ? uuid() : null;
+        if (analysisRecordId) {
+          await query(
+            `insert into clarity_gremlin_analyses (
+               id,
+               institution_id,
+               strategy_id,
+               cycle_id,
+               view,
+               entity_kind,
+               entity_id,
+               page_label,
+               context_label,
+               locale,
+               provider,
+               model,
+               analysis_json,
+               created_by
+             ) values (
+               $1, $2, $3, $4, $5, $6, $7::uuid, $8, $9, $10, $11, $12, $13::jsonb, $14
+             )`,
+            [
+              analysisRecordId,
+              req.auth.institutionId,
+              strategyId,
+              cycleId,
+              result.page?.view || view,
+              result.page?.entityKind || null,
+              result.page?.entityId || null,
+              result.page?.label || result.analysis?.pageLabel || result.page?.view || view,
+              result.page?.contextLabel || result.page?.label || result.page?.view || view,
+              locale,
+              aiConfig.provider || provider,
+              result.model || null,
+              JSON.stringify(result.analysis || {}),
+              req.auth.sub
+            ]
+          );
         }
-      });
-    } catch (error) {
-      await query(
-        `update institution_strategies
-         set clarity_gremlin_calls_used = greatest(coalesce(clarity_gremlin_calls_used, 0) - 1, 0)
-         where id = $1`,
-        [strategyId]
-      );
-      return res.status(mapErrorStatus(error)).json({ error: String(error?.message || 'internal server error') });
-    }
+
+        setPendingJob(jobId, {
+          status: 'completed',
+          payload: {
+            analysis: result.analysis,
+            page: result.page,
+            model: result.model,
+            historyEntryId: analysisRecordId,
+            usage
+          }
+        });
+      } catch (error) {
+        await query(
+          `update institution_strategies
+           set clarity_gremlin_calls_used = greatest(coalesce(clarity_gremlin_calls_used, 0) - 1, 0)
+           where id = $1`,
+          [strategyId]
+        );
+        setPendingJob(jobId, {
+          status: 'failed',
+          error: String(error?.message || 'internal server error'),
+          statusCode: mapErrorStatus(error),
+          usage: await loadStrategyUsage(strategyId)
+        });
+      }
+    });
+
+    return res.json({
+      ok: true,
+      pending: true,
+      jobId,
+      usage
+    });
   });
 
   app.post('/api/v1/cycles/:cycleId/clarity-gremlin/:analysisId/drafts/:draftIndex/implemented', requireAuth, async (req, res) => {

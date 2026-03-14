@@ -643,6 +643,90 @@ function buildPromptPayload(snapshot, viewPayload) {
   };
 }
 
+function compactPromptGuideline(item) {
+  return {
+    id: item?.id,
+    title: cleanText(item?.title, 120),
+    description: cleanPreviewText(item?.description, 220),
+    relationType: cleanText(item?.relationType, 20) || 'orphan',
+    parentTitle: cleanText(item?.parentTitle, 120) || null,
+    implementationDate: formatDate(item?.implementationDate),
+    linkedInitiatives: Number(item?.linkedInitiatives || 0)
+  };
+}
+
+function compactPromptInitiative(item) {
+  return {
+    id: item?.id,
+    title: cleanText(item?.title, 120),
+    description: cleanPreviewText(item?.description, 220),
+    implementationDate: formatDate(item?.implementationDate),
+    linkedGuidelines: truncateList(normalizeArray(item?.linkedGuidelines).map((title) => cleanText(title, 120)).filter(Boolean), 4)
+  };
+}
+
+function compactPromptPayloadForProvider(payload, provider) {
+  const normalizedProvider = String(provider || '').trim().toLowerCase();
+  if (normalizedProvider !== 'mistral') return payload;
+
+  const page = payload?.page && typeof payload.page === 'object' ? payload.page : {};
+  const compactFocusSummary = page?.focusSummary && typeof page.focusSummary === 'object'
+    ? {
+        ...page.focusSummary,
+        focusTitle: cleanText(page.focusSummary.focusTitle, 140),
+        parentGuideline: page.focusSummary.parentGuideline ? compactPromptGuideline(page.focusSummary.parentGuideline) : null,
+        childGuidelines: truncateList(normalizeArray(page.focusSummary.childGuidelines).map(compactPromptGuideline), 6),
+        linkedInitiatives: truncateList(normalizeArray(page.focusSummary.linkedInitiatives).map(compactPromptInitiative), 6),
+        linkedGuidelines: truncateList(normalizeArray(page.focusSummary.linkedGuidelines).map(compactPromptGuideline), 6)
+      }
+    : null;
+
+  return {
+    ...payload,
+    reviewFocus: {
+      ...payload.reviewFocus,
+      avoid: truncateList(normalizeArray(payload?.reviewFocus?.avoid), 3)
+    },
+    strategy: {
+      ...payload.strategy,
+      title: cleanText(payload?.strategy?.title, 140),
+      cycleTitle: cleanText(payload?.strategy?.cycleTitle, 140),
+      institutionName: cleanText(payload?.strategy?.institutionName, 140),
+      missionText: cleanPreviewText(payload?.strategy?.missionText, 320),
+      visionText: cleanPreviewText(payload?.strategy?.visionText, 320)
+    },
+    page: {
+      ...page,
+      reviewIntent: {
+        ...page.reviewIntent,
+        primaryQuestions: truncateList(normalizeArray(page?.reviewIntent?.primaryQuestions), 4),
+        prioritize: truncateList(normalizeArray(page?.reviewIntent?.prioritize), 4),
+        avoid: truncateList(normalizeArray(page?.reviewIntent?.avoid), 4)
+      },
+      proposalDrafts: {
+        ...page.proposalDrafts,
+        rules: truncateList(normalizeArray(page?.proposalDrafts?.rules), 5)
+      },
+      focusGuideline: page.focusGuideline ? compactPromptGuideline(page.focusGuideline) : null,
+      focusInitiative: page.focusInitiative ? compactPromptInitiative(page.focusInitiative) : null,
+      focusSummary: compactFocusSummary,
+      guidelines: truncateList(normalizeArray(page.guidelines).map(compactPromptGuideline), 28),
+      initiatives: truncateList(normalizeArray(page.initiatives).map(compactPromptInitiative), 28),
+      planRows: truncateList(normalizeArray(page.planRows).map((item) => ({
+        kind: cleanText(item?.kind, 20),
+        title: cleanText(item?.title, 120),
+        relationType: cleanText(item?.relationType, 20) || null,
+        parentTitle: cleanText(item?.parentTitle, 120) || null,
+        implementationDate: formatDate(item?.implementationDate),
+        implementationOwner: cleanText(item?.implementationOwner, 80),
+        linkedInitiatives: Number(item?.linkedInitiatives || 0),
+        linkedGuidelines: truncateList(normalizeArray(item?.linkedGuidelines).map((title) => cleanText(title, 120)).filter(Boolean), 3)
+      })), 48),
+      mostConnectedGuidelines: truncateList(normalizeArray(page.mostConnectedGuidelines).map(compactPromptGuideline), 8)
+    }
+  };
+}
+
 function buildSystemPrompt(locale) {
   const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
   const languageRule = isEnglish
@@ -730,7 +814,11 @@ function buildSystemPrompt(locale) {
   ].join('\n');
 }
 
-function buildUserPrompt(payload) {
+function buildUserPrompt(payload, provider) {
+  const compactPayload = compactPromptPayloadForProvider(payload, provider);
+  const prettyJson = String(provider || '').trim().toLowerCase() === 'mistral'
+    ? JSON.stringify(compactPayload)
+    : JSON.stringify(compactPayload, null, 2);
   return [
     'Analyze the full strategy workspace context below and suggest how to improve clarity, structure, and execution quality across the whole strategy.',
     'Always consider both guidelines and initiatives together.',
@@ -742,10 +830,13 @@ function buildUserPrompt(payload) {
     'Avoid generic observations about system structure or reusable platform fields.',
     'If you mention technical readiness gaps, keep them secondary and brief unless they are severe.',
     'If the context is already strong, say so briefly and still give the most useful refinements.',
+    String(provider || '').trim().toLowerCase() === 'mistral'
+      ? 'Be concise, select only the most important evidence from the provided context, and avoid repeating similar observations.'
+      : '',
     '',
     'CONTEXT JSON:',
-    JSON.stringify(payload, null, 2)
-  ].join('\n');
+    prettyJson
+  ].filter(Boolean).join('\n');
 }
 
 function buildDeleteDraftRetryPrompt(locale) {
@@ -869,7 +960,7 @@ async function analyzeStrategyPage({
     responseLanguage: locale
   });
   const systemText = buildSystemPrompt(locale);
-  const baseUserText = buildUserPrompt(promptPayload);
+  const baseUserText = buildUserPrompt(promptPayload, aiConfig?.provider);
   const requestAnalysis = async (retryDeleteDraft = false) => {
     const response = await requestPolicyAlignmentJson({
       ...aiConfig,
@@ -925,6 +1016,7 @@ function getClarityGremlinConfig({ provider, modelOverride } = {}) {
   const base = getPolicyAlignmentAiConfig({ provider, modelOverride });
   const fallbackModel = String(base.model || '').trim()
     || (String(provider || '').trim().toLowerCase() === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini');
+  const defaultTimeoutMs = String(provider || '').trim().toLowerCase() === 'mistral' ? 180000 : 120000;
   return {
     ...base,
     model: resolveProviderCompatibleModel(
@@ -933,8 +1025,8 @@ function getClarityGremlinConfig({ provider, modelOverride } = {}) {
       fallbackModel
     ),
     timeoutMs: Math.max(
-      15000,
-      Number(process.env.CLARITY_GREMLIN_TIMEOUT_MS || base.timeoutMs || 120000)
+      defaultTimeoutMs,
+      Number(process.env.CLARITY_GREMLIN_TIMEOUT_MS || base.timeoutMs || defaultTimeoutMs)
     )
   };
 }
