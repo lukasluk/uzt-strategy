@@ -794,6 +794,7 @@ function buildSystemPrompt(locale) {
     '- dataGaps: 0 to 4 items.',
     '- proposalDrafts: 0 or more items.',
     '- When proposalDrafts are enabled, return as many concrete drafts as are genuinely needed to move the strategy toward 10/10 clarity. Do not stop at an arbitrary cap.',
+    '- Keep proposalDraft titles, descriptions, and rationales concise. Prefer compact, specific wording over long explanations.',
     '- strengths should usually describe topic coverage, strategic direction quality, or content coherence, not platform mechanics.',
     '- Each recommendation must be concrete and tied to the whole strategy, while still reflecting the current focus page.',
     '- Only return proposalDrafts when page.proposalDrafts.enabled is true.',
@@ -868,6 +869,7 @@ function buildSchemaRetryPrompt(locale) {
         'Regenerate the full JSON from scratch.',
         'You must include all required top-level keys: responseLanguage, pageLabel, score, summary, strengths, improvements, nextActions, dataGaps, proposalDrafts.',
         'You must include at least one improvement and at least one nextAction.',
+        'Keep every field concise so the full JSON fits in one response. If you return many proposalDrafts, keep each title, description, and rationale compact and non-repetitive.',
         'Return only one valid JSON object with no markdown, no explanation, and no trailing text.'
       ].join('\n')
     : [
@@ -985,6 +987,7 @@ async function analyzeStrategyPage({
       ...aiConfig,
       systemText,
       userText: extraPrompt ? `${baseUserText}\n\n${extraPrompt}` : baseUserText,
+      maxOutputTokens: aiConfig?.maxOutputTokens,
       operationName: `clarity-gremlin:${normalizedView}${operationSuffix}`
     });
     const analysis = normalizeAnalysis(response?.parsed);
@@ -1038,12 +1041,17 @@ function getClarityGremlinConfig({ provider, modelOverride } = {}) {
   const fallbackModel = String(base.model || '').trim()
     || (String(provider || '').trim().toLowerCase() === 'mistral' ? 'mistral-small-latest' : 'gpt-5-mini');
   const defaultTimeoutMs = String(provider || '').trim().toLowerCase() === 'mistral' ? 180000 : 120000;
+  const defaultMaxOutputTokens = 12000;
   return {
     ...base,
     model: resolveProviderCompatibleModel(
       provider || base.provider,
       process.env.CLARITY_GREMLIN_MODEL,
       fallbackModel
+    ),
+    maxOutputTokens: Math.max(
+      4000,
+      Number(process.env.CLARITY_GREMLIN_MAX_OUTPUT_TOKENS || base.maxOutputTokens || defaultMaxOutputTokens)
     ),
     timeoutMs: Math.max(
       defaultTimeoutMs,

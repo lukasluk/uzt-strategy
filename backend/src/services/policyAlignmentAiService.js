@@ -115,6 +115,7 @@ async function requestPolicyAlignmentJson({
   systemText,
   userText,
   timeoutMs = 120000,
+  maxOutputTokens = 9000,
   operationName = 'policy-alignment'
 }) {
   const finalApiKey = String(apiKey || '').trim();
@@ -140,7 +141,7 @@ async function requestPolicyAlignmentJson({
           : `${String(userText || '')}\n\nReturn strictly valid JSON only.`,
         timeoutMs,
         responseFormat: 'json',
-        maxOutputTokens: 9000
+        maxOutputTokens
       });
       const outputText = String(response.outputText || '').trim();
 
