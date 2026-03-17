@@ -791,6 +791,24 @@ create table if not exists clarity_gremlin_analyses (
 
 alter table if exists clarity_gremlin_analyses
   add column if not exists provider text not null default 'openai';
+alter table if exists clarity_gremlin_analyses
+  add column if not exists status text not null default 'completed';
+alter table if exists clarity_gremlin_analyses
+  add column if not exists error_message text;
+alter table if exists clarity_gremlin_analyses
+  add column if not exists started_at timestamptz;
+alter table if exists clarity_gremlin_analyses
+  add column if not exists completed_at timestamptz;
+alter table if exists clarity_gremlin_analyses
+  add column if not exists failed_at timestamptz;
+update clarity_gremlin_analyses
+set status = 'completed'
+where status is null;
+alter table if exists clarity_gremlin_analyses
+  drop constraint if exists clarity_gremlin_analyses_status_check;
+alter table if exists clarity_gremlin_analyses
+  add constraint clarity_gremlin_analyses_status_check
+  check (status in ('running', 'completed', 'failed'));
 
 create index if not exists idx_clarity_gremlin_strategy
   on clarity_gremlin_analyses(strategy_id, created_at desc);

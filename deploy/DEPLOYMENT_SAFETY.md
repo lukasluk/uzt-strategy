@@ -2,6 +2,20 @@
 
 This project now includes safer deployment and migration scripts to protect live data.
 
+## Current release note: Clarity Gremlin job persistence
+
+This release changes `backend/src/schema_v1.sql` for Clarity Gremlin job persistence and restart recovery.
+
+If you are already at the repo root on the server (`/srv/uzt-strategy-src`), the normal deploy command is enough:
+
+```bash
+sudo bash deploy/deploy.sh
+```
+
+Why this is enough:
+- `deploy/deploy.sh` already runs `deploy/migrate_schema_v1.sh` before restarting the API.
+- The migration adds the new `clarity_gremlin_analyses` job-status columns required by the updated backend.
+
 ## 1) Safe schema migration (when `schema_v1.sql` changed)
 
 ```bash
