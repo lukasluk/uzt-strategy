@@ -591,7 +591,7 @@ async function buildViewPayload(query, snapshot, view, entityId, locale = 'lt', 
     proposalDrafts: createProposalDraftConfig({
       enabled: true,
       entityKind: '',
-      goal: 'Prepare up to 9 concrete mixed draft proposals across both guidelines and initiatives so the whole strategy becomes clearer, less duplicated, and more actionable.',
+      goal: 'Prepare as many concrete mixed draft proposals across both guidelines and initiatives as are genuinely needed so the whole strategy becomes clearer, less duplicated, and more actionable.',
       rules: [
         'You may return a mix of guideline and initiative drafts in the same analysis.',
         'You may use create, update, or delete drafts for either guidelines or initiatives.',
