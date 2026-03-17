@@ -9493,7 +9493,10 @@ function showClarityGremlinModal() {
           return;
         }
         const guidelineIds = resolveGremlinDraftGuidelineIds(draft, selected);
-        const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/initiatives`, {
+        const createInitiativeEndpoint = state.role === 'institution_admin'
+          ? `/api/v1/admin/cycles/${encodeURIComponent(cycleId)}/initiatives`
+          : `/api/v1/cycles/${encodeURIComponent(cycleId)}/initiatives`;
+        const payload = await api(createInitiativeEndpoint, {
           method: 'POST',
           body: {
             title: String(draft.title || '').trim(),

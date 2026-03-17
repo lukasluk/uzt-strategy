@@ -792,7 +792,8 @@ function buildSystemPrompt(locale) {
     '- improvements: 2 to 5 items.',
     '- nextActions: 2 to 4 items.',
     '- dataGaps: 0 to 4 items.',
-    '- proposalDrafts: 0 to 9 items.',
+    '- proposalDrafts: 0 or more items.',
+    '- When proposalDrafts are enabled, return as many concrete drafts as are genuinely needed to move the strategy toward 10/10 clarity. Do not stop at an arbitrary cap.',
     '- strengths should usually describe topic coverage, strategic direction quality, or content coherence, not platform mechanics.',
     '- Each recommendation must be concrete and tied to the whole strategy, while still reflecting the current focus page.',
     '- Only return proposalDrafts when page.proposalDrafts.enabled is true.',
@@ -898,36 +899,33 @@ function normalizeAnalysis(raw) {
     ),
     nextActions: truncateList(normalizeArray(value.nextActions).map((item) => cleanText(item, 220)).filter(Boolean), 4),
     dataGaps: truncateList(normalizeArray(value.dataGaps).map((item) => cleanText(item, 220)).filter(Boolean), 4),
-    proposalDrafts: truncateList(
-      normalizeArray(value.proposalDrafts)
-        .map((item) => {
-          const entityKind = String(item?.entityKind || '').trim().toLowerCase();
-          return {
-            entityKind: entityKind === 'initiative' ? 'initiative' : entityKind === 'guideline' ? 'guideline' : '',
-            draftMode: (() => {
-              const draftMode = String(item?.draftMode || '').trim().toLowerCase();
-              return draftMode === 'update' || draftMode === 'delete' ? draftMode : 'create';
-            })(),
-            targetTitle: cleanText(item?.targetTitle, 160) || null,
-            title: cleanText(item?.title, 160),
-            description: cleanText(item?.description, 1200),
-            rationale: cleanText(item?.rationale, 260),
-            relationType: (() => {
-              const relationType = String(item?.relationType || '').trim().toLowerCase();
-              return relationType === 'parent' || relationType === 'child' || relationType === 'orphan'
-                ? relationType
-                : null;
-            })(),
-            parentGuidelineTitle: cleanText(item?.parentGuidelineTitle, 160) || null,
-            guidelineTitles: truncateList(
-              normalizeArray(item?.guidelineTitles).map((title) => cleanText(title, 160)).filter(Boolean),
-              6
-            )
-          };
-        })
-        .filter((item) => item.entityKind && item.title && item.description && ((item.draftMode !== 'update' && item.draftMode !== 'delete') || item.targetTitle)),
-      9
-    )
+    proposalDrafts: normalizeArray(value.proposalDrafts)
+      .map((item) => {
+        const entityKind = String(item?.entityKind || '').trim().toLowerCase();
+        return {
+          entityKind: entityKind === 'initiative' ? 'initiative' : entityKind === 'guideline' ? 'guideline' : '',
+          draftMode: (() => {
+            const draftMode = String(item?.draftMode || '').trim().toLowerCase();
+            return draftMode === 'update' || draftMode === 'delete' ? draftMode : 'create';
+          })(),
+          targetTitle: cleanText(item?.targetTitle, 160) || null,
+          title: cleanText(item?.title, 160),
+          description: cleanText(item?.description, 1200),
+          rationale: cleanText(item?.rationale, 260),
+          relationType: (() => {
+            const relationType = String(item?.relationType || '').trim().toLowerCase();
+            return relationType === 'parent' || relationType === 'child' || relationType === 'orphan'
+              ? relationType
+              : null;
+          })(),
+          parentGuidelineTitle: cleanText(item?.parentGuidelineTitle, 160) || null,
+          guidelineTitles: truncateList(
+            normalizeArray(item?.guidelineTitles).map((title) => cleanText(title, 160)).filter(Boolean),
+            6
+          )
+        };
+      })
+      .filter((item) => item.entityKind && item.title && item.description && ((item.draftMode !== 'update' && item.draftMode !== 'delete') || item.targetTitle))
   };
 }
 
@@ -1057,5 +1055,6 @@ function getClarityGremlinConfig({ provider, modelOverride } = {}) {
 module.exports = {
   SUPPORTED_VIEWS,
   getClarityGremlinConfig,
-  analyzeStrategyPage
+  analyzeStrategyPage,
+  normalizeAnalysis
 };

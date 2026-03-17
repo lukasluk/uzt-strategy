@@ -31,6 +31,7 @@ function registerAdminRoutes({
   inviteTtlHours,
   requireAuth,
   verifyCycleAccess,
+  isCycleWritable,
   normalizeLineSide,
   loadGuidelineContext,
   loadCommentContext,
@@ -58,6 +59,7 @@ function registerAdminRoutes({
   hasGuidelineChildren,
   updateGuidelineRecord,
   updateInitiativeRecord,
+  createInitiativeWithGuidelines,
   replaceInitiativeGuidelineLinks,
   deleteInitiativeByCycle,
   resetChildrenToOrphan,
@@ -1912,6 +1914,47 @@ function registerAdminRoutes({
         comments: commentsByInitiative[row.id] || []
       }))
     });
+  });
+
+  app.post('/api/v1/admin/cycles/:cycleId/initiatives', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    const title = String(req.body?.title || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const guidelineIdsRaw = req.body?.guidelineIds;
+    if (!cycleId || !title) return res.status(400).json({ error: 'cycleId and title required' });
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
+    if (!isCycleWritable(cycle.state)) return res.status(409).json({ error: 'cycle not writable' });
+
+    let guidelineIds = [];
+    try {
+      guidelineIds = await validateInitiativeGuidelineAssignments({
+        cycleId,
+        guidelineIds: guidelineIdsRaw
+      });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid guideline assignment') });
+    }
+
+    let initiativeId = '';
+    try {
+      initiativeId = await createInitiativeWithGuidelines({
+        cycleId,
+        title,
+        description,
+        guidelineIds,
+        createdBy: req.auth.sub,
+        uuid
+      });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid initiative') });
+    }
+
+    broadcast({ type: 'v1.initiative.created', institutionId: req.auth.institutionId, cycleId, initiativeId });
+    return res.status(201).json({ initiativeId, status: 'active' });
   });
 
 
