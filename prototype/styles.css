@@ -5572,9 +5572,9 @@ select:focus {
   gap: 10px;
   margin-top: 10px;
   padding: 12px 14px;
-  border: 1px solid #d8e7f8;
+  border: 1px solid var(--initiative-border);
   border-radius: 14px;
-  background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+  background: linear-gradient(180deg, #fffdf8 0%, var(--initiative-surface) 100%);
 }
 .guideline-initiative-peek-head {
   display: flex;
@@ -5584,9 +5584,9 @@ select:focus {
   flex-wrap: wrap;
 }
 .tag.tag-initiative-peek {
-  background: #e8f2ff;
-  border: 1px solid #cddff6;
-  color: #2a568f;
+  background: #f5e7cf;
+  border: 1px solid #e4c8a4;
+  color: #5a4425;
   font-weight: 700;
 }
 .guideline-initiative-peek-list {
@@ -5596,10 +5596,10 @@ select:focus {
 }
 .guideline-initiative-peek-chip {
   appearance: none;
-  border: 1px solid #cfddf4;
+  border: 1px solid #e3c9a4;
   border-radius: 999px;
   background: #ffffff;
-  color: #28517f;
+  color: #6f5128;
   padding: 7px 12px;
   font: inherit;
   font-size: 12px;
@@ -5609,17 +5609,18 @@ select:focus {
   transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 .guideline-initiative-peek-chip:hover {
-  border-color: #a9c3e8;
-  background: #fdfefe;
-  box-shadow: 0 6px 12px rgba(37, 81, 127, 0.08);
+  border-color: #d6b482;
+  background: #fff8ee;
+  box-shadow: 0 6px 12px rgba(160, 104, 29, 0.12);
   transform: translateY(-1px);
 }
 .guideline-initiative-peek-chip:focus-visible {
-  outline: 2px solid rgba(63, 143, 230, 0.35);
+  outline: 2px solid rgba(200, 133, 39, 0.35);
   outline-offset: 1px;
 }
 .guideline-initiative-peek-empty {
   margin: 0;
+  color: #7a6240;
 }
 .card-pending {
   border-style: dashed;
