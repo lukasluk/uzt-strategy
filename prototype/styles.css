@@ -8824,6 +8824,91 @@ body.meta-admin-page .stage {
   gap: 18px;
 }
 
+.meta-institutions-workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.meta-institutions-sidebar {
+  border: 1px solid #cadef6;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f5faff 100%);
+  padding: 10px;
+  position: sticky;
+  top: 18px;
+}
+
+.meta-institution-directory-list {
+  display: grid;
+  gap: 8px;
+}
+
+.meta-institution-row {
+  width: 100%;
+  border: 1px solid #d6e4f6;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #23456f;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.meta-institution-row:hover {
+  border-color: #afc9ec;
+  background: #fbfdff;
+  box-shadow: 0 8px 18px rgba(35, 82, 147, 0.08);
+  transform: translateY(-1px);
+}
+
+.meta-institution-row.active {
+  border-color: #2d76c9;
+  background: linear-gradient(180deg, #eef5ff 0%, #e2eeff 100%);
+  box-shadow: 0 10px 20px rgba(37, 89, 157, 0.12);
+}
+
+.meta-institution-row-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.meta-institution-row-main strong {
+  color: #203f68;
+  line-height: 1.25;
+}
+
+.meta-institution-row-sub {
+  color: #6681a4;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.meta-institution-row-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.meta-institution-row-tags .tag {
+  margin-right: 0;
+}
+
+.meta-institution-detail-shell {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
 .meta-institution-card {
   width: 100%;
   padding: 20px 22px;
@@ -9477,11 +9562,14 @@ body.meta-admin-page .tag-slug {
     padding: 12px;
   }
 
+  .meta-institutions-workspace,
   .meta-users-layout {
     grid-template-columns: 1fr;
   }
 
+  .meta-institutions-sidebar,
   .meta-users-directory {
+    position: static;
     max-height: none;
   }
 

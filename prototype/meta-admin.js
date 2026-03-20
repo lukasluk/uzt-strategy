@@ -8,6 +8,7 @@ const state = {
   notice: '',
   overview: null,
   metaTab: 'monitoring',
+  selectedMetaInstitutionId: '',
   selectedMetaUserId: '',
   membershipAddTargetUserId: '',
   lastInvite: null,
@@ -388,6 +389,29 @@ function resolveSelectedMetaUser(users) {
   return users[0];
 }
 
+function resolveSelectedMetaInstitution(institutions) {
+  const list = Array.isArray(institutions) ? institutions : [];
+  if (!list.length) {
+    state.selectedMetaInstitutionId = '';
+    return null;
+  }
+  const selected = list.find((institution) => institution.id === state.selectedMetaInstitutionId);
+  if (selected) return selected;
+  state.selectedMetaInstitutionId = list[0].id;
+  return list[0];
+}
+
+function getUsersForInstitution(users, institutionId) {
+  const targetInstitutionId = String(institutionId || '').trim();
+  if (!targetInstitutionId) return [];
+  return (Array.isArray(users) ? users : [])
+    .filter((user) => {
+      const memberships = Array.isArray(user?.memberships) ? user.memberships : [];
+      return memberships.some((membership) => String(membership?.institutionId || '').trim() === targetInstitutionId);
+    })
+    .sort((left, right) => userDisplayName(left).localeCompare(userDisplayName(right), 'lt'));
+}
+
 function buildUsersByInstitution(users) {
   const groupsByInstitution = new Map();
   const unassigned = [];
@@ -466,6 +490,237 @@ function renderUsersDirectory(groups, selectedUserId) {
       </ul>
     </section>
   `).join('');
+}
+
+function renderInstitutionDirectory(institutions, selectedInstitutionId) {
+  const list = Array.isArray(institutions) ? institutions : [];
+  if (!list.length) {
+    return '<div class="card meta-admin-subcard"><p class="prompt">Instituciju dar nera.</p></div>';
+  }
+
+  return `
+    <div class="meta-institution-directory-list">
+      ${list.map((institution) => {
+        const isActive = String(selectedInstitutionId || '').trim() === String(institution?.id || '').trim();
+        const strategies = Array.isArray(institution?.strategies) ? institution.strategies : [];
+        return `
+          <button
+            type="button"
+            class="meta-institution-row${isActive ? ' active' : ''}"
+            data-action="select-institution"
+            data-institution-id="${escapeHtml(institution.id)}"
+          >
+            <span class="meta-institution-row-main">
+              <strong>${escapeHtml(institution.name || institution.id)}</strong>
+              <span class="meta-institution-row-sub">${escapeHtml(institution.slug || '-')}</span>
+            </span>
+            <span class="meta-institution-row-tags">
+              ${renderTag(`${strategies.length} strategijos`, 'count')}
+            </span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderInstitutionDetailCard(institution) {
+  if (!institution) {
+    return `
+      <article class="card meta-admin-subcard meta-institution-card">
+        <strong>Pasirinkite institucija</strong>
+        <p class="prompt">Kaireje pasirinkite institucija, kad matytumete jos strategijas, nustatymus ir vartotojus.</p>
+      </article>
+    `;
+  }
+
+  const strategies = Array.isArray(institution?.strategies) ? institution.strategies : [];
+  const selectedDeleteIds = getSelectedStrategyIdsForInstitution(institution.id);
+  const selectedDeleteCount = selectedDeleteIds.length;
+  const gremlinExtraScans = Math.max(0, Number(institution?.clarityGremlinExtraScans || 0));
+  const gremlinTotalLimit = 10 + gremlinExtraScans;
+  const gremlinUsed = strategies.reduce((sum, strategy) => sum + Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0)), 0);
+  const gremlinInstitutionLimit = gremlinTotalLimit * Math.max(0, strategies.length);
+  const gremlinRemaining = Math.max(0, gremlinInstitutionLimit - gremlinUsed);
+  const aiProvider = String(institution?.aiProvider || 'openai').trim().toLowerCase() === 'mistral' ? 'mistral' : 'openai';
+  const aiOpenaiModel = String(institution?.aiOpenaiModel || '').trim();
+  const aiMistralModel = String(institution?.aiMistralModel || '').trim();
+
+  return `
+    <article class="card meta-admin-subcard meta-institution-card">
+      <div class="header-row meta-institution-header">
+        <strong class="meta-institution-title">${escapeHtml(institution.name)}</strong>
+        <div class="meta-institution-tags">
+          ${renderTag(institution.slug, 'slug')}
+          ${renderTag(aiProvider === 'mistral' ? 'Mistral' : 'OpenAI', 'scope')}
+          ${renderTag(`Limitas / strategijai: ${gremlinTotalLimit}`, 'count')}
+        </div>
+      </div>
+      <div class="meta-institution-gremlin-summary">
+        <div class="meta-institution-stat">
+          <span class="meta-institution-stat-label">Panaudota</span>
+          <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinUsed))}</strong>
+        </div>
+        <div class="meta-institution-stat">
+          <span class="meta-institution-stat-label">Liko</span>
+          <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinRemaining))}</strong>
+        </div>
+        <div class="meta-institution-stat">
+          <span class="meta-institution-stat-label">Viso kvotos</span>
+          <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinInstitutionLimit))}</strong>
+        </div>
+        <div class="meta-institution-stat">
+          <span class="meta-institution-stat-label">Papildomai skirta</span>
+          <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinExtraScans))}</strong>
+        </div>
+      </div>
+      <form class="institution-rename-form inline-form meta-institution-form" data-institution-id="${escapeHtml(institution.id)}">
+        <label class="meta-institution-main-field">
+          <span>Institucijos pavadinimas</span>
+          <input
+            type="text"
+            name="name"
+            value="${escapeHtml(institution.name)}"
+            placeholder="Naujas institucijos pavadinimas"
+            required
+            ${state.busy ? 'disabled' : ''}
+          />
+        </label>
+        <label class="meta-institution-quota-field">
+          <span>Papildomi Gremlin scanai</span>
+          <input
+            type="number"
+            name="clarityGremlinExtraScans"
+            min="0"
+            step="1"
+            value="${escapeHtml(String(gremlinExtraScans))}"
+            ${state.busy ? 'disabled' : ''}
+          />
+        </label>
+        <label class="meta-institution-model-field">
+          <span>OpenAI modelis</span>
+          <select name="aiOpenaiModel" ${state.busy ? 'disabled' : ''}>
+            ${renderModelOptions(META_ADMIN_OPENAI_MODELS, aiOpenaiModel, 'Default (gpt-5-mini)')}
+          </select>
+        </label>
+        <label class="meta-institution-model-field">
+          <span>Mistral modelis</span>
+          <select name="aiMistralModel" ${state.busy ? 'disabled' : ''}>
+            ${renderModelOptions(META_ADMIN_MISTRAL_MODELS, aiMistralModel, 'Default (mistral-small-latest)')}
+          </select>
+        </label>
+        <button type="submit" class="btn btn-ghost meta-institution-save-btn" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+      </form>
+      <p class="prompt meta-institution-quota-note">
+        Bazinis limitas vienai strategijai: 10. Su papildoma kvota kiekviena strategija sioje institucijoje gali tureti iki ${escapeHtml(String(gremlinTotalLimit))} analizu.
+      </p>
+      <p class="prompt meta-institution-ai-note">
+        Aktyvus tiekejas: <strong>${escapeHtml(aiProvider === 'mistral' ? 'Mistral' : 'OpenAI')}</strong>.
+        OpenAI: <strong>${escapeHtml(aiOpenaiModel || 'gpt-5-mini')}</strong>.
+        Mistral: <strong>${escapeHtml(aiMistralModel || 'mistral-small-latest')}</strong>.
+      </p>
+      <div class="card-section meta-institution-strategies-section">
+        <div class="header-row meta-institution-section-head">
+          <strong>Strategijos</strong>
+          ${renderTag(`${strategies.length} strategijos`, 'count')}
+        </div>
+        <ul class="mini-list meta-strategy-list">
+          ${strategies.length
+            ? strategies.map((strategy) => `
+              <li class="meta-strategy-item">
+                <div class="meta-strategy-row">
+                  <div class="meta-strategy-item-head">
+                    <strong class="meta-strategy-item-title">${escapeHtml(strategy.title || '-')}</strong>
+                    <div class="meta-strategy-item-tags">
+                      <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
+                      ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
+                      ${renderTag(`Gremlin: ${Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0))} / ${gremlinTotalLimit}`, 'count')}
+                    </div>
+                  </div>
+                  <form class="strategy-rename-form meta-strategy-rename-form" data-strategy-id="${escapeHtml(strategy.id)}">
+                    <div class="meta-strategy-rename-row">
+                      <input
+                        type="text"
+                        name="title"
+                        value="${escapeHtml(strategy.title)}"
+                        placeholder="Naujas strategijos pavadinimas"
+                        required
+                        ${state.busy ? 'disabled' : ''}
+                      />
+                      <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
+                    </div>
+                  </form>
+                  ${strategy.isDefault
+                    ? '<p class="prompt meta-strategy-delete-hint">Numatytoji strategija netrinama.</p>'
+                    : `
+                      <label class="meta-strategy-delete-toggle">
+                        <input
+                          type="checkbox"
+                          data-action="toggle-strategy-delete-selection"
+                          data-institution-id="${escapeHtml(institution.id)}"
+                          data-strategy-id="${escapeHtml(strategy.id)}"
+                          ${selectedDeleteIds.includes(String(strategy.id || '').trim()) ? 'checked' : ''}
+                          ${state.busy ? 'disabled' : ''}
+                        />
+                        <span>Pasirinkti trynimui</span>
+                      </label>
+                    `}
+                </div>
+              </li>
+            `).join('')
+            : '<li><span class="prompt">Strategiju nera.</span></li>'}
+        </ul>
+        <div class="meta-strategy-delete-actions">
+          <button
+            type="button"
+            class="btn btn-danger"
+            data-action="delete-selected-strategies"
+            data-institution-id="${escapeHtml(institution.id)}"
+            ${state.busy || selectedDeleteCount < 1 ? 'disabled' : ''}
+          >
+            Istrinti pasirinktas (${selectedDeleteCount})
+          </button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderInstitutionUsersCard(selectedInstitution, users, institutions) {
+  if (!selectedInstitution) return '';
+  const institutionUsers = getUsersForInstitution(users, selectedInstitution.id);
+  const selectedUser = resolveSelectedMetaUser(institutionUsers);
+  const groupedUsers = institutionUsers.length
+    ? [{
+      key: String(selectedInstitution.id || '').trim() || 'institution',
+      institutionName: String(selectedInstitution.name || 'Institucija').trim() || 'Institucija',
+      institutionSlug: String(selectedInstitution.slug || '').trim(),
+      entries: institutionUsers
+        .map((user) => {
+          const memberships = Array.isArray(user?.memberships) ? user.memberships : [];
+          const membership = memberships.find((item) => String(item?.institutionId || '').trim() === String(selectedInstitution.id || '').trim()) || null;
+          return { user, membership };
+        })
+        .filter((entry) => entry.membership)
+    }]
+    : [];
+  return `
+    <section class="card meta-admin-subcard meta-user-management-card">
+      <div class="header-row">
+        <strong>Vartotojai</strong>
+        ${renderTag(String(institutionUsers.length), 'count')}
+      </div>
+      <p class="prompt">Pasirinktos institucijos vartotojai ir ju narystes.</p>
+      <div class="meta-users-layout">
+        <aside class="meta-users-directory">
+          ${renderUsersDirectory(groupedUsers, selectedUser?.id || '')}
+        </aside>
+        <div class="meta-user-detail-shell">
+          ${renderUserDetail(selectedUser, institutions)}
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderUserDetail(user, institutions = []) {
@@ -1024,8 +1279,8 @@ function renderTopTabs() {
     { id: 'links', label: 'Strategiju rysiai' },
     { id: 'content', label: 'Viesas turinys' },
     { id: 'institutions', label: 'Institucijos' },
-    { id: 'invites', label: 'Kvietimai' },
-    { id: 'users', label: 'Vartotojai' }
+    { id: 'aiTools', label: 'AI ir klasifikacija' },
+    { id: 'invites', label: 'Kvietimai' }
   ];
 
   return `
@@ -1047,7 +1302,7 @@ function renderTopTabs() {
 }
 
 function applyMetaTabVisibility() {
-  const allowedTabs = ['monitoring', 'accessRequests', 'links', 'content', 'institutions', 'invites', 'users'];
+  const allowedTabs = ['monitoring', 'accessRequests', 'links', 'content', 'institutions', 'aiTools', 'invites'];
   const activeTab = allowedTabs.includes(state.metaTab) ? state.metaTab : 'monitoring';
   state.metaTab = activeTab;
 
@@ -1141,7 +1396,7 @@ function renderStrategyClassificationCard(strategyClassification) {
   const lastRunResult = state.lastStrategyClassificationRunResult || null;
 
   return `
-    <section class="card meta-admin-card" data-meta-section="institutions">
+    <section class="card meta-admin-card" data-meta-section="aiTools">
       <div class="header-row">
         <strong>Strategy classification</strong>
         ${renderTag(`${Number(summary.totalClassified || 0)} classified`, 'count')}
@@ -1188,8 +1443,7 @@ function renderDashboard() {
   const institutions = state.overview?.institutions || [];
   syncStrategyDeleteSelection(institutions);
   const users = state.overview?.users || [];
-  const selectedUser = resolveSelectedMetaUser(users);
-  const groupedUsers = buildUsersByInstitution(users);
+  const selectedInstitution = resolveSelectedMetaInstitution(institutions);
   const pendingInvites = state.overview?.pendingInvites || [];
   const accessRequests = state.overview?.accessRequests || [];
   const pendingAccessRequests = accessRequests.filter((item) => String(item?.status || '').trim() === 'pending');
@@ -1238,7 +1492,7 @@ function renderDashboard() {
         </form>
       </section>
 
-      <section class="card meta-admin-card" data-meta-section="institutions">
+      <section class="card meta-admin-card" data-meta-section="aiTools">
         <div class="header-row">
           <strong>AI strategija is PDF</strong>
           ${renderTag('Atsargiai: kuria nauja strategija', 'scope')}
@@ -1291,163 +1545,17 @@ function renderDashboard() {
 
       <section class="card meta-admin-card" data-meta-section="institutions">
         <div class="header-row">
-          <strong>Esamos institucijos</strong>
+          <strong>Instituciju valdymas</strong>
           ${renderTag(String(institutions.length), 'count')}
         </div>
-        <div class="card-list meta-institutions-list">
-          ${institutions.length
-            ? institutions.map((institution) => {
-              const strategies = Array.isArray(institution?.strategies) ? institution.strategies : [];
-              const selectedDeleteIds = getSelectedStrategyIdsForInstitution(institution.id);
-              const selectedDeleteCount = selectedDeleteIds.length;
-              const gremlinExtraScans = Math.max(0, Number(institution?.clarityGremlinExtraScans || 0));
-              const gremlinTotalLimit = 10 + gremlinExtraScans;
-              const gremlinUsed = strategies.reduce((sum, strategy) => sum + Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0)), 0);
-              const gremlinInstitutionLimit = gremlinTotalLimit * Math.max(0, strategies.length);
-              const gremlinRemaining = Math.max(0, gremlinInstitutionLimit - gremlinUsed);
-              const aiProvider = String(institution?.aiProvider || 'openai').trim().toLowerCase() === 'mistral' ? 'mistral' : 'openai';
-              const aiOpenaiModel = String(institution?.aiOpenaiModel || '').trim();
-              const aiMistralModel = String(institution?.aiMistralModel || '').trim();
-              return `
-                <article class="card meta-admin-subcard meta-institution-card">
-                  <div class="header-row meta-institution-header">
-                    <strong class="meta-institution-title">${escapeHtml(institution.name)}</strong>
-                    <div class="meta-institution-tags">
-                      ${renderTag(institution.slug, 'slug')}
-                      ${renderTag(aiProvider === 'mistral' ? 'Mistral' : 'OpenAI', 'scope')}
-                      ${renderTag(`Limitas / strategijai: ${gremlinTotalLimit}`, 'count')}
-                    </div>
-                  </div>
-                  <div class="meta-institution-gremlin-summary">
-                    <div class="meta-institution-stat">
-                      <span class="meta-institution-stat-label">Panaudota</span>
-                      <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinUsed))}</strong>
-                    </div>
-                    <div class="meta-institution-stat">
-                      <span class="meta-institution-stat-label">Liko</span>
-                      <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinRemaining))}</strong>
-                    </div>
-                    <div class="meta-institution-stat">
-                      <span class="meta-institution-stat-label">Viso kvotos</span>
-                      <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinInstitutionLimit))}</strong>
-                    </div>
-                    <div class="meta-institution-stat">
-                      <span class="meta-institution-stat-label">Papildomai skirta</span>
-                      <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinExtraScans))}</strong>
-                    </div>
-                  </div>
-                  <form class="institution-rename-form inline-form meta-institution-form" data-institution-id="${escapeHtml(institution.id)}">
-                    <label class="meta-institution-main-field">
-                      <span>Institucijos pavadinimas</span>
-                      <input
-                        type="text"
-                        name="name"
-                        value="${escapeHtml(institution.name)}"
-                        placeholder="Naujas institucijos pavadinimas"
-                        required
-                        ${state.busy ? 'disabled' : ''}
-                      />
-                    </label>
-                    <label class="meta-institution-quota-field">
-                      <span>Papildomi Gremlin scanai</span>
-                      <input
-                        type="number"
-                        name="clarityGremlinExtraScans"
-                        min="0"
-                        step="1"
-                        value="${escapeHtml(String(gremlinExtraScans))}"
-                        ${state.busy ? 'disabled' : ''}
-                      />
-                    </label>
-                    <label class="meta-institution-model-field">
-                      <span>OpenAI modelis</span>
-                      <select name="aiOpenaiModel" ${state.busy ? 'disabled' : ''}>
-                        ${renderModelOptions(META_ADMIN_OPENAI_MODELS, aiOpenaiModel, 'Default (gpt-5-mini)')}
-                      </select>
-                    </label>
-                    <label class="meta-institution-model-field">
-                      <span>Mistral modelis</span>
-                      <select name="aiMistralModel" ${state.busy ? 'disabled' : ''}>
-                        ${renderModelOptions(META_ADMIN_MISTRAL_MODELS, aiMistralModel, 'Default (mistral-small-latest)')}
-                      </select>
-                    </label>
-                    <button type="submit" class="btn btn-ghost meta-institution-save-btn" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
-                  </form>
-                  <p class="prompt meta-institution-quota-note">
-                    Bazinis limitas vienai strategijai: 10. Su papildoma kvota kiekviena strategija sioje institucijoje gali tureti iki ${escapeHtml(String(gremlinTotalLimit))} analizu.
-                  </p>
-                  <p class="prompt meta-institution-ai-note">
-                    Aktyvus tiekejas: <strong>${escapeHtml(aiProvider === 'mistral' ? 'Mistral' : 'OpenAI')}</strong>.
-                    OpenAI: <strong>${escapeHtml(aiOpenaiModel || 'gpt-5-mini')}</strong>.
-                    Mistral: <strong>${escapeHtml(aiMistralModel || 'mistral-small-latest')}</strong>.
-                  </p>
-                  <div class="card-section meta-institution-strategies-section">
-                    <div class="header-row meta-institution-section-head">
-                      <strong>Strategijos</strong>
-                      ${renderTag(`${strategies.length} strategijos`, 'count')}
-                    </div>
-                    <ul class="mini-list meta-strategy-list">
-                      ${strategies.length
-                        ? strategies.map((strategy) => `
-                          <li class="meta-strategy-item">
-                            <div class="meta-strategy-row">
-                              <div class="meta-strategy-item-head">
-                                <strong class="meta-strategy-item-title">${escapeHtml(strategy.title || '-')}</strong>
-                                <div class="meta-strategy-item-tags">
-                                  <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
-                                  ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
-                                  ${renderTag(`Gremlin: ${Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0))} / ${gremlinTotalLimit}`, 'count')}
-                                </div>
-                              </div>
-                              <form class="strategy-rename-form meta-strategy-rename-form" data-strategy-id="${escapeHtml(strategy.id)}">
-                                <div class="meta-strategy-rename-row">
-                                  <input
-                                    type="text"
-                                    name="title"
-                                    value="${escapeHtml(strategy.title)}"
-                                    placeholder="Naujas strategijos pavadinimas"
-                                    required
-                                    ${state.busy ? 'disabled' : ''}
-                                  />
-                                  <button type="submit" class="btn btn-ghost" ${state.busy ? 'disabled' : ''}>Issaugoti</button>
-                                </div>
-                              </form>
-                              ${strategy.isDefault
-                                ? '<p class="prompt meta-strategy-delete-hint">Numatytoji strategija netrinama.</p>'
-                                : `
-                                  <label class="meta-strategy-delete-toggle">
-                                    <input
-                                      type="checkbox"
-                                      data-action="toggle-strategy-delete-selection"
-                                      data-institution-id="${escapeHtml(institution.id)}"
-                                      data-strategy-id="${escapeHtml(strategy.id)}"
-                                      ${selectedDeleteIds.includes(String(strategy.id || '').trim()) ? 'checked' : ''}
-                                      ${state.busy ? 'disabled' : ''}
-                                    />
-                                    <span>Pasirinkti trynimui</span>
-                                  </label>
-                                `}
-                            </div>
-                          </li>
-                        `).join('')
-                        : '<li><span class="prompt">Strategiju nera.</span></li>'}
-                    </ul>
-                    <div class="meta-strategy-delete-actions">
-                      <button
-                        type="button"
-                        class="btn btn-danger"
-                        data-action="delete-selected-strategies"
-                        data-institution-id="${escapeHtml(institution.id)}"
-                        ${state.busy || selectedDeleteCount < 1 ? 'disabled' : ''}
-                      >
-                        Istrinti pasirinktas (${selectedDeleteCount})
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              `;
-            }).join('')
-            : '<article class="card meta-admin-subcard"><p class="prompt">Instituciju dar nera.</p></article>'}
+        <div class="meta-institutions-workspace">
+          <aside class="meta-institutions-sidebar">
+            ${renderInstitutionDirectory(institutions, selectedInstitution?.id || '')}
+          </aside>
+          <div class="meta-institution-detail-shell">
+            ${renderInstitutionDetailCard(selectedInstitution)}
+            ${renderInstitutionUsersCard(selectedInstitution, users, institutions)}
+          </div>
         </div>
       </section>
 
@@ -1503,20 +1611,6 @@ function renderDashboard() {
         </ul>
       </section>
 
-      <section class="card meta-admin-card meta-users-shell" data-meta-section="users">
-        <div class="header-row">
-          <strong>Visi vartotojai</strong>
-          ${renderTag(String(users.length), 'count')}
-        </div>
-        <div class="meta-users-layout">
-          <aside class="meta-users-directory">
-            ${renderUsersDirectory(groupedUsers, selectedUser?.id || '')}
-          </aside>
-          <div class="meta-user-detail-shell">
-            ${renderUserDetail(selectedUser, institutions)}
-          </div>
-        </div>
-      </section>
     </div>
   `;
 
@@ -1563,6 +1657,7 @@ function bindDashboardEvents() {
       }
       state.authenticated = false;
       state.overview = null;
+      state.selectedMetaInstitutionId = '';
       state.selectedMetaUserId = '';
       state.membershipAddTargetUserId = '';
       state.error = '';
@@ -1895,6 +1990,19 @@ function bindDashboardEvents() {
     root.addEventListener('click', async (event) => {
       const target = event.target instanceof Element ? event.target : null;
       if (!target) return;
+      const selectInstitutionButton = target.closest('[data-action="select-institution"]');
+      if (selectInstitutionButton instanceof HTMLElement) {
+        const nextInstitutionId = String(selectInstitutionButton.dataset.institutionId || '').trim();
+        if (nextInstitutionId && nextInstitutionId !== state.selectedMetaInstitutionId) {
+          state.selectedMetaInstitutionId = nextInstitutionId;
+          state.selectedMetaUserId = '';
+          state.membershipAddTargetUserId = '';
+          render();
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       const selectUserButton = target.closest('[data-action="select-user"]');
       if (selectUserButton instanceof HTMLElement) {
         const nextUserId = String(selectUserButton.dataset.userId || '').trim();
