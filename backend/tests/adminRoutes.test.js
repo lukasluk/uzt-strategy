@@ -141,7 +141,9 @@ async function readJson(response) {
 
 function buildApp({
   auth = { institutionId: 'inst-1', sub: 'user-1', role: 'institution_admin' },
+  createGuideline = async () => 'guideline-1',
   createInitiativeWithGuidelines = async () => 'initiative-1',
+  validateGuidelineRelationship = async ({ parentGuidelineId }) => parentGuidelineId || null,
   validateInitiativeGuidelineAssignments = async ({ guidelineIds }) => guidelineIds,
   verifyCycleAccess = async () => ({ ok: true, status: 200, cycle: { strategy_id: 'strategy-1', state: 'open' } })
 } = {}) {
@@ -219,7 +221,7 @@ function buildApp({
     loadCommentContext: async () => null,
     loadInitiativeContext: async () => null,
     loadInitiativeCommentContext: async () => null,
-    validateGuidelineRelationship: async () => null,
+    validateGuidelineRelationship,
     validateInitiativeGuidelineAssignments,
     listCyclePendingProposals: async () => [],
     reviewPendingProposal: async () => ({}),
@@ -241,6 +243,7 @@ function buildApp({
     hasGuidelineChildren: async () => false,
     updateGuidelineRecord: async () => {},
     updateInitiativeRecord: async () => {},
+    createGuideline,
     createInitiativeWithGuidelines,
     replaceInitiativeGuidelineLinks: async () => {},
     deleteInitiativeByCycle: async () => {},
@@ -308,6 +311,77 @@ test('POST /api/v1/admin/cycles/:cycleId/initiatives rejects non-admin users', a
       body: JSON.stringify({
         title: 'Immediate initiative',
         guidelineIds: ['guideline-1']
+      })
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 403);
+    assert.equal(payload.error, 'admin role required');
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('POST /api/v1/admin/cycles/:cycleId/guidelines creates an active guideline for admins', async () => {
+  const createCalls = [];
+  const relationCalls = [];
+  const fixture = buildApp({
+    createGuideline: async (payload) => {
+      createCalls.push(payload);
+      return 'guideline-123';
+    },
+    validateGuidelineRelationship: async (payload) => {
+      relationCalls.push(payload);
+      return payload.parentGuidelineId || null;
+    }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/admin/cycles/cycle-1/guidelines`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Immediate guideline',
+        description: 'Create directly from gremlin',
+        relationType: 'child',
+        parentGuidelineId: 'guideline-parent-1'
+      })
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 201);
+    assert.equal(payload.guidelineId, 'guideline-123');
+    assert.equal(payload.status, 'active');
+    assert.deepEqual(relationCalls[0], {
+      cycleId: 'cycle-1',
+      relationType: 'child',
+      parentGuidelineId: 'guideline-parent-1'
+    });
+    assert.equal(createCalls[0]?.cycleId, 'cycle-1');
+    assert.equal(createCalls[0]?.title, 'Immediate guideline');
+    assert.equal(createCalls[0]?.description, 'Create directly from gremlin');
+    assert.equal(createCalls[0]?.relationType, 'child');
+    assert.equal(createCalls[0]?.parentGuidelineId, 'guideline-parent-1');
+    assert.equal(createCalls[0]?.lineSide, 'auto');
+    assert.equal(createCalls[0]?.createdBy, 'user-1');
+    assert.equal(typeof createCalls[0]?.uuid, 'function');
+    assert.equal(fixture.broadcasts[0]?.type, 'v1.guideline.created');
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('POST /api/v1/admin/cycles/:cycleId/guidelines rejects non-admin users', async () => {
+  const fixture = buildApp({
+    auth: { institutionId: 'inst-1', sub: 'user-1', role: 'member' }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/admin/cycles/cycle-1/guidelines`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Immediate guideline'
       })
     });
     const payload = await readJson(response);

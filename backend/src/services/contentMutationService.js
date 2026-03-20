@@ -1,10 +1,38 @@
 function createContentMutationService({ query }) {
-  async function createGuideline({ cycleId, title, description, createdBy, uuid }) {
+  async function createGuideline({
+    cycleId,
+    title,
+    description,
+    relationType = 'orphan',
+    parentGuidelineId = null,
+    lineSide = 'auto',
+    createdBy,
+    uuid
+  }) {
     const guidelineId = uuid();
     await query(
-      `insert into strategy_guidelines (id, cycle_id, title, description, status, created_by)
-       values ($1, $2, $3, $4, 'active', $5)`,
-      [guidelineId, cycleId, title, description || null, createdBy]
+      `insert into strategy_guidelines (
+         id,
+         cycle_id,
+         title,
+         description,
+         status,
+         relation_type,
+         parent_guideline_id,
+         line_side,
+         created_by
+       )
+       values ($1, $2, $3, $4, 'active', $5, $6, $7, $8)`,
+      [
+        guidelineId,
+        cycleId,
+        title,
+        description || null,
+        relationType,
+        parentGuidelineId || null,
+        lineSide || 'auto',
+        createdBy
+      ]
     );
     return guidelineId;
   }

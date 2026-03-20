@@ -146,23 +146,39 @@ function buildFixture({
   limitReached = false
 } = {}) {
   const teardown = [];
+  const configCalls = [];
   teardown.push(mockModule('../src/services/clarityGremlinService', {
     analyzeStrategyPage: analyzeStrategyPage || (async () => {
       throw new Error('analysis pipeline exploded');
     }),
-    getClarityGremlinConfig: () => ({
-      provider: 'openai',
-      model: 'test-model',
-      timeoutMs: 1000
-    })
+    getClarityGremlinConfig: (options = {}) => {
+      configCalls.push(options);
+      return {
+        provider: options.provider || 'openai',
+        model: options.modelOverride || 'test-model',
+        timeoutMs: 1000
+      };
+    }
   }));
   teardown.push(mockModule('../src/services/aiProviderService', {
+    normalizeAiProvider: (value) => String(value || '').trim().toLowerCase() === 'mistral' ? 'mistral' : 'openai',
+    isProviderCompatibleModel: (provider, model) => {
+      const modelText = String(model || '').trim();
+      if (!modelText) return false;
+      return String(provider || '').trim().toLowerCase() === 'mistral'
+        ? /mistral/i.test(modelText)
+        : !/mistral/i.test(modelText);
+    },
     resolveInstitutionAiSettings: async () => ({
       provider: 'openai',
       openaiModel: 'test-model',
-      mistralModel: ''
+      mistralModel: 'mistral-small-latest'
     }),
-    resolveInstitutionModelOverride: () => ''
+    resolveInstitutionModelOverride: (settings, provider) => (
+      String(provider || '').trim().toLowerCase() === 'mistral'
+        ? String(settings?.mistralModel || '').trim()
+        : String(settings?.openaiModel || '').trim()
+    )
   }));
 
   const modulePath = require.resolve('../src/clarityGremlinRoutes');
@@ -375,6 +391,7 @@ function buildFixture({
   return {
     app,
     calls,
+    configCalls,
     store,
     teardown: () => {
       delete require.cache[modulePath];
@@ -473,6 +490,56 @@ test('completed jobs remain pollable after process restart via persisted analysi
   } finally {
     await restartedServer.close();
     restartedFixture.teardown();
+  }
+});
+
+test('POST /api/v1/cycles/:cycleId/clarity-gremlin uses requested provider and model override', async () => {
+  const analyzeCalls = [];
+  const fixture = buildFixture({
+    analyzeStrategyPage: async (payload) => {
+      analyzeCalls.push(payload);
+      return {
+        page: {
+          view: 'guidelines',
+          entityKind: null,
+          entityId: null,
+          label: 'Guidelines',
+          contextLabel: 'Guidelines'
+        },
+        model: payload?.aiConfig?.model || null,
+        analysis: {
+          pageLabel: 'Guidelines',
+          summary: 'ok'
+        }
+      };
+    }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/cycles/cycle-1/clarity-gremlin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        view: 'guidelines',
+        locale: 'en',
+        provider: 'mistral',
+        model: 'mistral-medium-latest'
+      })
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.equal(payload.pending, true);
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.deepEqual(fixture.configCalls[0], {
+      provider: 'mistral',
+      modelOverride: 'mistral-medium-latest'
+    });
+    assert.equal(analyzeCalls[0]?.locale, 'en');
+    assert.equal(analyzeCalls[0]?.aiConfig?.provider, 'mistral');
+    assert.equal(analyzeCalls[0]?.aiConfig?.model, 'mistral-medium-latest');
+  } finally {
+    await server.close();
+    fixture.teardown();
   }
 });
 

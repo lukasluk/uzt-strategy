@@ -339,6 +339,7 @@ function registerV1Routes({ app, query, broadcast, uuid }) {
     hasGuidelineChildren,
     updateGuidelineRecord,
     updateInitiativeRecord,
+    createGuideline,
     createInitiativeWithGuidelines,
     replaceInitiativeGuidelineLinks,
     deleteInitiativeByCycle,

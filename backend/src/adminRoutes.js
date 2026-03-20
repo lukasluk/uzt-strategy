@@ -59,6 +59,7 @@ function registerAdminRoutes({
   hasGuidelineChildren,
   updateGuidelineRecord,
   updateInitiativeRecord,
+  createGuideline,
   createInitiativeWithGuidelines,
   replaceInitiativeGuidelineLinks,
   deleteInitiativeByCycle,
@@ -1955,6 +1956,51 @@ function registerAdminRoutes({
 
     broadcast({ type: 'v1.initiative.created', institutionId: req.auth.institutionId, cycleId, initiativeId });
     return res.status(201).json({ initiativeId, status: 'active' });
+  });
+
+  app.post('/api/v1/admin/cycles/:cycleId/guidelines', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    const title = String(req.body?.title || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const relationType = String(req.body?.relationType || 'orphan').trim().toLowerCase();
+    const parentGuidelineId = String(req.body?.parentGuidelineId || '').trim();
+    if (!cycleId || !title) return res.status(400).json({ error: 'cycleId and title required' });
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
+    if (!isCycleWritable(cycle.state)) return res.status(409).json({ error: 'cycle not writable' });
+
+    let validatedParentGuidelineId = null;
+    try {
+      validatedParentGuidelineId = await validateGuidelineRelationship({
+        cycleId,
+        relationType,
+        parentGuidelineId: parentGuidelineId || null
+      });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid guideline') });
+    }
+
+    let guidelineId = '';
+    try {
+      guidelineId = await createGuideline({
+        cycleId,
+        title,
+        description,
+        relationType,
+        parentGuidelineId: relationType === 'child' ? validatedParentGuidelineId : null,
+        lineSide: 'auto',
+        createdBy: req.auth.sub,
+        uuid
+      });
+    } catch (error) {
+      return res.status(400).json({ error: String(error?.message || 'invalid guideline') });
+    }
+
+    broadcast({ type: 'v1.guideline.created', institutionId: req.auth.institutionId, cycleId, guidelineId });
+    return res.status(201).json({ guidelineId, status: 'active' });
   });
 
 

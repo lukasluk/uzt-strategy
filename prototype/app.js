@@ -249,6 +249,7 @@ const state = {
   historySortOrder: 'desc',
   mapLayer: 'guidelines',
   mapGuidelinesShowInitiatives: false,
+  guidelinesShowInitiatives: false,
   implementationPlanLayer: resolveInitialImplementationPlanLayer(),
   implementationPlanSubview: resolveInitialImplementationPlanSubview(),
   mapStrategicLinksData: null,
@@ -4054,6 +4055,33 @@ function renderGuidelineCard(guideline, options) {
       </div>
     `
     : '';
+  const relatedInitiatives = options?.showAssociatedInitiatives
+    ? resolveGuidelineRelatedInitiatives(guideline).items
+    : [];
+  const relatedInitiativesMarkup = options?.showAssociatedInitiatives
+    ? `
+      <div class="guideline-initiative-peek">
+        <div class="guideline-initiative-peek-head">
+          <span class="tag tag-initiative-peek">${escapeHtml(langText('Susietos iniciatyvos', 'Linked initiatives'))}: ${relatedInitiatives.length}</span>
+        </div>
+        ${relatedInitiatives.length
+          ? `
+            <div class="guideline-initiative-peek-list">
+              ${relatedInitiatives.map((initiative) => `
+                <button
+                  type="button"
+                  class="guideline-initiative-peek-chip"
+                  data-action="open-guideline-linked-initiative"
+                  data-initiative-id="${escapeHtml(String(initiative?.id || '').trim())}"
+                >${escapeHtml(String(initiative?.title || initiative?.id || '').trim() || '-')}</button>
+              `).join('')}
+            </div>
+          `
+          : `<p class="prompt guideline-initiative-peek-empty">${escapeHtml(langText('Susietų iniciatyvų nerasta.', 'No linked initiatives found.'))}</p>`
+        }
+      </div>
+    `
+    : '';
   const guidelineUrl = guidelineShareUrl(guideline.id);
   const shareMarkup = renderCardShareRow({
     url: guidelineUrl,
@@ -4083,6 +4111,7 @@ function renderGuidelineCard(guideline, options) {
         <p>${escapeHtml(guideline.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
         ${shareMarkup}
         ${strategyLinksMarkup}
+        ${relatedInitiativesMarkup}
       </div>
       ${options.member ? `
         <div class="vote-panel">
@@ -4695,9 +4724,18 @@ function clarityGremlinUiText() {
       title: 'Clarity Gremlin',
       subtitle: 'AI review for either the full strategy or one selected guideline / initiative.',
       actionLabel: 'Clarity Gremlin',
+      setupTitle: 'Analysis setup',
+      setupLead: 'Choose what to analyze, select the output language and model, then run one analysis.',
       close: 'Close',
-      analyze: 'Analyze strategy',
-      analyzeEntity: 'Analyze individual guideline/initiative',
+      analyze: 'Analyze',
+      scopeLabel: 'What will be analyzed?',
+      scopeStrategy: 'Entire strategy',
+      scopeEntity: 'Individual card',
+      targetTypeLabel: 'Card type',
+      targetEntityLabel: 'Selected card',
+      outputLanguageLabel: 'Output language',
+      outputLanguageLt: 'Lithuanian',
+      outputLanguageEn: 'English',
       selectorLead: 'Choose exactly which item you want to review.',
       selectorGuidelines: 'Guidelines',
       selectorInitiatives: 'Initiatives',
@@ -4710,6 +4748,7 @@ function clarityGremlinUiText() {
       analysisTypeStrategy: 'Whole strategy',
       analysisTypeGuideline: 'Guideline',
       analysisTypeInitiative: 'Initiative',
+      selectedAnalysis: 'Currently viewing',
       strategyFocus: 'Launch focus',
       entityTarget: 'Analyzed item',
       modelLabel: 'Model',
@@ -4780,9 +4819,18 @@ function clarityGremlinUiText() {
     title: 'Aiškumo nykštukas',
     subtitle: 'AI vertinimas visai strategijai arba vienai pasirinktai gairei / iniciatyvai.',
     actionLabel: 'Aiškumo nykštukas',
+    setupTitle: 'Analizės nustatymai',
+    setupLead: 'Pasirinkite, kas bus analizuojama, kokia kalba pateikti atsakymą ir kokį modelį naudoti.',
     close: 'Uždaryti',
-    analyze: 'Analizuoti strategiją',
-    analyzeEntity: 'Analizuoti atskirą gairę / iniciatyvą',
+    analyze: 'Analizuoti',
+    scopeLabel: 'Kas bus analizuojama?',
+    scopeStrategy: 'Visa strategija',
+    scopeEntity: 'Atskira kortelė',
+    targetTypeLabel: 'Kortelės tipas',
+    targetEntityLabel: 'Pasirinkta kortelė',
+    outputLanguageLabel: 'Rezultato kalba',
+    outputLanguageLt: 'Lietuvių',
+    outputLanguageEn: 'Anglų',
     selectorLead: 'Pasirinkite, kurią konkrečią kortelę norite analizuoti.',
     selectorGuidelines: 'Gairės',
     selectorInitiatives: 'Iniciatyvos',
@@ -4795,6 +4843,7 @@ function clarityGremlinUiText() {
     analysisTypeStrategy: 'Visa strategija',
     analysisTypeGuideline: 'Gairė',
     analysisTypeInitiative: 'Iniciatyva',
+    selectedAnalysis: 'Šiuo metu rodoma',
     strategyFocus: 'Paleidimo fokusas',
     entityTarget: 'Analizuota kortelė',
     modelLabel: 'Modelis',
@@ -4902,6 +4951,41 @@ function formatAiProviderLabel(provider, model = '') {
   const providerLabel = normalizedProvider === 'mistral' ? 'Mistral' : 'OpenAI';
   if (!modelText) return providerLabel;
   return `${providerLabel} · ${modelText}`;
+}
+
+function normalizeClarityGremlinLocale(value) {
+  return String(value || '').trim().toLowerCase() === 'en' ? 'en' : 'lt';
+}
+
+function getClarityGremlinModelOptions() {
+  const institution = state.context?.institution && typeof state.context.institution === 'object'
+    ? state.context.institution
+    : {};
+  const featureInfo = getFeatureAiInfo('clarityGremlin');
+  const options = [];
+
+  const addOption = (provider, model) => {
+    const normalizedProvider = String(provider || '').trim().toLowerCase() === 'mistral' ? 'mistral' : 'openai';
+    const modelText = String(model || '').trim();
+    const value = `${normalizedProvider}:${modelText}`;
+    if (options.some((item) => item.value === value)) return;
+    options.push({
+      value,
+      provider: normalizedProvider,
+      model: modelText,
+      label: formatAiProviderLabel(normalizedProvider, modelText)
+    });
+  };
+
+  addOption(featureInfo.provider, featureInfo.model);
+  addOption('openai', institution.aiOpenaiModel);
+  addOption('mistral', institution.aiMistralModel);
+
+  if (!options.length) {
+    addOption(institution.aiProvider || featureInfo.provider || 'openai', featureInfo.model || '');
+  }
+
+  return options;
 }
 
 function clarityGremlinPageLabel(view = state.activeView) {
@@ -6821,7 +6905,8 @@ function renderStepView() {
                       member,
                       writable,
                       authenticated,
-                      commentsVisible: state.commentsVisible
+                      commentsVisible: state.commentsVisible,
+                      showAssociatedInitiatives: state.guidelinesShowInitiatives
                     })}
                   </div>
                   <div class="relationship-child-stack">
@@ -6832,7 +6917,8 @@ function renderStepView() {
                             member,
                             writable,
                             authenticated,
-                            commentsVisible: state.commentsVisible
+                            commentsVisible: state.commentsVisible,
+                            showAssociatedInitiatives: state.guidelinesShowInitiatives
                           })).join('')}
                         </div>`
                       : `<div class="relationship-child-empty">
@@ -6863,7 +6949,8 @@ function renderStepView() {
               member,
               writable,
               authenticated,
-              commentsVisible: state.commentsVisible
+              commentsVisible: state.commentsVisible,
+              showAssociatedInitiatives: state.guidelinesShowInitiatives
             })).join('')}
           </div>
         </section>
@@ -6881,7 +6968,8 @@ function renderStepView() {
                 member,
                 writable,
                 authenticated,
-                commentsVisible: state.commentsVisible
+                commentsVisible: state.commentsVisible,
+                showAssociatedInitiatives: state.guidelinesShowInitiatives
               })).join('')}
             </div>`
           : `<div class="card guideline-empty">
@@ -7067,6 +7155,13 @@ function bindStepEvents() {
           targetStrategySlug: actionElement.dataset.targetStrategy,
           targetGuidelineId: actionElement.dataset.targetGuideline
         });
+        return;
+      }
+
+      if (action === 'open-guideline-linked-initiative') {
+        const initiativeId = String(actionElement.dataset.initiativeId || '').trim();
+        if (!initiativeId) return;
+        openInitiativeDetail(initiativeId);
         return;
       }
 
@@ -7424,7 +7519,6 @@ function bindGlobal() {
       renderUserBar();
       return;
     }
-    if (state.activeView !== 'map') return;
     if (event.defaultPrevented || event.repeat) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const target = event.target;
@@ -7433,6 +7527,13 @@ function bindGlobal() {
       if (target.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select') return;
     }
     const key = String(event.key || '').toLowerCase();
+    if (state.activeView === 'guidelines' && key === 'i') {
+      event.preventDefault();
+      state.guidelinesShowInitiatives = !state.guidelinesShowInitiatives;
+      renderGuidelinesView();
+      return;
+    }
+    if (state.activeView !== 'map') return;
     if (key === 'i') {
       if (state.mapLayer !== 'guidelines') return;
       event.preventDefault();
@@ -9081,6 +9182,7 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
             type="button"
             class="gremlin-history-item${isSelected ? ' is-selected' : ''}${locked ? ' is-locked' : ''}"
             data-gremlin-history-id="${escapeHtml(item.id)}"
+            aria-current="${isSelected ? 'true' : 'false'}"
             ${locked ? 'disabled' : ''}
           >
             <div class="gremlin-history-item-top">
@@ -9092,7 +9194,10 @@ function renderClarityGremlinHistoryListMarkup(items, selectedId, context, ui, o
                 >${stepIconMarkup(kind.stepId)}</span>
                 <div class="gremlin-history-item-copy">
                   <strong>${escapeHtml(title)}</strong>
-                  <span class="gremlin-history-type gremlin-history-type-${escapeHtml(kind.key)}">${escapeHtml(kind.label)}</span>
+                  <div class="gremlin-history-badges">
+                    <span class="gremlin-history-type gremlin-history-type-${escapeHtml(kind.key)}">${escapeHtml(kind.label)}</span>
+                    ${isSelected ? `<span class="gremlin-history-current">${escapeHtml(ui.selectedAnalysis)}</span>` : ''}
+                  </div>
                   ${contextText ? `<span class="gremlin-history-context">${escapeHtml(contextText)}</span>` : ''}
                 </div>
               </div>
@@ -9165,12 +9270,8 @@ function showClarityGremlinModal() {
         <div class="gremlin-toolbar-meta">
           <span id="clarityGremlinUsage" class="tag"></span>
         </div>
-        <div class="gremlin-toolbar-actions">
-          <button id="runClarityGremlinStrategyBtn" class="btn btn-primary" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyze)}</button>
-          <button id="toggleClarityGremlinEntityBtn" class="btn btn-ghost" type="button" ${initialContext.supported ? '' : 'disabled'}>${escapeHtml(ui.analyzeEntity)}</button>
-        </div>
       </div>
-      <div id="clarityGremlinEntityPanel" class="gremlin-entity-panel" hidden></div>
+      <section id="clarityGremlinControlPanel" class="gremlin-control-panel"></section>
       <div class="gremlin-layout">
         <aside class="gremlin-history-panel">
           <div class="gremlin-panel-head">
@@ -9203,9 +9304,7 @@ function showClarityGremlinModal() {
   const body = overlay.querySelector('#clarityGremlinBody');
   const historyNode = overlay.querySelector('#clarityGremlinHistory');
   const closeButton = overlay.querySelector('#closeClarityGremlinModal');
-  const runStrategyButton = overlay.querySelector('#runClarityGremlinStrategyBtn');
-  const toggleEntityButton = overlay.querySelector('#toggleClarityGremlinEntityBtn');
-  const entityPanel = overlay.querySelector('#clarityGremlinEntityPanel');
+  const controlPanel = overlay.querySelector('#clarityGremlinControlPanel');
   const usageNode = overlay.querySelector('#clarityGremlinUsage');
   const infoToggle = overlay.querySelector('#clarityGremlinInfoToggle');
   const infoPanel = overlay.querySelector('#clarityGremlinInfoPanel');
@@ -9214,9 +9313,13 @@ function showClarityGremlinModal() {
   let isAnalyzing = false;
   let draftSubmitInProgress = false;
   let infoOpen = false;
-  let entityPickerOpen = false;
+  let analysisMode = initialContext.view === 'guideline-detail' || initialContext.view === 'initiative-detail'
+    ? 'entity'
+    : 'strategy';
   let entityPickerKind = initialContext.view === 'initiative-detail' ? 'initiative' : 'guideline';
   let entityPickerId = initialContext.entityId || '';
+  let selectedLocale = normalizeClarityGremlinLocale(currentLanguage());
+  let selectedModelValue = getClarityGremlinModelOptions()[0]?.value || `${getFeatureAiInfo('clarityGremlin').provider}:`;
 
   const syncInfoPanel = () => {
     if (!(infoToggle instanceof HTMLButtonElement) || !(infoPanel instanceof HTMLElement)) return;
@@ -9231,22 +9334,6 @@ function showClarityGremlinModal() {
     if (closeButton instanceof HTMLButtonElement) {
       closeButton.disabled = isAnalyzing;
     }
-    if (runStrategyButton instanceof HTMLButtonElement) {
-      runStrategyButton.disabled = isAnalyzing || draftSubmitInProgress || !currentContext.supported;
-      runStrategyButton.title = currentContext.reason === 'disabled-view'
-        ? ui.disabledView
-        : currentContext.supported
-          ? ''
-          : ui.unsupported;
-    }
-    if (toggleEntityButton instanceof HTMLButtonElement) {
-      toggleEntityButton.disabled = isAnalyzing || draftSubmitInProgress || !currentContext.supported;
-      toggleEntityButton.title = currentContext.reason === 'disabled-view'
-        ? ui.disabledView
-        : currentContext.supported
-          ? ''
-          : ui.unsupported;
-    }
     if (historyNode) {
       historyNode.innerHTML = renderClarityGremlinHistoryListMarkup(
         historyItems,
@@ -9257,7 +9344,7 @@ function showClarityGremlinModal() {
       );
       bindHistorySelection();
     }
-    renderEntityPanel();
+    renderControlPanel();
   };
 
   const applyUsage = (usage) => {
@@ -9322,63 +9409,156 @@ function showClarityGremlinModal() {
       .filter((item) => item.id && item.title);
   };
 
-  const renderEntityPanel = () => {
-    if (!(entityPanel instanceof HTMLElement)) return;
-    if (!entityPickerOpen) {
-      entityPanel.hidden = true;
-      entityPanel.innerHTML = '';
-      return;
+  const getSelectedModelOption = () => {
+    const options = getClarityGremlinModelOptions();
+    const matched = options.find((item) => item.value === selectedModelValue) || options[0] || null;
+    if (matched) {
+      selectedModelValue = matched.value;
+      return matched;
     }
-    const options = getEntityOptions(entityPickerKind);
-    if (!options.some((item) => item.id === entityPickerId)) {
-      entityPickerId = options[0]?.id || '';
+    const fallbackProvider = getFeatureAiInfo('clarityGremlin').provider || 'openai';
+    return {
+      value: `${fallbackProvider}:`,
+      provider: fallbackProvider,
+      model: '',
+      label: formatAiProviderLabel(fallbackProvider, '')
+    };
+  };
+
+  const renderControlPanel = () => {
+    if (!(controlPanel instanceof HTMLElement)) return;
+    const currentContext = resolveClarityGremlinContext();
+    const entityOptions = getEntityOptions(entityPickerKind);
+    const modelOptions = getClarityGremlinModelOptions();
+    if (!entityOptions.some((item) => item.id === entityPickerId)) {
+      entityPickerId = entityOptions[0]?.id || '';
     }
-    const hasOptions = options.length > 0;
-    entityPanel.hidden = false;
-    entityPanel.innerHTML = `
-      <div class="gremlin-entity-picker">
-        <div class="gremlin-entity-picker-copy">
-          <span class="gremlin-intro-eyebrow">${escapeHtml(ui.analyzeEntity)}</span>
-          <p class="prompt">${escapeHtml(ui.selectorLead)}</p>
+    const selectedModel = getSelectedModelOption();
+    const runDisabled = isAnalyzing
+      || draftSubmitInProgress
+      || !currentContext.supported
+      || (analysisMode === 'entity' && !entityPickerId);
+    const runDisabledMessage = currentContext.reason === 'disabled-view'
+      ? ui.disabledView
+      : currentContext.reason === 'login-required'
+        ? ui.loginRequired
+        : currentContext.reason === 'cycle-required'
+          ? ui.noCycle
+          : analysisMode === 'entity' && !entityPickerId
+            ? (entityPickerKind === 'initiative' ? ui.selectorNoInitiatives : ui.selectorNoGuidelines)
+            : currentContext.supported
+              ? ''
+              : ui.unsupported;
+
+    controlPanel.innerHTML = `
+      <div class="gremlin-control-surface">
+        <div class="gremlin-control-head">
+          <div class="gremlin-control-copy">
+            <span class="gremlin-intro-eyebrow">${escapeHtml(ui.actionLabel)}</span>
+            <h3>${escapeHtml(ui.setupTitle)}</h3>
+            <p class="prompt">${escapeHtml(ui.setupLead)}</p>
+          </div>
+          <div class="gremlin-control-meta">
+            <span class="tag">${escapeHtml(ui.currentContext)}: ${escapeHtml(currentContext.contextLabel || currentContext.view || ui.scopeStrategy)}</span>
+          </div>
         </div>
-        <div class="gremlin-entity-picker-kinds">
-          <button type="button" class="tag${entityPickerKind === 'guideline' ? ' tag-main' : ''}" data-gremlin-entity-kind="guideline">${escapeHtml(ui.selectorGuidelines)}</button>
-          <button type="button" class="tag${entityPickerKind === 'initiative' ? ' tag-main' : ''}" data-gremlin-entity-kind="initiative">${escapeHtml(ui.selectorInitiatives)}</button>
-        </div>
-        ${hasOptions ? `
-          <div class="gremlin-entity-picker-controls">
-            <label class="gremlin-entity-picker-select-wrap">
-              <span class="gremlin-summary-label">${escapeHtml(entityPickerKind === 'initiative' ? ui.selectorChooseInitiative : ui.selectorChooseGuideline)}</span>
-              <select id="clarityGremlinEntitySelect" class="input">
-                ${options.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === entityPickerId ? 'selected' : ''}>${escapeHtml(item.title)}</option>`).join('')}
-              </select>
+        <div class="gremlin-control-grid">
+          <div class="gremlin-control-field gremlin-control-field-wide">
+            <span class="gremlin-summary-label">${escapeHtml(ui.scopeLabel)}</span>
+            <div class="gremlin-mode-switch">
+              <button type="button" class="gremlin-mode-option${analysisMode === 'strategy' ? ' is-active' : ''}" data-gremlin-analysis-mode="strategy">${escapeHtml(ui.scopeStrategy)}</button>
+              <button type="button" class="gremlin-mode-option${analysisMode === 'entity' ? ' is-active' : ''}" data-gremlin-analysis-mode="entity">${escapeHtml(ui.scopeEntity)}</button>
+            </div>
+          </div>
+          ${analysisMode === 'entity' ? `
+            <div class="gremlin-control-field">
+              <span class="gremlin-summary-label">${escapeHtml(ui.targetTypeLabel)}</span>
+              <div class="gremlin-mode-switch gremlin-mode-switch-compact">
+                <button type="button" class="gremlin-mode-option${entityPickerKind === 'guideline' ? ' is-active' : ''}" data-gremlin-entity-kind="guideline">${escapeHtml(ui.selectorGuidelines)}</button>
+                <button type="button" class="gremlin-mode-option${entityPickerKind === 'initiative' ? ' is-active' : ''}" data-gremlin-entity-kind="initiative">${escapeHtml(ui.selectorInitiatives)}</button>
+              </div>
+            </div>
+            <label class="gremlin-control-field gremlin-control-field-wide">
+              <span class="gremlin-summary-label">${escapeHtml(ui.targetEntityLabel)}</span>
+              ${entityOptions.length ? `
+                <select id="clarityGremlinEntitySelect" class="input">
+                  ${entityOptions.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === entityPickerId ? 'selected' : ''}>${escapeHtml(item.title)}</option>`).join('')}
+                </select>
+              ` : `<div class="gremlin-entity-picker-empty">${escapeHtml(entityPickerKind === 'initiative' ? ui.selectorNoInitiatives : ui.selectorNoGuidelines)}</div>`}
             </label>
-            <button id="runClarityGremlinEntityBtn" class="btn btn-primary" type="button" ${isAnalyzing || draftSubmitInProgress ? 'disabled' : ''}>
-              ${escapeHtml(entityPickerKind === 'initiative' ? ui.selectorRunInitiative : ui.selectorRunGuideline)}
+          ` : ''}
+          <label class="gremlin-control-field">
+            <span class="gremlin-summary-label">${escapeHtml(ui.outputLanguageLabel)}</span>
+            <select id="clarityGremlinLocaleSelect" class="input">
+              <option value="lt" ${selectedLocale === 'lt' ? 'selected' : ''}>${escapeHtml(ui.outputLanguageLt)}</option>
+              <option value="en" ${selectedLocale === 'en' ? 'selected' : ''}>${escapeHtml(ui.outputLanguageEn)}</option>
+            </select>
+          </label>
+          <label class="gremlin-control-field">
+            <span class="gremlin-summary-label">${escapeHtml(ui.modelLabel)}</span>
+            <select id="clarityGremlinModelSelect" class="input" ${modelOptions.length <= 1 ? 'disabled' : ''}>
+              ${modelOptions.map((item) => `<option value="${escapeHtml(item.value)}" ${item.value === selectedModel.value ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
+            </select>
+          </label>
+          <div class="gremlin-control-actions">
+            <button id="runClarityGremlinBtn" class="btn btn-primary" type="button" ${runDisabled ? 'disabled' : ''} title="${escapeHtml(runDisabledMessage)}">
+              ${escapeHtml(ui.analyze)}
             </button>
           </div>
-        ` : `<div class="gremlin-entity-picker-empty">${escapeHtml(entityPickerKind === 'initiative' ? ui.selectorNoInitiatives : ui.selectorNoGuidelines)}</div>`}
+        </div>
       </div>
     `;
-    entityPanel.querySelectorAll('[data-gremlin-entity-kind]').forEach((button) => {
+
+    controlPanel.querySelectorAll('[data-gremlin-analysis-mode]').forEach((button) => {
       button.addEventListener('click', () => {
-        entityPickerKind = String(button.getAttribute('data-gremlin-entity-kind') || 'guideline');
-        renderEntityPanel();
+        analysisMode = String(button.getAttribute('data-gremlin-analysis-mode') || 'strategy').trim() === 'entity'
+          ? 'entity'
+          : 'strategy';
+        renderControlPanel();
       });
     });
-    const select = entityPanel.querySelector('#clarityGremlinEntitySelect');
-    if (select instanceof HTMLSelectElement) {
-      select.addEventListener('change', () => {
-        entityPickerId = String(select.value || '').trim();
+    controlPanel.querySelectorAll('[data-gremlin-entity-kind]').forEach((button) => {
+      button.addEventListener('click', () => {
+        entityPickerKind = String(button.getAttribute('data-gremlin-entity-kind') || 'guideline').trim() === 'initiative'
+          ? 'initiative'
+          : 'guideline';
+        renderControlPanel();
+      });
+    });
+    const entitySelect = controlPanel.querySelector('#clarityGremlinEntitySelect');
+    if (entitySelect instanceof HTMLSelectElement) {
+      entitySelect.addEventListener('change', () => {
+        entityPickerId = String(entitySelect.value || '').trim();
       });
     }
-    const runEntityButton = entityPanel.querySelector('#runClarityGremlinEntityBtn');
-    if (runEntityButton instanceof HTMLButtonElement) {
-      runEntityButton.addEventListener('click', () => {
+    const localeSelect = controlPanel.querySelector('#clarityGremlinLocaleSelect');
+    if (localeSelect instanceof HTMLSelectElement) {
+      localeSelect.addEventListener('change', () => {
+        selectedLocale = normalizeClarityGremlinLocale(localeSelect.value);
+      });
+    }
+    const modelSelect = controlPanel.querySelector('#clarityGremlinModelSelect');
+    if (modelSelect instanceof HTMLSelectElement) {
+      modelSelect.addEventListener('change', () => {
+        selectedModelValue = String(modelSelect.value || '').trim();
+      });
+    }
+    const runButton = controlPanel.querySelector('#runClarityGremlinBtn');
+    if (runButton instanceof HTMLButtonElement) {
+      runButton.addEventListener('click', () => {
+        const context = resolveClarityGremlinContext();
+        if (analysisMode === 'entity') {
+          void runAnalysis({
+            mode: 'entity',
+            view: entityPickerKind === 'initiative' ? 'initiative-detail' : 'guideline-detail',
+            entityId: entityPickerId
+          });
+          return;
+        }
         void runAnalysis({
-          mode: 'entity',
-          view: entityPickerKind === 'initiative' ? 'initiative-detail' : 'guideline-detail',
-          entityId: entityPickerId
+          mode: 'strategy',
+          view: context.view,
+          entityId: ''
         });
       });
     }
@@ -9516,7 +9696,10 @@ function showClarityGremlinModal() {
         const relationType = normalizeGuidelineRelation(draft.relationType || 'orphan');
         const parentGuidelineId = resolveGremlinDraftParentGuidelineId(draft, selected);
         const effectiveRelation = relationType === 'child' && !parentGuidelineId ? 'orphan' : relationType;
-        const payload = await api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/guidelines`, {
+        const createGuidelineEndpoint = state.role === 'institution_admin'
+          ? `/api/v1/admin/cycles/${encodeURIComponent(cycleId)}/guidelines`
+          : `/api/v1/cycles/${encodeURIComponent(cycleId)}/guidelines`;
+        const payload = await api(createGuidelineEndpoint, {
           method: 'POST',
           body: {
             title: String(draft.title || '').trim(),
@@ -9710,13 +9893,16 @@ function showClarityGremlinModal() {
     }
     const startedAtIso = new Date().toISOString();
     try {
+      const selectedModel = getSelectedModelOption();
       const payload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycleId)}/clarity-gremlin`, {
         method: 'POST',
         body: {
           mode,
           view: requestView || context.view,
           entityId: mode === 'entity' ? requestEntityId : '',
-          locale: currentLanguage()
+          locale: selectedLocale,
+          provider: selectedModel.provider,
+          model: selectedModel.model
         }
       });
       if (payload?.pending && payload?.jobId) {
@@ -9785,15 +9971,6 @@ function showClarityGremlinModal() {
       }
     }
     if (event.target === overlay) closeClarityGremlinModal();
-  });
-  runStrategyButton?.addEventListener('click', () => {
-    entityPickerOpen = false;
-    renderEntityPanel();
-    void runAnalysis({ mode: 'strategy', view: initialContext.view, entityId: '' });
-  });
-  toggleEntityButton?.addEventListener('click', () => {
-    entityPickerOpen = !entityPickerOpen;
-    renderEntityPanel();
   });
   document.addEventListener('keydown', function handleGremlinInfoEscape(event) {
     if (!document.body.contains(overlay)) {
