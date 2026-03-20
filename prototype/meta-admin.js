@@ -412,6 +412,18 @@ function getUsersForInstitution(users, institutionId) {
     .sort((left, right) => userDisplayName(left).localeCompare(userDisplayName(right), 'lt'));
 }
 
+function getEligibleExistingUsersForInstitution(users, institutionId) {
+  const targetInstitutionId = String(institutionId || '').trim();
+  if (!targetInstitutionId) return [];
+  return (Array.isArray(users) ? users : [])
+    .filter((user) => {
+      if (String(user?.status || '').trim() === 'archived') return false;
+      const memberships = Array.isArray(user?.memberships) ? user.memberships : [];
+      return !memberships.some((membership) => String(membership?.institutionId || '').trim() === targetInstitutionId);
+    })
+    .sort((left, right) => userDisplayName(left).localeCompare(userDisplayName(right), 'lt'));
+}
+
 function buildUsersByInstitution(users) {
   const groupsByInstitution = new Map();
   const unassigned = [];
@@ -689,6 +701,7 @@ function renderInstitutionDetailCard(institution) {
 function renderInstitutionUsersCard(selectedInstitution, users, institutions) {
   if (!selectedInstitution) return '';
   const institutionUsers = getUsersForInstitution(users, selectedInstitution.id);
+  const eligibleUsers = getEligibleExistingUsersForInstitution(users, selectedInstitution.id);
   const selectedUser = resolveSelectedMetaUser(institutionUsers);
   const groupedUsers = institutionUsers.length
     ? [{
@@ -711,6 +724,28 @@ function renderInstitutionUsersCard(selectedInstitution, users, institutions) {
         ${renderTag(String(institutionUsers.length), 'count')}
       </div>
       <p class="prompt">Pasirinktos institucijos vartotojai ir ju narystes.</p>
+      <div class="card-section meta-institution-existing-user-panel">
+        <div class="header-row">
+          <strong>Prideti egzistuojanti vartotoja</strong>
+          ${renderTag(String(eligibleUsers.length), 'count')}
+        </div>
+        ${eligibleUsers.length
+          ? `
+            <form class="meta-institution-existing-user-form inline-form" data-institution-id="${escapeHtml(selectedInstitution.id)}">
+              <select name="userId" required ${state.busy ? 'disabled' : ''}>
+                ${eligibleUsers.map((user) => `
+                  <option value="${escapeHtml(user.id)}">${escapeHtml(userDisplayName(user))} (${escapeHtml(user.email || '-')})</option>
+                `).join('')}
+              </select>
+              <select name="role" required ${state.busy ? 'disabled' : ''}>
+                <option value="member">member</option>
+                <option value="institution_admin">institution_admin</option>
+              </select>
+              <button class="btn btn-primary" type="submit" ${state.busy ? 'disabled' : ''}>Prideti i institucija</button>
+            </form>
+          `
+          : '<p class="prompt">Nebera nepriskirtu egzistuojanciu vartotoju, kuriuos butu galima prideti i sia institucija.</p>'}
+      </div>
       <div class="meta-users-layout">
         <aside class="meta-users-directory">
           ${renderUsersDirectory(groupedUsers, selectedUser?.id || '')}
@@ -1951,6 +1986,8 @@ function bindDashboardEvents() {
       setNotice(payload?.existedBefore
         ? 'Naryste atnaujinta.'
         : 'Naryste prideta.');
+      state.selectedMetaInstitutionId = normalizedInstitutionId;
+      state.selectedMetaUserId = normalizedUserId;
       state.membershipAddTargetUserId = normalizedUserId;
       await loadOverview();
     });
@@ -2160,6 +2197,18 @@ function bindDashboardEvents() {
       const institutionId = String(formData.get('institutionId') || '').trim();
       const role = String(formData.get('role') || '').trim();
       if (!userId || !institutionId || !role) return;
+      await addMembershipForUser(userId, institutionId, role);
+    });
+  });
+
+  root.querySelectorAll('.meta-institution-existing-user-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const institutionId = String(form.dataset.institutionId || '').trim();
+      const formData = new FormData(form);
+      const userId = String(formData.get('userId') || '').trim();
+      const role = String(formData.get('role') || '').trim();
+      if (!institutionId || !userId || !role) return;
       await addMembershipForUser(userId, institutionId, role);
     });
   });

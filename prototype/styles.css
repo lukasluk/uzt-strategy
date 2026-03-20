@@ -9157,6 +9157,23 @@ body.meta-admin-page .stage {
   background: linear-gradient(180deg, #d95b52 0%, #bf453c 100%);
 }
 
+.meta-institution-existing-user-panel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.meta-institution-existing-user-form {
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-institution-existing-user-form select {
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
 .meta-membership-add-panel {
   border: 1px dashed #aac5e6;
   border-radius: 12px;
