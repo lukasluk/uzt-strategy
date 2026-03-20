@@ -7508,7 +7508,7 @@ function bindGlobal() {
     if (!viewport || !world) return;
     fitMapToCurrentNodes(viewport, world);
   });
-  document.addEventListener('keydown', (event) => {
+  window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.strategySwitcherDialogOpen) {
       state.strategySwitcherDialogOpen = false;
       renderUserBar();
@@ -7527,14 +7527,17 @@ function bindGlobal() {
       if (target.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select') return;
     }
     const key = String(event.key || '').toLowerCase();
-    if (state.activeView === 'guidelines' && key === 'i') {
+    const code = String(event.code || '').trim();
+    const pressedI = code === 'KeyI' || key === 'i';
+    const pressedJ = code === 'KeyJ' || key === 'j';
+    if (state.activeView === 'guidelines' && pressedI) {
       event.preventDefault();
       state.guidelinesShowInitiatives = !state.guidelinesShowInitiatives;
-      renderGuidelinesView();
+      render();
       return;
     }
     if (state.activeView !== 'map') return;
-    if (key === 'i') {
+    if (pressedI) {
       if (state.mapLayer !== 'guidelines') return;
       event.preventDefault();
       state.mapGuidelinesShowInitiatives = !state.mapGuidelinesShowInitiatives;
@@ -7544,7 +7547,7 @@ function bindGlobal() {
       }
       return;
     }
-    if (key !== 'j') return;
+    if (!pressedJ) return;
     state.mapSecretAnthracite = !state.mapSecretAnthracite;
     const viewport = document.getElementById('strategyMapViewport');
     if (viewport instanceof HTMLElement) {
