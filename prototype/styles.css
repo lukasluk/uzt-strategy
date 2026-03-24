@@ -1356,6 +1356,44 @@ textarea {
   min-height: 80px;
   resize: vertical;
 }
+.rich-text-editor {
+  display: grid;
+  gap: 8px;
+}
+.rich-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rich-text-toolbar-btn {
+  min-width: 42px;
+  padding: 8px 12px;
+}
+.rich-text-toolbar-btn strong,
+.rich-text-toolbar-btn em,
+.rich-text-toolbar-btn u {
+  pointer-events: none;
+}
+.rich-text-input {
+  width: 100%;
+}
+.rich-text-content {
+  color: inherit;
+  line-height: 1.55;
+  white-space: normal;
+}
+.rich-text-content p {
+  margin: 0;
+}
+.rich-text-content.is-empty {
+  color: var(--muted);
+}
+.rich-text-content strong,
+.rich-text-content em,
+.rich-text-content u {
+  color: inherit;
+}
 .guideline-checkbox-panel {
   border: 1px solid var(--border-soft);
   border-radius: 12px;
@@ -5613,6 +5651,13 @@ select:focus {
   background: #fff8ee;
   box-shadow: 0 6px 12px rgba(160, 104, 29, 0.12);
   transform: translateY(-1px);
+}
+.guideline-initiative-peek-chip.is-linked-hover {
+  border-color: #ba6a00;
+  background: #fff1d7;
+  box-shadow:
+    0 0 0 3px rgba(230, 145, 0, 0.42),
+    0 8px 18px rgba(160, 104, 29, 0.18);
 }
 .guideline-initiative-peek-chip:focus-visible {
   outline: 2px solid rgba(200, 133, 39, 0.35);

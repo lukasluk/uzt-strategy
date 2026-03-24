@@ -1208,6 +1208,151 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+function sanitizeRichTextHtml(value) {
+  const source = String(value || '')
+    .replace(/\r\n/g, '\n')
+    .trim();
+  if (!source) return '';
+
+  const template = document.createElement('template');
+  template.innerHTML = source.replace(/\n/g, '<br>');
+  const container = document.createElement('div');
+  const allowedTags = new Set(['STRONG', 'B', 'EM', 'I', 'U', 'BR']);
+
+  const sanitizeNode = (node) => {
+    if (!node) return null;
+    if (node.nodeType === 3) {
+      return document.createTextNode(node.textContent || '');
+    }
+    if (node.nodeType !== 1) return null;
+
+    const tagName = String(node.nodeName || '').toUpperCase();
+    if (!allowedTags.has(tagName)) {
+      const fragment = document.createDocumentFragment();
+      node.childNodes.forEach((child) => {
+        const sanitizedChild = sanitizeNode(child);
+        if (sanitizedChild) fragment.appendChild(sanitizedChild);
+      });
+      return fragment;
+    }
+
+    if (tagName === 'BR') {
+      return document.createElement('br');
+    }
+
+    const normalizedTag = tagName === 'B'
+      ? 'strong'
+      : tagName === 'I'
+        ? 'em'
+        : tagName.toLowerCase();
+    const element = document.createElement(normalizedTag);
+    node.childNodes.forEach((child) => {
+      const sanitizedChild = sanitizeNode(child);
+      if (sanitizedChild) element.appendChild(sanitizedChild);
+    });
+    return element;
+  };
+
+  template.content.childNodes.forEach((child) => {
+    const sanitizedChild = sanitizeNode(child);
+    if (sanitizedChild) container.appendChild(sanitizedChild);
+  });
+
+  return container.innerHTML
+    .replace(/(?:<br>\s*){3,}/gi, '<br><br>')
+    .trim();
+}
+
+function normalizeRichTextValue(value) {
+  return sanitizeRichTextHtml(value);
+}
+
+function renderRichTextContent(value, fallbackText) {
+  const sanitized = sanitizeRichTextHtml(value);
+  if (!sanitized) {
+    return `<div class="rich-text-content is-empty">${escapeHtml(fallbackText || '')}</div>`;
+  }
+  return `<div class="rich-text-content">${sanitized}</div>`;
+}
+
+function richTextToPlainText(value, fallbackText = '') {
+  const sanitized = sanitizeRichTextHtml(value);
+  if (!sanitized) return String(fallbackText || '').trim();
+  const helper = document.createElement('div');
+  helper.innerHTML = sanitized.replace(/<br\s*\/?>/gi, '\n');
+  return String(helper.textContent || '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function renderRichTextEditor({
+  name,
+  value = '',
+  placeholder = '',
+  rows = 4,
+  disabled = false,
+  textareaClass = ''
+} = {}) {
+  const classes = ['rich-text-input', textareaClass].filter(Boolean).join(' ');
+  const disabledAttr = disabled ? 'disabled' : '';
+  return `
+    <div class="rich-text-editor">
+      <div class="rich-text-toolbar" role="toolbar" aria-label="${escapeHtml(langText('Teksto formatavimas', 'Text formatting'))}">
+        <button type="button" class="btn btn-ghost rich-text-toolbar-btn" data-action="format-rich-text" data-command="bold" title="${escapeHtml(langText('Paryskinti', 'Bold'))}" ${disabledAttr}><strong>B</strong></button>
+        <button type="button" class="btn btn-ghost rich-text-toolbar-btn" data-action="format-rich-text" data-command="italic" title="${escapeHtml(langText('Pasvyras', 'Italic'))}" ${disabledAttr}><em>I</em></button>
+        <button type="button" class="btn btn-ghost rich-text-toolbar-btn" data-action="format-rich-text" data-command="underline" title="${escapeHtml(langText('Pabraukti', 'Underline'))}" ${disabledAttr}><u>U</u></button>
+      </div>
+      <textarea class="${escapeHtml(classes)}" name="${escapeHtml(name)}" rows="${rows}" placeholder="${escapeHtml(placeholder)}" ${disabledAttr}>${escapeHtml(value)}</textarea>
+    </div>
+  `;
+}
+
+function applyRichTextFormat(textarea, command) {
+  if (!(textarea instanceof HTMLTextAreaElement) || textarea.disabled) return;
+  const normalizedCommand = String(command || '').trim().toLowerCase();
+  const tagName = normalizedCommand === 'bold'
+    ? 'strong'
+    : normalizedCommand === 'italic'
+      ? 'em'
+      : normalizedCommand === 'underline'
+        ? 'u'
+        : '';
+  if (!tagName) return;
+
+  const fallbackText = normalizedCommand === 'bold'
+    ? langText('paryskintas tekstas', 'bold text')
+    : normalizedCommand === 'italic'
+      ? langText('pasvyras tekstas', 'italic text')
+      : langText('pabrauktas tekstas', 'underlined text');
+  const value = String(textarea.value || '');
+  const start = Number.isInteger(textarea.selectionStart) ? textarea.selectionStart : value.length;
+  const end = Number.isInteger(textarea.selectionEnd) ? textarea.selectionEnd : start;
+  const selectedText = value.slice(start, end);
+  const innerText = selectedText || fallbackText;
+  const openingTag = `<${tagName}>`;
+  const closingTag = `</${tagName}>`;
+  const replacement = `${openingTag}${innerText}${closingTag}`;
+
+  textarea.value = `${value.slice(0, start)}${replacement}${value.slice(end)}`;
+  textarea.focus();
+  textarea.setSelectionRange(start + openingTag.length, start + openingTag.length + innerText.length);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function bindRichTextEditors(scope = document) {
+  const rootScope = scope instanceof Element || scope instanceof Document ? scope : document;
+  rootScope.querySelectorAll('[data-action="format-rich-text"]').forEach((button) => {
+    if (!(button instanceof HTMLButtonElement) || button.dataset.richTextBound === '1') return;
+    button.dataset.richTextBound = '1';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      const editor = button.closest('.rich-text-editor');
+      const textarea = editor?.querySelector('textarea');
+      applyRichTextFormat(textarea, button.dataset.command);
+    });
+  });
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -4108,7 +4253,7 @@ function renderGuidelineCard(guideline, options) {
           ${pendingStatus ? `<span class="tag tag-main">${langText('Laukia tvirtinimo', 'Pending')}</span>` : ''}
           ${guidelineStatus === 'disabled' ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
         </div>
-        <p>${escapeHtml(guideline.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
+        ${renderRichTextContent(guideline.description, langText('Be paaiskinimo', 'No description provided.'))}
         ${shareMarkup}
         ${strategyLinksMarkup}
         ${relatedInitiativesMarkup}
@@ -4312,7 +4457,7 @@ function renderInitiativeCard(initiative, options) {
           ${pendingStatus ? `<span class="tag tag-main">${langText('Laukia tvirtinimo', 'Pending')}</span>` : ''}
           ${initiativeStatus === 'disabled' ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
         </div>
-        <p>${escapeHtml(initiative.description || langText('Be paaiskinimo', 'No description provided.'))}</p>
+        ${renderRichTextContent(initiative.description, langText('Be paaiskinimo', 'No description provided.'))}
         ${shareMarkup}
       </div>
       ${options.member ? `
@@ -4351,6 +4496,17 @@ function renderInitiativeCard(initiative, options) {
       ` : ''}
     </article>
   `;
+}
+
+function setGuidelineInitiativePeekHighlight(initiativeId) {
+  const normalizedId = String(initiativeId || '').trim();
+  document.querySelectorAll('.guideline-initiative-peek-chip.is-linked-hover').forEach((node) => {
+    node.classList.remove('is-linked-hover');
+  });
+  if (!normalizedId) return;
+  document.querySelectorAll(`.guideline-initiative-peek-chip[data-initiative-id="${CSS.escape(normalizedId)}"]`).forEach((node) => {
+    node.classList.add('is-linked-hover');
+  });
 }
 
 function renderImplementationMetaSummary(item) {
@@ -4424,7 +4580,13 @@ function openGuidelineAdminEditModal(guideline) {
           </label>
           <label class="admin-edit-field">
             <span class="admin-edit-field-label">${escapeHtml(langText('Aprasymas', 'Description'))}</span>
-            <textarea class="admin-edit-description" name="description" placeholder="${escapeHtml(langText('Trumpas gaires aprasymas', 'Short guideline description'))}">${escapeHtml(item.description || '')}</textarea>
+            ${renderRichTextEditor({
+              name: 'description',
+              value: item.description || '',
+              placeholder: langText('Trumpas gaires aprasymas', 'Short guideline description'),
+              rows: 5,
+              textareaClass: 'admin-edit-description'
+            })}
           </label>
         </section>
         <section class="admin-edit-section">
@@ -4496,11 +4658,13 @@ function openGuidelineAdminEditModal(guideline) {
     if (event.target === overlay) closeInternalEditModal();
   });
 
+  bindRichTextEditors(overlay);
+
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const fd = new FormData(form);
     const title = String(fd.get('title') || '').trim();
-    const description = String(fd.get('description') || '').trim();
+    const description = normalizeRichTextValue(fd.get('description'));
     const status = String(fd.get('status') || 'active').trim();
     const relationType = String(fd.get('relationType') || 'orphan').trim();
     const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
@@ -4569,7 +4733,13 @@ function openInitiativeAdminEditModal(initiative) {
           </label>
           <label class="admin-edit-field">
             <span class="admin-edit-field-label">${escapeHtml(langText('Aprasymas', 'Description'))}</span>
-            <textarea class="admin-edit-description" name="description" placeholder="${escapeHtml(langText('Trumpas iniciatyvos aprasymas', 'Short initiative description'))}">${escapeHtml(item.description || '')}</textarea>
+            ${renderRichTextEditor({
+              name: 'description',
+              value: item.description || '',
+              placeholder: langText('Trumpas iniciatyvos aprasymas', 'Short initiative description'),
+              rows: 5,
+              textareaClass: 'admin-edit-description'
+            })}
           </label>
         </section>
         <section class="admin-edit-section">
@@ -4616,12 +4786,14 @@ function openInitiativeAdminEditModal(initiative) {
     if (event.target === overlay) closeInternalEditModal();
   });
 
+  bindRichTextEditors(overlay);
+
   const form = overlay.querySelector('#initiativeEditForm');
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const fd = new FormData(form);
     const title = String(fd.get('title') || '').trim();
-    const description = String(fd.get('description') || '').trim();
+    const description = normalizeRichTextValue(fd.get('description'));
     const status = String(fd.get('status') || 'active').trim();
     const implementationDate = normalizeImplementationDateInputValue(fd.get('implementationDate'));
     const implementationOwner = String(fd.get('implementationOwner') || '').trim();
@@ -6155,7 +6327,12 @@ function renderInitiativesView() {
               <div class="form-row">
                 <input type="text" name="title" placeholder="${escapeHtml(langText('Iniciatyvos pavadinimas', 'Initiative title'))}" required ${state.busy ? 'disabled' : ''}/>
               </div>
-              <textarea name="desc" placeholder="${escapeHtml(langText('Trumpas paaiskinimas', 'Short description'))}" ${state.busy ? 'disabled' : ''}></textarea>
+              ${renderRichTextEditor({
+                name: 'desc',
+                placeholder: langText('Trumpas paaiskinimas', 'Short description'),
+                rows: 5,
+                disabled: state.busy
+              })}
               <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Priskirtos gaires', 'Linked guidelines')}</label>
               <div class="guideline-checkbox-panel">
                 ${renderGuidelineCheckboxList(eligibleGuidelines, { name: 'guidelineIds', disabled: state.busy })}
@@ -6197,12 +6374,13 @@ function renderInitiativesView() {
   if (exportBtnInline) {
     exportBtnInline.addEventListener('click', exportSummary);
   }
+  bindRichTextEditors(elements.stepView);
   if (initiativeForm) {
     initiativeForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const fd = new FormData(initiativeForm);
       const title = String(fd.get('title') || '').trim();
-      const description = String(fd.get('desc') || '').trim();
+      const description = normalizeRichTextValue(fd.get('desc'));
       const guidelineIds = Array.from(initiativeForm.querySelectorAll('input[name="guidelineIds"]:checked'))
         .map((input) => String(input.value || '').trim())
         .filter(Boolean);
@@ -7010,7 +7188,12 @@ function renderStepView() {
           ${activeParentGuidelines.length
     ? ''
     : `<p id="guidelineParentHint" class="prompt" hidden>${langText('Nera aktyviu teviniu gairiu. Pirmiausia sukurkite tevine gaire.', 'No active parent guidelines found. Create a parent guideline first.')}</p>`}
-          <textarea name="desc" placeholder="${escapeHtml(langText('Trumpas paaiskinimas', 'Short description'))}" ${state.busy ? 'disabled' : ''}></textarea>
+          ${renderRichTextEditor({
+            name: 'desc',
+            placeholder: langText('Trumpas paaiskinimas', 'Short description'),
+            rows: 5,
+            disabled: state.busy
+          })}
           <button class="btn guideline-add-submit-btn" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>+ ${langText('Prideti gaire', 'Add guideline')}</button>
         </form>
       </div>
@@ -7057,6 +7240,8 @@ function bindStepEvents() {
   if (exportBtnInline) {
     exportBtnInline.addEventListener('click', exportSummary);
   }
+
+  bindRichTextEditors(elements.stepView);
 
   const syncGuidelineParentField = () => {
     if (!(guidelineRelationType instanceof HTMLSelectElement)) return;
@@ -7106,7 +7291,7 @@ function bindStepEvents() {
       event.preventDefault();
       const fd = new FormData(guidelineForm);
       const title = String(fd.get('title') || '').trim();
-      const description = String(fd.get('desc') || '').trim();
+      const description = normalizeRichTextValue(fd.get('desc'));
       const relationType = normalizeGuidelineRelation(fd.get('relationType'));
       const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
       if (!title) return;
@@ -7131,6 +7316,42 @@ function bindStepEvents() {
   }
 
   if (list) {
+    list.addEventListener('mouseover', (event) => {
+      const target = event.target instanceof Element ? event.target.closest('.guideline-initiative-peek-chip') : null;
+      if (!(target instanceof HTMLElement)) return;
+      setGuidelineInitiativePeekHighlight(target.dataset.initiativeId);
+    });
+    list.addEventListener('mouseout', (event) => {
+      const target = event.target instanceof Element ? event.target.closest('.guideline-initiative-peek-chip') : null;
+      if (!(target instanceof HTMLElement)) return;
+      const relatedTarget = event.relatedTarget instanceof Element ? event.relatedTarget.closest('.guideline-initiative-peek-chip') : null;
+      if (relatedTarget instanceof HTMLElement) {
+        const nextInitiativeId = String(relatedTarget.dataset.initiativeId || '').trim();
+        if (nextInitiativeId) {
+          setGuidelineInitiativePeekHighlight(nextInitiativeId);
+          return;
+        }
+      }
+      setGuidelineInitiativePeekHighlight('');
+    });
+    list.addEventListener('focusin', (event) => {
+      const target = event.target instanceof Element ? event.target.closest('.guideline-initiative-peek-chip') : null;
+      if (!(target instanceof HTMLElement)) return;
+      setGuidelineInitiativePeekHighlight(target.dataset.initiativeId);
+    });
+    list.addEventListener('focusout', (event) => {
+      const target = event.target instanceof Element ? event.target.closest('.guideline-initiative-peek-chip') : null;
+      if (!(target instanceof HTMLElement)) return;
+      const relatedTarget = event.relatedTarget instanceof Element ? event.relatedTarget.closest('.guideline-initiative-peek-chip') : null;
+      if (relatedTarget instanceof HTMLElement) {
+        const nextInitiativeId = String(relatedTarget.dataset.initiativeId || '').trim();
+        if (nextInitiativeId) {
+          setGuidelineInitiativePeekHighlight(nextInitiativeId);
+          return;
+        }
+      }
+      setGuidelineInitiativePeekHighlight('');
+    });
     list.addEventListener('click', async (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
@@ -7420,7 +7641,7 @@ function buildSummary() {
 
   state.guidelines.forEach((guideline) => {
     lines.push(`- ${guideline.title} (bendras balas: ${Number(guideline.totalScore || 0)})`);
-    lines.push(`  apraÅ¡ymas: ${guideline.description || 'be paaiÅ¡kinimo'}`);
+    lines.push(`  apraÅ¡ymas: ${richTextToPlainText(guideline.description, 'be paaiÅ¡kinimo')}`);
     lines.push(`  komentarÅ³: ${Array.isArray(guideline.comments) ? guideline.comments.length : 0}`);
   });
 
@@ -7432,7 +7653,7 @@ function buildSummary() {
     state.initiatives.forEach((initiative) => {
       const linkedNames = resolveInitiativeGuidelineNames(initiative);
       lines.push(`- ${initiative.title} (bendras balas: ${Number(initiative.totalScore || 0)})`);
-      lines.push(`  apraÅ¡ymas: ${initiative.description || 'be paaiÅ¡kinimo'}`);
+      lines.push(`  apraÅ¡ymas: ${richTextToPlainText(initiative.description, 'be paaiÅ¡kinimo')}`);
       lines.push(`  susietos gairÄ—s: ${linkedNames.length ? linkedNames.join(', ') : 'nÄ—ra'}`);
       lines.push(`  komentarÅ³: ${Array.isArray(initiative.comments) ? initiative.comments.length : 0}`);
     });
