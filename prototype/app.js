@@ -4325,7 +4325,7 @@ function renderGuidelineCard(guideline, options) {
           <ul class="mini-list">${safeComments}</ul>
           ${options.member && options.writable ? `
             <form data-action="comment" data-id="${escapeHtml(guideline.id)}" class="inline-form">
-              <input type="text" name="comment" placeholder="${escapeHtml(langText('Irasykite komentara', 'Write a comment'))}" required ${state.busy ? 'disabled' : ''}/>
+              <input type="text" name="comment" placeholder="${escapeHtml(langText('Įrašykite komentarą', 'Write a comment'))}" required ${state.busy ? 'disabled' : ''}/>
               <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>${langText('Prideti', 'Add')}</button>
             </form>
           ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
@@ -4527,7 +4527,7 @@ function renderInitiativeCard(initiative, options) {
           <ul class="mini-list">${safeComments}</ul>
           ${options.member && options.writable ? `
             <form data-action="initiative-comment" data-id="${escapeHtml(initiative.id)}" class="inline-form">
-              <input type="text" name="comment" placeholder="${escapeHtml(langText('Irasykite komentara', 'Write a comment'))}" required ${state.busy ? 'disabled' : ''}/>
+              <input type="text" name="comment" placeholder="${escapeHtml(langText('Įrašykite komentarą', 'Write a comment'))}" required ${state.busy ? 'disabled' : ''}/>
               <button class="btn btn-ghost" type="submit" ${state.busy ? 'disabled' : ''}>${langText('Prideti', 'Add')}</button>
             </form>
           ` : `<p class="prompt" style="margin: 8px 0 0;">${escapeHtml(commentsHint)}</p>`}
