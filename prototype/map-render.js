@@ -414,7 +414,14 @@ function bindMapCommentModalInteractions({ stepView, graph }) {
     if (!payload) return;
     const comments = Array.isArray(payload.comments) ? payload.comments : [];
     commentTitle.textContent = payload.title;
-    commentDescription.textContent = payload.description;
+    if (typeof renderRichTextContent === 'function') {
+      commentDescription.innerHTML = renderRichTextContent(
+        payload.description,
+        mapLang('Aprašymas nepateiktas.', 'Description not provided.')
+      );
+    } else {
+      commentDescription.textContent = payload.description || mapLang('Aprašymas nepateiktas.', 'Description not provided.');
+    }
     if (commentOpenCardBtn) {
       commentOpenCardBtn.dataset.mapCommentKind = payload.kind || '';
       commentOpenCardBtn.dataset.mapCommentId = payload.id || '';
@@ -640,7 +647,7 @@ function buildMapViewShellMarkup({
           <h3 id="mapCommentTitle">${escapeHtml(mapLang('Elementas', 'Item'))}</h3>
           <button id="mapCommentCloseBtn" class="btn btn-ghost" type="button" data-map-comment-close="1">${escapeHtml(mapLang('Uždaryti', 'Close'))}</button>
         </div>
-        <p id="mapCommentDescription" class="prompt map-comment-description"></p>
+        <div id="mapCommentDescription" class="prompt map-comment-description"></div>
         <div class="map-comment-actions">
           <button id="mapCommentOpenCardBtn" class="btn btn-primary" type="button">${escapeHtml(mapLang('Atidaryti kortelę', 'Open card'))}</button>
           <button id="mapCommentImportBtn" class="btn btn-ghost" type="button" hidden>${escapeHtml(mapLang('Naudoti mano strategijoje', 'Use in my strategy'))}</button>

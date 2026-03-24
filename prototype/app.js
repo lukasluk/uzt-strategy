@@ -1217,7 +1217,7 @@ function sanitizeRichTextHtml(value) {
   const template = document.createElement('template');
   template.innerHTML = source.replace(/\n/g, '<br>');
   const container = document.createElement('div');
-  const allowedTags = new Set(['STRONG', 'B', 'EM', 'I', 'U', 'BR']);
+  const allowedTags = new Set(['STRONG', 'B', 'EM', 'I', 'U', 'BR', 'DIV', 'P']);
 
   const sanitizeNode = (node) => {
     if (!node) return null;
@@ -1238,6 +1238,26 @@ function sanitizeRichTextHtml(value) {
 
     if (tagName === 'BR') {
       return document.createElement('br');
+    }
+
+    if (tagName === 'DIV' || tagName === 'P') {
+      const fragment = document.createDocumentFragment();
+      let hasVisibleChild = false;
+      node.childNodes.forEach((child) => {
+        const sanitizedChild = sanitizeNode(child);
+        if (!sanitizedChild) return;
+        if (sanitizedChild.nodeType === 3 && String(sanitizedChild.textContent || '').trim()) {
+          hasVisibleChild = true;
+        }
+        if (sanitizedChild.nodeType === 1 || sanitizedChild.nodeType === 11) {
+          hasVisibleChild = true;
+        }
+        fragment.appendChild(sanitizedChild);
+      });
+      if (hasVisibleChild) {
+        fragment.appendChild(document.createElement('br'));
+      }
+      return fragment;
     }
 
     const normalizedTag = tagName === 'B'
@@ -1289,12 +1309,12 @@ function renderRichTextEditor({
   name,
   value = '',
   placeholder = '',
-  rows = 4,
   disabled = false,
   textareaClass = ''
 } = {}) {
   const classes = ['rich-text-input', textareaClass].filter(Boolean).join(' ');
   const disabledAttr = disabled ? 'disabled' : '';
+  const sanitizedValue = sanitizeRichTextHtml(value);
   return `
     <div class="rich-text-editor">
       <div class="rich-text-toolbar" role="toolbar" aria-label="${escapeHtml(langText('Teksto formatavimas', 'Text formatting'))}">
@@ -1302,53 +1322,72 @@ function renderRichTextEditor({
         <button type="button" class="btn btn-ghost rich-text-toolbar-btn" data-action="format-rich-text" data-command="italic" title="${escapeHtml(langText('Pasvyras', 'Italic'))}" ${disabledAttr}><em>I</em></button>
         <button type="button" class="btn btn-ghost rich-text-toolbar-btn" data-action="format-rich-text" data-command="underline" title="${escapeHtml(langText('Pabraukti', 'Underline'))}" ${disabledAttr}><u>U</u></button>
       </div>
-      <textarea class="${escapeHtml(classes)}" name="${escapeHtml(name)}" rows="${rows}" placeholder="${escapeHtml(placeholder)}" ${disabledAttr}>${escapeHtml(value)}</textarea>
+      <div
+        class="rich-text-surface ${escapeHtml(textareaClass)}"
+        contenteditable="${disabled ? 'false' : 'true'}"
+        data-placeholder="${escapeHtml(placeholder)}"
+        data-rich-text-surface="1"
+        ${disabled ? 'aria-disabled="true"' : ''}
+      >${sanitizedValue}</div>
+      <textarea class="${escapeHtml(classes)} rich-text-hidden-input" name="${escapeHtml(name)}" ${disabledAttr} tabindex="-1" aria-hidden="true">${escapeHtml(sanitizedValue)}</textarea>
     </div>
   `;
 }
 
-function applyRichTextFormat(textarea, command) {
-  if (!(textarea instanceof HTMLTextAreaElement) || textarea.disabled) return;
+function syncRichTextEditor(editor) {
+  const surface = editor?.querySelector('.rich-text-surface');
+  const hiddenInput = editor?.querySelector('.rich-text-hidden-input');
+  if (!(surface instanceof HTMLElement) || !(hiddenInput instanceof HTMLTextAreaElement)) return;
+  const normalized = sanitizeRichTextHtml(surface.innerHTML);
+  if (surface.innerHTML !== normalized) {
+    surface.innerHTML = normalized;
+  }
+  hiddenInput.value = normalized;
+  surface.classList.toggle('is-empty', !normalized);
+}
+
+function applyRichTextFormat(surface, command) {
+  if (!(surface instanceof HTMLElement) || surface.getAttribute('contenteditable') !== 'true') return;
   const normalizedCommand = String(command || '').trim().toLowerCase();
-  const tagName = normalizedCommand === 'bold'
-    ? 'strong'
-    : normalizedCommand === 'italic'
-      ? 'em'
-      : normalizedCommand === 'underline'
-        ? 'u'
-        : '';
-  if (!tagName) return;
-
-  const fallbackText = normalizedCommand === 'bold'
-    ? langText('paryskintas tekstas', 'bold text')
-    : normalizedCommand === 'italic'
-      ? langText('pasvyras tekstas', 'italic text')
-      : langText('pabrauktas tekstas', 'underlined text');
-  const value = String(textarea.value || '');
-  const start = Number.isInteger(textarea.selectionStart) ? textarea.selectionStart : value.length;
-  const end = Number.isInteger(textarea.selectionEnd) ? textarea.selectionEnd : start;
-  const selectedText = value.slice(start, end);
-  const innerText = selectedText || fallbackText;
-  const openingTag = `<${tagName}>`;
-  const closingTag = `</${tagName}>`;
-  const replacement = `${openingTag}${innerText}${closingTag}`;
-
-  textarea.value = `${value.slice(0, start)}${replacement}${value.slice(end)}`;
-  textarea.focus();
-  textarea.setSelectionRange(start + openingTag.length, start + openingTag.length + innerText.length);
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  if (!['bold', 'italic', 'underline'].includes(normalizedCommand)) return;
+  surface.focus();
+  document.execCommand(normalizedCommand, false);
+  const editor = surface.closest('.rich-text-editor');
+  if (editor instanceof HTMLElement) {
+    syncRichTextEditor(editor);
+  }
 }
 
 function bindRichTextEditors(scope = document) {
   const rootScope = scope instanceof Element || scope instanceof Document ? scope : document;
+  rootScope.querySelectorAll('.rich-text-editor').forEach((editor) => {
+    if (!(editor instanceof HTMLElement) || editor.dataset.richTextEditorBound === '1') return;
+    editor.dataset.richTextEditorBound = '1';
+    const surface = editor.querySelector('.rich-text-surface');
+    if (surface instanceof HTMLElement) {
+      syncRichTextEditor(editor);
+      surface.addEventListener('input', () => {
+        syncRichTextEditor(editor);
+      });
+      surface.addEventListener('blur', () => {
+        syncRichTextEditor(editor);
+      });
+      surface.addEventListener('paste', (event) => {
+        event.preventDefault();
+        const text = event.clipboardData?.getData('text/plain') || '';
+        document.execCommand('insertText', false, text);
+        syncRichTextEditor(editor);
+      });
+    }
+  });
   rootScope.querySelectorAll('[data-action="format-rich-text"]').forEach((button) => {
     if (!(button instanceof HTMLButtonElement) || button.dataset.richTextBound === '1') return;
     button.dataset.richTextBound = '1';
     button.addEventListener('click', (event) => {
       event.preventDefault();
       const editor = button.closest('.rich-text-editor');
-      const textarea = editor?.querySelector('textarea');
-      applyRichTextFormat(textarea, button.dataset.command);
+      const surface = editor?.querySelector('.rich-text-surface');
+      applyRichTextFormat(surface, button.dataset.command);
     });
   });
 }

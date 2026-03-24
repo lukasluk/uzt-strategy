@@ -1378,6 +1378,36 @@ textarea {
 .rich-text-input {
   width: 100%;
 }
+.rich-text-surface {
+  font-family: 'Space Grotesk', sans-serif;
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e0d1bf;
+  background: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rich-text-surface:focus {
+  outline: none;
+  border-color: #b9ccf0;
+  box-shadow: 0 0 0 4px rgba(59, 116, 211, 0.08);
+}
+.rich-text-surface.is-empty::before {
+  content: attr(data-placeholder);
+  color: #8a97ac;
+}
+.rich-text-surface[aria-disabled='true'] {
+  background: #f6f7fb;
+  color: #68758a;
+  cursor: not-allowed;
+}
+.rich-text-hidden-input {
+  display: none !important;
+}
 .rich-text-content {
   color: inherit;
   line-height: 1.55;
@@ -4546,6 +4576,10 @@ body.embed-map-page .map-fullscreen-watermark img {
   margin: 0;
   font-size: clamp(22px, 2.2vw, 32px);
   line-height: 1.35;
+}
+.map-comment-card .map-comment-description .rich-text-content {
+  font-size: inherit;
+  line-height: inherit;
 }
 .map-comment-actions {
   display: flex;
