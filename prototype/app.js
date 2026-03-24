@@ -9,85 +9,85 @@
     id: 'initiatives',
     title: 'Iniciatyvos',
     hint: 'Veiksmai, balsavimas, komentarai',
-    prompt: 'Kokias konkrecias iniciatyvas igyvendinsime?'
+    prompt: 'Kokias konkrečias iniciatyvas įgyvendinsime?'
   }
 ];
 
 const introSlides = [
   {
-    title: '1. Pasirinkite institucija',
-    body: 'digistrategy.eu sistema skirta patogiam jusu institucijos strategijos rengimo procesui.',
+    title: '1. Pasirinkite instituciją',
+    body: 'digistrategy.eu sistema skirta patogiam jūsų institucijos strategijos rengimo procesui.',
     points: [
-      'Virsuje desineje pasirinkite institucija, kurios strategija norite perziureti ar administruoti.',
-      'Institucija galima keisti bet kada, duomenys persikrauna automatiskai.'
+      'Viršuje dešinėje pasirinkite instituciją, kurios strategiją norite peržiūrėti ar administruoti.',
+      'Instituciją galima keisti bet kada, duomenys persikrauna automatiškai.'
     ]
   },
   {
-    title: '2. Sukurkite gairiu struktura',
-    body: 'Patogiai susikurkite gairiu struktura ir aiskiai apibrezkite strategijos kryptis.',
+    title: '2. Sukurkite gairių struktūrą',
+    body: 'Patogiai susikurkite gairių struktūrą ir aiškiai apibrėžkite strategijos kryptis.',
     points: [
-      'Gaires grupuojamos pagal rysius: tevines, vaikines ir naslaitines.',
-      'Tai pagrindinis korteliu valdymo modulio etapas.'
+      'Gairės grupuojamos pagal ryšius: tėvinės, vaikinės ir našlaitinės.',
+      'Tai pagrindinis kortelių valdymo modulio etapas.'
     ]
   },
   {
     title: '3. Priskirkite iniciatyvas',
-    body: 'Skiltyje "Iniciatyvos" priskirkite konkrecias iniciatyvas gairiu igyvendinimui.',
+    body: 'Skiltyje "Iniciatyvos" priskirkite konkrečias iniciatyvas gairių įgyvendinimui.',
     points: [
-      'Kiekviena iniciatyva turi buti susieta bent su viena gaire.',
-      'Taip kuriamas aiskus rysys tarp krypties ir veiksmu.'
+      'Kiekviena iniciatyva turi būti susieta bent su viena gaire.',
+      'Taip kuriamas aiškus ryšys tarp krypties ir veiksmų.'
     ]
   },
   {
-    title: '4. Komentuokite ir siulykite kryptis',
-    body: 'Korteliu valdymo modulyje jusu kolegos gali komentuoti ir siulyti ivairias strategijos kryptis.',
+    title: '4. Komentuokite ir siūlykite kryptis',
+    body: 'Kortelių valdymo modulyje jūsų kolegos gali komentuoti ir siūlyti įvairias strategijos kryptis.',
     points: [
-      'Diskusijos vyksta prie konkreciu gairiu ir iniciatyvu.',
-      'Neprisijunges lankytojas mato tik viesa informacija.'
+      'Diskusijos vyksta prie konkrečių gairių ir iniciatyvų.',
+      'Neprisijungęs lankytojas mato tik viešą informaciją.'
     ]
   },
   {
-    title: '5. Balsuokite uz pasiulymus',
-    body: 'Nariai gali balsuoti uz vieni kitu teiktus pasiulymus gairiuose ir iniciatyvose.',
+    title: '5. Balsuokite už pasiūlymus',
+    body: 'Nariai gali balsuoti už vieni kitų teiktus pasiūlymus gairiuose ir iniciatyvose.',
     points: [
       'Balsai skiriami "+" ir "-" mygtukais.',
       'Kol ciklas atviras, balsus galima koreguoti.'
     ]
   },
   {
-    title: '6. Naudokite strategiju zemelapi',
-    body: 'Strategiju zemelapis yra patogus vizualinis irankis perziureti strategijos struktura ir elementu rysius.',
+    title: '6. Naudokite strategijų žemėlapį',
+    body: 'Strategijų žemėlapis yra patogus vizualinis įrankis peržiūrėti strategijos struktūrą ir elementų ryšius.',
     points: [
-      'Galite perjungti sluoksnius "GairÄ—s" ir "Iniciatyvos".',
-      'Galima centruoti vaizda, priartinti ir naudoti pilno ekrano rezima.'
+      'Galite perjungti sluoksnius "Gairės" ir "Iniciatyvos".',
+      'Galima centruoti vaizdą, priartinti ir naudoti pilno ekrano režimą.'
     ]
   },
   {
-    title: '7. Uzbaikite strategijos cikla',
-    body: 'Kai diskusijos baigtos, administratorius uzdaro cikla ir strategija lieka perziuros rezime.',
+    title: '7. Užbaikite strategijos ciklą',
+    body: 'Kai diskusijos baigtos, administratorius uždaro ciklą ir strategija lieka peržiūros režime.',
     points: [
-      'Uzdarytame cikle balsavimas ir komentavimas isjungiami.',
-      'Santrauka galima eksportuoti i teksta arba JSON.'
+      'Uždarytame cikle balsavimas ir komentavimas išjungiami.',
+      'Santrauką galima eksportuoti į tekstą arba JSON.'
     ]
   },
   {
-    title: '8. Ikelkite zemelapi su embed funkcija',
-    body: 'Galutini interaktyvu strategijos zemelapi ikelkite i intraneta ar vidini puslapi naudodami embedding funkcionaluma.',
+    title: '8. Įkelkite žemėlapį su embed funkcija',
+    body: 'Galutinį interaktyvų strategijos žemėlapį įkelkite į intranetą ar vidinį puslapį naudodami embedding funkcionalumą.',
     points: [
-      'Admin skiltyje "Embed: Strategiju zemelapis" nukopijuokite paruosta iframe koda.',
-      'Sistema skirta valstybinems institucijoms, siekiancioms strategijos kurimo procesa vykdyti efektyviai.'
+      'Admin skiltyje "Embed: Strategijų žemėlapis" nukopijuokite paruoštą iframe kodą.',
+      'Sistema skirta valstybinėms institucijoms, siekiančioms strategijos kūrimo procesą vykdyti efektyviai.'
     ]
   }
 ];
 
-const DEFAULT_MISSION_TEXT = 'Organizacijos paskirtis ir vertes kurimo logika.';
-const DEFAULT_VISION_TEXT = 'Ilgalaike kryptis ir siekiama pokycio busena.';
+const DEFAULT_MISSION_TEXT = 'Organizacijos paskirtis ir vertės kūrimo logika.';
+const DEFAULT_VISION_TEXT = 'Ilgalaikė kryptis ir siekiama pokyčio būsena.';
 const DEFAULT_GUIDE_INTRO_TEXT = [
-  'digistrategy.eu sistema skirta patogiam jusu institucijos strategijos rengimo procesui. Patogiai susikurkite gairiu struktura ir priskirkite konkrecias iniciatyvas tu gairiu igyvendinimui.',
-  'Sistema susideda is 2 pagrindiniu daliu:',
-  '1. Korteliu valdymo modulio (GairÄ—s ir Iniciatyvos) - cia jusu kolegos gali komentuoti, siulyti ivairias strategijos kryptis, balsuoti uz vieni kitu teiktus pasiulymus.',
-  '2. Strategiju zemelapis - patogus vizualinis irankis perziureti strategijos struktura ir rysius tarp skirtingu jos elementu.',
-  'Galutini savo interaktyvu strategijos zemelapi ikelkite i intraneta ar vidini puslapi su embeding funkcionalumu. Sistema skirta valstybinems institucijoms, kurios nori savo strategijos kurimo procesa vykdyti efektyviai.'
+  'digistrategy.eu sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.',
+  'Sistema susideda iš 2 pagrindinių dalių:',
+  '1. Kortelių valdymo modulio (Gairės ir Iniciatyvos) - čia jūsų kolegos gali komentuoti, siūlyti įvairias strategijos kryptis, balsuoti už vieni kitų teiktus pasiūlymus.',
+  '2. Strategijų žemėlapis - patogus vizualinis įrankis peržiūrėti strategijos struktūrą ir ryšius tarp skirtingų jos elementų.',
+  'Galutinį savo interaktyvų strategijos žemėlapį įkelkite į intranetą ar vidinį puslapį su embedding funkcionalumu. Sistema skirta valstybinėms institucijoms, kurios nori savo strategijos kūrimo procesą vykdyti efektyviai.'
 ].join('\\n');
 const DEFAULT_ABOUT_TEXT = [
   'Lietuvos vieÅ¡ajame sektoriuje skaitmenizacija vis daÅ¾niau suvokiama ne kaip pavieniÅ³ IT projektÅ³ rinkinys, o kaip sisteminis pokytis, apimantis paslaugÅ³ kokybÄ™, duomenÅ³ valdymÄ… ir naujÅ³ technologijÅ³ taikymÄ…. TodÄ—l vis didesnÄ™ reikÅ¡mÄ™ Ä¯gyja ne tik technologiniai sprendimai, bet ir aiÅ¡kios, Ä¯gyvendinamos skaitmenizacijos strategijos (arba IT plÄ—tros planai).',
@@ -729,7 +729,7 @@ function strategyUrlInlineBlockMarkup() {
   const canShareStrategy = Boolean(normalizeSlug(state.institutionSlug) && normalizeSlug(state.strategySlug));
   const strategyUrl = canShareStrategy ? strategyShareUrl() : '';
   const strategyUrlLabel = langText('Strategijos nuoroda', 'Strategy URL');
-  const copyStrategyUrlLabel = langText('Kopijuoti nuoroda', 'Copy URL');
+  const copyStrategyUrlLabel = langText('Kopijuoti nuorodą', 'Copy URL');
   if (!canShareStrategy) return '';
   return `
     <section class="strategy-url-inline-card" data-intro-stop-toggle>
@@ -1144,7 +1144,7 @@ function stepPrompt(stepId) {
   const id = String(stepId || '').trim().toLowerCase();
   if (id === 'initiatives') {
     return langText(
-      'Kokias konkrecias iniciatyvas igyvendinsime?',
+      'Kokias konkrečias iniciatyvas įgyvendinsime?',
       'Which concrete initiatives will we implement?'
     );
   }
@@ -2423,7 +2423,7 @@ function institutionSelectMarkup() {
   }).join('');
 
   const institutionLabel = langText('Institucija', 'Institution');
-  const institutionTitle = langText('Pasirinkite institucija perziurai', 'Select institution for viewing');
+  const institutionTitle = langText('Pasirinkite instituciją peržiūrai', 'Select institution for viewing');
   return `
     <label class="institution-switcher" title="${escapeHtml(institutionTitle)}">
       <span>${escapeHtml(institutionLabel)}</span>
@@ -2451,11 +2451,11 @@ function strategySelectMarkup() {
     return `<option value="${escapeHtml(slug)}"${selected}>${escapeHtml(decoratedTitle)}</option>`;
   }).join('');
   const placeholder = hasStrategies
-    ? `<option value="" ${selectedSlug ? '' : 'selected'} disabled>${escapeHtml(langText('Pasirinkite strategija', 'Select strategy'))}</option>`
+    ? `<option value="" ${selectedSlug ? '' : 'selected'} disabled>${escapeHtml(langText('Pasirinkite strategiją', 'Select strategy'))}</option>`
     : '';
 
   const strategyLabel = langText('Strategija', 'Strategy');
-  const strategyTitle = langText('Pasirinkite strategija perziurai', 'Select strategy for viewing');
+  const strategyTitle = langText('Pasirinkite strategiją peržiūrai', 'Select strategy for viewing');
   return `
     <label class="institution-switcher strategy-switcher" title="${escapeHtml(strategyTitle)}">
       <span>${escapeHtml(strategyLabel)}</span>
@@ -2751,19 +2751,19 @@ function strategySwitcherCardMarkup(options = {}) {
   const info = selectedInstitutionInfo();
   const institutionName = String(info?.name || state.institutionSlug || '-').trim() || '-';
   const strategyTitle = String(
-    info?.strategyTitle || state.strategy?.title || state.strategySlug || langText('Pasirinkite strategija', 'Select strategy')
-  ).trim() || langText('Pasirinkite strategija', 'Select strategy');
+    info?.strategyTitle || state.strategy?.title || state.strategySlug || langText('Pasirinkite strategiją', 'Select strategy')
+  ).trim() || langText('Pasirinkite strategiją', 'Select strategy');
   const loading = state.loading && !state.institutionsLoaded;
   const dialogOpen = Boolean(state.strategySwitcherDialogOpen);
   const showCreateStrategyAction = canManageSelectedInstitution();
-  const createButtonLabel = langText('Sukurti strategija', 'Create strategy');
+  const createButtonLabel = langText('Sukurti strategiją', 'Create strategy');
   const guideButtonLabel = langText('Naudojimosi gidas', 'User guide');
   const showVoteBudget = topbar && isLoggedIn() && Boolean(normalizeSlug(state.strategySlug) || state.strategy?.id);
   const budget = voteBudget();
   const used = usedVotesTotal();
   const remaining = Math.max(0, budget - used);
   const voteBudgetTooltip = langText(
-    'Balsu biudzetas priskiriamas konkreciai pasirinktai strategijai. Rodoma, kiek balsu liko is viso sios strategijos ciklo biudzeto.',
+    'Balsų biudžetas priskiriamas konkrečiai pasirinktai strategijai. Rodoma, kiek balsų liko iš viso šios strategijos ciklo biudžeto.',
     'Vote budget is assigned to the currently selected strategy. Shows how many votes remain out of this strategy cycle total.'
   );
   const voteBudgetMarkup = showVoteBudget
@@ -3175,7 +3175,7 @@ function renderSteps() {
     `;
     if (item.locked) {
       button.title = item.id === 'history'
-        ? langText('Sis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only')
+        ? langText('Šis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only')
         : 'Administravimas galimas tik savo institucijos administratoriui';
     } else if (sidebarCollapsed) {
       button.title = item.title;
@@ -3248,8 +3248,8 @@ function renderSteps() {
     `;
     gremlinButton.title = gremlinLocked
       ? (!isLoggedIn()
-        ? langText('Sis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only')
-        : langText('Pirmiausia atverkite aktyvu strategijos cikla', 'Open an active strategy cycle first'))
+        ? langText('Šis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only')
+        : langText('Pirmiausia atverkite aktyvų strategijos ciklą', 'Open an active strategy cycle first'))
       : langText('Gauti AI pasiūlymus visai strategijai pagal dabartinį fokusą', 'Get AI suggestions for the whole strategy from the current focus');
     if (sidebarCollapsed) {
       gremlinButton.title = clarityGremlinUiText().actionLabel;
@@ -3386,8 +3386,8 @@ function renderIntroDeck() {
                     <span class="structure-label">${langText('GairÄ—s', 'Guidelines')}</span>
                     <p>${langText('Kryptys arba tikslai, atvaizduojami dviem korteliu lygiais.', 'Directions or goals shown in two card levels.')}</p>
                     <div class="structure-mini-cards" aria-hidden="true">
-                      <span>${langText('Tevines', 'Parent')}</span>
-                      <span>${langText('Vaikines', 'Child')}</span>
+                      <span>${langText('Tėvinės', 'Parent')}</span>
+                      <span>${langText('Vaikinės', 'Child')}</span>
                     </div>
                     <span class="structure-badge">${langText('Etapas 1', 'Stage 1')}</span>
                   </article>
@@ -3404,7 +3404,7 @@ function renderIntroDeck() {
                   <span class="structure-arrow structure-arrow-inner" aria-hidden="true">&rarr;</span>
                   <article class="structure-step structure-step-layer structure-step-implementation" role="listitem">
                     <span class="structure-label">${langText('Igyvendinimo planas', 'Implementation plan')}</span>
-                    <p>${langText('Perkelimas i konkrecias veiklas, terminus ir atsakomybes.', 'Translation into concrete actions, timelines, and ownership.')}</p>
+                    <p>${langText('Perkėlimas į konkrečias veiklas, terminus ir atsakomybes.', 'Translation into concrete actions, timelines, and ownership.')}</p>
                     <span class="structure-badge">${langText('Etapas 3', 'Stage 3')}</span>
                   </article>
                 </div>
@@ -3460,9 +3460,9 @@ function renderIntroDeck() {
 
 function relationLabel(relationType) {
   const relation = String(relationType || 'orphan').toLowerCase();
-  if (relation === 'parent') return langText('tevine', 'parent');
-  if (relation === 'child') return langText('vaikine', 'child');
-  return langText('naslaite', 'orphan');
+  if (relation === 'parent') return langText('tėvinė', 'parent');
+  if (relation === 'child') return langText('vaikinė', 'child');
+  return langText('našlaitė', 'orphan');
 }
 
 function renderGuideView() {
@@ -4196,7 +4196,7 @@ function renderGuidelineCard(guideline, options) {
   const safeComments = commentsVisible
     ? (comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : `<li class="comment-item comment-item-empty">${langText('Dar nera komentaru.', 'No comments yet.')}</li>`)
+      : `<li class="comment-item comment-item-empty">${langText('Dar nėra komentarų.', 'No comments yet.')}</li>`)
     : `<li class="comment-item comment-item-empty">${escapeHtml(commentsHiddenHintText())}</li>`;
   const relation = relationLabel(guideline.relationType);
   const relationKey = normalizeGuidelineRelation(guideline.relationType);
@@ -4223,7 +4223,7 @@ function renderGuidelineCard(guideline, options) {
   const strategyLinksMarkup = relationKey === 'parent'
     ? `
       <div class="header-stack guideline-strategy-links">
-        <span class="tag tag-link-main">${escapeHtml(langText('Strateginiai rysiai', 'Strategic links'))}: ${strategyLinks.length}</span>
+        <span class="tag tag-link-main">${escapeHtml(langText('Strateginiai ryšiai', 'Strategic links'))}: ${strategyLinks.length}</span>
         ${uniqueStrategyLinks.slice(0, 3).map((link) => `
           <button
             type="button"
@@ -4465,7 +4465,7 @@ function renderInitiativeCard(initiative, options) {
   const safeComments = commentsVisible
     ? (comments.length
       ? comments.map((comment) => renderCommentItem(comment)).join('')
-      : `<li class="comment-item comment-item-empty">${langText('Dar nera komentaru.', 'No comments yet.')}</li>`)
+      : `<li class="comment-item comment-item-empty">${langText('Dar nėra komentarų.', 'No comments yet.')}</li>`)
     : `<li class="comment-item comment-item-empty">${escapeHtml(commentsHiddenHintText())}</li>`;
   const initiativeStatus = String(initiative.status || 'active').toLowerCase();
   const pendingStatus = initiativeStatus === 'pending';
@@ -4622,7 +4622,7 @@ function openGuidelineAdminEditModal(guideline) {
             ${renderRichTextEditor({
               name: 'description',
               value: item.description || '',
-              placeholder: langText('Trumpas gaires aprasymas', 'Short guideline description'),
+              placeholder: langText('Trumpas gairės aprašymas', 'Short guideline description'),
               rows: 5,
               textareaClass: 'admin-edit-description'
             })}
@@ -4642,15 +4642,15 @@ function openGuidelineAdminEditModal(guideline) {
             <label class="admin-edit-field">
               <span class="admin-edit-field-label">${escapeHtml(langText('Tipas', 'Type'))}</span>
               <select name="relationType">
-                <option value="orphan" ${relation === 'orphan' ? 'selected' : ''}>${escapeHtml(langText('Naslaite', 'Orphan'))}</option>
-                <option value="parent" ${relation === 'parent' ? 'selected' : ''}>${escapeHtml(langText('Tevine', 'Parent'))}</option>
-                <option value="child" ${relation === 'child' ? 'selected' : ''}>${escapeHtml(langText('Vaikine', 'Child'))}</option>
+                <option value="orphan" ${relation === 'orphan' ? 'selected' : ''}>${escapeHtml(langText('Našlaitė', 'Orphan'))}</option>
+                <option value="parent" ${relation === 'parent' ? 'selected' : ''}>${escapeHtml(langText('Tėvinė', 'Parent'))}</option>
+                <option value="child" ${relation === 'child' ? 'selected' : ''}>${escapeHtml(langText('Vaikinė', 'Child'))}</option>
               </select>
             </label>
             <label class="admin-edit-field${relation === 'child' ? '' : ' is-hidden'}" data-admin-parent-field>
-              <span class="admin-edit-field-label">${escapeHtml(langText('Tevine gaire', 'Parent guideline'))}</span>
+              <span class="admin-edit-field-label">${escapeHtml(langText('Tėvinė gairė', 'Parent guideline'))}</span>
               <select name="parentGuidelineId" ${relation === 'child' ? '' : 'disabled'}>
-                <option value="">${escapeHtml(langText('Pasirinkite tevine gaire', 'Select parent guideline'))}</option>
+                <option value="">${escapeHtml(langText('Pasirinkite tėvinę gairę', 'Select parent guideline'))}</option>
                 ${parentOptions}
               </select>
             </label>
@@ -4775,7 +4775,7 @@ function openInitiativeAdminEditModal(initiative) {
             ${renderRichTextEditor({
               name: 'description',
               value: item.description || '',
-              placeholder: langText('Trumpas iniciatyvos aprasymas', 'Short initiative description'),
+              placeholder: langText('Trumpas iniciatyvos aprašymas', 'Short initiative description'),
               rows: 5,
               textareaClass: 'admin-edit-description'
             })}
@@ -5423,8 +5423,8 @@ function resolveGuidelineRelatedItems(guideline) {
       return String(candidate.parentGuidelineId || '').trim() === guidelineId;
     }));
     return {
-      heading: langText('Vaikines gaires', 'Child guidelines'),
-      emptyLabel: langText('Vaikiniu gairiu dar nera.', 'No child guidelines yet.'),
+      heading: langText('Vaikinės gairės', 'Child guidelines'),
+      emptyLabel: langText('Vaikinių gairių dar nėra.', 'No child guidelines yet.'),
       items: children
     };
   }
@@ -5432,8 +5432,8 @@ function resolveGuidelineRelatedItems(guideline) {
   if (relation === 'child') {
     const parent = resolveGuidelineParent(item);
     return {
-      heading: langText('Tevine gaire', 'Parent guideline'),
-      emptyLabel: langText('Tevine gaire nepriskirta.', 'No parent guideline is assigned.'),
+      heading: langText('Tėvinė gairė', 'Parent guideline'),
+      emptyLabel: langText('Tėvinė gairė nepriskirta.', 'No parent guideline is assigned.'),
       items: parent ? [parent] : []
     };
   }
@@ -5444,8 +5444,8 @@ function resolveGuidelineRelatedItems(guideline) {
     return String(candidate.id || '').trim() !== guidelineId;
   }));
   return {
-    heading: langText('Kitos naslaiciu gaires', 'Other orphan guidelines'),
-    emptyLabel: langText('Kitu naslaiciu gairiu nera.', 'No other orphan guidelines.'),
+    heading: langText('Kitos našlaičių gairės', 'Other orphan guidelines'),
+    emptyLabel: langText('Kitų našlaičių gairių nėra.', 'No other orphan guidelines.'),
     items: otherOrphans
   };
 }
@@ -5455,7 +5455,7 @@ function resolveGuidelineRelatedInitiatives(guideline) {
   if (!item) {
     return {
       heading: langText('Susijusios iniciatyvos', 'Associated initiatives'),
-      emptyLabel: langText('Susietu iniciatyvu nerasta.', 'No linked initiatives found.'),
+      emptyLabel: langText('Susietų iniciatyvų nerasta.', 'No linked initiatives found.'),
       items: []
     };
   }
@@ -5590,7 +5590,7 @@ function renderInitiativeRelatedGuidelinesSection(initiative) {
         const parentHintMarkup = shouldRenderParentHint
           ? `
                 <div class="initiative-supported-parent-context" aria-hidden="true">
-                  <span class="initiative-supported-parent-label">${escapeHtml(langText('Tevine gaire', 'Parent guideline'))}</span>
+                  <span class="initiative-supported-parent-label">${escapeHtml(langText('Tėvinė gairė', 'Parent guideline'))}</span>
                   <span class="initiative-supported-parent-title">${escapeHtml(parent.title || parent.id)}</span>
                 </div>
               `
@@ -5615,7 +5615,7 @@ function renderInitiativeRelatedGuidelinesSection(initiative) {
             `;
       }).join('');
     })()
-    : `<div class="card guideline-empty"><strong>${escapeHtml(langText('Susietu gairiu nerasta.', 'No linked guidelines found.'))}</strong></div>`;
+    : `<div class="card guideline-empty"><strong>${escapeHtml(langText('Susietų gairių nerasta.', 'No linked guidelines found.'))}</strong></div>`;
   return `
     <div class="detail-related-grid detail-related-grid-single">
       <section class="guideline-group detail-related-group detail-related-group-tone-guideline detail-related-group-guideline initiative-supported-guidelines-section">
@@ -5659,7 +5659,7 @@ function buildGuidelineDetailBreadcrumbs(guideline) {
   const parent = resolveGuidelineParent(item);
   const label = langText('Kelias', 'Breadcrumb');
   const listLabel = langText('GairÄ—s', 'Guidelines');
-  const parentLabel = langText('Tevine gaire', 'Parent guideline');
+  const parentLabel = langText('Tėvinė gairė', 'Parent guideline');
   const currentTitle = String(item.title || item.id || '-').trim() || '-';
 
   return `
@@ -5740,28 +5740,28 @@ function proposalModerationText() {
     };
   }
   return {
-    title: 'Pasiulymo perziura',
-    subtitleGuideline: 'Perziurekite laukianti gaires pasiulyma ir uzfiksuokite sprendima.',
-    subtitleInitiative: 'Perziurekite laukianti iniciatyvos pasiulyma ir uzfiksuokite sprendima.',
+    title: 'Pasiūlymo peržiūra',
+    subtitleGuideline: 'Peržiūrėkite laukiantį gairės pasiūlymą ir užfiksuokite sprendimą.',
+    subtitleInitiative: 'Peržiūrėkite laukiantį iniciatyvos pasiūlymą ir užfiksuokite sprendimą.',
     approve: 'Patvirtinti',
     approveWithChanges: 'Patvirtinti su pakeitimais',
     reject: 'Atmesti',
     noteLabel: 'Sprendimo paaiskinimas',
-    notePlaceholder: 'Trumpai paaiskinkite, kodel pasiulyma patvirtinate, koreguojate arba atmetate.',
+    notePlaceholder: 'Trumpai paaiškinkite, kodėl pasiūlymą patvirtinate, koreguojate arba atmetate.',
     changesLabel: 'Pakeitimai pries tvirtinima',
     submit: 'Pateikti sprendima',
     titleLabel: 'Pavadinimas',
     descriptionLabel: 'Aprasymas',
     relationLabel: 'Rysio tipas',
-    parentLabel: 'Tevine gaire',
+    parentLabel: 'Tėvinė gairė',
     linkedGuidelinesLabel: 'Susietos gaires',
     standalone: 'Savarankiska',
-    parent: 'Tevine',
-    child: 'Vaikine',
-    parentRequired: 'Pries tvirtindami su pakeitimais pasirinkite tevine gaire vaikinei gairei.',
-    approved: 'Pasiulymas patvirtintas.',
-    approvedWithChanges: 'Pasiulymas patvirtintas su pakeitimais.',
-    rejected: 'Pasiulymas atmestas.'
+    parent: 'Tėvinė',
+    child: 'Vaikinė',
+    parentRequired: 'Prieš tvirtindami su pakeitimais pasirinkite tėvinę gairę vaikinės gairės pasiūlymui.',
+    approved: 'Pasiūlymas patvirtintas.',
+    approvedWithChanges: 'Pasiūlymas patvirtintas su pakeitimais.',
+    rejected: 'Pasiūlymas atmestas.'
   };
 }
 
@@ -5958,7 +5958,7 @@ function renderGuidelineDetailView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+        <strong>${langText('Pasirinkite instituciją', 'Select an institution')}</strong>
       </div>
     `;
     return;
@@ -5987,7 +5987,7 @@ function renderGuidelineDetailView() {
     elements.stepView.innerHTML = `
       <div class="card">
         <strong>${langText('Gaire nerasta', 'Guideline not found')}</strong>
-        <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuoroda arba grizkite i gairiu sarasa.', 'Check the URL or return to guideline list.')}</p>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuorodą arba grįžkite į gairių sąrašą.', 'Check the URL or return to guideline list.')}</p>
         <button id="backToGuidelinesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('GrÄ¯Å¾ti Ä¯ gaires', 'Back to guidelines')}</button>
       </div>
     `;
@@ -6163,7 +6163,7 @@ function renderInitiativeDetailView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+        <strong>${langText('Pasirinkite instituciją', 'Select an institution')}</strong>
       </div>
     `;
     return;
@@ -6192,7 +6192,7 @@ function renderInitiativeDetailView() {
     elements.stepView.innerHTML = `
       <div class="card">
         <strong>${langText('Iniciatyva nerasta', 'Initiative not found')}</strong>
-        <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuoroda arba grizkite i iniciatyvu sarasa.', 'Check the URL or return to initiative list.')}</p>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Patikrinkite nuorodą arba grįžkite į iniciatyvų sąrašą.', 'Check the URL or return to initiative list.')}</p>
         <button id="backToInitiativesBtn" class="btn btn-ghost" style="margin-top: 12px;">${langText('GrÄ¯Å¾ti Ä¯ iniciatyvas', 'Back to initiatives')}</button>
       </div>
     `;
@@ -6292,7 +6292,7 @@ function renderInitiativesView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+        <strong>${langText('Pasirinkite instituciją', 'Select an institution')}</strong>
       </div>
     `;
     return;
@@ -6347,7 +6347,7 @@ function renderInitiativesView() {
           </div>`
         : `<div class="card guideline-empty">
             <strong>${langText('Iniciatyvu dar nera', 'No initiatives yet')}</strong>
-            <p class="prompt" style="margin: 6px 0 0;">${langText('Sioje institucijoje kol kas nera sukurtu iniciatyvu.', 'No initiatives have been created for this institution yet.')}</p>
+            <p class="prompt" style="margin: 6px 0 0;">${langText('Šioje institucijoje kol kas nėra sukurtų iniciatyvų.', 'No initiatives have been created for this institution yet.')}</p>
           </div>`
       }
     </section>
@@ -6357,7 +6357,7 @@ function renderInitiativesView() {
       <div class="card initiative-add-card" style="margin-top: 16px;">
         <div class="header-row">
           <strong>${langText('Nauja iniciatyva', 'New initiative')}</strong>
-          <span class="tag">${langText('Pasiulymas', 'Suggestion')}</span>
+          <span class="tag">${langText('Pasiūlymas', 'Suggestion')}</span>
         </div>
         <div class="initiative-add-layout">
           <div class="initiative-add-form-pane">
@@ -6395,7 +6395,7 @@ function renderInitiativesView() {
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>${langText('Prisijunkite, kad galetumete aktyviai dalyvauti', 'Sign in to participate actively')}</strong>
+        <strong>${langText('Prisijunkite, kad galėtumėte aktyviai dalyvauti', 'Sign in to participate actively')}</strong>
         <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">${langText('Prisijungti', 'Sign in')}</button>
       </div>
     `)}
@@ -6441,7 +6441,7 @@ function renderImplementationPlanView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+        <strong>${langText('Pasirinkite instituciją', 'Select an institution')}</strong>
       </div>
     `;
     return;
@@ -6660,15 +6660,15 @@ function historyKindLabel(kind) {
 function historyEventLabel(action) {
   const key = String(action || '').trim().toLowerCase();
   if (key === 'strategy_created') return langText('Strategija sukurta', 'Strategy created');
-  if (key === 'proposal_submitted') return langText('Pasiulymas pateiktas', 'Proposal submitted');
-  if (key === 'proposal_approved') return langText('Pasiulymas patvirtintas', 'Proposal approved');
-  if (key === 'proposal_approved_with_changes') return langText('Pasiulymas patvirtintas su pakeitimais', 'Proposal approved with changes');
-  if (key === 'proposal_rejected') return langText('Pasiulymas atmestas', 'Proposal rejected');
+  if (key === 'proposal_submitted') return langText('Pasiūlymas pateiktas', 'Proposal submitted');
+  if (key === 'proposal_approved') return langText('Pasiūlymas patvirtintas', 'Proposal approved');
+  if (key === 'proposal_approved_with_changes') return langText('Pasiūlymas patvirtintas su pakeitimais', 'Proposal approved with changes');
+  if (key === 'proposal_rejected') return langText('Pasiūlymas atmestas', 'Proposal rejected');
   if (key === 'proposal_cancelled') return langText('Irasas pasalintas administratoriaus', 'Entry deleted by admin');
   if (key === 'gremlin_draft_implemented') return clarityGremlinUiText().gremlinImplementedHistory;
   if (key === 'guideline_commented') return langText('Gaire pakomentuota', 'Guideline commented');
   if (key === 'initiative_commented') return langText('Iniciatyva pakomentuota', 'Initiative commented');
-  if (key === 'proposal_commented') return langText('Pasiulymas pakomentuotas', 'Proposal commented');
+  if (key === 'proposal_commented') return langText('Pasiūlymas pakomentuotas', 'Proposal commented');
   return key || '-';
 }
 
@@ -6823,7 +6823,7 @@ function renderHistoryView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+        <strong>${langText('Pasirinkite instituciją', 'Select an institution')}</strong>
       </div>
     `;
     return;
@@ -6921,15 +6921,15 @@ function renderStrategySelectionRequiredView() {
   const institutionName = String(state.institution?.name || state.institutionSlug || '-').trim() || '-';
   const strategies = strategiesForSelectedInstitution();
   const rememberedSlug = rememberedStrategySlugForInstitution(state.institutionSlug);
-  const heading = langText('Pasirinkite strategija', 'Select a strategy');
+  const heading = langText('Pasirinkite strategiją', 'Select a strategy');
   const helper = langText(
-    'Pasirinkite, kuria strategija norite perziureti. Be strategijos pasirinkimo turinys nerodomas.',
+    'Pasirinkite, kurią strategiją norite peržiūrėti. Be strategijos pasirinkimo turinys nerodomas.',
     'Choose which strategy you want to view. Content stays hidden until a strategy is selected.'
   );
   const lastUsedLabel = langText('Paskutinis pasirinktas', 'Last used');
   const noStrategiesTitle = langText('Strategiju kol kas nera', 'No strategies yet');
   const noStrategiesHint = langText(
-    'Siai institucijai dar nera sukurtu strategiju. Paprasykite administratoriaus sukurti bent viena strategija.',
+    'Šiai institucijai dar nėra sukurtų strategijų. Paprašykite administratoriaus sukurti bent vieną strategiją.',
     'No strategies are available for this institution yet. Ask an administrator to create at least one strategy.'
   );
 
@@ -7063,9 +7063,9 @@ function renderStepView() {
   if (!state.institutionSlug) {
     elements.stepView.innerHTML = `
       <div class="card">
-        <strong>${langText('Pasirinkite institucija', 'Select an institution')}</strong>
+        <strong>${langText('Pasirinkite instituciją', 'Select an institution')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">
-          ${langText('Kairiajame meniu pasirinkite institucija is isskleidziamo saraso, kad atvertumete jos viesa gairiu puslapi.', 'Use the left menu institution selector to open its public guideline page.')}
+          ${langText('Kairiajame meniu pasirinkite instituciją iš išskleidžiamo sąrašo, kad atvertumėte jos viešą gairių puslapį.', 'Use the left menu institution selector to open its public guideline page.')}
         </p>
       </div>
     `;
@@ -7127,7 +7127,7 @@ function renderStepView() {
                     })}
                   </div>
                   <div class="relationship-child-stack">
-                    <div class="relationship-child-label">${langText('Vaikines gaires', 'Child guidelines')}: ${group.children.length}</div>
+                    <div class="relationship-child-label">${langText('Vaikinės gairės', 'Child guidelines')}: ${group.children.length}</div>
                     ${group.children.length
                       ? `<div class="card-list relationship-child-grid">
                           ${group.children.map((child) => renderGuidelineCard(child, {
@@ -7139,7 +7139,7 @@ function renderStepView() {
                           })).join('')}
                         </div>`
                       : `<div class="relationship-child-empty">
-                          <p class="prompt">${langText('Vaikiniu gairiu dar nera.', 'No child guidelines yet.')}</p>
+                          <p class="prompt">${langText('Vaikinių gairių dar nėra.', 'No child guidelines yet.')}</p>
                           ${member && writable ? `<button type="button" class="btn btn-primary relationship-child-create-btn" data-action="create-child-guideline" data-parent-id="${escapeHtml(group.parent.id)}">${langText('Sukurti', 'Create')}</button>` : ''}
                         </div>`
                     }
@@ -7148,8 +7148,8 @@ function renderStepView() {
               </div>
             `).join('')
           : `<div class="card guideline-empty">
-              <strong>${langText('Kol kas nera teviniu gairiu su rysiais','No parent guidelines with links yet')}</strong>
-              <p class="prompt" style="margin: 6px 0 0;">${langText('Sukurus rysius, tevines ir vaikines gaires bus rodomos viename bloke.','Once links are created, parent and child guidelines will be displayed in one block.')}</p>
+              <strong>${langText('Kol kas nėra tėvinių gairių su ryšiais','No parent guidelines with links yet')}</strong>
+              <p class="prompt" style="margin: 6px 0 0;">${langText('Sukūrus ryšius, tėvinės ir vaikinės gairės bus rodomos viename bloke.','Once links are created, parent and child guidelines will be displayed in one block.')}</p>
             </div>`
         }
       </section>
@@ -7157,10 +7157,10 @@ function renderStepView() {
       ${relationGroups.unassignedChildren.length ? `
         <section class="guideline-group">
           <div class="guideline-group-header">
-            <h3>${langText('Vaikines be tevines', 'Children without parent')}</h3>
+            <h3>${langText('Vaikinės be tėvinės', 'Children without parent')}</h3>
             <span class="tag">${relationGroups.unassignedChildren.length}</span>
           </div>
-          <p class="prompt">${langText('Sios vaikines gaires dar neturi teisingai priskirtos tevines gaires.', 'These child guidelines are missing a properly assigned parent guideline.')}</p>
+          <p class="prompt">${langText('Šios vaikinės gairės dar neturi teisingai priskirtos tėvinės gairės.', 'These child guidelines are missing a properly assigned parent guideline.')}</p>
           <div class="card-list">
             ${relationGroups.unassignedChildren.map((guideline) => renderGuidelineCard(guideline, {
               member,
@@ -7178,7 +7178,7 @@ function renderStepView() {
           <h3>${langText('Naslaitines gaires', 'Orphan guidelines')}</h3>
           <span class="tag">${relationGroups.orphanGuidelines.length}</span>
         </div>
-        <p class="prompt">${langText('Savarankiskos gaires, kurios nera priskirtos tevinei gairei.', 'Standalone guidelines that are not assigned to a parent guideline.')}</p>
+        <p class="prompt">${langText('Savarankiškos gairės, kurios nėra priskirtos tėvinei gairei.', 'Standalone guidelines that are not assigned to a parent guideline.')}</p>
         ${relationGroups.orphanGuidelines.length
           ? `<div class="card-list">
               ${relationGroups.orphanGuidelines.map((guideline) => renderGuidelineCard(guideline, {
@@ -7190,8 +7190,8 @@ function renderStepView() {
               })).join('')}
             </div>`
           : `<div class="card guideline-empty">
-              <strong>${langText('Naslaitiniu gairiu nera','No orphan guidelines')}</strong>
-              <p class="prompt" style="margin: 6px 0 0;">${langText('Visos gaires jau susietos su tevinemis arba pazymetos kitaip.','All guidelines are already linked to parent guidelines or marked differently.')}</p>
+              <strong>${langText('Našlaitinių gairių nėra','No orphan guidelines')}</strong>
+              <p class="prompt" style="margin: 6px 0 0;">${langText('Visos gairės jau susietos su tėvinėmis arba pažymėtos kitaip.','All guidelines are already linked to parent guidelines or marked differently.')}</p>
             </div>`
         }
       </section>
@@ -7213,20 +7213,20 @@ function renderStepView() {
           </div>
           <div class="form-row">
             <select name="relationType" id="guidelineRelationType" ${state.busy ? 'disabled' : ''}>
-              <option value="orphan">${escapeHtml(langText('Naslaite gaire', 'Orphan guideline'))}</option>
-              <option value="parent">${escapeHtml(langText('Tevine gaire', 'Parent guideline'))}</option>
-              <option value="child">${escapeHtml(langText('Vaikine gaire', 'Child guideline'))}</option>
+              <option value="orphan">${escapeHtml(langText('Našlaitė gairė', 'Orphan guideline'))}</option>
+              <option value="parent">${escapeHtml(langText('Tėvinė gairė', 'Parent guideline'))}</option>
+              <option value="child">${escapeHtml(langText('Vaikinė gairė', 'Child guideline'))}</option>
             </select>
           </div>
           <div class="form-row" id="guidelineParentRow" hidden>
             <select name="parentGuidelineId" id="guidelineParentGuidelineId" ${state.busy ? 'disabled' : ''}>
-              <option value="">${escapeHtml(langText('Pasirinkite tevine gaire', 'Select parent guideline'))}</option>
+              <option value="">${escapeHtml(langText('Pasirinkite tėvinę gairę', 'Select parent guideline'))}</option>
               ${parentGuidelineOptions}
             </select>
           </div>
           ${activeParentGuidelines.length
     ? ''
-    : `<p id="guidelineParentHint" class="prompt" hidden>${langText('Nera aktyviu teviniu gairiu. Pirmiausia sukurkite tevine gaire.', 'No active parent guidelines found. Create a parent guideline first.')}</p>`}
+    : `<p id="guidelineParentHint" class="prompt" hidden>${langText('Nėra aktyvių tėvinių gairių. Pirmiausia sukurkite tėvinę gairę.', 'No active parent guidelines found. Create a parent guideline first.')}</p>`}
           ${renderRichTextEditor({
             name: 'desc',
             placeholder: langText('Trumpas paaiskinimas', 'Short description'),
@@ -7245,13 +7245,13 @@ function renderStepView() {
       <div class="card" style="margin-top: 16px;">
         <strong>${langText('Prisijungta prie kitos institucijos','Signed in to another institution')}</strong>
         <p class="prompt" style="margin: 8px 0 0;">
-          ${langText('Sios institucijos strategija galite perziureti, bet teikti pasiulymu, komentuoti ir balsuoti negalite.','You can view this selected institution strategy, but you cannot submit suggestions, comment, or vote here.')}
+          ${langText('Šios institucijos strategiją galite peržiūrėti, bet teikti pasiūlymų, komentuoti ir balsuoti negalite.','You can view this selected institution strategy, but you cannot submit suggestions, comment, or vote here.')}
         </p>
       </div>
     ` : `
       <div class="card" style="margin-top: 16px;">
-        <strong>${langText('Prisijunkite, kad galetumete aktyviai dalyvauti', 'Sign in to participate actively')}</strong>
-        <p class="prompt" style="margin: 8px 0 0;">${langText('Viesai matomi visi komentarai prie strategijos gairiu. Prisijungus galima siulyti gaires, komentuoti ir balsuoti.', 'Public users can view the strategy cards. Sign in to suggest guidelines, comment, and vote.')}</p>
+        <strong>${langText('Prisijunkite, kad galėtumėte aktyviai dalyvauti', 'Sign in to participate actively')}</strong>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Viešai matomi visi komentarai prie strategijos gairių. Prisijungus galima siūlyti gaires, komentuoti ir balsuoti.', 'Public users can view the strategy cards. Sign in to suggest guidelines, comment, and vote.')}</p>
         <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">${langText('Prisijungti', 'Sign in')}</button>
       </div>
     `)}
@@ -7335,7 +7335,7 @@ function bindStepEvents() {
       const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
       if (!title) return;
       if (relationType === 'child' && !parentGuidelineId) {
-        notifyError(langText('Pasirinkite tevine gaire vaikinei gairei.', 'Select a parent guideline for a child guideline.'));
+        notifyError(langText('Pasirinkite tėvinę gairę vaikinės gairės pasiūlymui.', 'Select a parent guideline for a child guideline.'));
         return;
       }
 
@@ -7437,7 +7437,7 @@ function bindStepEvents() {
         const url = String(actionElement.dataset.url || guidelineShareUrl(guidelineId)).trim();
         const copied = await copyTextToClipboard(url);
         state.notice = copied
-          ? langText('Gaires nuoroda nukopijuota.', 'Guideline URL copied.')
+          ? langText('Gairės nuoroda nukopijuota.', 'Guideline URL copied.')
           : langText('Nepavyko nukopijuoti nuorodos.', 'Failed to copy URL.');
         if (copied) notifySuccess(state.notice);
         else notifyError(state.notice);
@@ -8465,7 +8465,7 @@ function buildParentGuidelineOptions(guidelines, selectedId = '') {
   const selected = String(selectedId || '').trim();
   const items = Array.isArray(guidelines) ? guidelines : [];
   return [
-    `<option value="">${escapeHtml(langText('Pasirinkite tevine gaire', 'Select a parent guideline'))}</option>`,
+    `<option value="">${escapeHtml(langText('Pasirinkite tėvinę gairę', 'Select a parent guideline'))}</option>`,
     ...items.map((guideline) => {
       const id = String(guideline?.id || '').trim();
       if (!id) return '';
@@ -8517,7 +8517,7 @@ async function showGuidelineImportModal(sourceGuideline) {
   }
   const initialTarget = pickPreferredExternalImportTarget(targets);
   if (!initialTarget) {
-    notifyError(langText('Importuoti galima tik i atvira jusu institucijos strategijos cikla.', 'Import is available only into an open cycle of your institution strategy.'));
+    notifyError(langText('Importuoti galima tik į atvirą jūsų institucijos strategijos ciklą.', 'Import is available only into an open cycle of your institution strategy.'));
     return;
   }
   if (!canImportExternalItem(sourceGuideline)) return;
@@ -8535,7 +8535,7 @@ async function showGuidelineImportModal(sourceGuideline) {
         <h2>${escapeHtml(langText('Naudoti mano strategijoje', 'Use in my strategy'))}</h2>
         <button id="closeExternalImportModal" class="btn btn-ghost" type="button">${escapeHtml(langText('Uzdaryti', 'Close'))}</button>
       </div>
-      <p class="prompt auth-hint">${escapeHtml(langText('Sukursite moderuojama gaires pasiulyma savo institucijos strategijoje.', 'This creates a moderated guideline proposal in your institution strategy.'))}</p>
+      <p class="prompt auth-hint">${escapeHtml(langText('Sukursite moderuojamą gairės pasiūlymą savo institucijos strategijoje.', 'This creates a moderated guideline proposal in your institution strategy.'))}</p>
       <div class="header-stack" style="margin-bottom: 12px;">
         <span class="tag">${escapeHtml(langText('Saltinis', 'Source'))}: ${escapeHtml(buildImportSourceLabel())}</span>
         <span class="tag">${escapeHtml(langText('Tikslas', 'Target'))}: <span id="externalImportTargetLabel">${escapeHtml(buildImportTargetLabel(initialTarget))}</span></span>
@@ -8543,7 +8543,7 @@ async function showGuidelineImportModal(sourceGuideline) {
       <div id="externalImportError" class="error" style="display:none;"></div>
       <form id="externalGuidelineImportForm" class="login-form login-form-auth strategy-create-form">
         ${targets.length > 1 ? `
-          <label class="auth-label" for="externalImportTargetStrategy">${escapeHtml(langText('Tiksline strategija', 'Target strategy'))}</label>
+          <label class="auth-label" for="externalImportTargetStrategy">${escapeHtml(langText('Tikslinė strategija', 'Target strategy'))}</label>
           <select id="externalImportTargetStrategy" name="targetStrategySlug">${buildImportTargetStrategyOptions(targets, initialTarget.strategySlug)}</select>
         ` : ''}
         <label class="auth-label" for="externalImportGuidelineTitle">${escapeHtml(langText('Pavadinimas', 'Title'))}</label>
@@ -8553,17 +8553,17 @@ async function showGuidelineImportModal(sourceGuideline) {
         <label class="auth-label" for="externalImportGuidelineRelation">${escapeHtml(langText('Rysio tipas', 'Relation type'))}</label>
         <select id="externalImportGuidelineRelation" name="relationType">
           <option value="orphan" ${defaultRelation === 'orphan' ? 'selected' : ''}>${escapeHtml(langText('Savarankiska', 'Standalone'))}</option>
-          <option value="parent" ${defaultRelation === 'parent' ? 'selected' : ''}>${escapeHtml(langText('Tevine', 'Parent'))}</option>
-          <option value="child" ${defaultRelation === 'child' ? 'selected' : ''}>${escapeHtml(langText('Vaikine', 'Child'))}</option>
+          <option value="parent" ${defaultRelation === 'parent' ? 'selected' : ''}>${escapeHtml(langText('Tėvinė', 'Parent'))}</option>
+          <option value="child" ${defaultRelation === 'child' ? 'selected' : ''}>${escapeHtml(langText('Vaikinė', 'Child'))}</option>
         </select>
-        <label class="auth-label" for="externalImportGuidelineParent">${escapeHtml(langText('Tiksline tevine gaire', 'Target parent guideline'))}</label>
+        <label class="auth-label" for="externalImportGuidelineParent">${escapeHtml(langText('Tikslinė tėvinė gairė', 'Target parent guideline'))}</label>
         <select id="externalImportGuidelineParent" name="parentGuidelineId"></select>
         <p id="externalImportGuidelineHint" class="prompt auth-hint">${escapeHtml(
           normalizeGuidelineRelation(sourceGuideline?.relationType) === 'child'
-            ? langText('Saltinio vaikine gaire pagal nutylejima importuojama kaip savarankiska, kol nepasirinksite tevines gaires savo strategijoje.', 'A child guideline from the source defaults to standalone until you map it to a parent guideline in your strategy.')
-            : langText('Perziurekite ir, jei reikia, pakoreguokite aprasyma pries pateikdami pasiulyma.', 'Review and adjust the description if needed before submitting the proposal.')
+            ? langText('Šaltinio vaikinė gairė pagal nutylėjimą importuojama kaip savarankiška, kol nepasirinksite tėvinės gairės savo strategijoje.', 'A child guideline from the source defaults to standalone until you map it to a parent guideline in your strategy.')
+            : langText('Peržiūrėkite ir, jei reikia, pakoreguokite aprašymą prieš pateikdami pasiūlymą.', 'Review and adjust the description if needed before submitting the proposal.')
         )}</p>
-        <button id="submitExternalGuidelineImport" class="btn btn-primary" type="submit">${escapeHtml(langText('Sukurti pasiulyma', 'Create proposal'))}</button>
+        <button id="submitExternalGuidelineImport" class="btn btn-primary" type="submit">${escapeHtml(langText('Sukurti pasiūlymą', 'Create proposal'))}</button>
       </form>
     </div>
   `;
@@ -8647,7 +8647,7 @@ async function showGuidelineImportModal(sourceGuideline) {
       const relationType = normalizeGuidelineRelation(fd.get('relationType'));
       const parentGuidelineId = String(fd.get('parentGuidelineId') || '').trim();
       if (relationType === 'child' && !parentGuidelineId) {
-        throw new Error(langText('Pasirinkite tevine gaire savo strategijoje.', 'Select a parent guideline in your strategy.'));
+        throw new Error(langText('Pasirinkite tėvinę gairę savo strategijoje.', 'Select a parent guideline in your strategy.'));
       }
       const payload = await api(`/api/v1/cycles/${encodeURIComponent(activeTarget.cycleId)}/import-guideline-proposals`, {
         method: 'POST',
@@ -8662,7 +8662,7 @@ async function showGuidelineImportModal(sourceGuideline) {
       closeExternalImportModal();
       notifySuccess(
         langText(
-          `Gaires pasiulymas sukurtas strategijai "${activeTarget.strategyTitle || activeTarget.cycleTitle || '-'}".`,
+          `Gairės pasiūlymas sukurtas strategijai "${activeTarget.strategyTitle || activeTarget.cycleTitle || '-'}".`,
           `Guideline proposal created for "${activeTarget.strategyTitle || activeTarget.cycleTitle || '-'}".`
         )
       );
@@ -8685,7 +8685,7 @@ async function showInitiativeImportModal(sourceInitiative) {
   }
   const initialTarget = pickPreferredExternalImportTarget(targets);
   if (!initialTarget) {
-    notifyError(langText('Importuoti galima tik i atvira jusu institucijos strategijos cikla.', 'Import is available only into an open cycle of your institution strategy.'));
+    notifyError(langText('Importuoti galima tik į atvirą jūsų institucijos strategijos ciklą.', 'Import is available only into an open cycle of your institution strategy.'));
     return;
   }
   if (!canImportExternalItem(sourceInitiative)) return;
@@ -8701,7 +8701,7 @@ async function showInitiativeImportModal(sourceInitiative) {
         <h2>${escapeHtml(langText('Naudoti mano strategijoje', 'Use in my strategy'))}</h2>
         <button id="closeExternalImportModal" class="btn btn-ghost" type="button">${escapeHtml(langText('Uzdaryti', 'Close'))}</button>
       </div>
-      <p class="prompt auth-hint">${escapeHtml(langText('Sukursite moderuojama iniciatyvos pasiulyma savo institucijos strategijoje.', 'This creates a moderated initiative proposal in your institution strategy.'))}</p>
+      <p class="prompt auth-hint">${escapeHtml(langText('Sukursite moderuojamą iniciatyvos pasiūlymą savo institucijos strategijoje.', 'This creates a moderated initiative proposal in your institution strategy.'))}</p>
       <div class="header-stack" style="margin-bottom: 12px;">
         <span class="tag">${escapeHtml(langText('Saltinis', 'Source'))}: ${escapeHtml(buildImportSourceLabel())}</span>
         <span class="tag">${escapeHtml(langText('Tikslas', 'Target'))}: <span id="externalImportTargetLabel">${escapeHtml(buildImportTargetLabel(initialTarget))}</span></span>
@@ -8714,17 +8714,17 @@ async function showInitiativeImportModal(sourceInitiative) {
       <div id="externalImportError" class="error" style="display:none;"></div>
       <form id="externalInitiativeImportForm" class="login-form login-form-auth strategy-create-form">
         ${targets.length > 1 ? `
-          <label class="auth-label" for="externalImportTargetStrategy">${escapeHtml(langText('Tiksline strategija', 'Target strategy'))}</label>
+          <label class="auth-label" for="externalImportTargetStrategy">${escapeHtml(langText('Tikslinė strategija', 'Target strategy'))}</label>
           <select id="externalImportTargetStrategy" name="targetStrategySlug">${buildImportTargetStrategyOptions(targets, initialTarget.strategySlug)}</select>
         ` : ''}
         <label class="auth-label" for="externalImportInitiativeTitle">${escapeHtml(langText('Pavadinimas', 'Title'))}</label>
         <input id="externalImportInitiativeTitle" type="text" name="title" value="${escapeHtml(sourceInitiative.title || '')}" required />
         <label class="auth-label" for="externalImportInitiativeDescription">${escapeHtml(langText('Aprasymas', 'Description'))}</label>
         <textarea id="externalImportInitiativeDescription" name="description" rows="5">${escapeHtml(sourceInitiative.description || '')}</textarea>
-        <label class="auth-label">${escapeHtml(langText('Priskirti prie siu jusu strategijos gairiu', 'Link to these guidelines in your strategy'))}</label>
+        <label class="auth-label">${escapeHtml(langText('Priskirti prie šių jūsų strategijos gairių', 'Link to these guidelines in your strategy'))}</label>
         <div id="externalImportInitiativeGuidelineList"></div>
-        <p class="prompt auth-hint">${escapeHtml(langText('Automatiskai pazymetos gairės, kuriu pavadinimai sutapo su saltinio iniciatyvos gairėmis.', 'Guidelines with titles matching the source initiative links were preselected automatically.'))}</p>
-        <button id="submitExternalInitiativeImport" class="btn btn-primary" type="submit">${escapeHtml(langText('Sukurti pasiulyma', 'Create proposal'))}</button>
+        <p class="prompt auth-hint">${escapeHtml(langText('Automatiškai pažymėtos gairės, kurių pavadinimai sutapo su šaltinio iniciatyvos gairėmis.', 'Guidelines with titles matching the source initiative links were preselected automatically.'))}</p>
+        <button id="submitExternalInitiativeImport" class="btn btn-primary" type="submit">${escapeHtml(langText('Sukurti pasiūlymą', 'Create proposal'))}</button>
       </form>
     </div>
   `;
@@ -8799,7 +8799,7 @@ async function showInitiativeImportModal(sourceInitiative) {
       const fd = new FormData(form);
       const guidelineIds = fd.getAll('guidelineIds').map((item) => String(item || '').trim()).filter(Boolean);
       if (!guidelineIds.length) {
-        throw new Error(langText('Pasirinkite bent viena tiksline gaire savo strategijoje.', 'Select at least one target guideline in your strategy.'));
+        throw new Error(langText('Pasirinkite bent vieną tikslinę gairę savo strategijoje.', 'Select at least one target guideline in your strategy.'));
       }
       const payload = await api(`/api/v1/cycles/${encodeURIComponent(activeTarget.cycleId)}/import-initiative-proposals`, {
         method: 'POST',
@@ -8813,7 +8813,7 @@ async function showInitiativeImportModal(sourceInitiative) {
       closeExternalImportModal();
       notifySuccess(
         langText(
-          `Iniciatyvos pasiulymas sukurtas strategijai "${activeTarget.strategyTitle || activeTarget.cycleTitle || '-'}".`,
+          `Iniciatyvos pasiūlymas sukurtas strategijai "${activeTarget.strategyTitle || activeTarget.cycleTitle || '-'}".`,
           `Initiative proposal created for "${activeTarget.strategyTitle || activeTarget.cycleTitle || '-'}".`
         )
       );
