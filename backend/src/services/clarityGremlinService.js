@@ -63,6 +63,14 @@ function normalizeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function uniqueTrimmed(values) {
+  return Array.from(new Set(
+    normalizeArray(values)
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  ));
+}
+
 function truncateList(items, maxItems = 40) {
   const list = Array.isArray(items) ? items : [];
   return list.slice(0, Math.max(0, Number(maxItems) || 0));
@@ -192,9 +200,35 @@ function summarizeInitiative(item) {
   };
 }
 
+function summarizeStrategicLinkCandidateGuideline(item) {
+  return {
+    id: item.id,
+    title: cleanText(item.title, 160),
+    description: cleanPreviewText(item.description, 320),
+    totalScore: Number(item.total_score || item.totalScore || 0),
+    childCount: Number(item.child_count || item.childCount || 0),
+    linkedInitiatives: Number(item.initiative_count || item.linkedInitiatives || 0)
+  };
+}
+
+function normalizeStrategicLinkConfidence(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'high' || raw === 'medium' || raw === 'low') return raw;
+  return 'medium';
+}
+
+function strategicLinkGroupLabel(group, locale) {
+  const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
+  if (String(group || '').trim().toLowerCase() === 'otherinstitutions') {
+    return isEnglish ? 'Other institutions' : 'Kitos institucijos';
+  }
+  return isEnglish ? 'Same institution' : 'Ta pati institucija';
+}
+
 async function loadCycleSnapshot(query, cycleId) {
   const cycleRes = await query(
     `select c.id,
+            c.institution_id,
             c.title,
             c.state,
             c.mission_text,
@@ -330,6 +364,469 @@ async function loadFullEntityDescription(query, { kind, entityId }) {
   }
 
   return '';
+}
+
+async function loadStrategicLinkCandidateStrategies(query, {
+  institutionId,
+  strategyId,
+  sameInstitution = true,
+  maxStrategies = 6,
+  maxGuidelinesPerStrategy = 6
+}) {
+  const strategiesRes = await query(
+    `select s.id as strategy_id,
+            s.title as strategy_title,
+            s.slug as strategy_slug,
+            i.id as institution_id,
+            i.name as institution_name,
+            i.slug as institution_slug,
+            c.id as cycle_id,
+            c.title as cycle_title
+     from institution_strategies s
+     join institutions i on i.id = s.institution_id
+     join lateral (
+       select c.id, c.title, c.created_at
+       from strategy_cycles c
+       where c.strategy_id = s.id
+         and c.state in ('open', 'closed')
+       order by c.created_at desc
+       limit 1
+     ) c on true
+     where s.status = 'active'
+       and i.status = 'active'
+       and (($1::boolean = true and i.id = $2 and s.id <> $3)
+         or ($1::boolean = false and i.id <> $2))
+     order by
+       case when $1::boolean = true then i.name else i.name end asc,
+       s.created_at asc
+     limit $4`,
+    [sameInstitution, institutionId, strategyId, Math.max(1, Number(maxStrategies) || 6)]
+  );
+
+  const strategies = strategiesRes.rows.map((row) => ({
+    institutionId: row.institution_id,
+    institutionName: row.institution_name,
+    institutionSlug: row.institution_slug,
+    strategyId: row.strategy_id,
+    strategyTitle: row.strategy_title,
+    strategySlug: row.strategy_slug,
+    cycleId: row.cycle_id,
+    cycleTitle: row.cycle_title,
+    guidelines: []
+  }));
+  const cycleIds = uniqueTrimmed(strategies.map((item) => item.cycleId));
+  if (!cycleIds.length) return [];
+
+  const guidelinesRes = await query(
+    `select g.id,
+            g.cycle_id,
+            g.title,
+            g.description,
+            coalesce(v.total_score, 0)::int as total_score,
+            coalesce(children.child_count, 0)::int as child_count,
+            coalesce(initiatives.initiative_count, 0)::int as initiative_count
+     from strategy_guidelines g
+     left join (
+       select guideline_id, sum(score)::int as total_score
+       from strategy_votes
+       group by guideline_id
+     ) v on v.guideline_id = g.id
+     left join (
+       select parent_guideline_id, count(*)::int as child_count
+       from strategy_guidelines
+       where parent_guideline_id is not null
+         and status in ('active', 'disabled', 'merged')
+       group by parent_guideline_id
+     ) children on children.parent_guideline_id = g.id
+     left join (
+       select ig.guideline_id, count(distinct ig.initiative_id)::int as initiative_count
+       from strategy_initiative_guidelines ig
+       join strategy_initiatives si on si.id = ig.initiative_id
+       where si.status in ('active', 'disabled', 'merged')
+       group by ig.guideline_id
+     ) initiatives on initiatives.guideline_id = g.id
+     where g.cycle_id = any($1::uuid[])
+       and g.status = 'active'
+       and g.relation_type = 'parent'
+     order by g.created_at asc`,
+    [cycleIds]
+  );
+
+  const guidelinesByCycleId = guidelinesRes.rows.reduce((acc, row) => {
+    const cycleId = String(row.cycle_id || '').trim();
+    if (!cycleId) return acc;
+    if (!acc[cycleId]) acc[cycleId] = [];
+    if (acc[cycleId].length >= Math.max(1, Number(maxGuidelinesPerStrategy) || 6)) return acc;
+    acc[cycleId].push(summarizeStrategicLinkCandidateGuideline(row));
+    return acc;
+  }, {});
+
+  return strategies
+    .map((item) => ({
+      ...item,
+      guidelines: normalizeArray(guidelinesByCycleId[item.cycleId])
+    }))
+    .filter((item) => item.guidelines.length);
+}
+
+async function loadExistingStrategicLinkPairs(query, sourceGuidelineIds, targetGuidelineIds) {
+  const sourceIds = uniqueTrimmed(sourceGuidelineIds);
+  const targetIds = uniqueTrimmed(targetGuidelineIds);
+  if (!sourceIds.length || !targetIds.length) return [];
+
+  const res = await query(
+    `select source_guideline_id, target_guideline_id
+     from strategy_guideline_links
+     where (source_guideline_id = any($1::uuid[]) and target_guideline_id = any($2::uuid[]))
+        or (source_guideline_id = any($2::uuid[]) and target_guideline_id = any($1::uuid[]))`,
+    [sourceIds, targetIds]
+  );
+
+  return res.rows.map((row) => ({
+    sourceGuidelineId: String(row.source_guideline_id || '').trim(),
+    targetGuidelineId: String(row.target_guideline_id || '').trim()
+  })).filter((item) => item.sourceGuidelineId && item.targetGuidelineId);
+}
+
+function buildStrategicLinkSearchPayload({
+  snapshot,
+  sourceGuidelines,
+  sameInstitutionTargets,
+  otherInstitutionTargets,
+  existingLinks,
+  locale
+}) {
+  return {
+    responseLanguage: String(locale || '').trim().toLowerCase() === 'en' ? 'en' : 'lt',
+    sourceStrategy: {
+      institutionName: cleanText(snapshot?.cycle?.institution_name, 140),
+      strategyTitle: cleanText(snapshot?.cycle?.strategy_title, 140),
+      cycleTitle: cleanText(snapshot?.cycle?.title, 140),
+      missionText: cleanPreviewText(snapshot?.cycle?.mission_text, 240),
+      visionText: cleanPreviewText(snapshot?.cycle?.vision_text, 240)
+    },
+    sourceGuidelines: truncateList(normalizeArray(sourceGuidelines).map((item) => ({
+      id: item.id,
+      title: cleanText(item.title, 160),
+      description: cleanPreviewText(item.description, 320),
+      totalScore: Number(item.totalScore || 0),
+      childCount: Number(item.childCount || 0),
+      linkedInitiatives: Number(item.linkedInitiatives || 0)
+    })), 16),
+    existingLinks: truncateList(normalizeArray(existingLinks).map((item) => ({
+      sourceGuidelineId: item.sourceGuidelineId,
+      targetGuidelineId: item.targetGuidelineId
+    })), 80),
+    targetGroups: {
+      sameInstitution: truncateList(normalizeArray(sameInstitutionTargets).map((item) => ({
+        institutionId: item.institutionId,
+        institutionName: cleanText(item.institutionName, 140),
+        institutionSlug: cleanText(item.institutionSlug, 80),
+        strategyId: item.strategyId,
+        strategyTitle: cleanText(item.strategyTitle, 140),
+        strategySlug: cleanText(item.strategySlug, 80),
+        cycleId: item.cycleId,
+        cycleTitle: cleanText(item.cycleTitle, 140),
+        guidelines: truncateList(normalizeArray(item.guidelines).map((guideline) => ({
+          id: guideline.id,
+          title: cleanText(guideline.title, 160),
+          description: cleanPreviewText(guideline.description, 280),
+          totalScore: Number(guideline.totalScore || 0),
+          childCount: Number(guideline.childCount || 0),
+          linkedInitiatives: Number(guideline.linkedInitiatives || 0)
+        })), 8)
+      })), 8),
+      otherInstitutions: truncateList(normalizeArray(otherInstitutionTargets).map((item) => ({
+        institutionId: item.institutionId,
+        institutionName: cleanText(item.institutionName, 140),
+        institutionSlug: cleanText(item.institutionSlug, 80),
+        strategyId: item.strategyId,
+        strategyTitle: cleanText(item.strategyTitle, 140),
+        strategySlug: cleanText(item.strategySlug, 80),
+        cycleId: item.cycleId,
+        cycleTitle: cleanText(item.cycleTitle, 140),
+        guidelines: truncateList(normalizeArray(item.guidelines).map((guideline) => ({
+          id: guideline.id,
+          title: cleanText(guideline.title, 160),
+          description: cleanPreviewText(guideline.description, 280),
+          totalScore: Number(guideline.totalScore || 0),
+          childCount: Number(guideline.childCount || 0),
+          linkedInitiatives: Number(guideline.linkedInitiatives || 0)
+        })), 8)
+      })), 8)
+    }
+  };
+}
+
+function buildStrategicLinkSearchSystemPrompt(locale) {
+  const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
+  const requiredLanguageCode = isEnglish ? 'en' : 'lt';
+  return [
+    'You are Clarity Gremlin, focused on finding useful parent-guideline strategic links across strategies.',
+    'Use only the provided source guideline IDs and target guideline IDs.',
+    'Suggest only meaningful cross-strategy parent-guideline links that would genuinely help users explore related strategic directions.',
+    'A suggestion is good when the themes clearly reinforce, overlap, complement, or connect at strategic level.',
+    'Do not suggest weak, generic, or trivial matches.',
+    'Do not suggest a pair that already exists in existingLinks.',
+    'The sameInstitution group is for other strategies in the same institution.',
+    'The otherInstitutions group is for strategies from different institutions.',
+    `Return every string in ${isEnglish ? 'English' : 'Lithuanian'}.`,
+    `Set responseLanguage to exactly "${requiredLanguageCode}".`,
+    'Return only valid JSON with this exact schema:',
+    '{',
+    `  "responseLanguage": "${requiredLanguageCode}",`,
+    '  "sameInstitution": [',
+    '    {',
+    '      "sourceGuidelineId": "uuid",',
+    '      "targetGuidelineId": "uuid",',
+    '      "rationale": "string",',
+    '      "confidence": "high|medium|low"',
+    '    }',
+    '  ],',
+    '  "otherInstitutions": [',
+    '    {',
+    '      "sourceGuidelineId": "uuid",',
+    '      "targetGuidelineId": "uuid",',
+    '      "rationale": "string",',
+    '      "confidence": "high|medium|low"',
+    '    }',
+    '  ]',
+    '}',
+    'Rules:',
+    '- sameInstitution: 0 to 6 items.',
+    '- otherInstitutions: 0 to 6 items.',
+    '- Never return the same source-target pair twice.',
+    '- Keep rationale concise and specific.',
+    '- Prefer high-confidence suggestions only when the thematic fit is genuinely clear.',
+    '- If there are no strong matches in a group, return an empty array for that group.',
+    '- Return only one JSON object. No markdown. No explanation.'
+  ].join('\n');
+}
+
+function buildStrategicLinkSearchUserPrompt(payload, provider) {
+  const compactPayload = String(provider || '').trim().toLowerCase() === 'mistral'
+    ? JSON.stringify(payload)
+    : JSON.stringify(payload, null, 2);
+  return [
+    'Find parent-guideline strategic link suggestions for the current strategy.',
+    'Match the source strategy parent guidelines against the provided target strategies.',
+    'Only propose links that are strategically useful to show in the strategic links map.',
+    '',
+    'CONTEXT JSON:',
+    compactPayload
+  ].join('\n');
+}
+
+function buildStrategicLinkSchemaRetryPrompt(locale) {
+  const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
+  return isEnglish
+    ? [
+        'RETRY REQUIREMENT:',
+        'Your previous response was invalid or incomplete.',
+        'Regenerate the full JSON from scratch.',
+        'You must include responseLanguage, sameInstitution, and otherInstitutions.',
+        'Each item must include sourceGuidelineId, targetGuidelineId, rationale, confidence.',
+        'Return only one valid JSON object.'
+      ].join('\n')
+    : [
+        'PAKARTOTINIO BANDYMO TAISYKLE:',
+        'Ankstesnis atsakymas buvo netinkamas arba nepilnas.',
+        'Sugeneruokite visa JSON is naujo.',
+        'Privalote itraukti responseLanguage, sameInstitution ir otherInstitutions.',
+        'Kiekvienas irasas turi tureti sourceGuidelineId, targetGuidelineId, rationale ir confidence.',
+        'Grazinkite tik viena validu JSON objekta.'
+      ].join('\n');
+}
+
+function normalizeStrategicLinkSearchResult(raw) {
+  const value = raw && typeof raw === 'object' ? raw : {};
+  const normalizeGroup = (items) => truncateList(
+    normalizeArray(items).map((item) => ({
+      sourceGuidelineId: String(item?.sourceGuidelineId || '').trim(),
+      targetGuidelineId: String(item?.targetGuidelineId || '').trim(),
+      rationale: cleanText(item?.rationale, 260),
+      confidence: normalizeStrategicLinkConfidence(item?.confidence)
+    })).filter((item) => item.sourceGuidelineId && item.targetGuidelineId && item.rationale),
+    8
+  );
+  return {
+    responseLanguage: String(value.responseLanguage || '').trim().toLowerCase(),
+    sameInstitution: normalizeGroup(value.sameInstitution),
+    otherInstitutions: normalizeGroup(value.otherInstitutions)
+  };
+}
+
+function validateStrategicLinkSearchResult(value, {
+  locale,
+  sourceGuidelineIdSet,
+  sameInstitutionTargetIdSet,
+  otherInstitutionTargetIdSet,
+  existingPairKeySet
+}) {
+  const requiredLanguage = String(locale || '').trim().toLowerCase() === 'en' ? 'en' : 'lt';
+  if (value.responseLanguage !== requiredLanguage) {
+    throw new Error('ai response language mismatch');
+  }
+  const ensureGroup = (items, targetIds, groupKey) => {
+    const seen = new Set();
+    normalizeArray(items).forEach((item) => {
+      const sourceGuidelineId = String(item?.sourceGuidelineId || '').trim();
+      const targetGuidelineId = String(item?.targetGuidelineId || '').trim();
+      if (!sourceGuidelineIdSet.has(sourceGuidelineId)) throw new Error('ai response invalid');
+      if (!targetIds.has(targetGuidelineId)) throw new Error('ai response invalid');
+      const pairKey = `${sourceGuidelineId}|${targetGuidelineId}`;
+      if (existingPairKeySet.has(pairKey)) throw new Error('ai response invalid');
+      const uniqueKey = `${groupKey}|${pairKey}`;
+      if (seen.has(uniqueKey)) throw new Error('ai response invalid');
+      seen.add(uniqueKey);
+    });
+  };
+  ensureGroup(value.sameInstitution, sameInstitutionTargetIdSet, 'same');
+  ensureGroup(value.otherInstitutions, otherInstitutionTargetIdSet, 'other');
+}
+
+async function searchStrategicLinks({
+  query,
+  cycleId,
+  locale,
+  aiConfig
+}) {
+  const snapshot = await loadCycleSnapshot(query, cycleId);
+  if (!snapshot?.cycle) {
+    throw new Error('cycle not found');
+  }
+
+  const sourceGuidelines = normalizeArray(snapshot.guidelines).filter((item) => item && item.relationType === 'parent');
+  if (!sourceGuidelines.length) {
+    return {
+      model: null,
+      responseLanguage: String(locale || '').trim().toLowerCase() === 'en' ? 'en' : 'lt',
+      sameInstitution: [],
+      otherInstitutions: []
+    };
+  }
+
+  const sameInstitutionTargets = await loadStrategicLinkCandidateStrategies(query, {
+    institutionId: snapshot.cycle.institution_id,
+    strategyId: snapshot.cycle.strategy_id,
+    sameInstitution: true,
+    maxStrategies: 6,
+    maxGuidelinesPerStrategy: 6
+  });
+  const otherInstitutionTargets = await loadStrategicLinkCandidateStrategies(query, {
+    institutionId: snapshot.cycle.institution_id,
+    strategyId: snapshot.cycle.strategy_id,
+    sameInstitution: false,
+    maxStrategies: 8,
+    maxGuidelinesPerStrategy: 5
+  });
+
+  const targetGuidelineIds = uniqueTrimmed([
+    ...sameInstitutionTargets.flatMap((item) => normalizeArray(item.guidelines).map((guideline) => guideline.id)),
+    ...otherInstitutionTargets.flatMap((item) => normalizeArray(item.guidelines).map((guideline) => guideline.id))
+  ]);
+  if (!targetGuidelineIds.length) {
+    return {
+      model: null,
+      responseLanguage: String(locale || '').trim().toLowerCase() === 'en' ? 'en' : 'lt',
+      sameInstitution: [],
+      otherInstitutions: []
+    };
+  }
+
+  const sourceGuidelineIds = uniqueTrimmed(sourceGuidelines.map((item) => item.id));
+  const existingLinks = await loadExistingStrategicLinkPairs(query, sourceGuidelineIds, targetGuidelineIds);
+  const payload = buildStrategicLinkSearchPayload({
+    snapshot,
+    sourceGuidelines,
+    sameInstitutionTargets,
+    otherInstitutionTargets,
+    existingLinks,
+    locale
+  });
+  const systemText = buildStrategicLinkSearchSystemPrompt(locale);
+  const baseUserText = buildStrategicLinkSearchUserPrompt(payload, aiConfig?.provider);
+
+  const sourceGuidelineById = new Map(sourceGuidelines.map((item) => [String(item.id || '').trim(), item]));
+  const sameInstitutionTargetById = new Map(
+    sameInstitutionTargets.flatMap((item) => normalizeArray(item.guidelines).map((guideline) => [String(guideline.id || '').trim(), { ...guideline, strategy: item }]))
+  );
+  const otherInstitutionTargetById = new Map(
+    otherInstitutionTargets.flatMap((item) => normalizeArray(item.guidelines).map((guideline) => [String(guideline.id || '').trim(), { ...guideline, strategy: item }]))
+  );
+  const existingPairKeySet = new Set(existingLinks.flatMap((item) => {
+    const sourceGuidelineId = String(item.sourceGuidelineId || '').trim();
+    const targetGuidelineId = String(item.targetGuidelineId || '').trim();
+    return [
+      `${sourceGuidelineId}|${targetGuidelineId}`,
+      `${targetGuidelineId}|${sourceGuidelineId}`
+    ];
+  }));
+
+  const requestSuggestions = async (extraPrompt = '', operationSuffix = '') => {
+    const response = await requestPolicyAlignmentJson({
+      ...aiConfig,
+      systemText,
+      userText: extraPrompt ? `${baseUserText}\n\n${extraPrompt}` : baseUserText,
+      maxOutputTokens: Math.min(8000, Number(aiConfig?.maxOutputTokens || 8000)),
+      operationName: `clarity-gremlin:strategic-links${operationSuffix}`
+    });
+    const suggestions = normalizeStrategicLinkSearchResult(response?.parsed);
+    validateStrategicLinkSearchResult(suggestions, {
+      locale,
+      sourceGuidelineIdSet: new Set(sourceGuidelineById.keys()),
+      sameInstitutionTargetIdSet: new Set(sameInstitutionTargetById.keys()),
+      otherInstitutionTargetIdSet: new Set(otherInstitutionTargetById.keys()),
+      existingPairKeySet
+    });
+    return {
+      response,
+      suggestions
+    };
+  };
+
+  let response;
+  let suggestions;
+  try {
+    ({ response, suggestions } = await requestSuggestions('', ''));
+  } catch (error) {
+    const message = String(error?.message || '').trim();
+    if (message === 'ai response invalid') {
+      ({ response, suggestions } = await requestSuggestions(buildStrategicLinkSchemaRetryPrompt(locale), ':retry-schema'));
+    } else {
+      throw error;
+    }
+  }
+
+  const enrichGroup = (items, targetById, groupKey) => normalizeArray(items).map((item) => {
+    const source = sourceGuidelineById.get(String(item.sourceGuidelineId || '').trim());
+    const target = targetById.get(String(item.targetGuidelineId || '').trim());
+    if (!source || !target?.strategy) return null;
+    return {
+      sourceGuidelineId: source.id,
+      sourceGuidelineTitle: source.title,
+      targetGuidelineId: target.id,
+      targetGuidelineTitle: target.title,
+      targetInstitutionId: target.strategy.institutionId,
+      targetInstitutionName: target.strategy.institutionName,
+      targetInstitutionSlug: target.strategy.institutionSlug,
+      targetStrategyId: target.strategy.strategyId,
+      targetStrategyTitle: target.strategy.strategyTitle,
+      targetStrategySlug: target.strategy.strategySlug,
+      targetCycleId: target.strategy.cycleId,
+      rationale: item.rationale,
+      confidence: item.confidence,
+      scope: strategicLinkGroupLabel(groupKey, locale),
+      canCreate: groupKey === 'sameInstitution'
+    };
+  }).filter(Boolean);
+
+  return {
+    model: response?.model || null,
+    responseLanguage: suggestions.responseLanguage,
+    sameInstitution: enrichGroup(suggestions.sameInstitution, sameInstitutionTargetById, 'sameInstitution'),
+    otherInstitutions: enrichGroup(suggestions.otherInstitutions, otherInstitutionTargetById, 'otherInstitutions')
+  };
 }
 
 function buildCounts(snapshot) {
@@ -1064,5 +1561,6 @@ module.exports = {
   SUPPORTED_VIEWS,
   getClarityGremlinConfig,
   analyzeStrategyPage,
-  normalizeAnalysis
+  normalizeAnalysis,
+  searchStrategicLinks
 };

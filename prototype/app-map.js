@@ -37,7 +37,8 @@ function ensureMapRuntimeDependencies() {
     'resolveActiveMapLayer',
     'resolveMapGraphForLayer',
     'buildMapViewRenderPayload',
-    'buildMapViewShellMarkup'
+    'buildMapViewShellMarkup',
+    'bindStrategicLinkSearchPanel'
   ];
   const missing = requiredFunctions.filter((name) => typeof globalThis[name] !== 'function');
   if (!missing.length) return true;
@@ -616,6 +617,7 @@ function renderMapView() {
       render();
     }
   });
+  bindStrategicLinkSearchPanel(elements.stepView);
   bindMapOverlayToolbarAutoHide(viewport, elements.stepView);
   if (activeLayer === 'plan') {
     bindMapPlanTimeline(viewport, world, elements.stepView);

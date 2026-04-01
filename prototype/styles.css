@@ -1213,7 +1213,7 @@ body.embed-map-page .stage {
 .stage {
   background: linear-gradient(180deg, #fbfcff 0%, #f7f9fd 100%);
   border-radius: 32px;
-  padding: 28px;
+  padding: 20px;
   box-shadow: var(--shadow);
   min-height: 520px;
   border: 1px solid var(--border-soft);
@@ -4512,6 +4512,141 @@ body.embed-map-page .map-fullscreen-watermark img {
   color: #21426d;
   font-size: 13px;
   font-weight: 600;
+}
+.strategic-gremlin-panel {
+  margin-top: 20px;
+  padding: 22px 24px;
+  border: 1px solid #d8e3f5;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(51, 102, 255, 0.08), transparent 38%),
+    linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  box-shadow: 0 22px 42px rgba(76, 110, 168, 0.12);
+}
+.strategic-gremlin-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.strategic-gremlin-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.strategic-gremlin-title-row h2 {
+  margin: 0 0 4px;
+  font-size: 28px;
+}
+.strategic-gremlin-title-row .prompt {
+  margin: 0;
+}
+.strategic-gremlin-icon {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(55, 93, 175, 0.18));
+}
+.strategic-gremlin-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.strategic-gremlin-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.strategic-gremlin-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.strategic-gremlin-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.strategic-gremlin-group-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.strategic-gremlin-suggestion-list {
+  display: grid;
+  gap: 12px;
+}
+.strategic-gremlin-suggestion-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 17px;
+  border: 1px solid #d5e0f3;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+}
+.strategic-gremlin-suggestion-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.strategic-gremlin-suggestion-top strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 18px;
+  line-height: 1.25;
+}
+.strategic-gremlin-scope-tag {
+  background: #eef4ff;
+  border-color: #c9d9f2;
+  color: #36517d;
+}
+.strategic-gremlin-confidence {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+.strategic-gremlin-confidence-high {
+  background: #ecfbef;
+  border-color: #bfe3c6;
+  color: #21653b;
+}
+.strategic-gremlin-confidence-medium {
+  background: #fff7e7;
+  border-color: #e6d2a2;
+  color: #8a6723;
+}
+.strategic-gremlin-confidence-low {
+  background: #fff0ef;
+  border-color: #efc1bc;
+  color: #a2473d;
+}
+.strategic-gremlin-suggestion-context,
+.strategic-gremlin-suggestion-rationale,
+.strategic-gremlin-footnote {
+  margin: 0;
+}
+.strategic-gremlin-suggestion-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.strategic-gremlin-readonly-note {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #d7dfec;
+  background: #f7f9fc;
+  color: #5e708a;
+  font-weight: 600;
+}
+.strategic-gremlin-empty-card,
+.strategic-gremlin-error {
+  margin: 0;
 }
 .map-vote-row {
   display: flex;
@@ -10417,4 +10552,15 @@ body.meta-admin-page .tag-slug {
 }
 .admin-ai-provider-row select {
   min-width: 180px;
+}
+@media (max-width: 960px) {
+  .strategic-gremlin-head,
+  .strategic-gremlin-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .strategic-gremlin-groups {
+    grid-template-columns: 1fr;
+  }
 }

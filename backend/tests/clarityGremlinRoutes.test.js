@@ -141,6 +141,7 @@ function createStore({ usage, jobs } = {}) {
 
 function buildFixture({
   analyzeStrategyPage,
+  searchStrategicLinks,
   store = createStore(),
   forceUsageRefreshFailure = false,
   limitReached = false
@@ -151,6 +152,12 @@ function buildFixture({
     analyzeStrategyPage: analyzeStrategyPage || (async () => {
       throw new Error('analysis pipeline exploded');
     }),
+    searchStrategicLinks: searchStrategicLinks || (async () => ({
+      responseLanguage: 'lt',
+      sameInstitution: [],
+      otherInstitutions: [],
+      model: 'test-model'
+    })),
     getClarityGremlinConfig: (options = {}) => {
       configCalls.push(options);
       return {
@@ -537,6 +544,83 @@ test('POST /api/v1/cycles/:cycleId/clarity-gremlin uses requested provider and m
     assert.equal(analyzeCalls[0]?.locale, 'en');
     assert.equal(analyzeCalls[0]?.aiConfig?.provider, 'mistral');
     assert.equal(analyzeCalls[0]?.aiConfig?.model, 'mistral-medium-latest');
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('POST /api/v1/cycles/:cycleId/clarity-gremlin/strategic-links returns grouped suggestions', async () => {
+  const searchCalls = [];
+  const fixture = buildFixture({
+    searchStrategicLinks: async (payload) => {
+      searchCalls.push(payload);
+      return {
+        responseLanguage: 'en',
+        model: payload?.aiConfig?.model || 'test-model',
+        sameInstitution: [{
+          sourceGuidelineId: 'guideline-1',
+          sourceGuidelineTitle: 'Source one',
+          targetGuidelineId: 'guideline-2',
+          targetGuidelineTitle: 'Target one',
+          targetInstitutionId: 'inst-1',
+          targetInstitutionName: 'Institution One',
+          targetInstitutionSlug: 'inst-one',
+          targetStrategyId: 'strategy-2',
+          targetStrategyTitle: 'Strategy Two',
+          targetStrategySlug: 'strategy-two',
+          targetCycleId: 'cycle-2',
+          rationale: 'Shared service design direction.',
+          confidence: 'high',
+          canCreate: true
+        }],
+        otherInstitutions: [{
+          sourceGuidelineId: 'guideline-1',
+          sourceGuidelineTitle: 'Source one',
+          targetGuidelineId: 'guideline-3',
+          targetGuidelineTitle: 'Target two',
+          targetInstitutionId: 'inst-9',
+          targetInstitutionName: 'Institution Nine',
+          targetInstitutionSlug: 'inst-nine',
+          targetStrategyId: 'strategy-9',
+          targetStrategyTitle: 'Strategy Nine',
+          targetStrategySlug: 'strategy-nine',
+          targetCycleId: 'cycle-9',
+          rationale: 'Strong data governance overlap.',
+          confidence: 'medium',
+          canCreate: false
+        }]
+      };
+    }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/cycles/cycle-1/clarity-gremlin/strategic-links`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        locale: 'en',
+        provider: 'mistral',
+        model: 'mistral-small-latest'
+      })
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.responseLanguage, 'en');
+    assert.equal(payload.sameInstitution.length, 1);
+    assert.equal(payload.otherInstitutions.length, 1);
+    assert.equal(payload.sameInstitution[0].canCreate, true);
+    assert.equal(payload.otherInstitutions[0].canCreate, false);
+    assert.equal(payload.model, 'mistral-small-latest');
+    assert.deepEqual(fixture.configCalls[0], {
+      provider: 'mistral',
+      modelOverride: 'mistral-small-latest'
+    });
+    assert.equal(searchCalls[0]?.locale, 'en');
+    assert.equal(searchCalls[0]?.cycleId, 'cycle-1');
+    assert.equal(searchCalls[0]?.aiConfig?.provider, 'mistral');
+    assert.equal(searchCalls[0]?.aiConfig?.model, 'mistral-small-latest');
   } finally {
     await server.close();
     fixture.teardown();

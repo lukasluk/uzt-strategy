@@ -1,6 +1,7 @@
 const {
   analyzeStrategyPage,
-  getClarityGremlinConfig
+  getClarityGremlinConfig,
+  searchStrategicLinks
 } = require('./services/clarityGremlinService');
 const {
   normalizeAiProvider,
@@ -298,6 +299,57 @@ function registerClarityGremlinRoutes({
       usage,
       history
     });
+  });
+
+  app.post('/api/v1/cycles/:cycleId/clarity-gremlin/strategic-links', requireAuth, requestGuard, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    const locale = String(req.body?.locale || 'lt').trim().toLowerCase() === 'en' ? 'en' : 'lt';
+    const requestedProviderBody = String(req.body?.provider || '').trim();
+    const requestedModel = String(req.body?.model || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
+    const strategyId = String(cycle?.strategy_id || '').trim();
+    if (!strategyId) {
+      return res.status(409).json({ error: 'strategy not found' });
+    }
+
+    const aiSettings = await resolveInstitutionAiSettings(query, req.auth.institutionId);
+    const requestedProvider = requestedProviderBody
+      ? normalizeAiProvider(requestedProviderBody)
+      : requestedModel
+        ? (/mistral/i.test(requestedModel) ? 'mistral' : 'openai')
+        : aiSettings.provider;
+    if (requestedModel && !isProviderCompatibleModel(requestedProvider, requestedModel)) {
+      return res.status(400).json({ error: 'invalid model for provider' });
+    }
+
+    try {
+      const provider = requestedProvider;
+      const aiConfig = getClarityGremlinConfig({
+        provider,
+        modelOverride: requestedModel || resolveInstitutionModelOverride(aiSettings, provider)
+      });
+      const result = await searchStrategicLinks({
+        query,
+        cycleId,
+        locale,
+        aiConfig
+      });
+      return res.json({
+        ok: true,
+        responseLanguage: result.responseLanguage || locale,
+        sameInstitution: Array.isArray(result.sameInstitution) ? result.sameInstitution : [],
+        otherInstitutions: Array.isArray(result.otherInstitutions) ? result.otherInstitutions : [],
+        model: result.model || null
+      });
+    } catch (error) {
+      return res.status(mapErrorStatus(error)).json({
+        error: String(error?.message || 'internal server error')
+      });
+    }
   });
 
   app.get('/api/v1/cycles/:cycleId/clarity-gremlin/jobs/:jobId', requireAuth, async (req, res) => {

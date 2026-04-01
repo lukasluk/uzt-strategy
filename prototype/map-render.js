@@ -607,6 +607,9 @@ function buildMapViewShellMarkup({
   const guidelineOverlayClass = activeLayer === 'guidelines' && state.mapGuidelinesShowInitiatives
     ? ' map-guidelines-show-initiatives'
     : '';
+  const strategicLinkSearchPanelMarkup = typeof buildStrategicLinkSearchPanelMarkup === 'function'
+    ? buildStrategicLinkSearchPanelMarkup({ activeLayer, graph })
+    : '';
   return `
     <section class="map-view-shell">
       ${mapHeader}
@@ -639,6 +642,7 @@ function buildMapViewShellMarkup({
         ${activeLayer === 'plan' ? '<div id="mapPlanFloatingCurrent" class="map-plan-floating-current" aria-live="polite"></div>' : ''}
         ${embedBranding}
       </section>
+      ${strategicLinkSearchPanelMarkup}
     </section>
     <section id="mapCommentModal" class="map-comment-modal" hidden>
       <button type="button" class="map-comment-backdrop" data-map-comment-close="1" aria-label="${escapeHtml(mapLang('Uždaryti', 'Close'))}"></button>
