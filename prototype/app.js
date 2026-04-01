@@ -4010,7 +4010,7 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
                         ${days.map((day) => `
                           <div class="implementation-plan-calendar-day-cell${day.isMonthStart ? ' is-month-start' : ''}${day.isToday ? ' is-today' : ''}">
                             ${day.key === entry.implementationDate
-                              ? `<span class="implementation-plan-calendar-marker implementation-plan-calendar-marker-${escapeHtml(entry.kind)}"></span>`
+                              ? `<span class="implementation-plan-calendar-marker implementation-plan-calendar-marker-${escapeHtml(entry.kind)}${entry.isCompleted ? ' is-completed' : ''}"></span>`
                               : ''}
                           </div>
                         `).join('')}

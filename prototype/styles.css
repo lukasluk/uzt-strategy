@@ -6455,6 +6455,23 @@ select:focus {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 4px rgba(45, 98, 182, 0.14);
 }
+.implementation-plan-calendar-marker.is-completed {
+  width: 28px;
+  height: 28px;
+  background: #2ea664;
+  box-shadow: 0 0 0 6px rgba(46, 166, 100, 0.18);
+}
+.implementation-plan-calendar-marker.is-completed::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 14px;
+  border-right: 3px solid #fff;
+  border-bottom: 3px solid #fff;
+  transform: translate(-50%, -58%) rotate(45deg);
+}
 .implementation-plan-calendar-marker-guideline {
   background: #2d62b6;
 }
