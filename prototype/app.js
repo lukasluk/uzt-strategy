@@ -5664,9 +5664,9 @@ function buildGuidelineDetailBreadcrumbs(guideline) {
   return `
     <nav class="detail-breadcrumbs" aria-label="${escapeHtml(label)}">
       <span class="detail-breadcrumb-label">${escapeHtml(label)}:</span>
-      <button type="button" class="detail-breadcrumb-link" data-action="open-guidelines-list">${escapeHtml(listLabel)}</button>
-      <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
       <span class="detail-breadcrumb-node">${escapeHtml(strategyTitle)}</span>
+      <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+      <button type="button" class="detail-breadcrumb-link" data-action="open-guidelines-list">${escapeHtml(listLabel)}</button>
       ${parent ? `
         <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
         <button type="button" class="detail-breadcrumb-link" data-action="open-parent-guideline-detail" data-guideline-id="${escapeHtml(parent.id)}" title="${escapeHtml(parentLabel)}">${escapeHtml(parent.title || parent.id)}</button>
@@ -5693,9 +5693,9 @@ function buildInitiativeDetailBreadcrumbs(initiative) {
   return `
     <nav class="detail-breadcrumbs" aria-label="${escapeHtml(label)}">
       <span class="detail-breadcrumb-label">${escapeHtml(label)}:</span>
-      <button type="button" class="detail-breadcrumb-link" data-action="open-initiatives-list">${escapeHtml(listLabel)}</button>
-      <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
       <span class="detail-breadcrumb-node">${escapeHtml(strategyTitle)}</span>
+      <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+      <button type="button" class="detail-breadcrumb-link" data-action="open-initiatives-list">${escapeHtml(listLabel)}</button>
       ${primaryGuideline ? `
         <span class="detail-breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
         <button type="button" class="detail-breadcrumb-link" data-action="open-guideline-detail-from-initiative" data-guideline-id="${escapeHtml(primaryGuideline.id)}" title="${escapeHtml(linkedLabel)}">${escapeHtml(primaryGuideline.title || primaryGuideline.id)}</button>
@@ -6002,7 +6002,6 @@ function renderGuidelineDetailView() {
   const member = isLoggedIn();
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
-  const cardUrl = guidelineShareUrl(guideline.id);
   const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
   const relatedGuidelinesMarkup = renderGuidelineDetailRelatedGrid(guideline);
   const canManage = canManageSelectedInstitution();
@@ -6020,9 +6019,6 @@ function renderGuidelineDetailView() {
       </div>
     </div>
     ${breadcrumbMarkup}
-    <div class="header-stack" style="margin-bottom: 14px;">
-      <span class="tag">${escapeHtml(langText('Nuoroda', 'URL'))}: <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cardUrl)}</a></span>
-    </div>
     ${renderImplementationMetaSummary(guideline)}
     ${renderProposalModerationPanel(guideline, 'guideline')}
     <section id="guidelineGroups" class="guideline-groups" data-detail-view="1">
