@@ -2309,9 +2309,16 @@ function openStrategicLinkSearchOverlay() {
   closeStrategicLinkSearchOverlay();
   const overlay = document.createElement('div');
   overlay.id = 'strategicLinkGremlinOverlay';
-  overlay.className = 'strategic-link-gremlin-overlay';
+  overlay.className = 'modal-overlay gremlin-analysis-locked strategic-link-gremlin-overlay';
   overlay.innerHTML = `
-    <div class="gremlin-backdrop-stage strategic-link-gremlin-backdrop" aria-hidden="true">
+    <div class="strategic-link-gremlin-loading-shell" aria-live="polite">
+      <div class="gremlin-loading-card strategic-link-gremlin-loading-card">
+        <div class="gremlin-loading-spinner" aria-hidden="true"></div>
+        <strong>${escapeHtml(ui.overlayLoading)}</strong>
+        <p class="prompt">${escapeHtml(ui.overlayHint)}</p>
+      </div>
+    </div>
+    <div class="gremlin-backdrop-stage" aria-hidden="true">
       <div class="gremlin-backdrop-aura gremlin-backdrop-aura-one"></div>
       <div class="gremlin-backdrop-aura gremlin-backdrop-aura-two"></div>
       <div class="gremlin-backdrop-aura gremlin-backdrop-aura-three"></div>
@@ -2324,11 +2331,6 @@ function openStrategicLinkSearchOverlay() {
         <span></span><span></span><span></span><span></span><span></span><span></span>
         <span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
-    </div>
-    <div class="gremlin-loading-card strategic-link-gremlin-overlay-card" aria-live="polite">
-      <div class="gremlin-loading-spinner" aria-hidden="true"></div>
-      <strong>${escapeHtml(ui.overlayLoading)}</strong>
-      <p class="prompt">${escapeHtml(ui.overlayHint)}</p>
     </div>
   `;
   document.body.classList.add('strategic-link-gremlin-locked');
