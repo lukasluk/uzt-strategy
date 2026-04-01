@@ -5953,8 +5953,8 @@ select:focus {
   --implementation-plan-accent-width: 8px;
 }
 .implementation-plan-row-guideline.implementation-plan-level-1 {
-  --implementation-plan-accent: var(--guideline-child-accent);
-  --implementation-plan-accent-width: 4px;
+  --implementation-plan-accent: transparent;
+  --implementation-plan-accent-width: 0;
 }
 .implementation-plan-row-initiative {
   --implementation-plan-accent: #d2912f;
@@ -5967,13 +5967,41 @@ select:focus {
   min-width: 0;
 }
 .implementation-plan-branch {
-  width: 14px;
-  min-height: 22px;
-  border-left: 2px solid var(--guideline-child-branch);
-  border-bottom: 2px solid var(--guideline-child-branch);
-  border-bottom-left-radius: 10px;
+  position: relative;
+  width: 24px;
+  min-height: 24px;
   flex: 0 0 auto;
-  margin-top: 1px;
+  margin-top: 0;
+}
+.implementation-plan-branch::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: -22px;
+  bottom: -22px;
+  width: 2px;
+  border-radius: 999px;
+  background: #8dc9bf;
+}
+.implementation-plan-branch::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 11px;
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  background: #8dc9bf;
+}
+.implementation-plan-row-guideline.implementation-plan-level-1.implementation-plan-child-first .implementation-plan-branch::before {
+  top: 11px;
+}
+.implementation-plan-row-guideline.implementation-plan-level-1.implementation-plan-child-last .implementation-plan-branch::before {
+  bottom: 11px;
+}
+.implementation-plan-row-guideline.implementation-plan-level-1.implementation-plan-child-single .implementation-plan-branch::before {
+  top: 11px;
+  bottom: 11px;
 }
 .implementation-plan-title-stack {
   min-width: 0;
@@ -6038,23 +6066,37 @@ select:focus {
 }
 .implementation-plan-cell-actions {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
 }
 .implementation-plan-complete-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #2c4752;
+  justify-content: center;
   cursor: pointer;
 }
 .implementation-plan-complete-toggle input {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   accent-color: #2f8f4e;
   cursor: pointer;
+}
+.implementation-plan-complete-toggle-readonly {
+  cursor: default;
+}
+.implementation-plan-complete-toggle-readonly input {
+  cursor: default;
+}
+.implementation-plan-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .implementation-plan-completed-tag {
   color: #5b6676;

@@ -3684,12 +3684,17 @@ function buildImplementationPlanGuidelineRows(guidelines) {
       level: 0,
       relationKey: 'parent'
     });
-    group.children.forEach((child) => {
+    const childCount = group.children.length;
+    group.children.forEach((child, index) => {
+      const childPosition = childCount === 1
+        ? 'single'
+        : (index === 0 ? 'first' : (index === childCount - 1 ? 'last' : 'middle'));
       rows.push({
         kind: 'guideline',
         item: child,
         level: 1,
-        relationKey: 'child'
+        relationKey: 'child',
+        childPosition
       });
     });
   });
@@ -4123,6 +4128,10 @@ function renderImplementationPlanRow(row, { editable = false } = {}) {
   const implementationOwnerValue = String(item.implementationOwner || '').trim();
   const implementationCompletedAt = normalizeImplementationCompletedAt(item.implementationCompletedAt);
   const implementationCompleted = Boolean(implementationCompletedAt);
+  const childPosition = String(row.childPosition || '').trim().toLowerCase();
+  const childPositionClass = level > 0 && rowKind === 'guideline' && childPosition
+    ? ` implementation-plan-child-${escapeHtml(childPosition)}`
+    : '';
   const implementationDateDisplay = formatInstitutionDate(implementationDateValue) || langText('Nenurodyta', 'Not set');
   const implementationOwnerDisplay = implementationOwnerValue || langText('Nenurodyta', 'Not set');
   const completedLabel = implementationCompleted
@@ -4133,7 +4142,7 @@ function renderImplementationPlanRow(row, { editable = false } = {}) {
     : '';
 
   return `
-    <div class="implementation-plan-row implementation-plan-row-${escapeHtml(rowKind)} implementation-plan-level-${level}${implementationCompleted ? ' is-completed' : ''}" data-plan-kind="${escapeHtml(rowKind)}" data-plan-id="${escapeHtml(item.id)}">
+    <div class="implementation-plan-row implementation-plan-row-${escapeHtml(rowKind)} implementation-plan-level-${level}${childPositionClass}${implementationCompleted ? ' is-completed' : ''}" data-plan-kind="${escapeHtml(rowKind)}" data-plan-id="${escapeHtml(item.id)}">
       <div class="implementation-plan-cell implementation-plan-cell-main">
         <div class="implementation-plan-title-wrap">
           ${level > 0 ? '<span class="implementation-plan-branch" aria-hidden="true"></span>' : ''}
@@ -4161,13 +4170,15 @@ function renderImplementationPlanRow(row, { editable = false } = {}) {
       : `<span class="implementation-plan-read-value${implementationOwnerValue ? '' : ' is-empty'}">${escapeHtml(implementationOwnerDisplay)}</span>`}
       </div>
       <div class="implementation-plan-cell implementation-plan-cell-actions">
-        <span class="implementation-plan-cell-label">${escapeHtml(langText('Būsena', 'Status'))}</span>
+        <span class="implementation-plan-cell-label">${escapeHtml(langText('Užbaigimo būsena', 'Completed status'))}</span>
         ${editable
       ? `<label class="implementation-plan-complete-toggle">
             <input type="checkbox" name="implementationCompleted" ${implementationCompleted ? 'checked' : ''} ${state.busy ? 'disabled' : ''} />
-            <span>${escapeHtml(langText('Pažymėti kaip atlikta', 'Mark as completed'))}</span>
+            <span class="implementation-plan-sr-only">${escapeHtml(langText('Pažymėti kaip atlikta', 'Mark as completed'))}</span>
           </label>`
-      : `<span class="implementation-plan-read-value${implementationCompleted ? '' : ' is-empty'}">${escapeHtml(completedLabel)}${completedMeta ? ` • ${escapeHtml(completedMeta)}` : ''}</span>`}
+      : `<label class="implementation-plan-complete-toggle implementation-plan-complete-toggle-readonly">
+            <input type="checkbox" ${implementationCompleted ? 'checked' : ''} disabled aria-label="${escapeHtml(langText('Atlikta', 'Completed'))}" />
+          </label>`}
       </div>
     </div>
   `;
@@ -6512,7 +6523,7 @@ function renderImplementationPlanView() {
               <div>${escapeHtml(activeLayer === 'initiatives' ? langText('Iniciatyva', 'Initiative') : langText('Gairė', 'Guideline'))}</div>
               <div>${escapeHtml(langText('Įgyvendinimo data', 'Implementation date'))}</div>
               <div>${escapeHtml(langText('Atsakingas asmuo / padalinys', 'Responsible person / unit'))}</div>
-              <div>${escapeHtml(langText('Būsena', 'Status'))}</div>
+              <div>${escapeHtml(langText('Užbaigimo būsena', 'Completed status'))}</div>
             </div>
             ${rows.length
               ? rows.map((row) => renderImplementationPlanRow(row, { editable })).join('')
