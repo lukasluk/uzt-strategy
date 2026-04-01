@@ -1876,13 +1876,15 @@ textarea {
 }
 
 .card {
+  --card-inner-radius: 16px;
+  --card-stack-gap: 12px;
   background: #fff;
   padding: 18px;
   border-radius: 22px;
   border: 1px solid var(--border-soft);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--card-stack-gap);
   box-shadow: 0 10px 24px rgba(37, 51, 75, 0.05);
 }
 .guideline-disabled {
@@ -1912,11 +1914,13 @@ textarea {
   color: var(--muted);
 }
 .card-section {
-  margin-top: 4px;
+  margin-top: 0;
+  display: grid;
+  gap: 10px;
 }
 .card-top {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 .card-top p {
   margin: 0;
@@ -2426,19 +2430,20 @@ textarea {
 }
 
 .mini-list {
-  margin: 8px 0 0;
+  margin: 0;
   padding-left: 0;
   list-style: none;
+  display: grid;
+  gap: 10px;
 }
 .mini-list li {
   margin: 0;
 }
 .comment-item {
   border-left: 2px solid #e7d6c2;
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  padding: 12px 14px;
   background: #fffcf7;
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 var(--card-inner-radius) var(--card-inner-radius) 0;
 }
 .comment-item-empty {
   color: var(--muted);
@@ -2458,13 +2463,14 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 0;
 }
 .inline-form input[type='text'] {
   width: 100%;
   min-width: 0;
   padding: 11px 14px;
+  border-radius: var(--card-inner-radius);
 }
 .inline-form .btn {
   white-space: nowrap;
@@ -4673,12 +4679,12 @@ body.map-comment-modal-open {
 }
 .vote-panel {
   background: #fdf3e7;
-  border-radius: 16px;
-  padding: 10px 14px;
+  border-radius: var(--card-inner-radius);
+  padding: 12px 16px;
   width: 100%;
   min-width: 0;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   align-content: start;
 }
 .vote-panel-head {
@@ -6507,7 +6513,7 @@ select:focus {
   line-height: 1.55;
 }
 .guideline-groups[data-detail-view="1"] .guideline-card .vote-panel {
-  margin-top: 2px;
+  margin-top: 0;
 }
 .modal-overlay {
   position: fixed;
