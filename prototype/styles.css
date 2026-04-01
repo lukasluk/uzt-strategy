@@ -5962,23 +5962,24 @@ select:focus {
 }
 .implementation-plan-title-wrap {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 10px;
   min-width: 0;
 }
 .implementation-plan-branch {
   position: relative;
   width: 24px;
-  min-height: 24px;
+  align-self: stretch;
   flex: 0 0 auto;
   margin-top: 0;
+  min-height: 100%;
 }
 .implementation-plan-branch::before {
   content: '';
   position: absolute;
   left: 8px;
-  top: -22px;
-  bottom: -22px;
+  top: -14px;
+  bottom: -14px;
   width: 2px;
   border-radius: 999px;
   background: #8dc9bf;
@@ -5987,21 +5988,23 @@ select:focus {
   content: '';
   position: absolute;
   left: 8px;
-  top: 11px;
+  top: 50%;
   width: 14px;
-  height: 2px;
-  border-radius: 999px;
-  background: #8dc9bf;
+  height: 12px;
+  border-left: 2px solid #8dc9bf;
+  border-bottom: 2px solid #8dc9bf;
+  border-bottom-left-radius: 10px;
+  transform: translateY(-50%);
 }
 .implementation-plan-row-guideline.implementation-plan-level-1.implementation-plan-child-first .implementation-plan-branch::before {
-  top: 11px;
+  top: 50%;
 }
 .implementation-plan-row-guideline.implementation-plan-level-1.implementation-plan-child-last .implementation-plan-branch::before {
-  bottom: 11px;
+  bottom: 50%;
 }
 .implementation-plan-row-guideline.implementation-plan-level-1.implementation-plan-child-single .implementation-plan-branch::before {
-  top: 11px;
-  bottom: 11px;
+  top: 50%;
+  bottom: 50%;
 }
 .implementation-plan-title-stack {
   min-width: 0;

@@ -1372,12 +1372,13 @@ function renderRichTextEditor({
   `;
 }
 
-function syncRichTextEditor(editor) {
+function syncRichTextEditor(editor, options = {}) {
   const surface = editor?.querySelector('.rich-text-surface');
   const hiddenInput = editor?.querySelector('.rich-text-hidden-input');
   if (!(surface instanceof HTMLElement) || !(hiddenInput instanceof HTMLTextAreaElement)) return;
+  const shouldRewriteSurface = options.rewriteSurface !== false;
   const normalized = sanitizeRichTextHtml(surface.innerHTML);
-  if (surface.innerHTML !== normalized) {
+  if (shouldRewriteSurface && surface.innerHTML !== normalized) {
     surface.innerHTML = normalized;
   }
   hiddenInput.value = normalized;
@@ -1405,7 +1406,7 @@ function bindRichTextEditors(scope = document) {
     if (surface instanceof HTMLElement) {
       syncRichTextEditor(editor);
       surface.addEventListener('input', () => {
-        syncRichTextEditor(editor);
+        syncRichTextEditor(editor, { rewriteSurface: false });
       });
       surface.addEventListener('blur', () => {
         syncRichTextEditor(editor);
@@ -6024,7 +6025,6 @@ function renderGuidelineDetailView() {
     </div>
     ${renderImplementationMetaSummary(guideline)}
     ${renderProposalModerationPanel(guideline, 'guideline')}
-    ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
     <section id="guidelineGroups" class="guideline-groups" data-detail-view="1">
       <div class="card-list">
         ${renderGuidelineCard(guideline, {
@@ -6223,7 +6223,6 @@ function renderInitiativeDetailView() {
     </div>
     ${renderImplementationMetaSummary(initiative)}
     ${renderProposalModerationPanel(initiative, 'initiative')}
-    ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
     <section id="initiativeSection" class="guideline-group" data-detail-view="1">
       <div class="card-list initiative-list">
         ${renderInitiativeCard(initiative, {
@@ -6325,14 +6324,6 @@ function renderInitiativesView() {
   const guidelineInitiativeMatrix = renderGuidelineInitiativeMatrix(eligibleGuidelines, initiatives);
 
   elements.stepView.innerHTML = `
-    <div class="step-header">
-      <div class="header-stack step-header-actions">
-        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
-      </div>
-    </div>
-
-    ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
-
     <section id="initiativeSection" class="guideline-group">
       ${initiatives.length
         ? `<div class="card-list initiative-list">
@@ -6398,6 +6389,10 @@ function renderInitiativesView() {
       </div>
     `)}
     </section>
+
+    <div class="header-stack step-header-actions" style="margin-top: 16px;">
+      <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
+    </div>
   `;
 
   const openAuthFromStep = elements.stepView.querySelector('#openAuthFromStep');
@@ -6512,8 +6507,6 @@ function renderImplementationPlanView() {
           ${pageSaveButtonMarkup}
         </div>
       </div>
-
-      ${state.notice ? `<div class="card implementation-plan-notice"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
 
       ${activeSubview === 'calendar'
         ? renderImplementationPlanCalendarMarkup(calendarData)
@@ -7104,14 +7097,6 @@ function renderStepView() {
     .join('');
 
   elements.stepView.innerHTML = `
-    <div class="step-header">
-      <div class="header-stack step-header-actions">
-        <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
-      </div>
-    </div>
-
-    ${state.notice ? `<div class="card" style="margin-bottom: 16px;"><strong>${escapeHtml(state.notice)}</strong></div>` : ''}
-
     <div id="guidelineGroups" class="guideline-groups">
       <section class="guideline-group">
         ${relationGroups.parentGroups.length
@@ -7257,6 +7242,10 @@ function renderStepView() {
       </div>
     `)}
     </section>
+
+    <div class="header-stack step-header-actions" style="margin-top: 16px;">
+      <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
+    </div>
   `;
 
   bindStepEvents();
