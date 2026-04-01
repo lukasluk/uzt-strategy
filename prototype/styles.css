@@ -4514,6 +4514,7 @@ body.embed-map-page .map-fullscreen-watermark img {
   font-weight: 600;
 }
 .strategic-gremlin-panel {
+  position: relative;
   margin-top: 20px;
   padding: 22px 24px;
   border: 1px solid #d8e3f5;
@@ -4522,6 +4523,7 @@ body.embed-map-page .map-fullscreen-watermark img {
     radial-gradient(circle at top right, rgba(51, 102, 255, 0.08), transparent 38%),
     linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
   box-shadow: 0 22px 42px rgba(76, 110, 168, 0.12);
+  overflow: hidden;
 }
 .strategic-gremlin-head {
   display: flex;
@@ -4586,17 +4588,79 @@ body.embed-map-page .map-fullscreen-watermark img {
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.92);
 }
+.strategic-gremlin-link-rail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+}
+.strategic-gremlin-link-end {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-height: 102px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #d5e0f3;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
+.strategic-gremlin-link-end-source {
+  border-color: #c9d9f2;
+  background: linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%);
+}
+.strategic-gremlin-link-end-target {
+  border-color: #cfddf5;
+  background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%);
+}
+.strategic-gremlin-link-end strong {
+  font-size: 18px;
+  line-height: 1.28;
+}
+.strategic-gremlin-link-end-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6c7f9c;
+}
+.strategic-gremlin-link-bridge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.strategic-gremlin-link-bridge-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(96, 136, 205, 0.3) 0%, rgba(46, 94, 185, 0.85) 50%, rgba(96, 136, 205, 0.3) 100%);
+}
+.strategic-gremlin-link-bridge-arrow {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid #c5d7f1;
+  background: rgba(255, 255, 255, 0.96);
+  color: #2b58b8;
+  font-size: 22px;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(69, 105, 170, 0.12);
+}
 .strategic-gremlin-suggestion-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-}
-.strategic-gremlin-suggestion-top strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 18px;
-  line-height: 1.25;
 }
 .strategic-gremlin-scope-tag {
   background: #eef4ff;
@@ -4646,6 +4710,37 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .strategic-gremlin-empty-card,
 .strategic-gremlin-error {
+  margin: 0;
+}
+.strategic-gremlin-panel-searching > *:not(.strategic-gremlin-search-overlay) {
+  pointer-events: none;
+  user-select: none;
+}
+.strategic-gremlin-search-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.strategic-gremlin-backdrop-stage {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+}
+.strategic-gremlin-loading-card {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  text-align: center;
+}
+.strategic-gremlin-loading-card strong {
+  display: block;
+  margin-bottom: 8px;
+}
+.strategic-gremlin-loading-card .prompt {
   margin: 0;
 }
 .map-vote-row {
@@ -10562,5 +10657,28 @@ body.meta-admin-page .tag-slug {
 
   .strategic-gremlin-groups {
     grid-template-columns: 1fr;
+  }
+
+  .strategic-gremlin-link-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .strategic-gremlin-link-bridge {
+    min-height: 44px;
+  }
+
+  .strategic-gremlin-link-bridge-line {
+    left: 50%;
+    right: auto;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    height: auto;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(96, 136, 205, 0.3) 0%, rgba(46, 94, 185, 0.85) 50%, rgba(96, 136, 205, 0.3) 100%);
+  }
+
+  .strategic-gremlin-link-bridge-arrow {
+    transform: rotate(90deg);
   }
 }

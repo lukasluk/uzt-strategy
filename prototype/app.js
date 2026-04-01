@@ -2224,13 +2224,17 @@ function strategicLinkGremlinUiText() {
         empty: 'No strong strategic link suggestions found yet.',
         rationale: 'Rationale',
         confidence: 'Confidence',
+        currentStrategy: 'Current strategy',
+        suggestedTarget: 'Suggested target',
         create: 'Create link',
         openTarget: 'Open target',
         viewOnly: 'View only',
         created: 'Strategic link created.',
         sameEmpty: 'No same-institution suggestions.',
         otherEmpty: 'No cross-institution suggestions.',
-        createRestricted: 'Cross-institution suggestions are read-only in this MVP.'
+        createRestricted: 'Cross-institution suggestions are read-only in this MVP.',
+        overlayLoading: 'Clarity Gremlin is searching strategic links...',
+        overlayHint: 'Comparing the current strategy against other strategy directions.'
       }
     : {
         title: 'Clarity Gremlin',
@@ -2245,13 +2249,17 @@ function strategicLinkGremlinUiText() {
         empty: 'Stiprių strateginių ryšių pasiūlymų kol kas nerasta.',
         rationale: 'Pagrindimas',
         confidence: 'Patikimumas',
+        currentStrategy: 'Dabartinė strategija',
+        suggestedTarget: 'Siūlomas taikinys',
         create: 'Sukurti ryšį',
         openTarget: 'Atidaryti tikslą',
         viewOnly: 'Tik peržiūra',
         created: 'Strateginis ryšys sukurtas.',
         sameEmpty: 'Toje pačioje institucijoje pasiūlymų nerasta.',
         otherEmpty: 'Su kitomis institucijomis pasiūlymų nerasta.',
-        createRestricted: 'Kitų institucijų pasiūlymai šiame MVP rodomi tik peržiūrai.'
+        createRestricted: 'Kitų institucijų pasiūlymai šiame MVP rodomi tik peržiūrai.',
+        overlayLoading: 'Clarity Gremlin ieško strateginių ryšių...',
+        overlayHint: 'Lyginamos dabartinės strategijos gairės su kitų strategijų kryptimis.'
       };
 }
 
@@ -2291,11 +2299,22 @@ function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupK
               return `
                 <article class="strategic-gremlin-suggestion-card">
                   <div class="strategic-gremlin-suggestion-top">
-                    <div>
-                      <span class="tag strategic-gremlin-scope-tag">${escapeHtml(item?.sourceGuidelineTitle || '-')}</span>
+                    <span class="tag strategic-gremlin-scope-tag">${escapeHtml(groupKey === 'sameInstitution' ? ui.sameInstitution : ui.otherInstitutions)}</span>
+                    <span class="tag strategic-gremlin-confidence strategic-gremlin-confidence-${escapeHtml(String(item?.confidence || 'medium').trim().toLowerCase())}">${escapeHtml(strategicLinkConfidenceLabel(item?.confidence))}</span>
+                  </div>
+                  <div class="strategic-gremlin-link-rail">
+                    <div class="strategic-gremlin-link-end strategic-gremlin-link-end-source">
+                      <span class="strategic-gremlin-link-end-label">${escapeHtml(ui.currentStrategy)}</span>
+                      <strong>${escapeHtml(item?.sourceGuidelineTitle || '-')}</strong>
+                    </div>
+                    <div class="strategic-gremlin-link-bridge" aria-hidden="true">
+                      <span class="strategic-gremlin-link-bridge-line"></span>
+                      <span class="strategic-gremlin-link-bridge-arrow">→</span>
+                    </div>
+                    <div class="strategic-gremlin-link-end strategic-gremlin-link-end-target">
+                      <span class="strategic-gremlin-link-end-label">${escapeHtml(ui.suggestedTarget)}</span>
                       <strong>${escapeHtml(item?.targetGuidelineTitle || '-')}</strong>
                     </div>
-                    <span class="tag strategic-gremlin-confidence strategic-gremlin-confidence-${escapeHtml(String(item?.confidence || 'medium').trim().toLowerCase())}">${escapeHtml(strategicLinkConfidenceLabel(item?.confidence))}</span>
                   </div>
                   <p class="prompt strategic-gremlin-suggestion-context">${escapeHtml(`${item?.targetInstitutionName || '-'} / ${item?.targetStrategyTitle || '-'}`)}</p>
                   <p class="strategic-gremlin-suggestion-rationale"><strong>${escapeHtml(`${ui.rationale}:`)}</strong> ${escapeHtml(item?.rationale || '')}</p>
@@ -2333,8 +2352,33 @@ function buildStrategicLinkSearchPanelMarkup({ activeLayer }) {
     : !isLoggedIn()
       ? ui.loginRequired
       : '';
+  const loadingOverlayMarkup = state.mapStrategicLinkSuggestionsLoading
+    ? `
+      <div class="strategic-gremlin-search-overlay" aria-live="polite">
+        <div class="gremlin-backdrop-stage strategic-gremlin-backdrop-stage" aria-hidden="true">
+          <div class="gremlin-backdrop-aura gremlin-backdrop-aura-one"></div>
+          <div class="gremlin-backdrop-aura gremlin-backdrop-aura-two"></div>
+          <div class="gremlin-backdrop-aura gremlin-backdrop-aura-three"></div>
+          <div class="gremlin-backdrop-rune-grid"></div>
+          <div class="gremlin-backdrop-sigil"></div>
+          <div class="gremlin-backdrop-flare gremlin-backdrop-flare-one"></div>
+          <div class="gremlin-backdrop-flare gremlin-backdrop-flare-two"></div>
+          <div class="gremlin-backdrop-flare gremlin-backdrop-flare-three"></div>
+          <div class="gremlin-backdrop-stars">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="gremlin-loading-card strategic-gremlin-loading-card">
+          <div class="gremlin-loading-spinner" aria-hidden="true"></div>
+          <strong>${escapeHtml(ui.overlayLoading)}</strong>
+          <p class="prompt">${escapeHtml(ui.overlayHint)}</p>
+        </div>
+      </div>
+    `
+    : '';
   return `
-    <section class="strategic-gremlin-panel">
+    <section class="strategic-gremlin-panel${state.mapStrategicLinkSuggestionsLoading ? ' strategic-gremlin-panel-searching' : ''}">
       <div class="strategic-gremlin-head">
         <div class="strategic-gremlin-copy">
           <div class="strategic-gremlin-title-row">
@@ -2372,6 +2416,7 @@ function buildStrategicLinkSearchPanelMarkup({ activeLayer }) {
         : (!state.mapStrategicLinkSuggestionsLoading && canSearch
           ? `<div class="card strategic-gremlin-empty-card"><strong>${escapeHtml(ui.ready)}</strong></div>`
           : '')}
+      ${loadingOverlayMarkup}
     </section>
   `;
 }
