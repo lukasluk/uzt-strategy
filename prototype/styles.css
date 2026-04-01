@@ -1572,6 +1572,9 @@ textarea {
   gap: 16px;
   margin-top: 16px;
 }
+.initiative-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .admin-guideline-grid {
   grid-template-columns: repeat(auto-fit, minmax(860px, 1fr));
   gap: 18px;
