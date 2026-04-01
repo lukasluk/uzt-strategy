@@ -8576,13 +8576,22 @@ function strategyCreateUiText() {
       strategySetup: 'Strategy setup',
       aiSetup: 'AI generation settings',
       strategyTitle: 'Strategy title',
+      strategyTitleHint: 'Enter the final strategy name that users will see in the platform. Keep it short and institution-specific.',
       strategySlug: 'Strategy slug (optional)',
+      strategySlugHint: 'Optional URL code. Use lowercase letters, numbers, and hyphens if you want a custom address.',
       strategyDescription: 'Short description (optional)',
+      strategyDescriptionHint: 'Optional 1-3 sentence summary of the strategy scope, audience, or purpose.',
       createManual: 'Create strategy',
       localeHint: 'Result language',
+      localeHintHelp: 'Choose the language for the generated digistrategy.eu structure and labels.',
       clarification: 'AI clarification',
+      clarificationHint: 'Describe the expected tone, scope, priorities, exclusions, and how the uploaded PDFs should be interpreted.',
       clarificationPlaceholder: 'Scope, tone, priorities, constraints.',
       documents: 'PDF documents',
+      documentsHint: 'Upload the source strategy PDFs the AI should read. You can select multiple files if the material is split.',
+      aiNoticeTitle: 'Before using AI from PDF',
+      aiNoticeBody: 'digistrategy.eu converts uploaded strategy documents into a structured format based on guidelines, initiatives, and other platform fields. Because source documents are often narrative and differently structured, the generated result may contain inaccuracies, missing relationships, or simplifications and must be reviewed manually.',
+      aiNoticeConfirm: 'I understand and want to continue',
       createAi: 'Generate strategy with AI',
       progressTitle: 'AI generation in progress',
       progressUploading: 'Uploading documents',
@@ -8603,13 +8612,22 @@ function strategyCreateUiText() {
     strategySetup: 'Strategijos nustatymai',
     aiSetup: 'AI generavimo nustatymai',
     strategyTitle: 'Strategijos pavadinimas',
+    strategyTitleHint: 'Įveskite galutinį strategijos pavadinimą, kurį naudotojai matys platformoje. Geriausia trumpą ir aiškiai susietą su institucija.',
     strategySlug: 'Strategijos slug (nebūtina)',
+    strategySlugHint: 'Nebūtinas URL kodas. Jei norite savo adreso, naudokite mažąsias raides, skaičius ir brūkšnelius.',
     strategyDescription: 'Trumpas aprašymas (nebūtina)',
+    strategyDescriptionHint: 'Nebūtina 1-3 sakinių santrauka apie strategijos apimtį, auditoriją ar paskirtį.',
     createManual: 'Sukurti strategiją',
     localeHint: 'Rezultato kalba',
+    localeHintHelp: 'Pasirinkite kalbą, kuria AI sugeneruos digistrategy.eu struktūrą ir pavadinimus.',
     clarification: 'AI patikslinimas',
+    clarificationHint: 'Aprašykite pageidaujamą toną, apimtį, prioritetus, ką atmesti ir kaip AI turėtų interpretuoti įkeltus PDF dokumentus.',
     clarificationPlaceholder: 'Koks lygis, tonas, prioritetai, ko vengti.',
     documents: 'PDF dokumentai',
+    documentsHint: 'Įkelkite strategijos PDF dokumentus, kuriuos AI turi perskaityti. Galite pasirinkti kelis failus, jei medžiaga išskaidyta.',
+    aiNoticeTitle: 'Prieš naudojant AI iš PDF',
+    aiNoticeBody: 'digistrategy.eu paverčia įkeltus strateginius dokumentus į struktūrizuotą formatą pagal gaires, iniciatyvas ir kitus platformos laukus. Kadangi šaltiniai dažnai būna naratyviniai ir skirtingos struktūros, sugeneruotame rezultate gali būti netikslumų, praleistų ryšių ar supaprastinimų, todėl rezultatą būtina peržiūrėti rankiniu būdu.',
+    aiNoticeConfirm: 'Suprantu ir noriu tęsti',
     createAi: 'Generuoti strategiją su AI',
     progressTitle: 'AI generavimas vyksta',
     progressUploading: 'Įkeliami dokumentai',
@@ -9451,10 +9469,13 @@ function showStrategyCreateModal() {
         <h3 class="strategy-create-section-title">${escapeHtml(ui.strategySetup)}</h3>
         <label class="auth-label" for="strategyCreateTitle">${escapeHtml(ui.strategyTitle)}</label>
         <input id="strategyCreateTitle" type="text" name="strategyTitle" required />
+        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategyTitleHint)}</p>
         <label class="auth-label" for="strategyCreateSlug">${escapeHtml(ui.strategySlug)}</label>
         <input id="strategyCreateSlug" type="text" name="strategySlug" />
+        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategySlugHint)}</p>
         <label class="auth-label" for="strategyCreateDescription">${escapeHtml(ui.strategyDescription)}</label>
         <textarea id="strategyCreateDescription" name="strategyDescription" rows="4"></textarea>
+        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategyDescriptionHint)}</p>
       </section>
 
       <form id="strategyCreateManualForm" class="login-form login-form-auth strategy-create-form">
@@ -9463,16 +9484,26 @@ function showStrategyCreateModal() {
 
       <form id="strategyCreateAiForm" class="login-form login-form-auth strategy-create-form" enctype="multipart/form-data" hidden>
         <h3 class="strategy-create-section-title">${escapeHtml(ui.aiSetup)}</h3>
+        <section class="strategy-create-ai-notice" id="strategyAiNotice">
+          <strong>${escapeHtml(ui.aiNoticeTitle)}</strong>
+          <p class="prompt">${escapeHtml(ui.aiNoticeBody)}</p>
+          <button class="btn btn-primary" type="button" id="strategyAiAcknowledgeBtn">${escapeHtml(ui.aiNoticeConfirm)}</button>
+        </section>
+        <div id="strategyAiFields" hidden>
         <label class="auth-label" for="strategyAiLocale">${escapeHtml(ui.localeHint)}</label>
         <select id="strategyAiLocale" name="localeHint">
           <option value="lt">LT</option>
           <option value="en">EN</option>
         </select>
+        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.localeHintHelp)}</p>
         <label class="auth-label" for="strategyAiClarification">${escapeHtml(ui.clarification)}</label>
         <textarea id="strategyAiClarification" name="clarification" rows="4" placeholder="${escapeHtml(ui.clarificationPlaceholder)}" required></textarea>
+        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.clarificationHint)}</p>
         <label class="auth-label" for="strategyAiDocs">${escapeHtml(ui.documents)}</label>
         <input id="strategyAiDocs" type="file" name="documents" accept="application/pdf,.pdf" multiple required />
+        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.documentsHint)}</p>
         <button class="btn btn-primary" type="submit">${escapeHtml(ui.createAi)}</button>
+        </div>
       </form>
     </div>
   `;
@@ -9483,9 +9514,13 @@ function showStrategyCreateModal() {
   const tabButtons = Array.from(overlay.querySelectorAll('.strategy-create-tab'));
   const manualForm = overlay.querySelector('#strategyCreateManualForm');
   const aiForm = overlay.querySelector('#strategyCreateAiForm');
+  const aiNotice = overlay.querySelector('#strategyAiNotice');
+  const aiFields = overlay.querySelector('#strategyAiFields');
+  const aiAcknowledgeButton = overlay.querySelector('#strategyAiAcknowledgeBtn');
   const commonTitleInput = overlay.querySelector('#strategyCreateTitle');
   const commonSlugInput = overlay.querySelector('#strategyCreateSlug');
   const commonDescriptionInput = overlay.querySelector('#strategyCreateDescription');
+  let aiAcknowledged = false;
   let generationInProgress = false;
   const safeRefreshAfterCreate = async () => {
     try {
@@ -9520,6 +9555,8 @@ function showStrategyCreateModal() {
     });
     if (manualForm instanceof HTMLElement) manualForm.hidden = next !== 'manual';
     if (aiForm instanceof HTMLElement) aiForm.hidden = next !== 'ai';
+    if (aiNotice instanceof HTMLElement) aiNotice.hidden = next !== 'ai' || aiAcknowledged;
+    if (aiFields instanceof HTMLElement) aiFields.hidden = next !== 'ai' || !aiAcknowledged;
     if (commonTitleInput instanceof HTMLInputElement) {
       commonTitleInput.required = next === 'manual';
     }
@@ -9558,6 +9595,13 @@ function showStrategyCreateModal() {
     button.addEventListener('click', () => {
       setMode(String(button.dataset.mode || 'manual'));
     });
+  });
+
+  aiAcknowledgeButton?.addEventListener('click', () => {
+    aiAcknowledged = true;
+    setMode('ai');
+    const localeInput = overlay.querySelector('#strategyAiLocale');
+    if (localeInput instanceof HTMLElement) localeInput.focus();
   });
 
   manualForm?.addEventListener('submit', async (event) => {
