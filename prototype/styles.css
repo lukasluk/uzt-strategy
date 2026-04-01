@@ -4587,6 +4587,17 @@ body.embed-map-page .map-fullscreen-watermark img {
   border: 1px solid #d5e0f3;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.92);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+.strategic-gremlin-suggestion-card.is-creating {
+  border-color: #8cb2ea;
+  box-shadow: 0 18px 34px rgba(76, 122, 197, 0.16);
+  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+}
+.strategic-gremlin-suggestion-card.is-accepted {
+  border-color: #99d0ae;
+  box-shadow: 0 18px 34px rgba(74, 155, 102, 0.18);
+  background: linear-gradient(180deg, #ffffff 0%, #eef9f2 100%);
 }
 .strategic-gremlin-link-rail {
   display: grid;
@@ -4684,6 +4695,16 @@ body.embed-map-page .map-fullscreen-watermark img {
   border-color: #efc1bc;
   color: #a2473d;
 }
+.strategic-gremlin-state-tag {
+  border-color: #c9daf4;
+  background: #eef5ff;
+  color: #355884;
+}
+.strategic-gremlin-state-tag.is-success {
+  border-color: #b8dcc3;
+  background: #edf8f0;
+  color: #246043;
+}
 .strategic-gremlin-suggestion-context,
 .strategic-gremlin-suggestion-rationale,
 .strategic-gremlin-suggestion-action-hint,
@@ -4692,6 +4713,10 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .strategic-gremlin-suggestion-action-hint {
   color: #38547c;
+}
+.strategic-gremlin-readonly-note.is-success {
+  color: #246043;
+  font-weight: 700;
 }
 .strategic-gremlin-suggestion-actions {
   display: flex;

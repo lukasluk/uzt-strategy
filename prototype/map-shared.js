@@ -11,12 +11,12 @@ const MAP_INSTITUTION_BASE_WIDTH = 390;
 const MAP_INSTITUTION_BASE_MIN_HEIGHT = 220;
 
 const STRATEGIC_LAYER_PALETTE = Object.freeze([
-  { pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#c97769' },
-  { pastel: '#fff0f0', border: '#d25f5f', ink: '#5e2323', edge: '#c97769' },
-  { pastel: '#eefbf4', border: '#63ab87', ink: '#1f4a35', edge: '#c97769' },
-  { pastel: '#fff7eb', border: '#c18a4f', ink: '#5a3d1f', edge: '#c97769' },
-  { pastel: '#f4f0ff', border: '#8668c2', ink: '#3b2f59', edge: '#c97769' },
-  { pastel: '#edf9fb', border: '#4d9cab', ink: '#1f4650', edge: '#c97769' }
+  { pastel: '#eef7ff', border: '#5f90ca', ink: '#233b57', edge: '#5f90ca' },
+  { pastel: '#fff0f0', border: '#d25f5f', ink: '#5e2323', edge: '#d25f5f' },
+  { pastel: '#eefbf4', border: '#63ab87', ink: '#1f4a35', edge: '#63ab87' },
+  { pastel: '#fff7eb', border: '#c18a4f', ink: '#5a3d1f', edge: '#c18a4f' },
+  { pastel: '#f4f0ff', border: '#8668c2', ink: '#3b2f59', edge: '#8668c2' },
+  { pastel: '#edf9fb', border: '#4d9cab', ink: '#1f4650', edge: '#4d9cab' }
 ]);
 
 function mapNormalizeStrategyLinks(value) {

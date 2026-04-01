@@ -2235,10 +2235,13 @@ function strategicLinkGremlinUiText() {
         currentStrategy: 'Current strategy',
         suggestedTarget: 'Suggested target',
         create: 'Review and create link',
+        creating: 'Creating link...',
         dismiss: 'Dismiss',
         openTarget: 'Review target',
         viewOnly: 'View only',
         created: 'Strategic link created.',
+        createdState: 'Link created',
+        createdHint: 'This strategic link has been created and is now visible in the map.',
         dismissed: 'Strategic link suggestion dismissed.',
         sameEmpty: 'No same-institution suggestions.',
         otherEmpty: 'No cross-institution suggestions.',
@@ -2270,10 +2273,13 @@ function strategicLinkGremlinUiText() {
         currentStrategy: 'Dabartinė strategija',
         suggestedTarget: 'Siūlomas taikinys',
         create: 'Peržiūrėti ir sukurti ryšį',
+        creating: 'Kuriamas ryšys...',
         dismiss: 'Paslėpti',
         openTarget: 'Peržiūrėti taikinį',
         viewOnly: 'Tik peržiūra',
         created: 'Strateginis ryšys sukurtas.',
+        createdState: 'Ryšys sukurtas',
+        createdHint: 'Šis strateginis ryšys jau sukurtas ir dabar matomas žemėlapyje.',
         dismissed: 'Strateginio ryšio pasiūlymas paslėptas.',
         sameEmpty: 'Toje pačioje institucijoje pasiūlymų nerasta.',
         otherEmpty: 'Su kitomis institucijomis pasiūlymų nerasta.',
@@ -2320,6 +2326,25 @@ function buildStrategicLinkTargetHref(item) {
     institutionSlug: item?.targetInstitutionSlug || '',
     strategySlug: item?.targetStrategySlug || ''
   });
+}
+
+function updateStrategicLinkSuggestionLocalState(sourceGuidelineId, targetGuidelineId, updater) {
+  if (!state.mapStrategicLinkSuggestions || typeof state.mapStrategicLinkSuggestions !== 'object') return;
+  const sourceId = String(sourceGuidelineId || '').trim();
+  const targetId = String(targetGuidelineId || '').trim();
+  if (!sourceId || !targetId || typeof updater !== 'function') return;
+  const patchList = (items) => (Array.isArray(items) ? items : []).map((item) => {
+    const samePair = String(item?.sourceGuidelineId || '').trim() === sourceId
+      && String(item?.targetGuidelineId || '').trim() === targetId;
+    if (!samePair) return item;
+    const nextItem = updater({ ...(item || {}) });
+    return nextItem && typeof nextItem === 'object' ? nextItem : item;
+  });
+  state.mapStrategicLinkSuggestions = {
+    ...state.mapStrategicLinkSuggestions,
+    sameInstitution: patchList(state.mapStrategicLinkSuggestions.sameInstitution),
+    otherInstitutions: patchList(state.mapStrategicLinkSuggestions.otherInstitutions)
+  };
 }
 
 function closeStrategicLinkSearchOverlay() {
@@ -2436,14 +2461,22 @@ function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupK
               const confidenceText = strategicLinkConfidenceLabel(item?.confidence);
               const confidenceTooltip = strategicLinkConfidenceTooltip(item?.confidence);
               const actionHint = canCreate ? ui.sameInstitutionAction : ui.otherInstitutionAction;
+              const status = String(item?.status || 'suggested').trim().toLowerCase();
+              const isCreating = status === 'creating';
+              const isAccepted = status === 'accepted';
               return `
-                <article class="strategic-gremlin-suggestion-card">
+                <article class="strategic-gremlin-suggestion-card ${isCreating ? 'is-creating' : ''} ${isAccepted ? 'is-accepted' : ''}">
                   <div class="strategic-gremlin-suggestion-top">
                     <span
                       class="tag strategic-gremlin-confidence strategic-gremlin-confidence-${escapeHtml(String(item?.confidence || 'medium').trim().toLowerCase())}"
                       title="${escapeHtml(confidenceTooltip)}"
                       aria-label="${escapeHtml(`${ui.confidence}: ${confidenceTooltip}`)}"
                     >${escapeHtml(confidenceText)}</span>
+                    ${isCreating
+                      ? `<span class="tag strategic-gremlin-state-tag">${escapeHtml(ui.creating)}</span>`
+                      : (isAccepted
+                        ? `<span class="tag strategic-gremlin-state-tag is-success">${escapeHtml(ui.createdState)}</span>`
+                        : '')}
                   </div>
                   <div class="strategic-gremlin-link-rail">
                     <div class="strategic-gremlin-link-end strategic-gremlin-link-end-source">
@@ -2461,9 +2494,11 @@ function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupK
                   </div>
                   <p class="prompt strategic-gremlin-suggestion-context">${escapeHtml(`${item?.targetInstitutionName || '-'} / ${item?.targetStrategyTitle || '-'}`)}</p>
                   <p class="strategic-gremlin-suggestion-rationale"><strong>${escapeHtml(`${ui.rationale}:`)}</strong> ${escapeHtml(item?.rationale || '')}</p>
-                  <p class="strategic-gremlin-suggestion-action-hint"><strong>${escapeHtml(`${ui.suggestedAction}:`)}</strong> ${escapeHtml(actionHint)}</p>
+                  <p class="strategic-gremlin-suggestion-action-hint"><strong>${escapeHtml(`${ui.suggestedAction}:`)}</strong> ${escapeHtml(isAccepted ? ui.createdHint : actionHint)}</p>
                   <div class="strategic-gremlin-suggestion-actions">
-                    ${canCreate
+                    ${isAccepted
+                      ? `<span class="strategic-gremlin-readonly-note is-success">${escapeHtml(ui.createdState)}</span>`
+                      : (canCreate
                       ? `<button
                           type="button"
                           class="btn btn-primary"
@@ -2471,9 +2506,10 @@ function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupK
                           data-group="${escapeHtml(groupKey)}"
                           data-source-guideline-id="${escapeHtml(item?.sourceGuidelineId || '')}"
                           data-target-guideline-id="${escapeHtml(item?.targetGuidelineId || '')}"
-                        >${escapeHtml(ui.create)}</button>`
-                      : `<span class="strategic-gremlin-readonly-note">${escapeHtml(ui.viewOnly)}</span>`}
-                    ${canCurate
+                          ${isCreating ? 'disabled' : ''}
+                        >${escapeHtml(isCreating ? ui.creating : ui.create)}</button>`
+                      : `<span class="strategic-gremlin-readonly-note">${escapeHtml(ui.viewOnly)}</span>`)}
+                    ${canCurate && !isAccepted
                       ? `<button
                           type="button"
                           class="btn btn-ghost"
@@ -2481,6 +2517,7 @@ function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupK
                           data-group="${escapeHtml(groupKey)}"
                           data-source-guideline-id="${escapeHtml(item?.sourceGuidelineId || '')}"
                           data-target-guideline-id="${escapeHtml(item?.targetGuidelineId || '')}"
+                          ${isCreating ? 'disabled' : ''}
                         >${escapeHtml(ui.dismiss)}</button>`
                       : ''}
                     <a class="btn btn-ghost" href="${escapeHtml(href)}">${escapeHtml(ui.openTarget)}</a>
@@ -2629,35 +2666,41 @@ async function runStrategicLinkSearch() {
 }
 
 async function createStrategicLinkFromSuggestion(sourceGuidelineId, targetGuidelineId) {
-  const linkPayload = await api('/api/v1/admin/guideline-links', {
-    method: 'POST',
-    body: {
-      sourceGuidelineId,
-      targetGuidelineId
-    }
-  });
-  await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/clarity-gremlin/strategic-links/accepted`, {
-    method: 'POST',
-    body: {
-      sourceGuidelineId,
-      targetGuidelineId,
-      linkId: String(linkPayload?.linkId || '').trim()
-    }
-  }).catch(() => {});
-  if (state.mapStrategicLinkSuggestions && typeof state.mapStrategicLinkSuggestions === 'object') {
-    const prune = (items) => (Array.isArray(items) ? items : []).filter((item) => !(
-      String(item?.sourceGuidelineId || '').trim() === String(sourceGuidelineId || '').trim()
-      && String(item?.targetGuidelineId || '').trim() === String(targetGuidelineId || '').trim()
-    ));
-    state.mapStrategicLinkSuggestions = {
-      ...state.mapStrategicLinkSuggestions,
-      sameInstitution: prune(state.mapStrategicLinkSuggestions.sameInstitution),
-      otherInstitutions: prune(state.mapStrategicLinkSuggestions.otherInstitutions)
-    };
+  updateStrategicLinkSuggestionLocalState(sourceGuidelineId, targetGuidelineId, (item) => ({
+    ...item,
+    status: 'creating'
+  }));
+  renderStepView();
+  try {
+    const linkPayload = await api('/api/v1/admin/guideline-links', {
+      method: 'POST',
+      body: {
+        sourceGuidelineId,
+        targetGuidelineId
+      }
+    });
+    await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/clarity-gremlin/strategic-links/accepted`, {
+      method: 'POST',
+      body: {
+        sourceGuidelineId,
+        targetGuidelineId,
+        linkId: String(linkPayload?.linkId || '').trim()
+      }
+    }).catch(() => {});
+    updateStrategicLinkSuggestionLocalState(sourceGuidelineId, targetGuidelineId, (item) => ({
+      ...item,
+      status: 'accepted'
+    }));
+    notifySuccess(strategicLinkGremlinUiText().created);
+    await loadStrategyMap({ preserveStrategicSuggestions: true });
+    await ensureStrategicLinksData({ force: true });
+  } catch (error) {
+    updateStrategicLinkSuggestionLocalState(sourceGuidelineId, targetGuidelineId, (item) => ({
+      ...item,
+      status: 'suggested'
+    }));
+    throw error;
   }
-  notifySuccess(strategicLinkGremlinUiText().created);
-  await loadStrategyMap({ preserveStrategicSuggestions: true });
-  await ensureStrategicLinksData({ force: true });
 }
 
 async function dismissStrategicLinkSuggestion(sourceGuidelineId, targetGuidelineId) {
