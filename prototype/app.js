@@ -2811,9 +2811,27 @@ function clarityGremlinWorkspaceUiText() {
         pdfBody: 'Turn uploaded strategy PDFs into the digistrategy.eu guideline and initiative structure with manual review before publishing.',
         pdfAction: 'Open PDF structuring',
         pdfAdminOnly: 'PDF structuring is available to institution admins who can create strategies.',
+        pdfChecklistTitle: 'What to prepare',
+        pdfChecklistDocs: 'One or more strategy PDFs with the source content you want Gremlin to read.',
+        pdfChecklistTitleField: 'A clean strategy title and short description that should appear in the platform.',
+        pdfChecklistClarification: 'A clarification note describing tone, priorities, exclusions, and interpretation rules.',
+        pdfOutcomeTitle: 'What Clarity Gremlin will produce',
+        pdfOutcomeStructure: 'A structured strategy draft mapped into digistrategy.eu guidelines and initiatives.',
+        pdfOutcomeReview: 'A review-first flow so the generated result can be checked before publishing.',
+        pdfOutcomeLimits: 'A best-effort conversion. Narrative source documents can still require manual cleanup.',
+        pdfEntryHint: 'Best for long narrative strategy documents that need to be translated into platform structure.',
         policyTitle: 'Check policy alignment',
         policyBody: 'Open the policy alignment workspace to compare strategy content against policy frameworks and external requirements.',
         policyAction: 'Open policy alignment',
+        policyModesTitle: 'Available policy checks',
+        policyModeFrameworks: 'Policy framework',
+        policyModeStrategy: 'Strategy analysis',
+        policyModeExternal: 'External analysis',
+        policyOutcomeTitle: 'What this mode helps clarify',
+        policyOutcomeFrameworks: 'How the current strategy maps to selected policy frameworks.',
+        policyOutcomeGaps: 'Where the strategy may be missing expected themes, safeguards, or obligations.',
+        policyOutcomeReview: 'A clearer basis for deciding what to revise before publishing or approval.',
+        policyEntryHint: 'Use this when you need to compare strategy content against external rules and policy expectations.',
         modesLabel: 'Clarity Gremlin modes',
         launchContext: 'Launch context',
         noContext: 'No active strategy context selected yet.',
@@ -2833,9 +2851,27 @@ function clarityGremlinWorkspaceUiText() {
         pdfBody: 'Paverskite įkeltus strategijos PDF dokumentus į digistrategy.eu gairių ir iniciatyvų struktūrą, o prieš paskelbiant viską peržiūrėkite rankiniu būdu.',
         pdfAction: 'Atverti PDF struktūravimą',
         pdfAdminOnly: 'PDF struktūravimas galimas institucijos administratoriams, kurie gali kurti strategijas.',
+        pdfChecklistTitle: 'Ką pasiruošti',
+        pdfChecklistDocs: 'Vieną ar kelis strategijos PDF dokumentus su turiniu, kurį Gremlin turi perskaityti.',
+        pdfChecklistTitleField: 'Aiškų strategijos pavadinimą ir trumpą aprašą, kurie bus rodomi platformoje.',
+        pdfChecklistClarification: 'Patikslinimą apie toną, prioritetus, išimtis ir tai, kaip interpretuoti įkeltus dokumentus.',
+        pdfOutcomeTitle: 'Ką Clarity Gremlin sugeneruos',
+        pdfOutcomeStructure: 'Struktūruotą strategijos juodraštį, susietą su digistrategy.eu gairėmis ir iniciatyvomis.',
+        pdfOutcomeReview: 'Peržiūros pirmumo srautą, kad rezultatą būtų galima patikrinti prieš paskelbiant.',
+        pdfOutcomeLimits: 'Geriausios pastangos konversiją. Naratyviniams dokumentams vis tiek gali reikėti rankinio pataisymo.',
+        pdfEntryHint: 'Geriausia ilgiems naratyviniams strategijų dokumentams, kuriuos reikia paversti platformos struktūra.',
         policyTitle: 'Tikrinti politikos atitiktį',
         policyBody: 'Atverkite politikos atitikties darbo erdvę ir palyginkite strategijos turinį su politikos karkasais bei išoriniais reikalavimais.',
         policyAction: 'Atverti politikos atitiktį',
+        policyModesTitle: 'Galimi politikos tikrinimo režimai',
+        policyModeFrameworks: 'Politikos karkasas',
+        policyModeStrategy: 'Strategijos analizė',
+        policyModeExternal: 'Išorinė analizė',
+        policyOutcomeTitle: 'Ką šis režimas padeda išsiaiškinti',
+        policyOutcomeFrameworks: 'Kaip dabartinė strategija siejasi su pasirinktais politikos karkasais.',
+        policyOutcomeGaps: 'Kur strategijoje gali trūkti laukiamų temų, saugiklių ar įsipareigojimų.',
+        policyOutcomeReview: 'Aiškesnį pagrindą spręsti, ką verta koreguoti prieš tvirtinimą ar publikavimą.',
+        policyEntryHint: 'Naudokite, kai reikia palyginti strategijos turinį su išorinėmis taisyklėmis ir politikos lūkesčiais.',
         modesLabel: 'Clarity Gremlin režimai',
         launchContext: 'Paleidimo kontekstas',
         noContext: 'Aktyvus strategijos kontekstas dar nepasirinktas.',
@@ -2885,16 +2921,33 @@ function renderClarityGremlinWorkspaceView() {
     if (activeMode === 'pdf') {
       return `
         <section class="clarity-workspace-section">
-          <div class="clarity-workspace-mode-card clarity-workspace-mode-card-wide">
-            <div class="clarity-workspace-mode-copy">
-              <h3>${escapeHtml(ui.pdfTitle)}</h3>
-              <p>${escapeHtml(ui.pdfBody)}</p>
-              <div class="header-stack">
-                <span class="tag">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
+          <div class="clarity-workspace-module-grid">
+            <article class="clarity-workspace-mode-card clarity-workspace-module-card">
+              <div class="clarity-workspace-mode-copy">
+                <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.pdfTitle)}</span>
+                <h3>${escapeHtml(ui.pdfChecklistTitle)}</h3>
+                <p>${escapeHtml(ui.pdfBody)}</p>
               </div>
-            </div>
-            <div class="clarity-workspace-mode-actions">
-              <button type="button" class="btn btn-primary" data-action="open-gremlin-pdf"${canStructurePdf ? '' : ' disabled'}>${escapeHtml(ui.pdfAction)}</button>
+              <ul class="clarity-workspace-checklist">
+                <li>${escapeHtml(ui.pdfChecklistDocs)}</li>
+                <li>${escapeHtml(ui.pdfChecklistTitleField)}</li>
+                <li>${escapeHtml(ui.pdfChecklistClarification)}</li>
+              </ul>
+              <p class="prompt clarity-workspace-mini-note">${escapeHtml(ui.pdfEntryHint)}</p>
+            </article>
+            <article class="clarity-workspace-mode-card clarity-workspace-module-card clarity-workspace-action-card">
+              <div class="clarity-workspace-mode-copy">
+                <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
+                <h3>${escapeHtml(ui.pdfOutcomeTitle)}</h3>
+              </div>
+              <ul class="clarity-workspace-checklist">
+                <li>${escapeHtml(ui.pdfOutcomeStructure)}</li>
+                <li>${escapeHtml(ui.pdfOutcomeReview)}</li>
+                <li>${escapeHtml(ui.pdfOutcomeLimits)}</li>
+              </ul>
+              <div class="clarity-workspace-mode-actions">
+                <button type="button" class="btn btn-primary" data-action="open-gremlin-pdf"${canStructurePdf ? '' : ' disabled'}>${escapeHtml(ui.pdfAction)}</button>
+              </div>
               ${canStructurePdf ? '' : `<p class="prompt clarity-workspace-inline-note">${escapeHtml(ui.pdfAdminOnly)}</p>`}
             </div>
           </div>
@@ -2905,14 +2958,35 @@ function renderClarityGremlinWorkspaceView() {
     if (activeMode === 'policy-alignment') {
       return `
         <section class="clarity-workspace-section">
-          <div class="clarity-workspace-mode-card clarity-workspace-mode-card-wide">
-            <div class="clarity-workspace-mode-copy">
-              <h3>${escapeHtml(ui.policyTitle)}</h3>
-              <p>${escapeHtml(ui.policyBody)}</p>
-            </div>
-            <div class="clarity-workspace-mode-actions">
-              <button type="button" class="btn btn-primary" data-action="open-gremlin-policy"${canOpenPolicy ? '' : ' disabled'}>${escapeHtml(ui.policyAction)}</button>
-            </div>
+          <div class="clarity-workspace-module-grid">
+            <article class="clarity-workspace-mode-card clarity-workspace-module-card">
+              <div class="clarity-workspace-mode-copy">
+                <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.policyTitle)}</span>
+                <h3>${escapeHtml(ui.policyModesTitle)}</h3>
+                <p>${escapeHtml(ui.policyBody)}</p>
+              </div>
+              <div class="clarity-workspace-pill-list">
+                <span class="tag">${escapeHtml(ui.policyModeFrameworks)}</span>
+                <span class="tag">${escapeHtml(ui.policyModeStrategy)}</span>
+                <span class="tag">${escapeHtml(ui.policyModeExternal)}</span>
+              </div>
+              <p class="prompt clarity-workspace-mini-note">${escapeHtml(ui.policyEntryHint)}</p>
+            </article>
+            <article class="clarity-workspace-mode-card clarity-workspace-module-card clarity-workspace-action-card">
+              <div class="clarity-workspace-mode-copy">
+                <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
+                <h3>${escapeHtml(ui.policyOutcomeTitle)}</h3>
+              </div>
+              <ul class="clarity-workspace-checklist">
+                <li>${escapeHtml(ui.policyOutcomeFrameworks)}</li>
+                <li>${escapeHtml(ui.policyOutcomeGaps)}</li>
+                <li>${escapeHtml(ui.policyOutcomeReview)}</li>
+              </ul>
+              <div class="clarity-workspace-mode-actions">
+                <button type="button" class="btn btn-ghost" data-action="open-gremlin-policy-frameworks"${canOpenPolicy ? '' : ' disabled'}>${escapeHtml(ui.policyModeFrameworks)}</button>
+                <button type="button" class="btn btn-primary" data-action="open-gremlin-policy"${canOpenPolicy ? '' : ' disabled'}>${escapeHtml(ui.policyAction)}</button>
+              </div>
+            </article>
           </div>
         </section>
       `;
@@ -3028,6 +3102,13 @@ function bindClarityGremlinWorkspace() {
   if (policyButton) {
     policyButton.addEventListener('click', () => {
       navigateToPolicyAlignmentTab('strategy-analysis');
+    });
+  }
+
+  const policyFrameworksButton = elements.stepView.querySelector('[data-action="open-gremlin-policy-frameworks"]');
+  if (policyFrameworksButton) {
+    policyFrameworksButton.addEventListener('click', () => {
+      navigateToPolicyAlignmentTab('frameworks');
     });
   }
 
@@ -9780,7 +9861,7 @@ function showStrategyCreateModal(initialMode = 'manual') {
           <button class="btn btn-primary" type="button" id="strategyAiAcknowledgeBtn">${escapeHtml(ui.aiNoticeConfirm)}</button>
         </section>
         <div id="strategyAiFields" class="strategy-create-ai-fields" hidden>
-          <div class="strategy-create-field-block">
+          <div class="strategy-create-field-block strategy-create-field-block-compact">
             <label class="auth-label" for="strategyAiLocale">${escapeHtml(ui.localeHint)}</label>
             <select id="strategyAiLocale" name="localeHint">
               <option value="lt">LT</option>
@@ -9793,7 +9874,7 @@ function showStrategyCreateModal(initialMode = 'manual') {
             <textarea id="strategyAiClarification" name="clarification" rows="4" placeholder="${escapeHtml(ui.clarificationPlaceholder)}" required></textarea>
             <p class="prompt strategy-create-field-hint">${escapeHtml(ui.clarificationHint)}</p>
           </div>
-          <div class="strategy-create-field-block">
+          <div class="strategy-create-field-block strategy-create-field-block-docs">
             <label class="auth-label" for="strategyAiDocs">${escapeHtml(ui.documents)}</label>
             <input id="strategyAiDocs" type="file" name="documents" accept="application/pdf,.pdf" multiple required />
             <p class="prompt strategy-create-field-hint">${escapeHtml(ui.documentsHint)}</p>

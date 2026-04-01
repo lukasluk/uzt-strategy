@@ -4895,6 +4895,22 @@ body.embed-map-page .map-fullscreen-watermark img {
   align-items: start;
 }
 
+.clarity-workspace-module-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 16px;
+}
+
+.clarity-workspace-module-card {
+  min-height: 100%;
+}
+
+.clarity-workspace-action-card {
+  background:
+    radial-gradient(circle at top right, rgba(255, 207, 112, 0.18), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(247, 250, 255, 0.99) 100%);
+}
+
 .clarity-workspace-mode-copy h3 {
   margin: 0 0 8px;
   font-size: 24px;
@@ -4917,6 +4933,53 @@ body.embed-map-page .map-fullscreen-watermark img {
 .clarity-workspace-inline-note {
   margin: 0;
   max-width: 360px;
+}
+
+.clarity-workspace-mode-kicker {
+  display: inline-flex;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4a6da6;
+}
+
+.clarity-workspace-checklist {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clarity-workspace-checklist li {
+  position: relative;
+  padding-left: 20px;
+  color: #35506f;
+  line-height: 1.55;
+}
+
+.clarity-workspace-checklist li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #4d78f3 0%, #274fd7 100%);
+  box-shadow: 0 0 0 4px rgba(77, 120, 243, 0.12);
+}
+
+.clarity-workspace-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.clarity-workspace-mini-note {
+  margin: 0;
 }
 .map-vote-row {
   display: flex;
@@ -5347,7 +5410,7 @@ body.map-comment-modal-open {
 }
 
 .strategy-create-card {
-  width: min(920px, 95vw);
+  width: min(980px, 96vw);
   max-height: calc(100vh - 32px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -5397,6 +5460,10 @@ body.map-comment-modal-open {
   gap: 14px;
 }
 
+.strategy-create-form[hidden] {
+  display: none !important;
+}
+
 .strategy-create-form textarea {
   min-height: 96px;
   resize: vertical;
@@ -5432,37 +5499,46 @@ body.map-comment-modal-open {
 
 .strategy-create-ai-fields {
   display: grid;
-  gap: 14px;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 16px 20px;
+  align-items: start;
+}
+
+.strategy-create-field-block-compact select {
+  max-width: 140px;
 }
 
 .strategy-create-field-block-emphasis textarea {
-  min-height: 224px;
+  min-height: 300px;
+}
+
+.strategy-create-field-block-emphasis {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.strategy-create-field-block-docs {
+  align-content: start;
 }
 
 .strategy-create-form-actions {
   display: flex;
   justify-content: flex-start;
   padding-top: 4px;
-}
-
-.strategy-create-form.is-acknowledged {
-  grid-template-columns: minmax(0, 1.2fr) minmax(270px, 0.8fr);
-  gap: 18px 22px;
-  align-items: start;
-}
-
-.strategy-create-form.is-acknowledged .strategy-create-section-title {
   grid-column: 1 / -1;
 }
 
-.strategy-create-form.is-acknowledged .strategy-create-ai-fields {
-  grid-column: 1;
+.strategy-create-form.is-acknowledged {
+  gap: 16px;
 }
 
 .strategy-create-form.is-acknowledged .strategy-create-ai-notice {
-  grid-column: 2;
-  position: sticky;
-  top: 0;
+  position: static;
+  gap: 8px;
+  padding: 14px 16px;
+  background:
+    radial-gradient(circle at top right, rgba(103, 157, 239, 0.1), transparent 38%),
+    linear-gradient(180deg, #fffefb 0%, #f7faff 100%);
 }
 
 .strategy-create-form.is-acknowledged #strategyAiAcknowledgeBtn {
@@ -9276,6 +9352,15 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
+  .strategy-create-ai-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .strategy-create-field-block-emphasis {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
   .strategy-create-form.is-acknowledged {
     grid-template-columns: 1fr;
   }
@@ -10866,7 +10951,8 @@ body.meta-admin-page .tag-slug {
 @media (max-width: 1100px) {
   .clarity-workspace-mode-tabs,
   .clarity-workspace-review-grid,
-  .clarity-workspace-mode-card-wide {
+  .clarity-workspace-mode-card-wide,
+  .clarity-workspace-module-grid {
     grid-template-columns: 1fr;
   }
   .clarity-workspace-hero {
