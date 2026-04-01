@@ -129,6 +129,231 @@ function registerClarityGremlinRoutes({
     }
   }
 
+  function shapeStrategicLinkSuggestionRows(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    const sameInstitution = [];
+    const otherInstitutions = [];
+    for (const row of list) {
+      const item = {
+        sourceGuidelineId: row.source_guideline_id,
+        sourceGuidelineTitle: row.source_guideline_title || '',
+        targetGuidelineId: row.target_guideline_id,
+        targetGuidelineTitle: row.target_guideline_title || '',
+        targetInstitutionId: row.target_institution_id || null,
+        targetInstitutionName: row.target_institution_name || '',
+        targetInstitutionSlug: row.target_institution_slug || '',
+        targetStrategyId: row.target_strategy_id || null,
+        targetStrategyTitle: row.target_strategy_title || '',
+        targetStrategySlug: row.target_strategy_slug || '',
+        targetCycleId: row.target_cycle_id || null,
+        rationale: row.rationale || '',
+        confidence: row.confidence || 'medium',
+        canCreate: row.group_key === 'sameInstitution',
+        status: row.status || 'suggested'
+      };
+      if (row.group_key === 'sameInstitution') sameInstitution.push(item);
+      else otherInstitutions.push(item);
+    }
+    return { sameInstitution, otherInstitutions };
+  }
+
+  async function loadStrategicLinkSearchState(strategyId) {
+    const searchRes = await query(
+      `select strategy_id,
+              response_language,
+              model,
+              last_scanned_at
+       from clarity_gremlin_strategic_link_searches
+       where strategy_id = $1
+       limit 1`,
+      [strategyId]
+    );
+    const search = searchRes.rows[0] || null;
+    const suggestionsRes = await query(
+      `select s.group_key,
+              s.status,
+              s.source_guideline_id,
+              sg.title as source_guideline_title,
+              s.target_guideline_id,
+              tg.title as target_guideline_title,
+              s.target_institution_id,
+              coalesce(ti.name, '') as target_institution_name,
+              coalesce(ti.slug, '') as target_institution_slug,
+              s.target_strategy_id,
+              coalesce(ts.title, '') as target_strategy_title,
+              coalesce(ts.slug, '') as target_strategy_slug,
+              s.target_cycle_id,
+              coalesce(s.rationale, '') as rationale,
+              coalesce(s.confidence, 'medium') as confidence
+       from clarity_gremlin_strategic_link_suggestions s
+       join strategy_guidelines sg on sg.id = s.source_guideline_id
+       join strategy_guidelines tg on tg.id = s.target_guideline_id
+       left join institutions ti on ti.id = s.target_institution_id
+       left join institution_strategies ts on ts.id = s.target_strategy_id
+       where s.strategy_id = $1
+         and s.status = 'suggested'
+       order by case when coalesce(s.confidence, 'medium') = 'high' then 0 when coalesce(s.confidence, 'medium') = 'medium' then 1 else 2 end,
+                s.updated_at desc`,
+      [strategyId]
+    );
+    return {
+      responseLanguage: search?.response_language || null,
+      model: search?.model || null,
+      lastScannedAt: search?.last_scanned_at || null,
+      ...shapeStrategicLinkSuggestionRows(suggestionsRes.rows)
+    };
+  }
+
+  async function persistStrategicLinkSearchRun({
+    strategyId,
+    institutionId,
+    cycleId,
+    actorId,
+    responseLanguage,
+    model
+  }) {
+    await query(
+      `insert into clarity_gremlin_strategic_link_searches (
+         strategy_id,
+         institution_id,
+         cycle_id,
+         response_language,
+         model,
+         last_scanned_at,
+         last_scanned_by,
+         created_at,
+         updated_at
+       )
+       values ($1, $2, $3, $4, $5, now(), $6, now(), now())
+       on conflict (strategy_id) do update
+       set institution_id = excluded.institution_id,
+           cycle_id = excluded.cycle_id,
+           response_language = excluded.response_language,
+           model = excluded.model,
+           last_scanned_at = now(),
+           last_scanned_by = excluded.last_scanned_by,
+           updated_at = now()`,
+      [strategyId, institutionId, cycleId, responseLanguage, model || null, actorId || null]
+    );
+  }
+
+  async function persistStrategicLinkSuggestions({
+    strategyId,
+    institutionId,
+    cycleId,
+    suggestions,
+    uuid
+  }) {
+    const items = Array.isArray(suggestions) ? suggestions : [];
+    for (const item of items) {
+      const sourceGuidelineId = String(item?.sourceGuidelineId || '').trim();
+      const targetGuidelineId = String(item?.targetGuidelineId || '').trim();
+      if (!sourceGuidelineId || !targetGuidelineId) continue;
+      const targetInstitutionId = String(item?.targetInstitutionId || '').trim() || null;
+      const targetStrategyId = String(item?.targetStrategyId || '').trim() || null;
+      const targetCycleId = String(item?.targetCycleId || '').trim() || null;
+      const groupKey = String(item?.canCreate ? 'sameInstitution' : 'otherInstitutions');
+      const rationale = String(item?.rationale || '').trim();
+      const confidence = String(item?.confidence || 'medium').trim().toLowerCase() || 'medium';
+      const metaJson = JSON.stringify({
+        sourceGuidelineTitle: item?.sourceGuidelineTitle || '',
+        targetGuidelineTitle: item?.targetGuidelineTitle || '',
+        targetInstitutionName: item?.targetInstitutionName || '',
+        targetInstitutionSlug: item?.targetInstitutionSlug || '',
+        targetStrategyTitle: item?.targetStrategyTitle || '',
+        targetStrategySlug: item?.targetStrategySlug || ''
+      });
+      await query(
+        `insert into clarity_gremlin_strategic_link_suggestions (
+           id,
+           strategy_id,
+           institution_id,
+           cycle_id,
+           source_guideline_id,
+           target_guideline_id,
+           target_institution_id,
+           target_strategy_id,
+           target_cycle_id,
+           group_key,
+           status,
+           rationale,
+           confidence,
+           meta_json,
+           last_suggested_at,
+           created_at,
+           updated_at
+         )
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'suggested', $11, $12, $13::jsonb, now(), now(), now())
+         on conflict (strategy_id, source_guideline_id, target_guideline_id) do update
+         set institution_id = excluded.institution_id,
+             cycle_id = excluded.cycle_id,
+             target_institution_id = excluded.target_institution_id,
+             target_strategy_id = excluded.target_strategy_id,
+             target_cycle_id = excluded.target_cycle_id,
+             group_key = excluded.group_key,
+             rationale = excluded.rationale,
+             confidence = excluded.confidence,
+             meta_json = excluded.meta_json,
+             last_suggested_at = now(),
+             updated_at = now()`,
+        [
+          typeof uuid === 'function' ? uuid() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          strategyId,
+          institutionId,
+          cycleId,
+          sourceGuidelineId,
+          targetGuidelineId,
+          targetInstitutionId,
+          targetStrategyId,
+          targetCycleId,
+          groupKey,
+          rationale,
+          confidence,
+          metaJson
+        ]
+      );
+    }
+  }
+
+  async function updateStrategicLinkSuggestionStatus({
+    strategyId,
+    sourceGuidelineId,
+    targetGuidelineId,
+    status,
+    actorId,
+    acceptedLinkId = null
+  }) {
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    if (!['dismissed', 'accepted'].includes(normalizedStatus)) {
+      throw new Error('invalid strategic link suggestion status');
+    }
+    const sql = normalizedStatus === 'accepted'
+      ? `update clarity_gremlin_strategic_link_suggestions
+         set status = 'accepted',
+             accepted_at = now(),
+             accepted_by = $4,
+             accepted_link_id = $5,
+             updated_at = now()
+         where strategy_id = $1
+           and source_guideline_id = $2
+           and target_guideline_id = $3
+         returning id`
+      : `update clarity_gremlin_strategic_link_suggestions
+         set status = 'dismissed',
+             dismissed_at = now(),
+             dismissed_by = $4,
+             updated_at = now()
+         where strategy_id = $1
+           and source_guideline_id = $2
+           and target_guideline_id = $3
+         returning id`;
+    const params = normalizedStatus === 'accepted'
+      ? [strategyId, sourceGuidelineId, targetGuidelineId, actorId || null, acceptedLinkId || null]
+      : [strategyId, sourceGuidelineId, targetGuidelineId, actorId || null];
+    const result = await query(sql, params);
+    return result.rowCount > 0;
+  }
+
   async function loadStrategyUsageSafely(strategyId, fallbackUsage = null) {
     try {
       return await loadStrategyUsage(strategyId);
@@ -349,10 +574,18 @@ function registerClarityGremlinRoutes({
       return res.status(409).json({ error: 'strategy not found' });
     }
 
-    const usage = await loadStrategicLinkUsage(strategyId);
+    const [usage, searchState] = await Promise.all([
+      loadStrategicLinkUsage(strategyId),
+      loadStrategicLinkSearchState(strategyId)
+    ]);
     res.json({
       ok: true,
-      usage
+      usage,
+      responseLanguage: searchState.responseLanguage || null,
+      model: searchState.model || null,
+      lastScannedAt: searchState.lastScannedAt || null,
+      sameInstitution: searchState.sameInstitution,
+      otherInstitutions: searchState.otherInstitutions
     });
   });
 
@@ -428,12 +661,32 @@ function registerClarityGremlinRoutes({
         locale,
         aiConfig
       });
+      await persistStrategicLinkSearchRun({
+        strategyId,
+        institutionId: req.auth.institutionId,
+        cycleId,
+        actorId: req.auth.sub,
+        responseLanguage: result.responseLanguage || locale,
+        model: result.model || null
+      });
+      await persistStrategicLinkSuggestions({
+        strategyId,
+        institutionId: req.auth.institutionId,
+        cycleId,
+        suggestions: [
+          ...(Array.isArray(result.sameInstitution) ? result.sameInstitution : []),
+          ...(Array.isArray(result.otherInstitutions) ? result.otherInstitutions : [])
+        ],
+        uuid
+      });
+      const persisted = await loadStrategicLinkSearchState(strategyId);
       return res.json({
         ok: true,
-        responseLanguage: result.responseLanguage || locale,
-        sameInstitution: Array.isArray(result.sameInstitution) ? result.sameInstitution : [],
-        otherInstitutions: Array.isArray(result.otherInstitutions) ? result.otherInstitutions : [],
-        model: result.model || null,
+        responseLanguage: persisted.responseLanguage || result.responseLanguage || locale,
+        sameInstitution: persisted.sameInstitution,
+        otherInstitutions: persisted.otherInstitutions,
+        model: persisted.model || result.model || null,
+        lastScannedAt: persisted.lastScannedAt || null,
         usage
       });
     } catch (error) {
@@ -448,6 +701,76 @@ function registerClarityGremlinRoutes({
         usage: await loadStrategicLinkUsageSafely(strategyId, usage)
       });
     }
+  });
+
+  app.post('/api/v1/cycles/:cycleId/clarity-gremlin/strategic-links/dismiss', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    const sourceGuidelineId = String(req.body?.sourceGuidelineId || '').trim();
+    const targetGuidelineId = String(req.body?.targetGuidelineId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+    if (!sourceGuidelineId || !targetGuidelineId) {
+      return res.status(400).json({ error: 'sourceGuidelineId and targetGuidelineId required' });
+    }
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const strategyId = String(cycleAccess?.cycle?.strategy_id || '').trim();
+    if (!strategyId) return res.status(409).json({ error: 'strategy not found' });
+
+    const updated = await updateStrategicLinkSuggestionStatus({
+      strategyId,
+      sourceGuidelineId,
+      targetGuidelineId,
+      status: 'dismissed',
+      actorId: req.auth.sub
+    });
+    if (!updated) return res.status(404).json({ error: 'strategic link suggestion not found' });
+
+    const searchState = await loadStrategicLinkSearchState(strategyId);
+    res.json({
+      ok: true,
+      dismissed: true,
+      lastScannedAt: searchState.lastScannedAt || null,
+      sameInstitution: searchState.sameInstitution,
+      otherInstitutions: searchState.otherInstitutions
+    });
+  });
+
+  app.post('/api/v1/cycles/:cycleId/clarity-gremlin/strategic-links/accepted', requireAuth, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    const sourceGuidelineId = String(req.body?.sourceGuidelineId || '').trim();
+    const targetGuidelineId = String(req.body?.targetGuidelineId || '').trim();
+    const linkId = String(req.body?.linkId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+    if (!sourceGuidelineId || !targetGuidelineId) {
+      return res.status(400).json({ error: 'sourceGuidelineId and targetGuidelineId required' });
+    }
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const strategyId = String(cycleAccess?.cycle?.strategy_id || '').trim();
+    if (!strategyId) return res.status(409).json({ error: 'strategy not found' });
+
+    const updated = await updateStrategicLinkSuggestionStatus({
+      strategyId,
+      sourceGuidelineId,
+      targetGuidelineId,
+      status: 'accepted',
+      actorId: req.auth.sub,
+      acceptedLinkId: linkId || null
+    });
+    if (!updated) return res.status(404).json({ error: 'strategic link suggestion not found' });
+
+    const searchState = await loadStrategicLinkSearchState(strategyId);
+    res.json({
+      ok: true,
+      accepted: true,
+      lastScannedAt: searchState.lastScannedAt || null,
+      sameInstitution: searchState.sameInstitution,
+      otherInstitutions: searchState.otherInstitutions
+    });
   });
 
   app.get('/api/v1/cycles/:cycleId/clarity-gremlin/jobs/:jobId', requireAuth, async (req, res) => {

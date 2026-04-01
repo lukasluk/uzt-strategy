@@ -2235,9 +2235,11 @@ function strategicLinkGremlinUiText() {
         currentStrategy: 'Current strategy',
         suggestedTarget: 'Suggested target',
         create: 'Create link',
+        dismiss: 'Dismiss',
         openTarget: 'Open target',
         viewOnly: 'View only',
         created: 'Strategic link created.',
+        dismissed: 'Strategic link suggestion dismissed.',
         sameEmpty: 'No same-institution suggestions.',
         otherEmpty: 'No cross-institution suggestions.',
         createRestricted: 'Cross-institution suggestions are read-only in this MVP.',
@@ -2246,7 +2248,8 @@ function strategicLinkGremlinUiText() {
         usage: 'Usage',
         usageLoading: 'Loading quota...',
         limitReached: 'Strategic link search quota reached for this strategy.',
-        limitReachedHint: 'Ask a meta-admin to allocate more strategic-link analyses for this institution.'
+        limitReachedHint: 'Ask a meta-admin to allocate more strategic-link analyses for this institution.',
+        lastScanned: 'Last scanned'
       }
     : {
         title: 'Clarity Gremlin',
@@ -2264,9 +2267,11 @@ function strategicLinkGremlinUiText() {
         currentStrategy: 'Dabartinė strategija',
         suggestedTarget: 'Siūlomas taikinys',
         create: 'Sukurti ryšį',
+        dismiss: 'Paslėpti',
         openTarget: 'Atidaryti tikslą',
         viewOnly: 'Tik peržiūra',
         created: 'Strateginis ryšys sukurtas.',
+        dismissed: 'Strateginio ryšio pasiūlymas paslėptas.',
         sameEmpty: 'Toje pačioje institucijoje pasiūlymų nerasta.',
         otherEmpty: 'Su kitomis institucijomis pasiūlymų nerasta.',
         createRestricted: 'Kitų institucijų pasiūlymai šiame MVP rodomi tik peržiūrai.',
@@ -2275,7 +2280,8 @@ function strategicLinkGremlinUiText() {
         usage: 'Panaudojimas',
         usageLoading: 'Kraunama kvota...',
         limitReached: 'Šiai strategijai strateginių ryšių paieškos kvota išnaudota.',
-        limitReachedHint: 'Meta-admin gali šiai institucijai skirti daugiau strateginių ryšių analizių.'
+        limitReachedHint: 'Meta-admin gali šiai institucijai skirti daugiau strateginių ryšių analizių.',
+        lastScanned: 'Paskutinį kartą tikrinta'
       };
 }
 
@@ -2362,6 +2368,21 @@ async function ensureStrategicLinkGremlinUsage({ force = false } = {}) {
         ? payload.usage
         : null;
       state.mapStrategicLinkUsageCycleId = cycleId;
+      const rememberedSuggestions = Array.isArray(payload?.sameInstitution) ? payload.sameInstitution : [];
+      const rememberedOther = Array.isArray(payload?.otherInstitutions) ? payload.otherInstitutions : [];
+      if (payload && typeof payload === 'object' && (
+        rememberedSuggestions.length
+        || rememberedOther.length
+        || payload?.lastScannedAt
+      )) {
+        state.mapStrategicLinkSuggestions = {
+          responseLanguage: String(payload?.responseLanguage || currentLanguage()).trim().toLowerCase(),
+          sameInstitution: rememberedSuggestions,
+          otherInstitutions: rememberedOther,
+          model: payload?.model || null,
+          lastScannedAt: payload?.lastScannedAt || null
+        };
+      }
       return state.mapStrategicLinkUsage;
     })
     .catch((error) => {
@@ -2382,6 +2403,7 @@ async function ensureStrategicLinkGremlinUsage({ force = false } = {}) {
 function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupKey) {
   const ui = strategicLinkGremlinUiText();
   const suggestions = Array.isArray(items) ? items : [];
+  const canCurate = canOpenAdminView();
   return `
     <section class="strategic-gremlin-group">
       <div class="strategic-gremlin-group-head">
@@ -2426,6 +2448,16 @@ function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupK
                           data-target-guideline-id="${escapeHtml(item?.targetGuidelineId || '')}"
                         >${escapeHtml(ui.create)}</button>`
                       : `<span class="strategic-gremlin-readonly-note">${escapeHtml(ui.viewOnly)}</span>`}
+                    ${canCurate
+                      ? `<button
+                          type="button"
+                          class="btn btn-ghost"
+                          data-action="dismiss-strategic-link-suggestion"
+                          data-group="${escapeHtml(groupKey)}"
+                          data-source-guideline-id="${escapeHtml(item?.sourceGuidelineId || '')}"
+                          data-target-guideline-id="${escapeHtml(item?.targetGuidelineId || '')}"
+                        >${escapeHtml(ui.dismiss)}</button>`
+                      : ''}
                     <a class="btn btn-ghost" href="${escapeHtml(href)}">${escapeHtml(ui.openTarget)}</a>
                   </div>
                 </article>
@@ -2443,6 +2475,10 @@ function buildStrategicLinkSearchPanelMarkup({ activeLayer }) {
   const payload = state.mapStrategicLinkSuggestions || null;
   const sameInstitution = Array.isArray(payload?.sameInstitution) ? payload.sameInstitution : [];
   const otherInstitutions = Array.isArray(payload?.otherInstitutions) ? payload.otherInstitutions : [];
+  const lastScannedAt = payload?.lastScannedAt || null;
+  const lastScannedLabel = lastScannedAt
+    ? `${ui.lastScanned}: ${formatCommentDateTime(lastScannedAt) || String(lastScannedAt)}`
+    : '';
   const usage = state.mapStrategicLinkUsage && typeof state.mapStrategicLinkUsage === 'object'
     ? state.mapStrategicLinkUsage
     : null;
@@ -2471,6 +2507,7 @@ function buildStrategicLinkSearchPanelMarkup({ activeLayer }) {
               <p class="prompt">${escapeHtml(ui.subtitle)}</p>
               <div class="strategic-gremlin-usage-row">
                 <span class="tag strategic-gremlin-usage-tag${usageDepleted ? ' strategic-gremlin-usage-tag-depleted' : ''}">${escapeHtml(usageLabel)}</span>
+                ${lastScannedLabel ? `<span class="tag strategic-gremlin-last-scanned-tag">${escapeHtml(lastScannedLabel)}</span>` : ''}
               </div>
             </div>
           </div>
@@ -2544,7 +2581,8 @@ async function runStrategicLinkSearch() {
       responseLanguage: String(payload?.responseLanguage || currentLanguage()).trim().toLowerCase(),
       sameInstitution: Array.isArray(payload?.sameInstitution) ? payload.sameInstitution : [],
       otherInstitutions: Array.isArray(payload?.otherInstitutions) ? payload.otherInstitutions : [],
-      model: payload?.model || null
+      model: payload?.model || null,
+      lastScannedAt: payload?.lastScannedAt || null
     };
     state.mapStrategicLinkUsage = payload?.usage && typeof payload.usage === 'object'
       ? payload.usage
@@ -2566,13 +2604,21 @@ async function runStrategicLinkSearch() {
 }
 
 async function createStrategicLinkFromSuggestion(sourceGuidelineId, targetGuidelineId) {
-  await api('/api/v1/admin/guideline-links', {
+  const linkPayload = await api('/api/v1/admin/guideline-links', {
     method: 'POST',
     body: {
       sourceGuidelineId,
       targetGuidelineId
     }
   });
+  await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/clarity-gremlin/strategic-links/accepted`, {
+    method: 'POST',
+    body: {
+      sourceGuidelineId,
+      targetGuidelineId,
+      linkId: String(linkPayload?.linkId || '').trim()
+    }
+  }).catch(() => {});
   if (state.mapStrategicLinkSuggestions && typeof state.mapStrategicLinkSuggestions === 'object') {
     const prune = (items) => (Array.isArray(items) ? items : []).filter((item) => !(
       String(item?.sourceGuidelineId || '').trim() === String(sourceGuidelineId || '').trim()
@@ -2587,6 +2633,24 @@ async function createStrategicLinkFromSuggestion(sourceGuidelineId, targetGuidel
   notifySuccess(strategicLinkGremlinUiText().created);
   await loadStrategyMap({ preserveStrategicSuggestions: true });
   await ensureStrategicLinksData({ force: true });
+}
+
+async function dismissStrategicLinkSuggestion(sourceGuidelineId, targetGuidelineId) {
+  const payload = await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/clarity-gremlin/strategic-links/dismiss`, {
+    method: 'POST',
+    body: {
+      sourceGuidelineId,
+      targetGuidelineId
+    }
+  });
+  state.mapStrategicLinkSuggestions = {
+    responseLanguage: String(payload?.responseLanguage || state.mapStrategicLinkSuggestions?.responseLanguage || currentLanguage()).trim().toLowerCase(),
+    sameInstitution: Array.isArray(payload?.sameInstitution) ? payload.sameInstitution : [],
+    otherInstitutions: Array.isArray(payload?.otherInstitutions) ? payload.otherInstitutions : [],
+    model: payload?.model || state.mapStrategicLinkSuggestions?.model || null,
+    lastScannedAt: payload?.lastScannedAt || state.mapStrategicLinkSuggestions?.lastScannedAt || null
+  };
+  notifySuccess(strategicLinkGremlinUiText().dismissed);
 }
 
 function bindStrategicLinkSearchPanel(container) {
@@ -2615,6 +2679,23 @@ function bindStrategicLinkSearchPanel(container) {
       button.disabled = true;
       try {
         await createStrategicLinkFromSuggestion(sourceGuidelineId, targetGuidelineId);
+      } catch (error) {
+        notifyError(toUserMessage(error));
+      } finally {
+        renderStepView();
+      }
+    });
+  });
+
+  container.querySelectorAll('[data-action="dismiss-strategic-link-suggestion"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const sourceGuidelineId = String(button.getAttribute('data-source-guideline-id') || '').trim();
+      const targetGuidelineId = String(button.getAttribute('data-target-guideline-id') || '').trim();
+      if (!sourceGuidelineId || !targetGuidelineId) return;
+      if (!(button instanceof HTMLButtonElement)) return;
+      button.disabled = true;
+      try {
+        await dismissStrategicLinkSuggestion(sourceGuidelineId, targetGuidelineId);
       } catch (error) {
         notifyError(toUserMessage(error));
       } finally {

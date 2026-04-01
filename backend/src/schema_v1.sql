@@ -259,6 +259,47 @@ create index if not exists idx_cycles_strategy on strategy_cycles(strategy_id);
 create index if not exists idx_guidelines_cycle on strategy_guidelines(cycle_id);
 create index if not exists idx_guideline_links_source on strategy_guideline_links(source_guideline_id);
 create index if not exists idx_guideline_links_target on strategy_guideline_links(target_guideline_id);
+
+create table if not exists clarity_gremlin_strategic_link_searches (
+  strategy_id uuid primary key references institution_strategies(id) on delete cascade,
+  institution_id uuid not null references institutions(id) on delete cascade,
+  cycle_id uuid not null references strategy_cycles(id) on delete cascade,
+  response_language text not null default 'lt' check (response_language in ('lt', 'en')),
+  model text,
+  last_scanned_at timestamptz not null default now(),
+  last_scanned_by uuid references platform_users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists clarity_gremlin_strategic_link_suggestions (
+  id uuid primary key,
+  strategy_id uuid not null references institution_strategies(id) on delete cascade,
+  institution_id uuid not null references institutions(id) on delete cascade,
+  cycle_id uuid not null references strategy_cycles(id) on delete cascade,
+  source_guideline_id uuid not null references strategy_guidelines(id) on delete cascade,
+  target_guideline_id uuid not null references strategy_guidelines(id) on delete cascade,
+  target_institution_id uuid references institutions(id) on delete set null,
+  target_strategy_id uuid references institution_strategies(id) on delete set null,
+  target_cycle_id uuid references strategy_cycles(id) on delete set null,
+  group_key text not null check (group_key in ('sameInstitution', 'otherInstitutions')),
+  status text not null default 'suggested' check (status in ('suggested', 'dismissed', 'accepted')),
+  rationale text,
+  confidence text,
+  meta_json jsonb not null default '{}'::jsonb,
+  accepted_link_id uuid references strategy_guideline_links(id) on delete set null,
+  accepted_at timestamptz,
+  accepted_by uuid references platform_users(id) on delete set null,
+  dismissed_at timestamptz,
+  dismissed_by uuid references platform_users(id) on delete set null,
+  last_suggested_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(strategy_id, source_guideline_id, target_guideline_id)
+);
+
+create index if not exists idx_clarity_gremlin_strategic_link_suggestions_strategy
+  on clarity_gremlin_strategic_link_suggestions(strategy_id, status, updated_at desc);
 create index if not exists idx_comments_guideline on strategy_comments(guideline_id);
 create index if not exists idx_votes_guideline on strategy_votes(guideline_id);
 create index if not exists idx_votes_voter on strategy_votes(voter_id);

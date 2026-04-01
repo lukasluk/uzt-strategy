@@ -4699,11 +4699,20 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .strategic-gremlin-usage-row {
   margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .strategic-gremlin-usage-tag {
   border-color: #cfe0f6;
   background: linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%);
   color: #315b93;
+}
+.strategic-gremlin-last-scanned-tag {
+  border-color: #dde6f3;
+  background: #f8fbff;
+  color: #607796;
 }
 .strategic-gremlin-usage-tag-depleted {
   border-color: #e6c3bf;
@@ -4748,7 +4757,10 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategic-link-gremlin-loading-card {
   min-height: auto;
   padding: 24px 20px;
-  color: #22344c;
+  color: #ffffff;
+  text-shadow:
+    0 2px 16px rgba(28, 54, 108, 0.34),
+    0 0 24px rgba(126, 194, 255, 0.18);
 }
 .strategic-link-gremlin-loading-card strong {
   display: block;
@@ -4757,7 +4769,7 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategic-link-gremlin-loading-card .prompt {
   margin: 0;
   max-width: 36ch;
-  color: #7189aa;
+  color: rgba(255, 255, 255, 0.9);
 }
 .map-vote-row {
   display: flex;

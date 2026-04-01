@@ -129,6 +129,12 @@ function createStore({ usage, jobs } = {}) {
     strategicExtra: Math.max(0, Number(usage?.strategicExtra || 0))
   };
   const jobsById = new Map();
+  const strategicSuggestions = new Map();
+  const strategicSearchState = {
+    responseLanguage: null,
+    model: null,
+    lastScannedAt: null
+  };
   for (const job of Array.isArray(jobs) ? jobs : []) {
     jobsById.set(job.id, {
       provider: 'openai',
@@ -138,7 +144,7 @@ function createStore({ usage, jobs } = {}) {
       ...job
     });
   }
-  return { usageState, jobsById };
+  return { usageState, jobsById, strategicSuggestions, strategicSearchState };
 }
 
 function buildFixture({
@@ -282,6 +288,57 @@ function buildFixture({
       return { rows: [], rowCount: 1 };
     }
 
+    if (/insert into clarity_gremlin_strategic_link_searches/i.test(text)) {
+      const [, , , responseLanguage, model] = params;
+      store.strategicSearchState.responseLanguage = responseLanguage;
+      store.strategicSearchState.model = model || null;
+      store.strategicSearchState.lastScannedAt = new Date().toISOString();
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (/insert into clarity_gremlin_strategic_link_suggestions/i.test(text)) {
+      const [
+        id,
+        strategyId,
+        institutionId,
+        cycleId,
+        sourceGuidelineId,
+        targetGuidelineId,
+        targetInstitutionId,
+        targetStrategyId,
+        targetCycleId,
+        groupKey,
+        rationale,
+        confidence,
+        metaJson
+      ] = params;
+      const key = `${strategyId}|${sourceGuidelineId}|${targetGuidelineId}`;
+      const previous = store.strategicSuggestions.get(key) || {};
+      store.strategicSuggestions.set(key, {
+        id: previous.id || id,
+        strategy_id: strategyId,
+        institution_id: institutionId,
+        cycle_id: cycleId,
+        source_guideline_id: sourceGuidelineId,
+        source_guideline_title: JSON.parse(metaJson || '{}').sourceGuidelineTitle || 'Source',
+        target_guideline_id: targetGuidelineId,
+        target_guideline_title: JSON.parse(metaJson || '{}').targetGuidelineTitle || 'Target',
+        target_institution_id: targetInstitutionId,
+        target_institution_name: JSON.parse(metaJson || '{}').targetInstitutionName || '',
+        target_institution_slug: JSON.parse(metaJson || '{}').targetInstitutionSlug || '',
+        target_strategy_id: targetStrategyId,
+        target_strategy_title: JSON.parse(metaJson || '{}').targetStrategyTitle || '',
+        target_strategy_slug: JSON.parse(metaJson || '{}').targetStrategySlug || '',
+        target_cycle_id: targetCycleId,
+        group_key: groupKey,
+        status: previous.status || 'suggested',
+        rationale,
+        confidence,
+        updated_at: new Date().toISOString()
+      });
+      return { rows: [], rowCount: 1 };
+    }
+
     if (/select id, strategy_id\s+from clarity_gremlin_analyses/i.test(text)) {
       const [cycleId, jobId, institutionId, strategyId, cutoffIso] = params;
       const cutoff = Date.parse(String(cutoffIso || ''));
@@ -318,6 +375,52 @@ function buildFixture({
     if (/set clarity_gremlin_strategic_link_calls_used = greatest/i.test(text)) {
       store.usageState.strategicUsed = Math.max(0, store.usageState.strategicUsed - 1);
       return { rows: [], rowCount: 1 };
+    }
+
+    if (/select strategy_id,\s+response_language,\s+model,\s+last_scanned_at/i.test(text) && /from clarity_gremlin_strategic_link_searches/i.test(text)) {
+      if (!store.strategicSearchState.lastScannedAt) return { rows: [], rowCount: 0 };
+      return {
+        rows: [{
+          strategy_id: 'strategy-1',
+          response_language: store.strategicSearchState.responseLanguage,
+          model: store.strategicSearchState.model,
+          last_scanned_at: store.strategicSearchState.lastScannedAt
+        }],
+        rowCount: 1
+      };
+    }
+
+    if (/select s\.group_key,/i.test(text) && /from clarity_gremlin_strategic_link_suggestions s/i.test(text)) {
+      const [strategyId] = params;
+      const rows = [...store.strategicSuggestions.values()]
+        .filter((item) => item.strategy_id === strategyId && item.status === 'suggested')
+        .sort((left, right) => {
+          const rank = (value) => value === 'high' ? 0 : value === 'medium' ? 1 : 2;
+          return rank(left.confidence) - rank(right.confidence);
+        });
+      return { rows, rowCount: rows.length };
+    }
+
+    if (/set status = 'dismissed'/i.test(text) && /update clarity_gremlin_strategic_link_suggestions/i.test(text)) {
+      const [strategyId, sourceGuidelineId, targetGuidelineId] = params;
+      const key = `${strategyId}|${sourceGuidelineId}|${targetGuidelineId}`;
+      const item = store.strategicSuggestions.get(key);
+      if (!item) return { rows: [], rowCount: 0 };
+      item.status = 'dismissed';
+      item.updated_at = new Date().toISOString();
+      store.strategicSuggestions.set(key, item);
+      return { rows: [{ id: item.id }], rowCount: 1 };
+    }
+
+    if (/set status = 'accepted'/i.test(text) && /update clarity_gremlin_strategic_link_suggestions/i.test(text)) {
+      const [strategyId, sourceGuidelineId, targetGuidelineId] = params;
+      const key = `${strategyId}|${sourceGuidelineId}|${targetGuidelineId}`;
+      const item = store.strategicSuggestions.get(key);
+      if (!item) return { rows: [], rowCount: 0 };
+      item.status = 'accepted';
+      item.updated_at = new Date().toISOString();
+      store.strategicSuggestions.set(key, item);
+      return { rows: [{ id: item.id }], rowCount: 1 };
     }
 
     if (/select id,\s+institution_id,\s+strategy_id,\s+cycle_id,/i.test(text) && /from clarity_gremlin_analyses/i.test(text)) {
@@ -713,6 +816,103 @@ test('POST /api/v1/cycles/:cycleId/clarity-gremlin/strategic-links returns limit
     assert.equal(payload.usage.used, 3);
     assert.equal(payload.usage.limit, 3);
     assert.equal(payload.usage.remaining, 0);
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('GET /api/v1/cycles/:cycleId/clarity-gremlin/strategic-links returns persisted suggestions and last scan state', async () => {
+  const store = createStore({
+    usage: {
+      strategicUsed: 1
+    }
+  });
+  store.strategicSearchState.responseLanguage = 'en';
+  store.strategicSearchState.model = 'test-model';
+  store.strategicSearchState.lastScannedAt = '2026-04-01T10:00:00.000Z';
+  store.strategicSuggestions.set('strategy-1|guideline-1|guideline-2', {
+    id: 'suggestion-1',
+    strategy_id: 'strategy-1',
+    source_guideline_id: 'guideline-1',
+    source_guideline_title: 'Current parent',
+    target_guideline_id: 'guideline-2',
+    target_guideline_title: 'Sibling direction',
+    target_institution_id: 'inst-1',
+    target_institution_name: 'Institution One',
+    target_institution_slug: 'inst-one',
+    target_strategy_id: 'strategy-2',
+    target_strategy_title: 'Strategy Two',
+    target_strategy_slug: 'strategy-two',
+    target_cycle_id: 'cycle-2',
+    group_key: 'sameInstitution',
+    status: 'suggested',
+    rationale: 'Shared service direction.',
+    confidence: 'high',
+    updated_at: '2026-04-01T10:00:00.000Z'
+  });
+  const fixture = buildFixture({ store });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/cycles/cycle-1/clarity-gremlin/strategic-links`);
+    const payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.lastScannedAt, '2026-04-01T10:00:00.000Z');
+    assert.equal(payload.sameInstitution.length, 1);
+    assert.equal(payload.sameInstitution[0].sourceGuidelineTitle, 'Current parent');
+    assert.equal(payload.sameInstitution[0].canCreate, true);
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('POST /api/v1/cycles/:cycleId/clarity-gremlin/strategic-links/dismiss hides persisted suggestion', async () => {
+  const store = createStore({
+    usage: {
+      strategicUsed: 1
+    }
+  });
+  store.strategicSearchState.responseLanguage = 'en';
+  store.strategicSearchState.model = 'test-model';
+  store.strategicSearchState.lastScannedAt = '2026-04-01T10:00:00.000Z';
+  store.strategicSuggestions.set('strategy-1|guideline-1|guideline-2', {
+    id: 'suggestion-1',
+    strategy_id: 'strategy-1',
+    source_guideline_id: 'guideline-1',
+    source_guideline_title: 'Current parent',
+    target_guideline_id: 'guideline-2',
+    target_guideline_title: 'Sibling direction',
+    target_institution_id: 'inst-1',
+    target_institution_name: 'Institution One',
+    target_institution_slug: 'inst-one',
+    target_strategy_id: 'strategy-2',
+    target_strategy_title: 'Strategy Two',
+    target_strategy_slug: 'strategy-two',
+    target_cycle_id: 'cycle-2',
+    group_key: 'sameInstitution',
+    status: 'suggested',
+    rationale: 'Shared service direction.',
+    confidence: 'high',
+    updated_at: '2026-04-01T10:00:00.000Z'
+  });
+  const fixture = buildFixture({ store });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/cycles/cycle-1/clarity-gremlin/strategic-links/dismiss`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sourceGuidelineId: 'guideline-1',
+        targetGuidelineId: 'guideline-2'
+      })
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.dismissed, true);
+    assert.equal(payload.sameInstitution.length, 0);
   } finally {
     await server.close();
     fixture.teardown();
