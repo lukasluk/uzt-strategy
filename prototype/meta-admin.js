@@ -203,7 +203,8 @@ function toUserMessage(error) {
     'generationId required': 'Truksta generavimo uzklausos ID.',
     'generation not found': 'AI generavimo uzklausa nerasta.',
     'ai generation timeout': 'AI generavimas uztruko ilgiau nei tiketasi. Patikrinkite po keliu sekundziu.',
-    'ai generation failed': 'AI generavimas nepavyko.'
+    'ai generation failed': 'AI generavimas nepavyko.',
+    'invalid clarityGremlinStrategicLinkExtraScans': 'Papildomu strateginiu rysiu Clarity Gremlin analiziÅ³ skaicius turi buti sveikas teigiamas skaicius arba nulis.'
   };
   return map[raw] || raw || 'Nepavyko ivykdyti uzklausos.';
 }
@@ -550,10 +551,15 @@ function renderInstitutionDetailCard(institution) {
   const selectedDeleteIds = getSelectedStrategyIdsForInstitution(institution.id);
   const selectedDeleteCount = selectedDeleteIds.length;
   const gremlinExtraScans = Math.max(0, Number(institution?.clarityGremlinExtraScans || 0));
+  const strategicLinkExtraScans = Math.max(0, Number(institution?.clarityGremlinStrategicLinkExtraScans || 0));
   const gremlinTotalLimit = 10 + gremlinExtraScans;
+  const strategicLinkTotalLimit = 3 + strategicLinkExtraScans;
   const gremlinUsed = strategies.reduce((sum, strategy) => sum + Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0)), 0);
+  const strategicLinkUsed = strategies.reduce((sum, strategy) => sum + Math.max(0, Number(strategy?.clarityGremlinStrategicLinkCallsUsed || 0)), 0);
   const gremlinInstitutionLimit = gremlinTotalLimit * Math.max(0, strategies.length);
+  const strategicLinkInstitutionLimit = strategicLinkTotalLimit * Math.max(0, strategies.length);
   const gremlinRemaining = Math.max(0, gremlinInstitutionLimit - gremlinUsed);
+  const strategicLinkRemaining = Math.max(0, strategicLinkInstitutionLimit - strategicLinkUsed);
   const aiProvider = String(institution?.aiProvider || 'openai').trim().toLowerCase() === 'mistral' ? 'mistral' : 'openai';
   const aiOpenaiModel = String(institution?.aiOpenaiModel || '').trim();
   const aiMistralModel = String(institution?.aiMistralModel || '').trim();
@@ -565,7 +571,8 @@ function renderInstitutionDetailCard(institution) {
         <div class="meta-institution-tags">
           ${renderTag(institution.slug, 'slug')}
           ${renderTag(aiProvider === 'mistral' ? 'Mistral' : 'OpenAI', 'scope')}
-          ${renderTag(`Limitas / strategijai: ${gremlinTotalLimit}`, 'count')}
+          ${renderTag(`Gremlin / strategijai: ${gremlinTotalLimit}`, 'count')}
+          ${renderTag(`Strateginiai rysiai / strategijai: ${strategicLinkTotalLimit}`, 'count')}
         </div>
       </div>
       <div class="meta-institution-gremlin-summary">
@@ -584,6 +591,24 @@ function renderInstitutionDetailCard(institution) {
         <div class="meta-institution-stat">
           <span class="meta-institution-stat-label">Papildomai skirta</span>
           <strong class="meta-institution-stat-value">${escapeHtml(String(gremlinExtraScans))}</strong>
+        </div>
+      </div>
+      <div class="meta-institution-gremlin-summary">
+        <div class="meta-institution-stat">
+          <span class="meta-institution-stat-label">Strateginiai rysiai panaudota</span>
+          <strong class="meta-institution-stat-value">${escapeHtml(String(strategicLinkUsed))}</strong>
+        </div>
+        <div class="meta-institution-stat">
+          <span class="meta-institution-stat-label">Strateginiai rysiai liko</span>
+          <strong class="meta-institution-stat-value">${escapeHtml(String(strategicLinkRemaining))}</strong>
+        </div>
+        <div class="meta-institution-stat">
+          <span class="meta-institution-stat-label">Strateginiu rysiu kvota</span>
+          <strong class="meta-institution-stat-value">${escapeHtml(String(strategicLinkInstitutionLimit))}</strong>
+        </div>
+        <div class="meta-institution-stat">
+          <span class="meta-institution-stat-label">Strateginiams rysiams papildomai</span>
+          <strong class="meta-institution-stat-value">${escapeHtml(String(strategicLinkExtraScans))}</strong>
         </div>
       </div>
       <form class="institution-rename-form inline-form meta-institution-form" data-institution-id="${escapeHtml(institution.id)}">
@@ -609,6 +634,17 @@ function renderInstitutionDetailCard(institution) {
             ${state.busy ? 'disabled' : ''}
           />
         </label>
+        <label class="meta-institution-quota-field">
+          <span>Papildomi strateginiu rysiu scanai</span>
+          <input
+            type="number"
+            name="clarityGremlinStrategicLinkExtraScans"
+            min="0"
+            step="1"
+            value="${escapeHtml(String(strategicLinkExtraScans))}"
+            ${state.busy ? 'disabled' : ''}
+          />
+        </label>
         <label class="meta-institution-model-field">
           <span>OpenAI modelis</span>
           <select name="aiOpenaiModel" ${state.busy ? 'disabled' : ''}>
@@ -625,6 +661,9 @@ function renderInstitutionDetailCard(institution) {
       </form>
       <p class="prompt meta-institution-quota-note">
         Bazinis limitas vienai strategijai: 10. Su papildoma kvota kiekviena strategija sioje institucijoje gali tureti iki ${escapeHtml(String(gremlinTotalLimit))} analizu.
+      </p>
+      <p class="prompt meta-institution-quota-note">
+        Strateginiu rysiu Gremlin bazinis limitas vienai strategijai: 3. Su papildoma kvota kiekviena strategija sioje institucijoje gali tureti iki ${escapeHtml(String(strategicLinkTotalLimit))} paiesku.
       </p>
       <p class="prompt meta-institution-ai-note">
         Aktyvus tiekejas: <strong>${escapeHtml(aiProvider === 'mistral' ? 'Mistral' : 'OpenAI')}</strong>.
@@ -647,6 +686,7 @@ function renderInstitutionDetailCard(institution) {
                       <span class="tag">${escapeHtml(strategy.slug || '-')}</span>
                       ${strategy.isDefault ? renderTag('Numatytoji', 'scope') : ''}
                       ${renderTag(`Gremlin: ${Math.max(0, Number(strategy?.clarityGremlinCallsUsed || 0))} / ${gremlinTotalLimit}`, 'count')}
+                      ${renderTag(`Strateginiai rysiai: ${Math.max(0, Number(strategy?.clarityGremlinStrategicLinkCallsUsed || 0))} / ${strategicLinkTotalLimit}`, 'count')}
                     </div>
                   </div>
                   <form class="strategy-rename-form meta-strategy-rename-form" data-strategy-id="${escapeHtml(strategy.id)}">
@@ -2220,10 +2260,12 @@ function bindDashboardEvents() {
       const formData = new FormData(form);
       const name = String(formData.get('name') || '').trim();
       const clarityGremlinExtraScans = Number(formData.get('clarityGremlinExtraScans'));
+      const clarityGremlinStrategicLinkExtraScans = Number(formData.get('clarityGremlinStrategicLinkExtraScans'));
       const aiOpenaiModel = String(formData.get('aiOpenaiModel') || '').trim();
       const aiMistralModel = String(formData.get('aiMistralModel') || '').trim();
       if (!institutionId || !name) return;
       if (!Number.isFinite(clarityGremlinExtraScans) || clarityGremlinExtraScans < 0) return;
+      if (!Number.isFinite(clarityGremlinStrategicLinkExtraScans) || clarityGremlinStrategicLinkExtraScans < 0) return;
 
       await runBusy(async () => {
         await api(`/api/v1/meta-admin/institutions/${encodeURIComponent(institutionId)}`, {
@@ -2231,6 +2273,7 @@ function bindDashboardEvents() {
           body: {
             name,
             clarityGremlinExtraScans: Math.trunc(clarityGremlinExtraScans),
+            clarityGremlinStrategicLinkExtraScans: Math.trunc(clarityGremlinStrategicLinkExtraScans),
             aiOpenaiModel,
             aiMistralModel
           }

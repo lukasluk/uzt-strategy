@@ -259,6 +259,10 @@ const state = {
   mapStrategicLinkSuggestions: null,
   mapStrategicLinkSuggestionsLoading: false,
   mapStrategicLinkSuggestionsError: '',
+  mapStrategicLinkUsage: null,
+  mapStrategicLinkUsageLoading: false,
+  mapStrategicLinkUsageCycleId: '',
+  mapStrategicLinkUsagePromise: null,
   voteFloatingCollapsed: hydrateVoteFloatingCollapsed(),
   mapInitiativeFocusId: '',
   mapInitiativeHoverId: '',
@@ -2023,6 +2027,10 @@ async function loadStrategyMap({ preserveStrategicSuggestions = false } = {}) {
     state.mapStrategicLinkSuggestionsLoading = false;
     state.mapStrategicLinkSuggestionsError = '';
   }
+  state.mapStrategicLinkUsage = null;
+  state.mapStrategicLinkUsageLoading = false;
+  state.mapStrategicLinkUsageCycleId = '';
+  state.mapStrategicLinkUsagePromise = null;
 }
 
 function mapPerspectiveKey() {
@@ -2234,7 +2242,11 @@ function strategicLinkGremlinUiText() {
         otherEmpty: 'No cross-institution suggestions.',
         createRestricted: 'Cross-institution suggestions are read-only in this MVP.',
         overlayLoading: 'Clarity Gremlin is searching strategic links...',
-        overlayHint: 'Comparing the current strategy against other strategy directions.'
+        overlayHint: 'Comparing the current strategy against other strategy directions.',
+        usage: 'Usage',
+        usageLoading: 'Loading quota...',
+        limitReached: 'Strategic link search quota reached for this strategy.',
+        limitReachedHint: 'Ask a meta-admin to allocate more strategic-link analyses for this institution.'
       }
     : {
         title: 'Clarity Gremlin',
@@ -2259,7 +2271,11 @@ function strategicLinkGremlinUiText() {
         otherEmpty: 'Su kitomis institucijomis pasiūlymų nerasta.',
         createRestricted: 'Kitų institucijų pasiūlymai šiame MVP rodomi tik peržiūrai.',
         overlayLoading: 'Clarity Gremlin ieško strateginių ryšių...',
-        overlayHint: 'Lyginamos dabartinės strategijos gairės su kitų strategijų kryptimis.'
+        overlayHint: 'Lyginamos dabartinės strategijos gairės su kitų strategijų kryptimis.',
+        usage: 'Panaudojimas',
+        usageLoading: 'Kraunama kvota...',
+        limitReached: 'Šiai strategijai strateginių ryšių paieškos kvota išnaudota.',
+        limitReachedHint: 'Meta-admin gali šiai institucijai skirti daugiau strateginių ryšių analizių.'
       };
 }
 
@@ -2280,6 +2296,85 @@ function buildStrategicLinkTargetHref(item) {
     institutionSlug: item?.targetInstitutionSlug || '',
     strategySlug: item?.targetStrategySlug || ''
   });
+}
+
+function closeStrategicLinkSearchOverlay() {
+  document.body.classList.remove('strategic-link-gremlin-locked');
+  const existing = document.getElementById('strategicLinkGremlinOverlay');
+  if (existing) existing.remove();
+}
+
+function openStrategicLinkSearchOverlay() {
+  const ui = strategicLinkGremlinUiText();
+  closeStrategicLinkSearchOverlay();
+  const overlay = document.createElement('div');
+  overlay.id = 'strategicLinkGremlinOverlay';
+  overlay.className = 'strategic-link-gremlin-overlay';
+  overlay.innerHTML = `
+    <div class="gremlin-backdrop-stage strategic-link-gremlin-backdrop" aria-hidden="true">
+      <div class="gremlin-backdrop-aura gremlin-backdrop-aura-one"></div>
+      <div class="gremlin-backdrop-aura gremlin-backdrop-aura-two"></div>
+      <div class="gremlin-backdrop-aura gremlin-backdrop-aura-three"></div>
+      <div class="gremlin-backdrop-rune-grid"></div>
+      <div class="gremlin-backdrop-sigil"></div>
+      <div class="gremlin-backdrop-flare gremlin-backdrop-flare-one"></div>
+      <div class="gremlin-backdrop-flare gremlin-backdrop-flare-two"></div>
+      <div class="gremlin-backdrop-flare gremlin-backdrop-flare-three"></div>
+      <div class="gremlin-backdrop-stars">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+    <div class="gremlin-loading-card strategic-link-gremlin-overlay-card" aria-live="polite">
+      <div class="gremlin-loading-spinner" aria-hidden="true"></div>
+      <strong>${escapeHtml(ui.overlayLoading)}</strong>
+      <p class="prompt">${escapeHtml(ui.overlayHint)}</p>
+    </div>
+  `;
+  document.body.classList.add('strategic-link-gremlin-locked');
+  document.body.appendChild(overlay);
+}
+
+async function ensureStrategicLinkGremlinUsage({ force = false } = {}) {
+  if (!state.cycle?.id || !isLoggedIn()) {
+    state.mapStrategicLinkUsage = null;
+    state.mapStrategicLinkUsageLoading = false;
+    state.mapStrategicLinkUsageCycleId = '';
+    state.mapStrategicLinkUsagePromise = null;
+    return null;
+  }
+  const cycleId = String(state.cycle.id || '').trim();
+  if (!force
+    && state.mapStrategicLinkUsage
+    && state.mapStrategicLinkUsageCycleId === cycleId) {
+    return state.mapStrategicLinkUsage;
+  }
+  if (!force && state.mapStrategicLinkUsagePromise) {
+    return state.mapStrategicLinkUsagePromise;
+  }
+
+  state.mapStrategicLinkUsageLoading = true;
+  const loader = api(`/api/v1/cycles/${encodeURIComponent(cycleId)}/clarity-gremlin/strategic-links`)
+    .then((payload) => {
+      state.mapStrategicLinkUsage = payload?.usage && typeof payload.usage === 'object'
+        ? payload.usage
+        : null;
+      state.mapStrategicLinkUsageCycleId = cycleId;
+      return state.mapStrategicLinkUsage;
+    })
+    .catch((error) => {
+      state.mapStrategicLinkUsage = null;
+      state.mapStrategicLinkUsageCycleId = cycleId;
+      throw error;
+    })
+    .finally(() => {
+      state.mapStrategicLinkUsageLoading = false;
+      state.mapStrategicLinkUsagePromise = null;
+      renderStepView();
+    });
+
+  state.mapStrategicLinkUsagePromise = loader;
+  return loader;
 }
 
 function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupKey) {
@@ -2346,37 +2441,23 @@ function buildStrategicLinkSearchPanelMarkup({ activeLayer }) {
   const payload = state.mapStrategicLinkSuggestions || null;
   const sameInstitution = Array.isArray(payload?.sameInstitution) ? payload.sameInstitution : [];
   const otherInstitutions = Array.isArray(payload?.otherInstitutions) ? payload.otherInstitutions : [];
+  const usage = state.mapStrategicLinkUsage && typeof state.mapStrategicLinkUsage === 'object'
+    ? state.mapStrategicLinkUsage
+    : null;
+  const usageLabel = state.mapStrategicLinkUsageLoading
+    ? ui.usageLoading
+    : usage
+      ? `${ui.usage}: ${Math.max(0, Number(usage.remaining || 0))} / ${Math.max(0, Number(usage.limit || 0))}`
+      : `${ui.usage}: - / -`;
+  const usageDepleted = usage ? Math.max(0, Number(usage.remaining || 0)) < 1 : false;
   const canSearch = Boolean(state.cycle?.id && isLoggedIn());
   const disabledReason = !state.cycle?.id
     ? ui.noCycle
     : !isLoggedIn()
       ? ui.loginRequired
-      : '';
-  const loadingOverlayMarkup = state.mapStrategicLinkSuggestionsLoading
-    ? `
-      <div class="strategic-gremlin-search-overlay" aria-live="polite">
-        <div class="gremlin-backdrop-stage strategic-gremlin-backdrop-stage" aria-hidden="true">
-          <div class="gremlin-backdrop-aura gremlin-backdrop-aura-one"></div>
-          <div class="gremlin-backdrop-aura gremlin-backdrop-aura-two"></div>
-          <div class="gremlin-backdrop-aura gremlin-backdrop-aura-three"></div>
-          <div class="gremlin-backdrop-rune-grid"></div>
-          <div class="gremlin-backdrop-sigil"></div>
-          <div class="gremlin-backdrop-flare gremlin-backdrop-flare-one"></div>
-          <div class="gremlin-backdrop-flare gremlin-backdrop-flare-two"></div>
-          <div class="gremlin-backdrop-flare gremlin-backdrop-flare-three"></div>
-          <div class="gremlin-backdrop-stars">
-            <span></span><span></span><span></span><span></span><span></span><span></span>
-            <span></span><span></span><span></span><span></span><span></span><span></span>
-          </div>
-        </div>
-        <div class="gremlin-loading-card strategic-gremlin-loading-card">
-          <div class="gremlin-loading-spinner" aria-hidden="true"></div>
-          <strong>${escapeHtml(ui.overlayLoading)}</strong>
-          <p class="prompt">${escapeHtml(ui.overlayHint)}</p>
-        </div>
-      </div>
-    `
-    : '';
+      : usageDepleted
+        ? ui.limitReached
+        : '';
   return `
     <section class="strategic-gremlin-panel${state.mapStrategicLinkSuggestionsLoading ? ' strategic-gremlin-panel-searching' : ''}">
       <div class="strategic-gremlin-head">
@@ -2386,6 +2467,9 @@ function buildStrategicLinkSearchPanelMarkup({ activeLayer }) {
             <div>
               <h2>${escapeHtml(ui.title)}</h2>
               <p class="prompt">${escapeHtml(ui.subtitle)}</p>
+              <div class="strategic-gremlin-usage-row">
+                <span class="tag strategic-gremlin-usage-tag${usageDepleted ? ' strategic-gremlin-usage-tag-depleted' : ''}">${escapeHtml(usageLabel)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -2394,13 +2478,16 @@ function buildStrategicLinkSearchPanelMarkup({ activeLayer }) {
             type="button"
             class="btn btn-primary"
             data-action="search-strategic-links"
-            ${canSearch && !state.mapStrategicLinkSuggestionsLoading ? '' : 'disabled'}
+            ${canSearch && !state.mapStrategicLinkSuggestionsLoading && !usageDepleted ? '' : 'disabled'}
             title="${escapeHtml(disabledReason || ui.search)}"
           >${escapeHtml(state.mapStrategicLinkSuggestionsLoading ? ui.searching : ui.search)}</button>
         </div>
       </div>
       ${state.mapStrategicLinkSuggestionsError
         ? `<div class="card strategic-gremlin-error"><strong>${escapeHtml(state.mapStrategicLinkSuggestionsError)}</strong></div>`
+        : ''}
+      ${usageDepleted
+        ? `<div class="card strategic-gremlin-empty-card"><strong>${escapeHtml(ui.limitReached)}</strong><p class="prompt">${escapeHtml(ui.limitReachedHint)}</p></div>`
         : ''}
       ${!canSearch && disabledReason
         ? `<div class="card strategic-gremlin-empty-card"><strong>${escapeHtml(disabledReason)}</strong></div>`
@@ -2413,10 +2500,9 @@ function buildStrategicLinkSearchPanelMarkup({ activeLayer }) {
           </div>
           ${otherInstitutions.length ? `<p class="prompt strategic-gremlin-footnote">${escapeHtml(ui.createRestricted)}</p>` : ''}
         `
-        : (!state.mapStrategicLinkSuggestionsLoading && canSearch
+        : (!state.mapStrategicLinkSuggestionsLoading && canSearch && !usageDepleted
           ? `<div class="card strategic-gremlin-empty-card"><strong>${escapeHtml(ui.ready)}</strong></div>`
           : '')}
-      ${loadingOverlayMarkup}
     </section>
   `;
 }
@@ -2430,8 +2516,20 @@ async function runStrategicLinkSearch() {
     notifyError(strategicLinkGremlinUiText().loginRequired);
     return;
   }
+  try {
+    await ensureStrategicLinkGremlinUsage();
+  } catch (error) {
+    notifyError(toUserMessage(error));
+    return;
+  }
+  if (Math.max(0, Number(state.mapStrategicLinkUsage?.remaining || 0)) < 1) {
+    notifyError(strategicLinkGremlinUiText().limitReached);
+    renderStepView();
+    return;
+  }
   state.mapStrategicLinkSuggestionsLoading = true;
   state.mapStrategicLinkSuggestionsError = '';
+  openStrategicLinkSearchOverlay();
   renderStepView();
   try {
     const payload = await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/clarity-gremlin/strategic-links`, {
@@ -2446,12 +2544,21 @@ async function runStrategicLinkSearch() {
       otherInstitutions: Array.isArray(payload?.otherInstitutions) ? payload.otherInstitutions : [],
       model: payload?.model || null
     };
+    state.mapStrategicLinkUsage = payload?.usage && typeof payload.usage === 'object'
+      ? payload.usage
+      : state.mapStrategicLinkUsage;
+    state.mapStrategicLinkUsageCycleId = String(state.cycle?.id || '').trim();
   } catch (error) {
     state.mapStrategicLinkSuggestions = null;
+    if (error?.payload?.usage && typeof error.payload.usage === 'object') {
+      state.mapStrategicLinkUsage = error.payload.usage;
+      state.mapStrategicLinkUsageCycleId = String(state.cycle?.id || '').trim();
+    }
     state.mapStrategicLinkSuggestionsError = toUserMessage(error);
     notifyError(state.mapStrategicLinkSuggestionsError);
   } finally {
     state.mapStrategicLinkSuggestionsLoading = false;
+    closeStrategicLinkSearchOverlay();
     renderStepView();
   }
 }
@@ -2482,6 +2589,14 @@ async function createStrategicLinkFromSuggestion(sourceGuidelineId, targetGuidel
 
 function bindStrategicLinkSearchPanel(container) {
   if (!(container instanceof HTMLElement)) return;
+  if (state.cycle?.id && isLoggedIn() && !state.mapStrategicLinkUsageLoading) {
+    const cycleId = String(state.cycle.id || '').trim();
+    if (state.mapStrategicLinkUsageCycleId !== cycleId) {
+      void ensureStrategicLinkGremlinUsage().catch((error) => {
+        notifyError(toUserMessage(error));
+      });
+    }
+  }
   const searchButton = container.querySelector('[data-action="search-strategic-links"]');
   if (searchButton instanceof HTMLButtonElement) {
     searchButton.addEventListener('click', () => {
@@ -3321,6 +3436,10 @@ async function navigateToStrategyPerspective(payload = {}) {
     state.mapStrategicLinkSuggestions = null;
     state.mapStrategicLinkSuggestionsLoading = false;
     state.mapStrategicLinkSuggestionsError = '';
+    state.mapStrategicLinkUsage = null;
+    state.mapStrategicLinkUsageLoading = false;
+    state.mapStrategicLinkUsageCycleId = '';
+    state.mapStrategicLinkUsagePromise = null;
     pushRouteState();
 
     if (isAuthenticated() && !state.embedMapMode && normalizeSlug(targetStrategySlug)) {

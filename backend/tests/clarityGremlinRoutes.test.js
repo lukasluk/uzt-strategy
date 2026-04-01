@@ -124,7 +124,9 @@ function createStore({ usage, jobs } = {}) {
   const usageState = {
     used: Number(usage?.used || 0),
     extra: Math.max(0, Number(usage?.extra || 0)),
-    title: String(usage?.title || 'Strategy One')
+    title: String(usage?.title || 'Strategy One'),
+    strategicUsed: Number(usage?.strategicUsed || 0),
+    strategicExtra: Math.max(0, Number(usage?.strategicExtra || 0))
   };
   const jobsById = new Map();
   for (const job of Array.isArray(jobs) ? jobs : []) {
@@ -198,6 +200,20 @@ function buildFixture({
     const text = String(sql);
     calls.push(text);
 
+    if (/update institution_strategies s/i.test(text) && /clarity_gremlin_strategic_link_calls_used/i.test(text)) {
+      if (limitReached) return { rows: [], rowCount: 0 };
+      store.usageState.strategicUsed += 1;
+      return {
+        rows: [{
+          id: 'strategy-1',
+          title: store.usageState.title,
+          clarity_gremlin_strategic_link_calls_used: store.usageState.strategicUsed,
+          clarity_gremlin_strategic_link_extra_scans: store.usageState.strategicExtra
+        }],
+        rowCount: 1
+      };
+    }
+
     if (/update institution_strategies s/i.test(text)) {
       if (limitReached) return { rows: [], rowCount: 0 };
       store.usageState.used += 1;
@@ -212,7 +228,7 @@ function buildFixture({
       };
     }
 
-    if (/select s\.id,/i.test(text)) {
+    if (/select s\.id,/i.test(text) && !/clarity_gremlin_strategic_link_calls_used/i.test(text)) {
       if (forceUsageRefreshFailure) throw new Error('usage refresh failed');
       return {
         rows: [{
@@ -220,6 +236,19 @@ function buildFixture({
           title: store.usageState.title,
           clarity_gremlin_calls_used: store.usageState.used,
           clarity_gremlin_extra_scans: store.usageState.extra
+        }],
+        rowCount: 1
+      };
+    }
+
+    if (/select s\.id,/i.test(text) && /clarity_gremlin_strategic_link_calls_used/i.test(text)) {
+      if (forceUsageRefreshFailure) throw new Error('usage refresh failed');
+      return {
+        rows: [{
+          id: 'strategy-1',
+          title: store.usageState.title,
+          clarity_gremlin_strategic_link_calls_used: store.usageState.strategicUsed,
+          clarity_gremlin_strategic_link_extra_scans: store.usageState.strategicExtra
         }],
         rowCount: 1
       };
@@ -283,6 +312,11 @@ function buildFixture({
 
     if (/set clarity_gremlin_calls_used = greatest/i.test(text)) {
       store.usageState.used = Math.max(0, store.usageState.used - 1);
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (/set clarity_gremlin_strategic_link_calls_used = greatest/i.test(text)) {
+      store.usageState.strategicUsed = Math.max(0, store.usageState.strategicUsed - 1);
       return { rows: [], rowCount: 1 };
     }
 
@@ -613,6 +647,9 @@ test('POST /api/v1/cycles/:cycleId/clarity-gremlin/strategic-links returns group
     assert.equal(payload.sameInstitution[0].canCreate, true);
     assert.equal(payload.otherInstitutions[0].canCreate, false);
     assert.equal(payload.model, 'mistral-small-latest');
+    assert.equal(payload.usage.used, 1);
+    assert.equal(payload.usage.limit, 3);
+    assert.equal(payload.usage.remaining, 2);
     assert.deepEqual(fixture.configCalls[0], {
       provider: 'mistral',
       modelOverride: 'mistral-small-latest'
@@ -621,6 +658,61 @@ test('POST /api/v1/cycles/:cycleId/clarity-gremlin/strategic-links returns group
     assert.equal(searchCalls[0]?.cycleId, 'cycle-1');
     assert.equal(searchCalls[0]?.aiConfig?.provider, 'mistral');
     assert.equal(searchCalls[0]?.aiConfig?.model, 'mistral-small-latest');
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('GET /api/v1/cycles/:cycleId/clarity-gremlin/strategic-links returns strategic-link quota usage', async () => {
+  const fixture = buildFixture({
+    store: createStore({
+      usage: {
+        strategicUsed: 1,
+        strategicExtra: 2
+      }
+    })
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/cycles/cycle-1/clarity-gremlin/strategic-links`);
+    const payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.usage.used, 1);
+    assert.equal(payload.usage.baseLimit, 3);
+    assert.equal(payload.usage.extraAllocated, 2);
+    assert.equal(payload.usage.limit, 5);
+    assert.equal(payload.usage.remaining, 4);
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('POST /api/v1/cycles/:cycleId/clarity-gremlin/strategic-links returns limit error with usage when quota is exhausted', async () => {
+  const fixture = buildFixture({
+    limitReached: true,
+    store: createStore({
+      usage: {
+        strategicUsed: 3,
+        strategicExtra: 0
+      }
+    })
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/cycles/cycle-1/clarity-gremlin/strategic-links`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locale: 'lt' })
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 429);
+    assert.equal(payload.error, 'strategic link gremlin limit reached');
+    assert.equal(payload.usage.used, 3);
+    assert.equal(payload.usage.limit, 3);
+    assert.equal(payload.usage.remaining, 0);
   } finally {
     await server.close();
     fixture.teardown();

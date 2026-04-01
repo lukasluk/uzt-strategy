@@ -24,6 +24,7 @@ function registerClarityGremlinRoutes({
     : (_req, _res, next) => next();
 
   const baseLimitPerStrategy = Math.max(1, Number(process.env.CLARITY_GREMLIN_LIMIT_PER_STRATEGY || 10));
+  const strategicLinkBaseLimitPerStrategy = Math.max(1, Number(process.env.CLARITY_GREMLIN_STRATEGIC_LINK_LIMIT_PER_STRATEGY || 3));
   const staleJobWindowMs = Math.max(10 * 60 * 1000, Number(process.env.CLARITY_GREMLIN_JOB_STALE_MS || 30 * 60 * 1000));
   const interruptedJobError = 'Analysis run was interrupted. Please run it again.';
 
@@ -91,6 +92,41 @@ function registerClarityGremlinRoutes({
       strategyId,
       strategyTitle: strategy?.title || null
     };
+  }
+
+  async function loadStrategicLinkUsage(strategyId) {
+    const strategyRes = await query(
+      `select s.id,
+              s.title,
+              coalesce(s.clarity_gremlin_strategic_link_calls_used, 0)::int as clarity_gremlin_strategic_link_calls_used,
+              coalesce(i.clarity_gremlin_strategic_link_extra_scans, 0)::int as clarity_gremlin_strategic_link_extra_scans
+       from institution_strategies s
+       join institutions i on i.id = s.institution_id
+       where s.id = $1
+       limit 1`,
+      [strategyId]
+    );
+    const strategy = strategyRes.rows[0] || null;
+    const used = Number(strategy?.clarity_gremlin_strategic_link_calls_used || 0);
+    const extra = Math.max(0, Number(strategy?.clarity_gremlin_strategic_link_extra_scans || 0));
+    const limit = strategicLinkBaseLimitPerStrategy + extra;
+    return {
+      used,
+      limit,
+      baseLimit: strategicLinkBaseLimitPerStrategy,
+      extraAllocated: extra,
+      remaining: Math.max(0, limit - used),
+      strategyId,
+      strategyTitle: strategy?.title || null
+    };
+  }
+
+  async function loadStrategicLinkUsageSafely(strategyId, fallbackUsage = null) {
+    try {
+      return await loadStrategicLinkUsage(strategyId);
+    } catch {
+      return fallbackUsage;
+    }
   }
 
   async function loadStrategyUsageSafely(strategyId, fallbackUsage = null) {
@@ -301,6 +337,25 @@ function registerClarityGremlinRoutes({
     });
   });
 
+  app.get('/api/v1/cycles/:cycleId/clarity-gremlin/strategic-links', requireAuth, async (req, res) => {
+    const cycleId = String(req.params.cycleId || '').trim();
+    if (!cycleId) return res.status(400).json({ error: 'cycleId required' });
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+    const { cycle } = cycleAccess;
+    const strategyId = String(cycle?.strategy_id || '').trim();
+    if (!strategyId) {
+      return res.status(409).json({ error: 'strategy not found' });
+    }
+
+    const usage = await loadStrategicLinkUsage(strategyId);
+    res.json({
+      ok: true,
+      usage
+    });
+  });
+
   app.post('/api/v1/cycles/:cycleId/clarity-gremlin/strategic-links', requireAuth, requestGuard, async (req, res) => {
     const cycleId = String(req.params.cycleId || '').trim();
     const locale = String(req.body?.locale || 'lt').trim().toLowerCase() === 'en' ? 'en' : 'lt';
@@ -326,6 +381,41 @@ function registerClarityGremlinRoutes({
       return res.status(400).json({ error: 'invalid model for provider' });
     }
 
+    const usageReservation = await query(
+      `update institution_strategies s
+       set clarity_gremlin_strategic_link_calls_used = coalesce(s.clarity_gremlin_strategic_link_calls_used, 0) + 1
+       from institutions i
+       where s.id = $1
+         and i.id = s.institution_id
+         and coalesce(s.clarity_gremlin_strategic_link_calls_used, 0) < ($2 + coalesce(i.clarity_gremlin_strategic_link_extra_scans, 0))
+       returning s.id,
+                 s.title,
+                 coalesce(s.clarity_gremlin_strategic_link_calls_used, 0)::int as clarity_gremlin_strategic_link_calls_used,
+                 coalesce(i.clarity_gremlin_strategic_link_extra_scans, 0)::int as clarity_gremlin_strategic_link_extra_scans`,
+      [strategyId, strategicLinkBaseLimitPerStrategy]
+    );
+
+    if (!usageReservation.rowCount) {
+      return res.status(429).json({
+        error: 'strategic link gremlin limit reached',
+        usage: await loadStrategicLinkUsage(strategyId)
+      });
+    }
+
+    const reserved = usageReservation.rows[0];
+    const used = Number(reserved?.clarity_gremlin_strategic_link_calls_used || 0);
+    const extra = Math.max(0, Number(reserved?.clarity_gremlin_strategic_link_extra_scans || 0));
+    const limit = strategicLinkBaseLimitPerStrategy + extra;
+    const usage = {
+      used,
+      limit,
+      baseLimit: strategicLinkBaseLimitPerStrategy,
+      extraAllocated: extra,
+      remaining: Math.max(0, limit - used),
+      strategyId,
+      strategyTitle: reserved?.title || null
+    };
+
     try {
       const provider = requestedProvider;
       const aiConfig = getClarityGremlinConfig({
@@ -343,11 +433,19 @@ function registerClarityGremlinRoutes({
         responseLanguage: result.responseLanguage || locale,
         sameInstitution: Array.isArray(result.sameInstitution) ? result.sameInstitution : [],
         otherInstitutions: Array.isArray(result.otherInstitutions) ? result.otherInstitutions : [],
-        model: result.model || null
+        model: result.model || null,
+        usage
       });
     } catch (error) {
+      await query(
+        `update institution_strategies
+         set clarity_gremlin_strategic_link_calls_used = greatest(coalesce(clarity_gremlin_strategic_link_calls_used, 0) - 1, 0)
+         where id = $1`,
+        [strategyId]
+      ).catch(() => {});
       return res.status(mapErrorStatus(error)).json({
-        error: String(error?.message || 'internal server error')
+        error: String(error?.message || 'internal server error'),
+        usage: await loadStrategicLinkUsageSafely(strategyId, usage)
       });
     }
   });

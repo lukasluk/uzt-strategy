@@ -8,6 +8,7 @@ create table if not exists institutions (
   country_code text,
   website_url text,
   clarity_gremlin_extra_scans integer not null default 0,
+  clarity_gremlin_strategic_link_extra_scans integer not null default 0,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now()
 );
@@ -240,6 +241,8 @@ alter table if exists strategy_cycles
   add column if not exists strategy_id uuid references institution_strategies(id) on delete set null;
 alter table if exists institution_strategies
   add column if not exists clarity_gremlin_calls_used integer not null default 0;
+alter table if exists institution_strategies
+  add column if not exists clarity_gremlin_strategic_link_calls_used integer not null default 0;
 alter table if exists institutions
   add column if not exists ai_provider text not null default 'openai';
 alter table if exists institutions
@@ -507,6 +510,8 @@ alter table if exists institutions
 
 alter table if exists institutions
   add column if not exists clarity_gremlin_extra_scans integer not null default 0;
+alter table if exists institutions
+  add column if not exists clarity_gremlin_strategic_link_extra_scans integer not null default 0;
 
 create table if not exists strategy_ai_generations (
   id uuid primary key,

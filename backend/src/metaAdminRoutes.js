@@ -1162,6 +1162,7 @@ function registerMetaAdminRoutes({
               status,
               created_at,
               coalesce(clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans,
+              coalesce(clarity_gremlin_strategic_link_extra_scans, 0)::int as clarity_gremlin_strategic_link_extra_scans,
               ai_provider,
               coalesce(ai_openai_model, '') as ai_openai_model,
               coalesce(ai_mistral_model, '') as ai_mistral_model
@@ -1176,7 +1177,8 @@ function registerMetaAdminRoutes({
               status,
               is_default,
               created_at,
-              coalesce(clarity_gremlin_calls_used, 0)::int as clarity_gremlin_calls_used
+              coalesce(clarity_gremlin_calls_used, 0)::int as clarity_gremlin_calls_used,
+              coalesce(clarity_gremlin_strategic_link_calls_used, 0)::int as clarity_gremlin_strategic_link_calls_used
        from institution_strategies
        order by created_at desc`
     );
@@ -1255,6 +1257,7 @@ function registerMetaAdminRoutes({
         status: row.status,
         isDefault: Boolean(row.is_default),
         clarityGremlinCallsUsed: Number(row.clarity_gremlin_calls_used || 0),
+        clarityGremlinStrategicLinkCallsUsed: Number(row.clarity_gremlin_strategic_link_calls_used || 0),
         createdAt: row.created_at
       });
       return acc;
@@ -1304,6 +1307,7 @@ function registerMetaAdminRoutes({
         aiOpenaiModel: String(row.ai_openai_model || '').trim(),
         aiMistralModel: String(row.ai_mistral_model || '').trim(),
         clarityGremlinExtraScans: Number(row.clarity_gremlin_extra_scans || 0),
+        clarityGremlinStrategicLinkExtraScans: Number(row.clarity_gremlin_strategic_link_extra_scans || 0),
         strategies: strategiesByInstitution[row.id] || []
       })),
       users: usersRes.rows.map((row) => ({
@@ -1571,12 +1575,14 @@ function registerMetaAdminRoutes({
     const institutionId = String(req.params.institutionId || '').trim();
     const name = String(req.body?.name || '').trim();
     const rawExtraScans = req.body?.clarityGremlinExtraScans;
+    const rawStrategicLinkExtraScans = req.body?.clarityGremlinStrategicLinkExtraScans;
     const aiOpenaiModel = String(req.body?.aiOpenaiModel || '').trim();
     const aiMistralModel = String(req.body?.aiMistralModel || '').trim();
     if (!institutionId || !name) {
       return res.status(400).json({ error: 'institutionId and name required' });
     }
     let clarityGremlinExtraScans = null;
+    let clarityGremlinStrategicLinkExtraScans = null;
     if (rawExtraScans !== undefined) {
       const parsed = Number(rawExtraScans);
       if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
@@ -1584,21 +1590,31 @@ function registerMetaAdminRoutes({
       }
       clarityGremlinExtraScans = parsed;
     }
+    if (rawStrategicLinkExtraScans !== undefined) {
+      const parsed = Number(rawStrategicLinkExtraScans);
+      if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+        return res.status(400).json({ error: 'invalid clarityGremlinStrategicLinkExtraScans' });
+      }
+      clarityGremlinStrategicLinkExtraScans = parsed;
+    }
 
     const result = await query(
       `update institutions
        set name = $1,
            clarity_gremlin_extra_scans = coalesce($2::integer, clarity_gremlin_extra_scans),
-           ai_openai_model = nullif($3, ''),
-           ai_mistral_model = nullif($4, '')
-       where id = $5
+           clarity_gremlin_strategic_link_extra_scans = coalesce($3::integer, clarity_gremlin_strategic_link_extra_scans),
+           ai_openai_model = nullif($4, ''),
+           ai_mistral_model = nullif($5, '')
+       where id = $6
        returning coalesce(clarity_gremlin_extra_scans, 0)::int as clarity_gremlin_extra_scans,
+                 coalesce(clarity_gremlin_strategic_link_extra_scans, 0)::int as clarity_gremlin_strategic_link_extra_scans,
                  coalesce(ai_openai_model, '') as ai_openai_model,
                  coalesce(ai_mistral_model, '') as ai_mistral_model`,
-      [name, clarityGremlinExtraScans, aiOpenaiModel, aiMistralModel, institutionId]
+      [name, clarityGremlinExtraScans, clarityGremlinStrategicLinkExtraScans, aiOpenaiModel, aiMistralModel, institutionId]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'institution not found' });
     const updatedExtraScans = Number(result.rows[0]?.clarity_gremlin_extra_scans || 0);
+    const updatedStrategicLinkExtraScans = Number(result.rows[0]?.clarity_gremlin_strategic_link_extra_scans || 0);
     const updatedOpenaiModel = String(result.rows[0]?.ai_openai_model || '').trim();
     const updatedMistralModel = String(result.rows[0]?.ai_mistral_model || '').trim();
 
@@ -1612,6 +1628,7 @@ function registerMetaAdminRoutes({
       payload: metaAuditPayload(req, {
         name,
         clarityGremlinExtraScans: updatedExtraScans,
+        clarityGremlinStrategicLinkExtraScans: updatedStrategicLinkExtraScans,
         aiOpenaiModel: updatedOpenaiModel,
         aiMistralModel: updatedMistralModel
       })
@@ -1622,6 +1639,7 @@ function registerMetaAdminRoutes({
       institutionId,
       name,
       clarityGremlinExtraScans: updatedExtraScans,
+      clarityGremlinStrategicLinkExtraScans: updatedStrategicLinkExtraScans,
       aiOpenaiModel: updatedOpenaiModel,
       aiMistralModel: updatedMistralModel
     });
