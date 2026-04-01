@@ -1712,10 +1712,6 @@ function registerAdminRoutes({
     if (source.institution_id !== req.auth.institutionId || target.institution_id !== req.auth.institutionId) {
       return res.status(403).json({ error: 'cross-institution forbidden' });
     }
-    if (source.relation_type !== 'parent' || target.relation_type !== 'parent') {
-      return res.status(400).json({ error: 'parent guideline required' });
-    }
-
     const [firstId, secondId] = sourceGuidelineIdRaw < targetGuidelineIdRaw
       ? [sourceGuidelineIdRaw, targetGuidelineIdRaw]
       : [targetGuidelineIdRaw, sourceGuidelineIdRaw];

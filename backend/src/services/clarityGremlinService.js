@@ -205,6 +205,8 @@ function summarizeStrategicLinkCandidateGuideline(item) {
     id: item.id,
     title: cleanText(item.title, 160),
     description: cleanPreviewText(item.description, 320),
+    relationType: cleanText(item.relation_type || item.relationType, 40) || 'orphan',
+    parentTitle: cleanText(item.parent_title || item.parentTitle, 160) || null,
     totalScore: Number(item.total_score || item.totalScore || 0),
     childCount: Number(item.child_count || item.childCount || 0),
     linkedInitiatives: Number(item.initiative_count || item.linkedInitiatives || 0)
@@ -422,10 +424,13 @@ async function loadStrategicLinkCandidateStrategies(query, {
             g.cycle_id,
             g.title,
             g.description,
+            g.relation_type,
+            parent.title as parent_title,
             coalesce(v.total_score, 0)::int as total_score,
             coalesce(children.child_count, 0)::int as child_count,
             coalesce(initiatives.initiative_count, 0)::int as initiative_count
      from strategy_guidelines g
+     left join strategy_guidelines parent on parent.id = g.parent_guideline_id
      left join (
        select guideline_id, sum(score)::int as total_score
        from strategy_votes
@@ -447,7 +452,6 @@ async function loadStrategicLinkCandidateStrategies(query, {
      ) initiatives on initiatives.guideline_id = g.id
      where g.cycle_id = any($1::uuid[])
        and g.status = 'active'
-       and g.relation_type = 'parent'
      order by g.created_at asc`,
     [cycleIds]
   );
@@ -509,6 +513,8 @@ function buildStrategicLinkSearchPayload({
       id: item.id,
       title: cleanText(item.title, 160),
       description: cleanPreviewText(item.description, 320),
+      relationType: cleanText(item.relationType, 40) || 'orphan',
+      parentTitle: cleanText(item.parentTitle, 160) || null,
       totalScore: Number(item.totalScore || 0),
       childCount: Number(item.childCount || 0),
       linkedInitiatives: Number(item.linkedInitiatives || 0)
@@ -531,6 +537,8 @@ function buildStrategicLinkSearchPayload({
           id: guideline.id,
           title: cleanText(guideline.title, 160),
           description: cleanPreviewText(guideline.description, 280),
+          relationType: cleanText(guideline.relationType, 40) || 'orphan',
+          parentTitle: cleanText(guideline.parentTitle, 160) || null,
           totalScore: Number(guideline.totalScore || 0),
           childCount: Number(guideline.childCount || 0),
           linkedInitiatives: Number(guideline.linkedInitiatives || 0)
@@ -549,6 +557,8 @@ function buildStrategicLinkSearchPayload({
           id: guideline.id,
           title: cleanText(guideline.title, 160),
           description: cleanPreviewText(guideline.description, 280),
+          relationType: cleanText(guideline.relationType, 40) || 'orphan',
+          parentTitle: cleanText(guideline.parentTitle, 160) || null,
           totalScore: Number(guideline.totalScore || 0),
           childCount: Number(guideline.childCount || 0),
           linkedInitiatives: Number(guideline.linkedInitiatives || 0)
@@ -562,10 +572,11 @@ function buildStrategicLinkSearchSystemPrompt(locale) {
   const isEnglish = String(locale || '').trim().toLowerCase() === 'en';
   const requiredLanguageCode = isEnglish ? 'en' : 'lt';
   return [
-    'You are Clarity Gremlin, focused on finding useful parent-guideline strategic links across strategies.',
+    'You are Clarity Gremlin, focused on finding useful guideline-to-guideline strategic links across strategies.',
     'Use only the provided source guideline IDs and target guideline IDs.',
-    'Suggest only meaningful cross-strategy parent-guideline links that would genuinely help users explore related strategic directions.',
+    'Suggest only meaningful cross-strategy guideline links that would genuinely help users explore related strategic directions.',
     'A suggestion is good when the themes clearly reinforce, overlap, complement, or connect at strategic level.',
+    'You may use parent, child, and orphan guidelines. Relation type provides context, but it is not a restriction.',
     'Do not suggest weak, generic, or trivial matches.',
     'Do not suggest a pair that already exists in existingLinks.',
     'The sameInstitution group is for other strategies in the same institution.',
@@ -608,8 +619,9 @@ function buildStrategicLinkSearchUserPrompt(payload, provider) {
     ? JSON.stringify(payload)
     : JSON.stringify(payload, null, 2);
   return [
-    'Find parent-guideline strategic link suggestions for the current strategy.',
-    'Match the source strategy parent guidelines against the provided target strategies.',
+    'Find strategic link suggestions for the current strategy.',
+    'Match the source strategy guidelines against the provided target strategies.',
+    'Consider all guideline types, including parent, child, and orphan guidelines.',
     'Only propose links that are strategically useful to show in the strategic links map.',
     '',
     'CONTEXT JSON:',
@@ -696,7 +708,7 @@ async function searchStrategicLinks({
     throw new Error('cycle not found');
   }
 
-  const sourceGuidelines = normalizeArray(snapshot.guidelines).filter((item) => item && item.relationType === 'parent');
+  const sourceGuidelines = normalizeArray(snapshot.guidelines).filter((item) => item);
   if (!sourceGuidelines.length) {
     return {
       model: null,

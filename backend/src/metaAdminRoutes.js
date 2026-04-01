@@ -1444,10 +1444,6 @@ function registerMetaAdminRoutes({
     const source = byId[sourceGuidelineIdRaw];
     const target = byId[targetGuidelineIdRaw];
     if (!source || !target) return res.status(404).json({ error: 'guideline not found' });
-    if (source.relation_type !== 'parent' || target.relation_type !== 'parent') {
-      return res.status(400).json({ error: 'parent guideline required' });
-    }
-
     const [firstId, secondId] = sourceGuidelineIdRaw < targetGuidelineIdRaw
       ? [sourceGuidelineIdRaw, targetGuidelineIdRaw]
       : [targetGuidelineIdRaw, sourceGuidelineIdRaw];
