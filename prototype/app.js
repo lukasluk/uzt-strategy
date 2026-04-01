@@ -2234,15 +2234,18 @@ function strategicLinkGremlinUiText() {
         confidence: 'Confidence',
         currentStrategy: 'Current strategy',
         suggestedTarget: 'Suggested target',
-        create: 'Create link',
+        create: 'Review and create link',
         dismiss: 'Dismiss',
-        openTarget: 'Open target',
+        openTarget: 'Review target',
         viewOnly: 'View only',
         created: 'Strategic link created.',
         dismissed: 'Strategic link suggestion dismissed.',
         sameEmpty: 'No same-institution suggestions.',
         otherEmpty: 'No cross-institution suggestions.',
         createRestricted: 'Cross-institution suggestions are read-only in this MVP.',
+        suggestedAction: 'Suggested action',
+        sameInstitutionAction: 'Review the suggested target and create a strategic link if it fits.',
+        otherInstitutionAction: 'Review the suggested target as an external reference or benchmarking example.',
         overlayLoading: 'Clarity Gremlin is searching strategic links...',
         overlayHint: 'Comparing the current strategy against other strategy directions.',
         usage: 'Usage',
@@ -2266,15 +2269,18 @@ function strategicLinkGremlinUiText() {
         confidence: 'Patikimumas',
         currentStrategy: 'Dabartinė strategija',
         suggestedTarget: 'Siūlomas taikinys',
-        create: 'Sukurti ryšį',
+        create: 'Peržiūrėti ir sukurti ryšį',
         dismiss: 'Paslėpti',
-        openTarget: 'Atidaryti tikslą',
+        openTarget: 'Peržiūrėti taikinį',
         viewOnly: 'Tik peržiūra',
         created: 'Strateginis ryšys sukurtas.',
         dismissed: 'Strateginio ryšio pasiūlymas paslėptas.',
         sameEmpty: 'Toje pačioje institucijoje pasiūlymų nerasta.',
         otherEmpty: 'Su kitomis institucijomis pasiūlymų nerasta.',
         createRestricted: 'Kitų institucijų pasiūlymai šiame MVP rodomi tik peržiūrai.',
+        suggestedAction: 'Siūlomas veiksmas',
+        sameInstitutionAction: 'Peržiūrėkite siūlomą taikinį ir, jei jis tinka, sukurkite strateginį ryšį.',
+        otherInstitutionAction: 'Peržiūrėkite siūlomą taikinį kaip išorinę nuorodą ar įkvėpimo pavyzdį.',
         overlayLoading: 'Clarity Gremlin ieško strateginių ryšių...',
         overlayHint: 'Lyginamos dabartinės strategijos gairės su kitų strategijų kryptimis.',
         usage: 'Panaudojimas',
@@ -2295,6 +2301,18 @@ function strategicLinkConfidenceLabel(value) {
   if (normalized === 'high') return 'Aukštas';
   if (normalized === 'low') return 'Žemas';
   return 'Vidutinis';
+}
+
+function strategicLinkConfidenceTooltip(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (currentLanguage() === 'en') {
+    if (normalized === 'high') return 'High confidence: the thematic match is strong and strategically relevant.';
+    if (normalized === 'low') return 'Low confidence: there may be a loose or partial thematic connection.';
+    return 'Medium confidence: there is a plausible strategic connection, but it should be reviewed manually.';
+  }
+  if (normalized === 'high') return 'Aukštas patikimumas: teminis atitikimas stiprus ir strategiškai reikšmingas.';
+  if (normalized === 'low') return 'Žemas patikimumas: ryšys gali būti tik dalinis arba silpnesnis.';
+  return 'Vidutinis patikimumas: strateginis ryšys tikėtinas, bet jį verta peržiūrėti rankiniu būdu.';
 }
 
 function buildStrategicLinkTargetHref(item) {
@@ -2415,11 +2433,17 @@ function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupK
             ${suggestions.map((item) => {
               const canCreate = canOpenAdminView() && item?.canCreate === true;
               const href = buildStrategicLinkTargetHref(item);
+              const confidenceText = strategicLinkConfidenceLabel(item?.confidence);
+              const confidenceTooltip = strategicLinkConfidenceTooltip(item?.confidence);
+              const actionHint = canCreate ? ui.sameInstitutionAction : ui.otherInstitutionAction;
               return `
                 <article class="strategic-gremlin-suggestion-card">
                   <div class="strategic-gremlin-suggestion-top">
-                    <span class="tag strategic-gremlin-scope-tag">${escapeHtml(groupKey === 'sameInstitution' ? ui.sameInstitution : ui.otherInstitutions)}</span>
-                    <span class="tag strategic-gremlin-confidence strategic-gremlin-confidence-${escapeHtml(String(item?.confidence || 'medium').trim().toLowerCase())}">${escapeHtml(strategicLinkConfidenceLabel(item?.confidence))}</span>
+                    <span
+                      class="tag strategic-gremlin-confidence strategic-gremlin-confidence-${escapeHtml(String(item?.confidence || 'medium').trim().toLowerCase())}"
+                      title="${escapeHtml(confidenceTooltip)}"
+                      aria-label="${escapeHtml(`${ui.confidence}: ${confidenceTooltip}`)}"
+                    >${escapeHtml(confidenceText)}</span>
                   </div>
                   <div class="strategic-gremlin-link-rail">
                     <div class="strategic-gremlin-link-end strategic-gremlin-link-end-source">
@@ -2437,6 +2461,7 @@ function buildStrategicLinkSuggestionGroupMarkup(title, items, emptyText, groupK
                   </div>
                   <p class="prompt strategic-gremlin-suggestion-context">${escapeHtml(`${item?.targetInstitutionName || '-'} / ${item?.targetStrategyTitle || '-'}`)}</p>
                   <p class="strategic-gremlin-suggestion-rationale"><strong>${escapeHtml(`${ui.rationale}:`)}</strong> ${escapeHtml(item?.rationale || '')}</p>
+                  <p class="strategic-gremlin-suggestion-action-hint"><strong>${escapeHtml(`${ui.suggestedAction}:`)}</strong> ${escapeHtml(actionHint)}</p>
                   <div class="strategic-gremlin-suggestion-actions">
                     ${canCreate
                       ? `<button

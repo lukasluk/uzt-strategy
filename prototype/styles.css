@@ -4629,6 +4629,7 @@ body.embed-map-page .map-fullscreen-watermark img {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 44px;
 }
 .strategic-gremlin-link-bridge-line {
   position: absolute;
@@ -4643,11 +4644,11 @@ body.embed-map-page .map-fullscreen-watermark img {
 .strategic-gremlin-link-bridge-arrow {
   position: relative;
   z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   width: 38px;
   height: 38px;
+  line-height: 1;
   border-radius: 999px;
   border: 1px solid #c5d7f1;
   background: rgba(255, 255, 255, 0.96);
@@ -4655,21 +4656,18 @@ body.embed-map-page .map-fullscreen-watermark img {
   font-size: 22px;
   font-weight: 700;
   box-shadow: 0 10px 20px rgba(69, 105, 170, 0.12);
+  transform: translateY(-1px);
 }
 .strategic-gremlin-suggestion-top {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
-}
-.strategic-gremlin-scope-tag {
-  background: #eef4ff;
-  border-color: #c9d9f2;
-  color: #36517d;
 }
 .strategic-gremlin-confidence {
   flex-shrink: 0;
   font-weight: 700;
+  cursor: help;
 }
 .strategic-gremlin-confidence-high {
   background: #ecfbef;
@@ -4688,8 +4686,12 @@ body.embed-map-page .map-fullscreen-watermark img {
 }
 .strategic-gremlin-suggestion-context,
 .strategic-gremlin-suggestion-rationale,
+.strategic-gremlin-suggestion-action-hint,
 .strategic-gremlin-footnote {
   margin: 0;
+}
+.strategic-gremlin-suggestion-action-hint {
+  color: #38547c;
 }
 .strategic-gremlin-suggestion-actions {
   display: flex;
