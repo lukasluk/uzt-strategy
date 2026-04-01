@@ -2160,6 +2160,7 @@ function registerAdminRoutes({
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
     let implementationDate = context.implementation_target_date || null;
     let implementationOwner = context.implementation_owner || null;
+    let implementationCompletedAt = context.implementation_completed_at || null;
 
     try {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationDate')) {
@@ -2167,6 +2168,11 @@ function registerAdminRoutes({
       }
       if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationOwner')) {
         implementationOwner = normalizeImplementationOwner(req.body?.implementationOwner);
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationCompleted')) {
+        implementationCompletedAt = req.body?.implementationCompleted
+          ? (implementationCompletedAt || new Date().toISOString())
+          : null;
       }
     } catch (error) {
       return res.status(400).json({ error: String(error?.message || 'invalid implementation plan') });
@@ -2200,7 +2206,8 @@ function registerAdminRoutes({
       parentGuidelineId,
       lineSide,
       implementationDate,
-      implementationOwner
+      implementationOwner,
+      implementationCompletedAt
     });
 
     broadcast({ type: 'v1.guideline.updated', institutionId: req.auth.institutionId, guidelineId });
@@ -2226,12 +2233,18 @@ function registerAdminRoutes({
 
     let implementationDate = context.implementation_target_date || null;
     let implementationOwner = context.implementation_owner || null;
+    let implementationCompletedAt = context.implementation_completed_at || null;
     try {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationDate')) {
         implementationDate = normalizeImplementationDate(req.body?.implementationDate);
       }
       if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationOwner')) {
         implementationOwner = normalizeImplementationOwner(req.body?.implementationOwner);
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'implementationCompleted')) {
+        implementationCompletedAt = req.body?.implementationCompleted
+          ? (implementationCompletedAt || new Date().toISOString())
+          : null;
       }
     } catch (error) {
       return res.status(400).json({ error: String(error?.message || 'invalid implementation plan') });
@@ -2254,7 +2267,8 @@ function registerAdminRoutes({
       status,
       lineSide,
       implementationDate,
-      implementationOwner
+      implementationOwner,
+      implementationCompletedAt
     });
 
     await replaceInitiativeGuidelineLinks({

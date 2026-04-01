@@ -145,7 +145,11 @@ function buildApp({
   createInitiativeWithGuidelines = async () => 'initiative-1',
   validateGuidelineRelationship = async ({ parentGuidelineId }) => parentGuidelineId || null,
   validateInitiativeGuidelineAssignments = async ({ guidelineIds }) => guidelineIds,
-  verifyCycleAccess = async () => ({ ok: true, status: 200, cycle: { strategy_id: 'strategy-1', state: 'open' } })
+  verifyCycleAccess = async () => ({ ok: true, status: 200, cycle: { strategy_id: 'strategy-1', state: 'open' } }),
+  loadGuidelineContext = async () => null,
+  loadInitiativeContext = async () => null,
+  updateGuidelineRecord = async () => {},
+  updateInitiativeRecord = async () => {}
 } = {}) {
   const teardown = [];
   teardown.push(mockBareModule('multer', Object.assign(
@@ -217,9 +221,9 @@ function buildApp({
     verifyCycleAccess,
     isCycleWritable: (state) => state === 'open',
     normalizeLineSide: () => 'auto',
-    loadGuidelineContext: async () => null,
+    loadGuidelineContext,
     loadCommentContext: async () => null,
-    loadInitiativeContext: async () => null,
+    loadInitiativeContext,
     loadInitiativeCommentContext: async () => null,
     validateGuidelineRelationship,
     validateInitiativeGuidelineAssignments,
@@ -241,8 +245,8 @@ function buildApp({
     listExistingInitiativeIds: async () => new Set(),
     setInitiativeMapPosition: async () => {},
     hasGuidelineChildren: async () => false,
-    updateGuidelineRecord: async () => {},
-    updateInitiativeRecord: async () => {},
+    updateGuidelineRecord,
+    updateInitiativeRecord,
     createGuideline,
     createInitiativeWithGuidelines,
     replaceInitiativeGuidelineLinks: async () => {},
@@ -387,6 +391,89 @@ test('POST /api/v1/admin/cycles/:cycleId/guidelines rejects non-admin users', as
     const payload = await readJson(response);
     assert.equal(response.status, 403);
     assert.equal(payload.error, 'admin role required');
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('PUT /api/v1/admin/guidelines/:guidelineId persists implementation completion state', async () => {
+  const updateCalls = [];
+  const fixture = buildApp({
+    loadGuidelineContext: async () => ({
+      guideline_id: 'guideline-1',
+      institution_id: 'inst-1',
+      cycle_id: 'cycle-1',
+      implementation_target_date: null,
+      implementation_owner: null,
+      implementation_completed_at: null
+    }),
+    updateGuidelineRecord: async (payload) => {
+      updateCalls.push(payload);
+    }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/admin/guidelines/guideline-1`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Guideline',
+        description: 'Desc',
+        status: 'active',
+        relationType: 'orphan',
+        lineSide: 'auto',
+        implementationCompleted: true
+      })
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(updateCalls.length, 1);
+    assert.equal(updateCalls[0].guidelineId, 'guideline-1');
+    assert.equal(typeof updateCalls[0].implementationCompletedAt, 'string');
+    assert.ok(updateCalls[0].implementationCompletedAt.includes('T'));
+  } finally {
+    await server.close();
+    fixture.teardown();
+  }
+});
+
+test('PUT /api/v1/admin/initiatives/:initiativeId clears implementation completion state', async () => {
+  const updateCalls = [];
+  const fixture = buildApp({
+    loadInitiativeContext: async () => ({
+      initiative_id: 'initiative-1',
+      institution_id: 'inst-1',
+      cycle_id: 'cycle-1',
+      implementation_target_date: null,
+      implementation_owner: null,
+      implementation_completed_at: '2026-04-01T08:00:00.000Z'
+    }),
+    updateInitiativeRecord: async (payload) => {
+      updateCalls.push(payload);
+    }
+  });
+  const server = await startServer(fixture.app);
+  try {
+    const response = await fetch(`${server.baseUrl}/api/v1/admin/initiatives/initiative-1`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Initiative',
+        description: 'Desc',
+        status: 'active',
+        lineSide: 'auto',
+        guidelineIds: [],
+        implementationCompleted: false
+      })
+    });
+    const payload = await readJson(response);
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(updateCalls.length, 1);
+    assert.equal(updateCalls[0].initiativeId, 'initiative-1');
+    assert.equal(updateCalls[0].implementationCompletedAt, null);
   } finally {
     await server.close();
     fixture.teardown();

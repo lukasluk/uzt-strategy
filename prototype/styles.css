@@ -851,6 +851,45 @@ body.embed-map-page .stage {
   align-items: center;
 }
 
+.strategy-switcher-context {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.strategy-switcher-context-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #d8e4f3;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
+
+.strategy-switcher-context-label {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 26px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #cfe0f6;
+  background: #edf5ff;
+  color: #315984;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.strategy-switcher-context-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #304766;
+}
+
 .strategy-url-inline-card {
   border: 1px solid #c3d8f2;
   border-radius: 12px;
@@ -1812,7 +1851,7 @@ textarea {
 }
 .relationship-child-grid {
   margin-top: 0;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .relationship-child-grid .guideline-card {
   background: linear-gradient(180deg, #ffffff 0%, var(--guideline-child-surface) 100%);
@@ -5851,7 +5890,7 @@ select:focus {
 .implementation-plan-table-head,
 .implementation-plan-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) 180px minmax(220px, 0.95fr) 118px;
+  grid-template-columns: minmax(0, 1.35fr) 180px minmax(220px, 0.95fr) 170px;
   gap: 0;
   align-items: center;
 }
@@ -5887,6 +5926,18 @@ select:focus {
 }
 .implementation-plan-row:last-child {
   border-bottom: 0;
+}
+.implementation-plan-row.is-completed {
+  background: linear-gradient(180deg, #f7fbf6 0%, #f2f9f1 100%);
+}
+.implementation-plan-row.is-completed .implementation-plan-link {
+  color: #5f6f66;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+.implementation-plan-row.is-completed .implementation-plan-read-value,
+.implementation-plan-row.is-completed .implementation-plan-title-stack .tag:not(.implementation-plan-completed-tag) {
+  opacity: 0.82;
 }
 .implementation-plan-row-guideline.implementation-plan-level-0 .implementation-plan-cell-main {
   box-shadow: none;
@@ -5987,7 +6038,33 @@ select:focus {
 }
 .implementation-plan-cell-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  align-items: center;
+}
+.implementation-plan-complete-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c4752;
+  cursor: pointer;
+}
+.implementation-plan-complete-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2f8f4e;
+  cursor: pointer;
+}
+.implementation-plan-completed-tag {
+  color: #5b6676;
+  background: #f4f7fb;
+  border-color: #d5dfec;
+}
+.implementation-plan-completed-tag.is-completed {
+  color: #1b5e33;
+  background: #e9f7ec;
+  border-color: #b9dec4;
 }
 .implementation-plan-level-1 .implementation-plan-cell-main {
   padding-left: 28px;
@@ -6098,6 +6175,14 @@ select:focus {
 }
 .implementation-plan-calendar-row + .implementation-plan-calendar-row {
   border-top: 1px solid #edf2f8;
+}
+.implementation-plan-calendar-row.is-completed .implementation-plan-calendar-entry-link {
+  color: #65766c;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+.implementation-plan-calendar-row.is-completed .implementation-plan-calendar-owner {
+  opacity: 0.78;
 }
 .implementation-plan-calendar-row-header {
   position: sticky;
@@ -6438,6 +6523,7 @@ select:focus {
 }
 .guideline-card.guideline-relation-child .card-top {
   border-left-color: var(--guideline-child-accent);
+  border-left-width: 2px;
 }
 .guideline-card.guideline-relation-orphan {
   border-color: var(--guideline-orphan-border);
@@ -8461,6 +8547,10 @@ select:focus {
     margin-top: 12px;
   }
 
+  .relationship-child-grid {
+    grid-template-columns: 1fr;
+  }
+
   .institution-grid {
     grid-template-columns: 1fr;
   }
@@ -8711,6 +8801,10 @@ select:focus {
     border-radius: 10px;
     background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
     padding: 8px;
+  }
+
+  .strategy-switcher-context {
+    grid-template-columns: 1fr;
   }
 
   .user-toolbar {

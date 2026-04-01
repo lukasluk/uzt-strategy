@@ -79,6 +79,7 @@ create table if not exists strategy_guidelines (
   description text,
   implementation_target_date date,
   implementation_owner text,
+  implementation_completed_at timestamptz,
   status text not null default 'active' check (status in ('active', 'merged', 'hidden')),
   line_side text not null default 'auto',
   created_by uuid references platform_users(id) on delete set null,
@@ -122,6 +123,7 @@ create table if not exists strategy_initiatives (
   description text,
   implementation_target_date date,
   implementation_owner text,
+  implementation_completed_at timestamptz,
   status text not null default 'active' check (status in ('active', 'disabled', 'merged', 'hidden')),
   line_side text not null default 'auto',
   map_x integer,
@@ -281,6 +283,9 @@ alter table if exists strategy_guidelines
 alter table if exists strategy_guidelines
   add column if not exists implementation_owner text;
 
+alter table if exists strategy_guidelines
+  add column if not exists implementation_completed_at timestamptz;
+
 create index if not exists idx_guidelines_parent on strategy_guidelines(parent_guideline_id);
 
 create table if not exists strategy_card_proposals (
@@ -435,6 +440,9 @@ alter table if exists strategy_initiatives
 
 alter table if exists strategy_initiatives
   add column if not exists implementation_owner text;
+
+alter table if exists strategy_initiatives
+  add column if not exists implementation_completed_at timestamptz;
 
 update strategy_initiatives
 set line_side = 'auto'

@@ -615,12 +615,50 @@ function buildCurrentPageHref({
   return `${path}${query ? `?${query}` : ''}`;
 }
 
-function syncRouteState() {
+function syncRouteState(historyMode = 'replace') {
   const nextHref = buildCurrentPageHref();
   const currentHref = `${window.location.pathname}${window.location.search}`;
   if (nextHref !== currentHref) {
-    window.history.replaceState(null, '', nextHref);
+    const method = historyMode === 'push' ? 'pushState' : 'replaceState';
+    window.history[method](null, '', nextHref);
   }
+}
+
+function pushRouteState() {
+  syncRouteState('push');
+}
+
+function applyLocationState() {
+  const previousView = state.activeView;
+  state.institutionSlug = resolveInstitutionSlug();
+  state.strategySlug = resolveStrategySlug();
+  state.activeView = resolveInitialView();
+  state.routeEntityKind = resolveRouteEntityKind();
+  state.routeEntityId = resolveRouteEntityId();
+  state.implementationPlanLayer = resolveInitialImplementationPlanLayer();
+  state.implementationPlanSubview = resolveInitialImplementationPlanSubview();
+
+  if (state.activeView !== 'map' && previousView === 'map') {
+    resetMapInitiativeFocusState();
+  }
+}
+
+async function handleBrowserPopState() {
+  const previousInstitutionSlug = normalizeSlug(state.institutionSlug);
+  const previousStrategySlug = normalizeSlug(state.strategySlug);
+  applyLocationState();
+
+  const needsBootstrap = (
+    previousInstitutionSlug !== normalizeSlug(state.institutionSlug)
+    || previousStrategySlug !== normalizeSlug(state.strategySlug)
+  );
+
+  if (needsBootstrap) {
+    await bootstrap();
+    return;
+  }
+
+  render();
 }
 
 function setRouteEntity(kind, entityId) {
@@ -2549,7 +2587,7 @@ function bindInstitutionSwitch(container) {
       state.activeView = 'guidelines';
     }
     state.expandedStepId = '';
-    syncRouteState();
+    pushRouteState();
 
     if (isAuthenticated() && !state.embedMapMode && normalizeSlug(state.strategySlug)) {
       try {
@@ -2580,7 +2618,7 @@ function bindStrategySwitch(container) {
     rememberStrategySlugForInstitution(state.institutionSlug, slug);
     state.strategySwitcherDialogOpen = false;
     clearRouteEntity();
-    syncRouteState();
+    pushRouteState();
 
     if (isAuthenticated() && !state.embedMapMode && state.institutionSlug) {
       try {
@@ -2614,7 +2652,7 @@ function setActiveView(nextView) {
   }
   clearRouteEntityForView(nextView);
   state.activeView = nextView;
-  syncRouteState();
+  pushRouteState();
   render();
 }
 
@@ -2677,7 +2715,7 @@ function openGuidelineDetail(guidelineId) {
   if (!nextId) return;
   setRouteEntity('guideline', nextId);
   state.activeView = 'guideline-detail';
-  syncRouteState();
+  pushRouteState();
   render();
 }
 
@@ -2686,7 +2724,7 @@ function openInitiativeDetail(initiativeId) {
   if (!nextId) return;
   setRouteEntity('initiative', nextId);
   state.activeView = 'initiative-detail';
-  syncRouteState();
+  pushRouteState();
   render();
 }
 
@@ -2811,6 +2849,7 @@ function strategySwitcherCardMarkup(options = {}) {
       <div class="strategy-switcher-dialog" ${dialogOpen ? '' : 'hidden'}>
         ${institutionSelectMarkup()}
         ${strategySelectMarkup()}
+        ${strategySwitcherMissionVisionMarkup()}
         ${showCreateStrategyAction
     ? `<button id="openStrategyCreateModalBtn" type="button" class="btn btn-primary strategy-switcher-create-btn">${escapeHtml(createButtonLabel)}</button>`
     : ''}
@@ -2921,7 +2960,7 @@ async function navigateToStrategyLink(payload = {}) {
     state.expandedStepId = '';
     clearRouteEntityForView('guidelines');
     scheduleGuidelineFocus(targetGuidelineId);
-    syncRouteState();
+    pushRouteState();
 
     if (isAuthenticated() && !state.embedMapMode && normalizeSlug(targetStrategySlug)) {
       try {
@@ -2955,7 +2994,7 @@ async function navigateToStrategyPerspective(payload = {}) {
     clearRouteEntityForView('map');
     state.activeView = 'map';
     state.mapLayer = nextMapLayer;
-    syncRouteState();
+    pushRouteState();
     render();
     return;
   }
@@ -2972,7 +3011,7 @@ async function navigateToStrategyPerspective(payload = {}) {
     state.mapStrategicLinksError = '';
     state.mapStrategicLinksLoading = false;
     state.mapStrategicLinksPromise = null;
-    syncRouteState();
+    pushRouteState();
 
     if (isAuthenticated() && !state.embedMapMode && normalizeSlug(targetStrategySlug)) {
       try {
@@ -3346,116 +3385,33 @@ function cycleWorkshopTitleText() {
   return langText('Strategijos dirbtuves', 'Strategy workshop');
 }
 
+function strategySwitcherMissionVisionMarkup() {
+  const mission = cycleMissionText();
+  const vision = cycleVisionText();
+  if (!mission && !vision) return '';
+
+  return `
+    <section class="strategy-switcher-context" aria-label="${escapeHtml(langText('Strategijos kontekstas', 'Strategy context'))}">
+      ${mission ? `
+        <article class="strategy-switcher-context-card">
+          <span class="strategy-switcher-context-label">${escapeHtml(langText('Misija', 'Mission'))}</span>
+          <p>${escapeHtml(mission)}</p>
+        </article>
+      ` : ''}
+      ${vision ? `
+        <article class="strategy-switcher-context-card">
+          <span class="strategy-switcher-context-label">${escapeHtml(langText('Vizija', 'Vision'))}</span>
+          <p>${escapeHtml(vision)}</p>
+        </article>
+      ` : ''}
+    </section>
+  `;
+}
+
 function renderIntroDeck() {
   if (!elements.introDeck) return;
-  if (state.embedMapMode || state.activeView === 'policy-alignment') {
-    elements.introDeck.hidden = true;
-    elements.introDeck.innerHTML = '';
-    return;
-  }
-
-  const existingGuide = elements.introDeck.querySelector('.intro-guide');
-  if (!existingGuide) {
-    elements.introDeck.innerHTML = `
-      <div class="intro-guide" role="button" tabindex="0" aria-expanded="true">
-        <div class="intro-guide-header">
-          <div>
-            <h3 data-guide-title>${escapeHtml(cycleWorkshopTitleText())}</h3>
-          </div>
-          <button id="toggleIntroBtn" class="btn btn-ghost intro-toggle-btn" type="button" aria-expanded="true"></button>
-        </div>
-        <div class="intro-guide-body">
-          <section class="guide-structure" aria-label="${escapeHtml(langText('Strategijos struktura', 'Strategy structure'))}">
-            <div class="guide-structure-track" role="list">
-              <article class="structure-step structure-step-strategic" role="listitem">
-                <span class="structure-label">${langText('Misija', 'Mission')}</span>
-                <p data-guide-mission>${escapeHtml(cycleMissionText())}</p>
-              </article>
-              <span class="structure-arrow" aria-hidden="true">&rarr;</span>
-              <article class="structure-step structure-step-strategic" role="listitem">
-                <span class="structure-label">${langText('Vizija', 'Vision')}</span>
-                <p data-guide-vision>${escapeHtml(cycleVisionText())}</p>
-              </article>
-              <span class="structure-arrow" aria-hidden="true">&rarr;</span>
-              <section class="structure-layer-group" role="group" aria-label="${escapeHtml(langText('Platformos dalis', 'Platform scope'))}">
-                <div class="structure-layer-group-head">
-                  <span class="structure-group-badge">${langText('Platformos apimtis', 'Platform scope')}: digistrategy.eu</span>
-                </div>
-                <div class="structure-layer-grid">
-                  <article class="structure-step structure-step-layer" role="listitem">
-                    <span class="structure-label">${langText('GairÄ—s', 'Guidelines')}</span>
-                    <p>${langText('Kryptys arba tikslai, atvaizduojami dviem korteliu lygiais.', 'Directions or goals shown in two card levels.')}</p>
-                    <div class="structure-mini-cards" aria-hidden="true">
-                      <span>${langText('Tėvinės', 'Parent')}</span>
-                      <span>${langText('Vaikinės', 'Child')}</span>
-                    </div>
-                    <span class="structure-badge">${langText('Etapas 1', 'Stage 1')}</span>
-                  </article>
-                  <span class="structure-arrow structure-arrow-inner" aria-hidden="true">&rarr;</span>
-                  <article class="structure-step structure-step-layer" role="listitem">
-                    <span class="structure-label">${langText('Iniciatyvos', 'Initiatives')}</span>
-                    <p>${langText('Uzdaviniai, kurie ispildo gaires ir kuria apciuopiama rezultata.', 'Tasks that fulfill guidelines and create tangible outcomes.')}</p>
-                    <div class="structure-mini-cards" aria-hidden="true">
-                      <span>${langText('Veiksmu idejos', 'Action ideas')}</span>
-                      <span>${langText('Prioritetai', 'Priorities')}</span>
-                    </div>
-                    <span class="structure-badge">${langText('Etapas 2', 'Stage 2')}</span>
-                  </article>
-                  <span class="structure-arrow structure-arrow-inner" aria-hidden="true">&rarr;</span>
-                  <article class="structure-step structure-step-layer structure-step-implementation" role="listitem">
-                    <span class="structure-label">${langText('Igyvendinimo planas', 'Implementation plan')}</span>
-                    <p>${langText('Perkėlimas į konkrečias veiklas, terminus ir atsakomybes.', 'Translation into concrete actions, timelines, and ownership.')}</p>
-                    <span class="structure-badge">${langText('Etapas 3', 'Stage 3')}</span>
-                  </article>
-                </div>
-              </section>
-            </div>
-            <div class="structure-note-row">
-              <p class="structure-note">${langText('Platformos apimtis: "Gairės", "Iniciatyvos" ir "Įgyvendinimo planas" etapai.', 'Platform scope: "Guidelines", "Initiatives", and "Implementation plan" stages.')}</p>
-              <div data-strategy-url-inline-slot></div>
-            </div>
-          </section>
-        </div>
-      </div>
-    `;
-
-    const introGuide = elements.introDeck.querySelector('.intro-guide');
-    const toggleIntroBtn = elements.introDeck.querySelector('#toggleIntroBtn');
-    const toggleGuide = () => {
-      state.introCollapsed = !state.introCollapsed;
-      persistIntroCollapsed();
-      applyIntroGuideState();
-    };
-    if (introGuide) {
-      introGuide.addEventListener('click', (event) => {
-        const target = event.target;
-        if (
-          target instanceof HTMLElement
-          && target.closest('a, button, input, textarea, select, label, [data-intro-stop-toggle]')
-        ) {
-          return;
-        }
-        toggleGuide();
-      });
-      introGuide.addEventListener('keydown', (event) => {
-        if (event.target !== introGuide) return;
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        toggleGuide();
-      });
-    }
-    if (toggleIntroBtn) {
-      toggleIntroBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        toggleGuide();
-      });
-    }
-  }
-
-  refreshIntroNarrativeTexts();
-  renderStrategyUrlInlineBlock();
-  applyIntroGuideState();
+  elements.introDeck.hidden = true;
+  elements.introDeck.innerHTML = '';
 }
 
 function relationLabel(relationType) {
@@ -3700,6 +3656,18 @@ function normalizeImplementationDateInputValue(value) {
   return `${year}-${month}-${day}`;
 }
 
+function normalizeImplementationCompletedAt(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString();
+}
+
+function isImplementationItemCompleted(item) {
+  return Boolean(normalizeImplementationCompletedAt(item?.implementationCompletedAt));
+}
+
 function buildImplementationPlanGuidelineRows(guidelines) {
   const source = (Array.isArray(guidelines) ? guidelines : []).filter((guideline) => (
     guideline
@@ -3817,6 +3785,7 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
     const kind = String(row.kind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
     const implementationDate = normalizeImplementationDateInputValue(item.implementationDate);
     const implementationOwner = String(item.implementationOwner || '').trim();
+    const implementationCompletedAt = normalizeImplementationCompletedAt(item.implementationCompletedAt);
     const workdaysUntilImplementation = implementationDate
       ? countImplementationPlanWorkdaysUntil(implementationDate, todayKey)
       : null;
@@ -3838,6 +3807,8 @@ function buildImplementationPlanCalendarEntries({ guidelineRows, initiativeRows 
       implementationDateDisplay: formatInstitutionDate(implementationDate) || langText('Nenurodyta', 'Not set'),
       workdaysUntilImplementation,
       implementationOwner,
+      implementationCompletedAt,
+      isCompleted: Boolean(implementationCompletedAt),
       linkedGuidelineNames,
       originalIndex: index
     };
@@ -3976,10 +3947,11 @@ function renderImplementationPlanCalendarMarkup(calendarData) {
                     <div class="implementation-plan-calendar-group-fill"></div>
                   </div>
                   ${group.entries.map((entry) => `
-                    <div class="implementation-plan-calendar-row">
+                    <div class="implementation-plan-calendar-row${entry.isCompleted ? ' is-completed' : ''}">
                       <div class="implementation-plan-calendar-entry-cell">
                         <div class="implementation-plan-calendar-entry-top">
                           <span class="tag implementation-plan-calendar-kind implementation-plan-calendar-kind-${escapeHtml(entry.kind)}">${escapeHtml(entry.kindLabel)}</span>
+                          ${entry.isCompleted ? `<span class="tag implementation-plan-completed-tag is-completed">${escapeHtml(langText('Atlikta', 'Completed'))}</span>` : ''}
                           ${entry.workdaysUntilImplementation === null
                             ? ''
                             : `
@@ -4149,11 +4121,19 @@ function renderImplementationPlanRow(row, { editable = false } = {}) {
   const linkedGuidelineNames = linkedGuidelines.map((guideline) => String(guideline?.title || guideline?.id || '').trim()).filter(Boolean);
   const implementationDateValue = normalizeImplementationDateInputValue(item.implementationDate);
   const implementationOwnerValue = String(item.implementationOwner || '').trim();
+  const implementationCompletedAt = normalizeImplementationCompletedAt(item.implementationCompletedAt);
+  const implementationCompleted = Boolean(implementationCompletedAt);
   const implementationDateDisplay = formatInstitutionDate(implementationDateValue) || langText('Nenurodyta', 'Not set');
   const implementationOwnerDisplay = implementationOwnerValue || langText('Nenurodyta', 'Not set');
+  const completedLabel = implementationCompleted
+    ? langText('Atlikta', 'Completed')
+    : langText('Vykdoma', 'In progress');
+  const completedMeta = implementationCompleted
+    ? formatCommentDateTime(implementationCompletedAt) || langText('Pažymėta kaip atlikta', 'Marked as completed')
+    : '';
 
   return `
-    <div class="implementation-plan-row implementation-plan-row-${escapeHtml(rowKind)} implementation-plan-level-${level}" data-plan-kind="${escapeHtml(rowKind)}" data-plan-id="${escapeHtml(item.id)}">
+    <div class="implementation-plan-row implementation-plan-row-${escapeHtml(rowKind)} implementation-plan-level-${level}${implementationCompleted ? ' is-completed' : ''}" data-plan-kind="${escapeHtml(rowKind)}" data-plan-id="${escapeHtml(item.id)}">
       <div class="implementation-plan-cell implementation-plan-cell-main">
         <div class="implementation-plan-title-wrap">
           ${level > 0 ? '<span class="implementation-plan-branch" aria-hidden="true"></span>' : ''}
@@ -4163,6 +4143,7 @@ function renderImplementationPlanRow(row, { editable = false } = {}) {
               ${rowKind === 'initiative' && linkedGuidelineNames.length
       ? `<span class="tag">${escapeHtml(langText('Gairės', 'Guidelines'))}: ${escapeHtml(linkedGuidelineNames.join(', '))}</span>`
       : ''}
+              <span class="tag implementation-plan-completed-tag${implementationCompleted ? ' is-completed' : ''}">${escapeHtml(completedLabel)}</span>
             </div>
           </div>
         </div>
@@ -4180,7 +4161,13 @@ function renderImplementationPlanRow(row, { editable = false } = {}) {
       : `<span class="implementation-plan-read-value${implementationOwnerValue ? '' : ' is-empty'}">${escapeHtml(implementationOwnerDisplay)}</span>`}
       </div>
       <div class="implementation-plan-cell implementation-plan-cell-actions">
-        ${editable ? '<span class="implementation-plan-row-status"></span>' : ''}
+        <span class="implementation-plan-cell-label">${escapeHtml(langText('Būsena', 'Status'))}</span>
+        ${editable
+      ? `<label class="implementation-plan-complete-toggle">
+            <input type="checkbox" name="implementationCompleted" ${implementationCompleted ? 'checked' : ''} ${state.busy ? 'disabled' : ''} />
+            <span>${escapeHtml(langText('Pažymėti kaip atlikta', 'Mark as completed'))}</span>
+          </label>`
+      : `<span class="implementation-plan-read-value${implementationCompleted ? '' : ' is-empty'}">${escapeHtml(completedLabel)}${completedMeta ? ` • ${escapeHtml(completedMeta)}` : ''}</span>`}
       </div>
     </div>
   `;
@@ -6525,7 +6512,7 @@ function renderImplementationPlanView() {
               <div>${escapeHtml(activeLayer === 'initiatives' ? langText('Iniciatyva', 'Initiative') : langText('Gairė', 'Guideline'))}</div>
               <div>${escapeHtml(langText('Įgyvendinimo data', 'Implementation date'))}</div>
               <div>${escapeHtml(langText('Atsakingas asmuo / padalinys', 'Responsible person / unit'))}</div>
-              <div></div>
+              <div>${escapeHtml(langText('Būsena', 'Status'))}</div>
             </div>
             ${rows.length
               ? rows.map((row) => renderImplementationPlanRow(row, { editable })).join('')
@@ -6602,6 +6589,7 @@ function renderImplementationPlanView() {
 
         const implementationDate = normalizeImplementationDateInputValue(row.querySelector('[name="implementationDate"]')?.value);
         const implementationOwner = String(row.querySelector('[name="implementationOwner"]')?.value || '').trim();
+        const implementationCompleted = Boolean(row.querySelector('[name="implementationCompleted"]')?.checked);
 
         if (planKind === 'guideline') {
           const guideline = findGuidelineById(planId);
@@ -6616,7 +6604,8 @@ function renderImplementationPlanView() {
               parentGuidelineId: guideline.parentGuidelineId || '',
               lineSide: guideline.lineSide || 'auto',
               implementationDate,
-              implementationOwner
+              implementationOwner,
+              implementationCompleted
             }
           });
           continue;
@@ -6633,7 +6622,8 @@ function renderImplementationPlanView() {
             lineSide: initiative.lineSide || 'auto',
             guidelineIds: resolveInitiativeGuidelineIds(initiative),
             implementationDate,
-            implementationOwner
+            implementationOwner,
+            implementationCompleted
           }
         });
       }
@@ -7815,6 +7805,9 @@ function bindGlobal() {
     }
   });
   window.addEventListener('scroll', maybeAutoCollapseIntroOnFirstScroll, { passive: true });
+  window.addEventListener('popstate', () => {
+    void handleBrowserPopState();
+  });
 }
 
 function ensureInstitutionSelectionForAuth() {

@@ -156,7 +156,8 @@ function createAdminMutationService({ query }) {
     relationType,
     parentGuidelineId,
     implementationDate,
-    implementationOwner
+    implementationOwner,
+    implementationCompletedAt
   }) {
     await query(
       `update strategy_guidelines
@@ -167,9 +168,10 @@ function createAdminMutationService({ query }) {
            parent_guideline_id = $5,
            implementation_target_date = $6,
            implementation_owner = $7,
+           implementation_completed_at = $8,
            line_side = 'auto',
            updated_at = now()
-       where id = $8`,
+       where id = $9`,
       [
         title,
         description || null,
@@ -178,6 +180,7 @@ function createAdminMutationService({ query }) {
         parentGuidelineId,
         implementationDate || null,
         implementationOwner || null,
+        implementationCompletedAt || null,
         guidelineId
       ]
     );
@@ -189,7 +192,8 @@ function createAdminMutationService({ query }) {
     description,
     status,
     implementationDate,
-    implementationOwner
+    implementationOwner,
+    implementationCompletedAt
   }) {
     await query(
       `update strategy_initiatives
@@ -198,15 +202,17 @@ function createAdminMutationService({ query }) {
            status = $3,
            implementation_target_date = $4,
            implementation_owner = $5,
+           implementation_completed_at = $6,
            line_side = 'auto',
            updated_at = now()
-       where id = $6`,
+       where id = $7`,
       [
         title,
         description || null,
         status,
         implementationDate || null,
         implementationOwner || null,
+        implementationCompletedAt || null,
         initiativeId
       ]
     );
