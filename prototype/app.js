@@ -126,6 +126,7 @@ const ALLOWED_VIEWS = new Set([
   'initiatives',
   'initiative-detail',
   'implementation-plan',
+  'clarity-gremlin',
   'policy-alignment',
   'history',
   'admin',
@@ -152,6 +153,7 @@ const APP_PATH_INITIATIVE_SEGMENT = 'initiative';
 const FOCUS_GUIDELINE_QUERY_KEY = 'focusGuideline';
 const FOCUS_INITIATIVE_QUERY_KEY = 'focusInitiative';
 const IMPLEMENTATION_PLAN_QUERY_KEY = 'implementation';
+const CLARITY_GREMLIN_QUERY_KEY = 'gremlin';
 const MAP_INSTITUTION_PULSE_MS = 10000;
 const MAP_PLAN_PLAYBACK_MS = 10000;
 const MAP_PLAN_PLAYBACK_OPTIONS = Object.freeze([10000, 30000, 60000, 300000]);
@@ -252,6 +254,9 @@ const state = {
   guidelinesShowInitiatives: false,
   implementationPlanLayer: resolveInitialImplementationPlanLayer(),
   implementationPlanSubview: resolveInitialImplementationPlanSubview(),
+  clarityGremlinWorkspaceTab: resolveInitialClarityGremlinWorkspaceTab(),
+  clarityGremlinLaunchContextView: '',
+  clarityGremlinLaunchContextEntityId: '',
   mapStrategicLinksData: null,
   mapStrategicLinksLoading: false,
   mapStrategicLinksError: '',
@@ -546,6 +551,17 @@ function resolveInitialImplementationPlanSubview() {
   return resolveInitialImplementationPlanTarget() === 'calendar' ? 'calendar' : 'table';
 }
 
+function normalizeClarityGremlinWorkspaceTab(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'strategic-links' || normalized === 'pdf' || normalized === 'policy-alignment') return normalized;
+  return 'review';
+}
+
+function resolveInitialClarityGremlinWorkspaceTab() {
+  const params = new URLSearchParams(window.location.search);
+  return normalizeClarityGremlinWorkspaceTab(params.get(CLARITY_GREMLIN_QUERY_KEY));
+}
+
 function buildCanonicalAppPath({ slug, strategySlug, focusKind, focusId }) {
   const nextSlug = normalizeSlug(slug);
   const nextStrategySlug = normalizeSlug(strategySlug);
@@ -618,6 +634,12 @@ function buildCurrentPageHref({
     params.delete(IMPLEMENTATION_PLAN_QUERY_KEY);
   }
 
+  if (nextView === 'clarity-gremlin') {
+    params.set(CLARITY_GREMLIN_QUERY_KEY, normalizeClarityGremlinWorkspaceTab(state.clarityGremlinWorkspaceTab));
+  } else {
+    params.delete(CLARITY_GREMLIN_QUERY_KEY);
+  }
+
   const query = params.toString();
   return `${path}${query ? `?${query}` : ''}`;
 }
@@ -644,6 +666,7 @@ function applyLocationState() {
   state.routeEntityId = resolveRouteEntityId();
   state.implementationPlanLayer = resolveInitialImplementationPlanLayer();
   state.implementationPlanSubview = resolveInitialImplementationPlanSubview();
+  state.clarityGremlinWorkspaceTab = resolveInitialClarityGremlinWorkspaceTab();
 
   if (state.activeView !== 'map' && previousView === 'map') {
     resetMapInitiativeFocusState();
@@ -2773,6 +2796,247 @@ function bindStrategicLinkSearchPanel(container) {
   });
 }
 
+function clarityGremlinWorkspaceUiText() {
+  return currentLanguage() === 'en'
+    ? {
+        title: 'Clarity Gremlin',
+        subtitle: 'One place for the AI functions that help structure, clarify, connect, and interpret strategy work.',
+        overviewTitle: 'Choose what Clarity Gremlin should help with',
+        reviewTitle: 'Review strategy',
+        reviewBody: 'Run the full Clarity Gremlin review workspace for the current strategy or a selected card. This keeps recent analyses, draft suggestions, language, and model settings in one place.',
+        reviewAction: 'Open review workspace',
+        strategicLinksTitle: 'Find strategic links',
+        strategicLinksBody: 'Search for connections between this strategy and other strategies, then review, accept, or dismiss suggestions.',
+        pdfTitle: 'Structure PDF',
+        pdfBody: 'Turn uploaded strategy PDFs into the digistrategy.eu guideline and initiative structure with manual review before publishing.',
+        pdfAction: 'Open PDF structuring',
+        pdfAdminOnly: 'PDF structuring is available to institution admins who can create strategies.',
+        policyTitle: 'Check policy alignment',
+        policyBody: 'Open the policy alignment workspace to compare strategy content against policy frameworks and external requirements.',
+        policyAction: 'Open policy alignment',
+        modesLabel: 'Clarity Gremlin modes',
+        launchContext: 'Launch context',
+        noContext: 'No active strategy context selected yet.',
+        providerLabel: 'Current AI provider',
+        gremlinHome: 'Clarity Gremlin home'
+      }
+    : {
+        title: 'Clarity Gremlin',
+        subtitle: 'Viena vieta visoms AI funkcijoms, kurios padeda aiškiau suprasti, struktūruoti, susieti ir interpretuoti strategiją.',
+        overviewTitle: 'Pasirinkite, kuo Clarity Gremlin turėtų padėti',
+        reviewTitle: 'Peržiūrėti strategiją',
+        reviewBody: 'Atverkite pilną Clarity Gremlin analizės darbo erdvę visai strategijai arba vienai pasirinktai kortelei. Čia vienoje vietoje laikomos analizės, pasiūlymų juodraščiai, kalba ir modelio nustatymai.',
+        reviewAction: 'Atverti analizės erdvę',
+        strategicLinksTitle: 'Rasti strateginius ryšius',
+        strategicLinksBody: 'Ieškokite ryšių tarp šios strategijos ir kitų strategijų, tada peržiūrėkite, patvirtinkite arba paslėpkite pasiūlymus.',
+        pdfTitle: 'Struktūruoti PDF',
+        pdfBody: 'Paverskite įkeltus strategijos PDF dokumentus į digistrategy.eu gairių ir iniciatyvų struktūrą, o prieš paskelbiant viską peržiūrėkite rankiniu būdu.',
+        pdfAction: 'Atverti PDF struktūravimą',
+        pdfAdminOnly: 'PDF struktūravimas galimas institucijos administratoriams, kurie gali kurti strategijas.',
+        policyTitle: 'Tikrinti politikos atitiktį',
+        policyBody: 'Atverkite politikos atitikties darbo erdvę ir palyginkite strategijos turinį su politikos karkasais bei išoriniais reikalavimais.',
+        policyAction: 'Atverti politikos atitiktį',
+        modesLabel: 'Clarity Gremlin režimai',
+        launchContext: 'Paleidimo kontekstas',
+        noContext: 'Aktyvus strategijos kontekstas dar nepasirinktas.',
+        providerLabel: 'Dabartinis AI tiekėjas',
+        gremlinHome: 'Clarity Gremlin pradžia'
+      };
+}
+
+function resolveClarityGremlinLaunchLabel() {
+  const view = String(state.clarityGremlinLaunchContextView || '').trim().toLowerCase();
+  if (!view) return '';
+  if (view === 'guideline-detail') {
+    const guideline = findGuidelineById(state.clarityGremlinLaunchContextEntityId);
+    return guideline ? `${clarityGremlinPageLabel(view)}: ${guideline.title || guideline.id}` : clarityGremlinPageLabel(view);
+  }
+  if (view === 'initiative-detail') {
+    const initiative = findInitiativeById(state.clarityGremlinLaunchContextEntityId);
+    return initiative ? `${clarityGremlinPageLabel(view)}: ${initiative.title || initiative.id}` : clarityGremlinPageLabel(view);
+  }
+  return clarityGremlinPageLabel(view);
+}
+
+function renderClarityGremlinWorkspaceView() {
+  const ui = clarityGremlinWorkspaceUiText();
+  const activeMode = normalizeClarityGremlinWorkspaceTab(state.clarityGremlinWorkspaceTab);
+  const currentProvider = formatFeatureAiLabel('clarityGremlin');
+  const launchContextLabel = resolveClarityGremlinLaunchLabel();
+  const canStructurePdf = canManageSelectedInstitution();
+  const reviewContext = resolveClarityGremlinContext();
+  const canOpenReview = reviewContext.supported === true;
+  const canOpenPolicy = isLoggedIn();
+  const reviewBlockedLabel = !isLoggedIn()
+    ? langText('Prisijunkite, kad galėtumėte naudoti Clarity Gremlin analizę.', 'Sign in to use Clarity Gremlin review.')
+    : !state.cycle?.id
+      ? langText('Pirmiausia pasirinkite aktyvią strategiją su ciklu.', 'Select an active strategy with a cycle first.')
+      : '';
+
+  const renderModeBody = () => {
+    if (activeMode === 'strategic-links') {
+      return `
+        <section class="clarity-workspace-section">
+          ${buildStrategicLinkSearchPanelMarkup({ activeLayer: 'strategic-links' })}
+        </section>
+      `;
+    }
+
+    if (activeMode === 'pdf') {
+      return `
+        <section class="clarity-workspace-section">
+          <div class="clarity-workspace-mode-card clarity-workspace-mode-card-wide">
+            <div class="clarity-workspace-mode-copy">
+              <h3>${escapeHtml(ui.pdfTitle)}</h3>
+              <p>${escapeHtml(ui.pdfBody)}</p>
+              <div class="header-stack">
+                <span class="tag">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
+              </div>
+            </div>
+            <div class="clarity-workspace-mode-actions">
+              <button type="button" class="btn btn-primary" data-action="open-gremlin-pdf"${canStructurePdf ? '' : ' disabled'}>${escapeHtml(ui.pdfAction)}</button>
+              ${canStructurePdf ? '' : `<p class="prompt clarity-workspace-inline-note">${escapeHtml(ui.pdfAdminOnly)}</p>`}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    if (activeMode === 'policy-alignment') {
+      return `
+        <section class="clarity-workspace-section">
+          <div class="clarity-workspace-mode-card clarity-workspace-mode-card-wide">
+            <div class="clarity-workspace-mode-copy">
+              <h3>${escapeHtml(ui.policyTitle)}</h3>
+              <p>${escapeHtml(ui.policyBody)}</p>
+            </div>
+            <div class="clarity-workspace-mode-actions">
+              <button type="button" class="btn btn-primary" data-action="open-gremlin-policy"${canOpenPolicy ? '' : ' disabled'}>${escapeHtml(ui.policyAction)}</button>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="clarity-workspace-section clarity-workspace-review-grid">
+        <article class="clarity-workspace-mode-card clarity-workspace-mode-card-primary">
+          <div class="clarity-workspace-mode-copy">
+            <h3>${escapeHtml(ui.reviewTitle)}</h3>
+            <p>${escapeHtml(ui.reviewBody)}</p>
+            <div class="header-stack">
+              <span class="tag">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
+              <span class="tag">${escapeHtml(ui.launchContext)}: ${escapeHtml(launchContextLabel || ui.noContext)}</span>
+            </div>
+          </div>
+          <div class="clarity-workspace-mode-actions">
+            <button type="button" class="btn btn-primary" data-action="open-gremlin-review"${canOpenReview ? '' : ' disabled'}>${escapeHtml(ui.reviewAction)}</button>
+            ${reviewBlockedLabel ? `<p class="prompt clarity-workspace-inline-note">${escapeHtml(reviewBlockedLabel)}</p>` : ''}
+          </div>
+        </article>
+        <article class="clarity-workspace-mode-card">
+          <div class="clarity-workspace-mode-copy">
+            <h3>${escapeHtml(ui.strategicLinksTitle)}</h3>
+            <p>${escapeHtml(ui.strategicLinksBody)}</p>
+          </div>
+          <div class="clarity-workspace-mode-actions">
+            <button type="button" class="btn btn-ghost" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links">${escapeHtml(ui.strategicLinksTitle)}</button>
+          </div>
+        </article>
+        <article class="clarity-workspace-mode-card">
+          <div class="clarity-workspace-mode-copy">
+            <h3>${escapeHtml(ui.pdfTitle)}</h3>
+            <p>${escapeHtml(ui.pdfBody)}</p>
+          </div>
+          <div class="clarity-workspace-mode-actions">
+            <button type="button" class="btn btn-ghost" data-action="switch-gremlin-mode" data-gremlin-mode="pdf">${escapeHtml(ui.pdfAction)}</button>
+          </div>
+        </article>
+        <article class="clarity-workspace-mode-card">
+          <div class="clarity-workspace-mode-copy">
+            <h3>${escapeHtml(ui.policyTitle)}</h3>
+            <p>${escapeHtml(ui.policyBody)}</p>
+          </div>
+          <div class="clarity-workspace-mode-actions">
+            <button type="button" class="btn btn-ghost" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment">${escapeHtml(ui.policyAction)}</button>
+          </div>
+        </article>
+      </section>
+    `;
+  };
+
+  elements.stepView.innerHTML = `
+    <section class="clarity-workspace-shell">
+      <div class="clarity-workspace-hero">
+        <div class="clarity-workspace-hero-copy">
+          <div class="clarity-workspace-title-row">
+            <img class="clarity-workspace-icon" src="assets/clarity_gremlin2_ui.png" alt="" aria-hidden="true" />
+            <div>
+              <h2>${escapeHtml(ui.title)}</h2>
+              <p class="prompt">${escapeHtml(ui.subtitle)}</p>
+            </div>
+          </div>
+          <div class="header-stack">
+            <span class="tag">${escapeHtml(ui.launchContext)}: ${escapeHtml(launchContextLabel || ui.noContext)}</span>
+            <span class="tag">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
+          </div>
+        </div>
+      </div>
+      <section class="clarity-workspace-nav card">
+        <div class="guideline-group-header">
+          <h3>${escapeHtml(ui.modesLabel)}</h3>
+          <span class="tag">${escapeHtml(ui.gremlinHome)}</span>
+        </div>
+        <div class="clarity-workspace-mode-tabs">
+          <button type="button" class="btn ${activeMode === 'review' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="review">${escapeHtml(ui.reviewTitle)}</button>
+          <button type="button" class="btn ${activeMode === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links">${escapeHtml(ui.strategicLinksTitle)}</button>
+          <button type="button" class="btn ${activeMode === 'pdf' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="pdf">${escapeHtml(ui.pdfTitle)}</button>
+          <button type="button" class="btn ${activeMode === 'policy-alignment' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment">${escapeHtml(ui.policyTitle)}</button>
+        </div>
+      </section>
+      ${renderModeBody()}
+    </section>
+  `;
+
+  bindClarityGremlinWorkspace();
+}
+
+function bindClarityGremlinWorkspace() {
+  elements.stepView.querySelectorAll('[data-action="switch-gremlin-mode"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.clarityGremlinWorkspaceTab = normalizeClarityGremlinWorkspaceTab(button.getAttribute('data-gremlin-mode'));
+      syncRouteState();
+      render();
+    });
+  });
+
+  const reviewButton = elements.stepView.querySelector('[data-action="open-gremlin-review"]');
+  if (reviewButton) {
+    reviewButton.addEventListener('click', () => {
+      showClarityGremlinModal();
+    });
+  }
+
+  const pdfButton = elements.stepView.querySelector('[data-action="open-gremlin-pdf"]');
+  if (pdfButton) {
+    pdfButton.addEventListener('click', () => {
+      showStrategyCreateModal('ai');
+    });
+  }
+
+  const policyButton = elements.stepView.querySelector('[data-action="open-gremlin-policy"]');
+  if (policyButton) {
+    policyButton.addEventListener('click', () => {
+      navigateToPolicyAlignmentTab('strategy-analysis');
+    });
+  }
+
+  const strategicPanel = elements.stepView.querySelector('.strategic-gremlin-panel');
+  if (strategicPanel instanceof HTMLElement) {
+    bindStrategicLinkSearchPanel(strategicPanel);
+  }
+}
+
 async function loadMemberContext() {
   const buildContextPath = () => {
     const params = new URLSearchParams();
@@ -3217,11 +3481,35 @@ function canOpenAdminView() {
   );
 }
 
+function captureClarityGremlinLaunchContext() {
+  const currentView = String(state.activeView || '').trim().toLowerCase();
+  if (!CLARITY_GREMLIN_SUPPORTED_VIEWS.has(currentView)) return;
+  state.clarityGremlinLaunchContextView = currentView;
+  if (currentView === 'guideline-detail' || currentView === 'initiative-detail') {
+    state.clarityGremlinLaunchContextEntityId = String(state.routeEntityId || '').trim();
+    return;
+  }
+  state.clarityGremlinLaunchContextEntityId = '';
+}
+
+function openClarityGremlinWorkspace(mode = 'review') {
+  state.clarityGremlinWorkspaceTab = normalizeClarityGremlinWorkspaceTab(mode);
+  if (state.activeView === 'clarity-gremlin') {
+    syncRouteState();
+    render();
+    return;
+  }
+  setActiveView('clarity-gremlin');
+}
+
 function setActiveView(nextView) {
   if (!ALLOWED_VIEWS.has(nextView)) return;
   if (state.activeView === nextView) return;
   if (nextView !== 'map') {
     resetMapInitiativeFocusState();
+  }
+  if (nextView === 'clarity-gremlin') {
+    captureClarityGremlinLaunchContext();
   }
   clearRouteEntityForView(nextView);
   state.activeView = nextView;
@@ -3721,7 +4009,8 @@ function renderSteps() {
     { id: 'guidelines', title: langText('GairÄ—s', 'Guidelines'), locked: false },
     { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
     { id: 'implementation-plan', title: langText('Įgyvendinimo planas', 'Implementation plan'), locked: false },
-    { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false }
+    { id: 'map', title: langText('StrategijÅ³ Å¾emÄ—lapis', 'Strategy map'), locked: false },
+    { id: 'clarity-gremlin', title: clarityGremlinUiText().actionLabel, locked: false }
   ];
 
   const visibleItems = state.embedMapMode
@@ -3852,38 +4141,6 @@ function renderSteps() {
     elements.steps.appendChild(shell);
   });
 
-  if (!state.embedMapMode) {
-    const gremlinShell = document.createElement('div');
-    gremlinShell.className = 'step-utility-shell';
-    const gremlinButton = document.createElement('button');
-    const gremlinLocked = !isLoggedIn() || !state.cycle?.id;
-    gremlinButton.type = 'button';
-    gremlinButton.className = `step-pill step-pill-gremlin${gremlinLocked ? ' locked' : ''}`;
-    gremlinButton.innerHTML = `
-      <div class="step-pill-head">
-        <span class="step-icon" aria-hidden="true">${stepIconMarkup('clarity-gremlin')}</span>
-        <h4>${escapeHtml(clarityGremlinUiText().actionLabel)}</h4>
-      </div>
-    `;
-    gremlinButton.title = gremlinLocked
-      ? (!isLoggedIn()
-        ? langText('Šis rodinys prieinamas tik prisijungusiems nariams', 'This view is available to signed-in members only')
-        : langText('Pirmiausia atverkite aktyvų strategijos ciklą', 'Open an active strategy cycle first'))
-      : langText('Gauti AI pasiūlymus visai strategijai pagal dabartinį fokusą', 'Get AI suggestions for the whole strategy from the current focus');
-    if (sidebarCollapsed) {
-      gremlinButton.title = clarityGremlinUiText().actionLabel;
-    }
-    if (gremlinLocked) {
-      gremlinButton.disabled = true;
-    } else {
-      gremlinButton.addEventListener('click', () => {
-        showClarityGremlinModal();
-      });
-    }
-    gremlinShell.appendChild(gremlinButton);
-    elements.steps.appendChild(gremlinShell);
-  }
-
 }
 
 function applyIntroGuideState() {
@@ -3924,6 +4181,20 @@ function navigateToPolicyAlignmentTab(nextTab = 'frameworks') {
     return;
   }
   setActiveView('policy-alignment');
+}
+
+function openClarityGremlinPolicyWorkspace(nextTab = 'frameworks') {
+  if (!isLoggedIn()) return;
+  const normalizedTab = String(nextTab || 'frameworks').trim().toLowerCase();
+  state.policyAlignmentWorkspaceTab = ['frameworks', 'strategy-analysis', 'external-analysis'].includes(normalizedTab)
+    ? normalizedTab
+    : 'frameworks';
+  state.policyAlignmentAnalysisSubview = 'overview';
+  state.policyAlignmentSelectedId = '';
+  state.policyAlignmentCurrent = null;
+  state.expandedStepId = '';
+  state.userMenuOpen = false;
+  openClarityGremlinWorkspace('policy-alignment');
 }
 
 function pulseIntroToggleButton() {
@@ -5779,6 +6050,7 @@ function getClarityGremlinModelOptions() {
 
 function clarityGremlinPageLabel(view = state.activeView) {
   const normalized = String(view || '').trim().toLowerCase();
+  if (normalized === 'clarity-gremlin') return clarityGremlinWorkspaceUiText().gremlinHome;
   if (normalized === 'guideline-detail') return langText('Gairės kortelė', 'Guideline detail');
   if (normalized === 'initiative-detail') return langText('Iniciatyvos kortelė', 'Initiative detail');
   if (normalized === 'guidelines') return langText('Gairių sąrašas', 'Guidelines list');
@@ -5792,7 +6064,12 @@ function clarityGremlinPageLabel(view = state.activeView) {
 }
 
 function resolveClarityGremlinContext() {
-  const view = String(state.activeView || '').trim().toLowerCase();
+  let view = String(state.activeView || '').trim().toLowerCase();
+  let entityId = '';
+  if (view === 'clarity-gremlin') {
+    view = String(state.clarityGremlinLaunchContextView || 'guidelines').trim().toLowerCase();
+    entityId = String(state.clarityGremlinLaunchContextEntityId || '').trim();
+  }
   if (!isLoggedIn()) {
     return { supported: false, reason: 'login-required', view };
   }
@@ -5807,7 +6084,7 @@ function resolveClarityGremlinContext() {
   }
 
   if (view === 'guideline-detail') {
-    const guideline = findGuidelineByRouteEntity();
+    const guideline = entityId ? findGuidelineById(entityId) : findGuidelineByRouteEntity();
     if (!guideline) return { supported: false, reason: 'missing-entity', view };
     return {
       supported: true,
@@ -5819,7 +6096,7 @@ function resolveClarityGremlinContext() {
   }
 
   if (view === 'initiative-detail') {
-    const initiative = findInitiativeByRouteEntity();
+    const initiative = entityId ? findInitiativeById(entityId) : findInitiativeByRouteEntity();
     if (!initiative) return { supported: false, reason: 'missing-entity', view };
     return {
       supported: true,
@@ -7615,6 +7892,11 @@ function renderStepView() {
     return;
   }
 
+  if (state.activeView === 'clarity-gremlin') {
+    renderClarityGremlinWorkspaceView();
+    return;
+  }
+
   if (state.activeView === 'policy-alignment') {
     renderPolicyAlignmentView();
     return;
@@ -8137,7 +8419,9 @@ function renderUserBar() {
     ? currentPolicyAlignmentTabRaw
     : 'frameworks';
   const userMenuLabel = langText('Naudotojo meniu', 'User menu');
-  const currentUtilityView = state.activeView === 'policy-alignment'
+  const currentUtilityView = state.activeView === 'clarity-gremlin' && state.clarityGremlinWorkspaceTab === 'policy-alignment'
+    ? currentPolicyAlignmentTab
+    : state.activeView === 'policy-alignment'
     ? currentPolicyAlignmentTab
     : state.activeView;
 
@@ -8206,7 +8490,7 @@ function renderUserBar() {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       if (button.hasAttribute('disabled')) return;
-      navigateToPolicyAlignmentTab(button.getAttribute('data-policy-alignment-nav'));
+      openClarityGremlinPolicyWorkspace(button.getAttribute('data-policy-alignment-nav'));
     });
   });
 
@@ -9436,7 +9720,7 @@ function closePlatformPopups() {
   state.strategySwitcherDialogOpen = false;
 }
 
-function showStrategyCreateModal() {
+function showStrategyCreateModal(initialMode = 'manual') {
   if (!canManageSelectedInstitution()) {
     notifyError(currentLanguage() === 'en'
       ? 'Only institution admin can create strategies in selected institution.'
@@ -9467,15 +9751,21 @@ function showStrategyCreateModal() {
 
       <section class="strategy-create-shared-fields">
         <h3 class="strategy-create-section-title">${escapeHtml(ui.strategySetup)}</h3>
-        <label class="auth-label" for="strategyCreateTitle">${escapeHtml(ui.strategyTitle)}</label>
-        <input id="strategyCreateTitle" type="text" name="strategyTitle" required />
-        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategyTitleHint)}</p>
-        <label class="auth-label" for="strategyCreateSlug">${escapeHtml(ui.strategySlug)}</label>
-        <input id="strategyCreateSlug" type="text" name="strategySlug" />
-        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategySlugHint)}</p>
-        <label class="auth-label" for="strategyCreateDescription">${escapeHtml(ui.strategyDescription)}</label>
-        <textarea id="strategyCreateDescription" name="strategyDescription" rows="4"></textarea>
-        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategyDescriptionHint)}</p>
+        <div class="strategy-create-field-block">
+          <label class="auth-label" for="strategyCreateTitle">${escapeHtml(ui.strategyTitle)}</label>
+          <input id="strategyCreateTitle" type="text" name="strategyTitle" required />
+          <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategyTitleHint)}</p>
+        </div>
+        <div class="strategy-create-field-block">
+          <label class="auth-label" for="strategyCreateSlug">${escapeHtml(ui.strategySlug)}</label>
+          <input id="strategyCreateSlug" type="text" name="strategySlug" />
+          <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategySlugHint)}</p>
+        </div>
+        <div class="strategy-create-field-block strategy-create-field-block-wide">
+          <label class="auth-label" for="strategyCreateDescription">${escapeHtml(ui.strategyDescription)}</label>
+          <textarea id="strategyCreateDescription" name="strategyDescription" rows="4"></textarea>
+          <p class="prompt strategy-create-field-hint">${escapeHtml(ui.strategyDescriptionHint)}</p>
+        </div>
       </section>
 
       <form id="strategyCreateManualForm" class="login-form login-form-auth strategy-create-form">
@@ -9489,20 +9779,28 @@ function showStrategyCreateModal() {
           <p class="prompt">${escapeHtml(ui.aiNoticeBody)}</p>
           <button class="btn btn-primary" type="button" id="strategyAiAcknowledgeBtn">${escapeHtml(ui.aiNoticeConfirm)}</button>
         </section>
-        <div id="strategyAiFields" hidden>
-        <label class="auth-label" for="strategyAiLocale">${escapeHtml(ui.localeHint)}</label>
-        <select id="strategyAiLocale" name="localeHint">
-          <option value="lt">LT</option>
-          <option value="en">EN</option>
-        </select>
-        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.localeHintHelp)}</p>
-        <label class="auth-label" for="strategyAiClarification">${escapeHtml(ui.clarification)}</label>
-        <textarea id="strategyAiClarification" name="clarification" rows="4" placeholder="${escapeHtml(ui.clarificationPlaceholder)}" required></textarea>
-        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.clarificationHint)}</p>
-        <label class="auth-label" for="strategyAiDocs">${escapeHtml(ui.documents)}</label>
-        <input id="strategyAiDocs" type="file" name="documents" accept="application/pdf,.pdf" multiple required />
-        <p class="prompt strategy-create-field-hint">${escapeHtml(ui.documentsHint)}</p>
-        <button class="btn btn-primary" type="submit">${escapeHtml(ui.createAi)}</button>
+        <div id="strategyAiFields" class="strategy-create-ai-fields" hidden>
+          <div class="strategy-create-field-block">
+            <label class="auth-label" for="strategyAiLocale">${escapeHtml(ui.localeHint)}</label>
+            <select id="strategyAiLocale" name="localeHint">
+              <option value="lt">LT</option>
+              <option value="en">EN</option>
+            </select>
+            <p class="prompt strategy-create-field-hint">${escapeHtml(ui.localeHintHelp)}</p>
+          </div>
+          <div class="strategy-create-field-block strategy-create-field-block-emphasis">
+            <label class="auth-label" for="strategyAiClarification">${escapeHtml(ui.clarification)}</label>
+            <textarea id="strategyAiClarification" name="clarification" rows="4" placeholder="${escapeHtml(ui.clarificationPlaceholder)}" required></textarea>
+            <p class="prompt strategy-create-field-hint">${escapeHtml(ui.clarificationHint)}</p>
+          </div>
+          <div class="strategy-create-field-block">
+            <label class="auth-label" for="strategyAiDocs">${escapeHtml(ui.documents)}</label>
+            <input id="strategyAiDocs" type="file" name="documents" accept="application/pdf,.pdf" multiple required />
+            <p class="prompt strategy-create-field-hint">${escapeHtml(ui.documentsHint)}</p>
+          </div>
+          <div class="strategy-create-form-actions">
+            <button class="btn btn-primary" type="submit">${escapeHtml(ui.createAi)}</button>
+          </div>
         </div>
       </form>
     </div>
@@ -9555,8 +9853,11 @@ function showStrategyCreateModal() {
     });
     if (manualForm instanceof HTMLElement) manualForm.hidden = next !== 'manual';
     if (aiForm instanceof HTMLElement) aiForm.hidden = next !== 'ai';
-    if (aiNotice instanceof HTMLElement) aiNotice.hidden = next !== 'ai' || aiAcknowledged;
+    if (aiNotice instanceof HTMLElement) aiNotice.hidden = next !== 'ai';
     if (aiFields instanceof HTMLElement) aiFields.hidden = next !== 'ai' || !aiAcknowledged;
+    if (aiForm instanceof HTMLElement) {
+      aiForm.classList.toggle('is-acknowledged', next === 'ai' && aiAcknowledged);
+    }
     if (commonTitleInput instanceof HTMLInputElement) {
       commonTitleInput.required = next === 'manual';
     }
@@ -9731,7 +10032,7 @@ function showStrategyCreateModal() {
     }
   });
 
-  setMode('manual');
+  setMode(String(initialMode || '').trim().toLowerCase() === 'ai' ? 'ai' : 'manual');
 }
 
 function closeClarityGremlinModal() {
