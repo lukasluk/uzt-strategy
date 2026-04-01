@@ -6419,7 +6419,10 @@ function renderInitiativesView() {
       if (!title) return;
 
       await runBusy(async () => {
-        await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/initiatives`, {
+        const endpoint = state.role === 'institution_admin'
+          ? `/api/v1/admin/cycles/${encodeURIComponent(state.cycle.id)}/initiatives`
+          : `/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/initiatives`;
+        await api(endpoint, {
           method: 'POST',
           body: { title, description, guidelineIds, lineSide: 'auto' }
         });
@@ -6654,6 +6657,8 @@ function historyKindLabel(kind) {
 function historyEventLabel(action) {
   const key = String(action || '').trim().toLowerCase();
   if (key === 'strategy_created') return langText('Strategija sukurta', 'Strategy created');
+  if (key === 'guideline_created') return langText('Gairė sukurta', 'Guideline created');
+  if (key === 'initiative_created') return langText('Iniciatyva sukurta', 'Initiative created');
   if (key === 'proposal_submitted') return langText('Pasiūlymas pateiktas', 'Proposal submitted');
   if (key === 'proposal_approved') return langText('Pasiūlymas patvirtintas', 'Proposal approved');
   if (key === 'proposal_approved_with_changes') return langText('Pasiūlymas patvirtintas su pakeitimais', 'Proposal approved with changes');
@@ -6669,6 +6674,7 @@ function historyEventLabel(action) {
 function historyActionPriority(action) {
   const key = String(action || '').trim().toLowerCase();
   if (key === 'strategy_created') return -100;
+  if (key === 'guideline_created' || key === 'initiative_created') return -20;
   if (key === 'proposal_submitted') return -10;
   if (key === 'gremlin_draft_implemented') return 5;
   if (key.endsWith('_commented')) return 0;
@@ -7330,7 +7336,10 @@ function bindStepEvents() {
       }
 
       await runBusy(async () => {
-        await api(`/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/guidelines`, {
+        const endpoint = state.role === 'institution_admin'
+          ? `/api/v1/admin/cycles/${encodeURIComponent(state.cycle.id)}/guidelines`
+          : `/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/guidelines`;
+        await api(endpoint, {
           method: 'POST',
           body: {
             title,

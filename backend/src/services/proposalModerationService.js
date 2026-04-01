@@ -89,6 +89,7 @@ function historyActorName(row, idField, nameField, emailField) {
 function historySortKey(row) {
   const action = String(row?.action || '').trim().toLowerCase();
   if (action === 'strategy_created') return -100;
+  if (action === 'guideline_created' || action === 'initiative_created') return -20;
   if (action === 'proposal_submitted') return -10;
   if (action.endsWith('_commented')) return 0;
   return 10;
@@ -449,6 +450,76 @@ function createProposalModerationService({ query, pool }) {
         actorName: 'System'
       });
     }
+
+    const directGuidelineRes = await query(
+      `select g.id,
+              g.title,
+              g.description,
+              g.created_at,
+              g.created_by,
+              u.display_name as created_by_name,
+              u.email as created_by_email
+       from strategy_guidelines g
+       left join platform_users u on u.id = g.created_by
+       where g.cycle_id = $1
+         and not exists (
+           select 1
+           from strategy_card_proposals p
+           where p.final_entity_id = g.id
+         )`,
+      [cycleId]
+    );
+    directGuidelineRes.rows.forEach((row) => {
+      const guidelineId = String(row.id || '').trim();
+      if (!guidelineId || !row.created_at) return;
+      historyRows.push({
+        id: `${guidelineId}:guideline-created`,
+        occurredAt: row.created_at,
+        entityKind: 'guideline',
+        action: 'guideline_created',
+        entityId: guidelineId,
+        proposalId: null,
+        title: String(row.title || guidelineId || '-').trim() || '-',
+        details: String(row.description || '').trim() || null,
+        actorId: row.created_by || null,
+        actorName: historyActorName(row, 'created_by', 'created_by_name', 'created_by_email')
+      });
+    });
+
+    const directInitiativeRes = await query(
+      `select i.id,
+              i.title,
+              i.description,
+              i.created_at,
+              i.created_by,
+              u.display_name as created_by_name,
+              u.email as created_by_email
+       from strategy_initiatives i
+       left join platform_users u on u.id = i.created_by
+       where i.cycle_id = $1
+         and not exists (
+           select 1
+           from strategy_card_proposals p
+           where p.final_entity_id = i.id
+         )`,
+      [cycleId]
+    );
+    directInitiativeRes.rows.forEach((row) => {
+      const initiativeId = String(row.id || '').trim();
+      if (!initiativeId || !row.created_at) return;
+      historyRows.push({
+        id: `${initiativeId}:initiative-created`,
+        occurredAt: row.created_at,
+        entityKind: 'initiative',
+        action: 'initiative_created',
+        entityId: initiativeId,
+        proposalId: null,
+        title: String(row.title || initiativeId || '-').trim() || '-',
+        details: String(row.description || '').trim() || null,
+        actorId: row.created_by || null,
+        actorName: historyActorName(row, 'created_by', 'created_by_name', 'created_by_email')
+      });
+    });
 
     const proposalRes = await query(
       `select p.*,
