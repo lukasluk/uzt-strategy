@@ -672,11 +672,12 @@ body.embed-map-page .stage {
   border-radius: 999px;
   background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
   box-sizing: border-box;
-  height: 50px;
-  padding: 9px 16px;
+  min-height: 50px;
+  height: auto;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
-  line-height: 1;
+  line-height: 1.15;
   align-self: center;
 }
 
@@ -720,7 +721,7 @@ body.embed-map-page .stage {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 11px;
-  line-height: 1;
+  line-height: 1.15;
   color: #5f799a;
   flex: 0 0 auto;
 }
@@ -728,7 +729,7 @@ body.embed-map-page .stage {
 .strategy-switcher-item > strong {
   min-width: 0;
   font-size: 13px;
-  line-height: 1;
+  line-height: 1.2;
   color: #1f3f69;
   overflow: hidden;
   text-overflow: ellipsis;

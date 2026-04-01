@@ -8937,7 +8937,7 @@ function strategyCreateUiText() {
       subtitle: 'Create a new strategy for the selected institution.',
       close: 'Close',
       manualTab: 'Manual',
-      aiTab: 'AI from PDF',
+      aiTab: 'Clarity Gremlin from PDF',
       strategySetup: 'Strategy setup',
       aiSetup: 'AI generation settings',
       strategyTitle: 'Strategy title',
@@ -8954,10 +8954,10 @@ function strategyCreateUiText() {
       clarificationPlaceholder: 'Scope, tone, priorities, constraints.',
       documents: 'PDF documents',
       documentsHint: 'Upload the source strategy PDFs the AI should read. You can select multiple files if the material is split.',
-      aiNoticeTitle: 'Before using AI from PDF',
+      aiNoticeTitle: 'Before using Clarity Gremlin from PDF',
       aiNoticeBody: 'digistrategy.eu converts uploaded strategy documents into a structured format based on guidelines, initiatives, and other platform fields. Because source documents are often narrative and differently structured, the generated result may contain inaccuracies, missing relationships, or simplifications and must be reviewed manually.',
       aiNoticeConfirm: 'I understand and want to continue',
-      createAi: 'Generate strategy with AI',
+      createAi: 'Generate strategy with Clarity Gremlin',
       progressTitle: 'AI generation in progress',
       progressUploading: 'Uploading documents',
       progressAnalyses: 'Analyzing with AI',
@@ -8965,7 +8965,7 @@ function strategyCreateUiText() {
       progressDone: 'Finalizing',
       progressRecovering: 'Waiting for server confirmation',
       successManual: 'Strategy created:',
-      successAi: 'AI generated strategy:'
+      successAi: 'Clarity Gremlin generated strategy:'
     };
   }
   return {
@@ -8973,7 +8973,7 @@ function strategyCreateUiText() {
     subtitle: 'Sukurkite naują strategiją pasirinktai institucijai.',
     close: 'Uždaryti',
     manualTab: 'Rankinis',
-    aiTab: 'AI iš PDF',
+    aiTab: 'Clarity Gremlin iš PDF',
     strategySetup: 'Strategijos nustatymai',
     aiSetup: 'AI generavimo nustatymai',
     strategyTitle: 'Strategijos pavadinimas',
@@ -8990,10 +8990,10 @@ function strategyCreateUiText() {
     clarificationPlaceholder: 'Koks lygis, tonas, prioritetai, ko vengti.',
     documents: 'PDF dokumentai',
     documentsHint: 'Įkelkite strategijos PDF dokumentus, kuriuos AI turi perskaityti. Galite pasirinkti kelis failus, jei medžiaga išskaidyta.',
-    aiNoticeTitle: 'Prieš naudojant AI iš PDF',
+    aiNoticeTitle: 'Prieš naudojant Clarity Gremlin iš PDF',
     aiNoticeBody: 'digistrategy.eu paverčia įkeltus strateginius dokumentus į struktūrizuotą formatą pagal gaires, iniciatyvas ir kitus platformos laukus. Kadangi šaltiniai dažnai būna naratyviniai ir skirtingos struktūros, sugeneruotame rezultate gali būti netikslumų, praleistų ryšių ar supaprastinimų, todėl rezultatą būtina peržiūrėti rankiniu būdu.',
     aiNoticeConfirm: 'Suprantu ir noriu tęsti',
-    createAi: 'Generuoti strategiją su AI',
+    createAi: 'Generuoti strategiją su Clarity Gremlin',
     progressTitle: 'AI generavimas vyksta',
     progressUploading: 'Įkeliami dokumentai',
     progressAnalyses: 'Analizuojama su AI',
@@ -9001,7 +9001,7 @@ function strategyCreateUiText() {
     progressDone: 'Užbaigiama',
     progressRecovering: 'Laukiamas serverio patvirtinimas',
     successManual: 'Strategija sukurta:',
-    successAi: 'AI sugeneravo strategiją:'
+    successAi: 'Clarity Gremlin sugeneravo strategiją:'
   };
 }
 
