@@ -553,8 +553,8 @@ function resolveInitialImplementationPlanSubview() {
 
 function normalizeClarityGremlinWorkspaceTab(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === 'strategic-links' || normalized === 'pdf' || normalized === 'policy-alignment') return normalized;
-  return 'review';
+  if (normalized === 'review' || normalized === 'strategic-links' || normalized === 'pdf' || normalized === 'policy-alignment') return normalized;
+  return 'home';
 }
 
 function resolveInitialClarityGremlinWorkspaceTab() {
@@ -2802,15 +2802,23 @@ function clarityGremlinWorkspaceUiText() {
         title: 'Clarity Gremlin',
         subtitle: 'One place for the AI functions that help structure, clarify, connect, and interpret strategy work.',
         overviewTitle: 'Choose what Clarity Gremlin should help with',
+        overviewIntro: 'Start from the overview, then open the exact Clarity Gremlin mode you need for the current task.',
+        loginRequiredNotice: 'You must log in to use Clarity Gremlin features.',
+        cycleRequiredNotice: 'Select an active strategy first to use strategy-specific Gremlin features.',
+        backToOverview: 'Back to overview',
         reviewTitle: 'Review strategy',
         reviewBody: 'Run the full Clarity Gremlin review workspace for the current strategy or a selected card. This keeps recent analyses, draft suggestions, language, and model settings in one place.',
+        reviewHow: 'Analyze the current strategy or one selected card, score clarity, and prepare structured improvement suggestions.',
         reviewAction: 'Open review workspace',
         strategicLinksTitle: 'Find strategic links',
         strategicLinksBody: 'Search for connections between this strategy and other strategies, then review, accept, or dismiss suggestions.',
-        pdfTitle: 'Structure PDF',
+        strategicLinksHow: 'Compare the current strategy with other strategies and surface candidate guideline links that can be created or dismissed.',
+        pdfTitle: 'Create strategy from PDF',
         pdfBody: 'Turn uploaded strategy PDFs into the digistrategy.eu guideline and initiative structure with manual review before publishing.',
+        pdfHow: 'Read uploaded PDF documents, extract strategy structure, and prepare a draft strategy that can be reviewed before publishing.',
         pdfAction: 'Open PDF structuring',
         pdfAdminOnly: 'PDF structuring is available to institution admins who can create strategies.',
+        pdfAdminOnlyShort: 'Only institution admins can create strategies from PDF.',
         pdfChecklistTitle: 'What to prepare',
         pdfChecklistDocs: 'One or more strategy PDFs with the source content you want Gremlin to read.',
         pdfChecklistTitleField: 'A clean strategy title and short description that should appear in the platform.',
@@ -2822,6 +2830,7 @@ function clarityGremlinWorkspaceUiText() {
         pdfEntryHint: 'Best for long narrative strategy documents that need to be translated into platform structure.',
         policyTitle: 'Check policy alignment',
         policyBody: 'Open the policy alignment workspace to compare strategy content against policy frameworks and external requirements.',
+        policyHow: 'Compare strategy content against policy frameworks and external requirements to spot missing themes, gaps, and obligations.',
         policyAction: 'Open policy alignment',
         policyModesTitle: 'Available policy checks',
         policyModeFrameworks: 'Policy framework',
@@ -2842,15 +2851,23 @@ function clarityGremlinWorkspaceUiText() {
         title: 'Clarity Gremlin',
         subtitle: 'Viena vieta visoms AI funkcijoms, kurios padeda aiškiau suprasti, struktūruoti, susieti ir interpretuoti strategiją.',
         overviewTitle: 'Pasirinkite, kuo Clarity Gremlin turėtų padėti',
+        overviewIntro: 'Pirmiausia peržiūrėkite režimų apžvalgą, tada atverkite tą Clarity Gremlin funkciją, kurios reikia dabartinei užduočiai.',
+        loginRequiredNotice: 'Prisijunkite, kad galėtumėte naudoti Clarity Gremlin funkcijas.',
+        cycleRequiredNotice: 'Pirmiausia pasirinkite aktyvią strategiją, kad galėtumėte naudoti strategijai skirtas Gremlin funkcijas.',
+        backToOverview: 'Grįžti į apžvalgą',
         reviewTitle: 'Peržiūrėti strategiją',
         reviewBody: 'Atverkite pilną Clarity Gremlin analizės darbo erdvę visai strategijai arba vienai pasirinktai kortelei. Čia vienoje vietoje laikomos analizės, pasiūlymų juodraščiai, kalba ir modelio nustatymai.',
+        reviewHow: 'Išanalizuokite dabartinę strategiją arba vieną pasirinktą kortelę, gaukite aiškumo įvertinimą ir struktūruotus tobulinimo pasiūlymus.',
         reviewAction: 'Atverti analizės erdvę',
         strategicLinksTitle: 'Rasti strateginius ryšius',
         strategicLinksBody: 'Ieškokite ryšių tarp šios strategijos ir kitų strategijų, tada peržiūrėkite, patvirtinkite arba paslėpkite pasiūlymus.',
-        pdfTitle: 'Struktūruoti PDF',
+        strategicLinksHow: 'Palyginkite dabartinę strategiją su kitomis strategijomis ir gaukite galimų gairių ryšių pasiūlymus, kuriuos galima sukurti arba atmesti.',
+        pdfTitle: 'Sukurti strategiją iš PDF',
         pdfBody: 'Paverskite įkeltus strategijos PDF dokumentus į digistrategy.eu gairių ir iniciatyvų struktūrą, o prieš paskelbiant viską peržiūrėkite rankiniu būdu.',
+        pdfHow: 'Perskaitykite įkeltus PDF dokumentus, ištraukite strategijos struktūrą ir paruoškite strategijos juodraštį rankinei peržiūrai prieš paskelbiant.',
         pdfAction: 'Atverti PDF struktūravimą',
         pdfAdminOnly: 'PDF struktūravimas galimas institucijos administratoriams, kurie gali kurti strategijas.',
+        pdfAdminOnlyShort: 'Tik institucijos administratoriai gali kurti strategijas iš PDF.',
         pdfChecklistTitle: 'Ką pasiruošti',
         pdfChecklistDocs: 'Vieną ar kelis strategijos PDF dokumentus su turiniu, kurį Gremlin turi perskaityti.',
         pdfChecklistTitleField: 'Aiškų strategijos pavadinimą ir trumpą aprašą, kurie bus rodomi platformoje.',
@@ -2862,6 +2879,7 @@ function clarityGremlinWorkspaceUiText() {
         pdfEntryHint: 'Geriausia ilgiems naratyviniams strategijų dokumentams, kuriuos reikia paversti platformos struktūra.',
         policyTitle: 'Tikrinti politikos atitiktį',
         policyBody: 'Atverkite politikos atitikties darbo erdvę ir palyginkite strategijos turinį su politikos karkasais bei išoriniais reikalavimais.',
+        policyHow: 'Palyginkite strategijos turinį su politikos karkasais ir išoriniais reikalavimais, kad pamatytumėte spragas, trūkstamas temas ir įsipareigojimus.',
         policyAction: 'Atverti politikos atitiktį',
         policyModesTitle: 'Galimi politikos tikrinimo režimai',
         policyModeFrameworks: 'Politikos karkasas',
@@ -2900,9 +2918,12 @@ function renderClarityGremlinWorkspaceView() {
   const currentProvider = formatFeatureAiLabel('clarityGremlin');
   const launchContextLabel = resolveClarityGremlinLaunchLabel();
   const canStructurePdf = canManageSelectedInstitution();
+  const isLoggedInMember = isLoggedIn();
+  const hasCycle = Boolean(state.cycle?.id);
   const reviewContext = resolveClarityGremlinContext();
   const canOpenReview = reviewContext.supported === true;
-  const canOpenPolicy = isLoggedIn();
+  const canOpenStrategicLinks = isLoggedInMember && hasCycle;
+  const canOpenPolicy = isLoggedInMember;
   const reviewBlockedLabel = !isLoggedIn()
     ? langText('Prisijunkite, kad galėtumėte naudoti Clarity Gremlin analizę.', 'Sign in to use Clarity Gremlin review.')
     : !state.cycle?.id
@@ -2910,6 +2931,76 @@ function renderClarityGremlinWorkspaceView() {
       : '';
 
   const renderModeBody = () => {
+    if (activeMode === 'home') {
+      const globalNotice = !isLoggedInMember
+        ? ui.loginRequiredNotice
+        : !hasCycle
+          ? ui.cycleRequiredNotice
+          : '';
+      return `
+        <section class="clarity-workspace-section">
+          <section class="clarity-workspace-home-intro card">
+            <div class="guideline-group-header">
+              <h3>${escapeHtml(ui.overviewTitle)}</h3>
+              <span class="tag">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
+            </div>
+            <p class="prompt">${escapeHtml(ui.overviewIntro)}</p>
+            ${globalNotice ? `<p class="prompt clarity-workspace-home-notice">${escapeHtml(globalNotice)}</p>` : ''}
+          </section>
+          <section class="clarity-workspace-home-grid">
+            <article class="clarity-workspace-mode-card clarity-workspace-home-card">
+              <div class="clarity-workspace-mode-copy">
+                <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.reviewTitle)}</span>
+                <h3>${escapeHtml(ui.reviewTitle)}</h3>
+                <p>${escapeHtml(ui.reviewBody)}</p>
+              </div>
+              <p class="prompt clarity-workspace-mini-note">${escapeHtml(ui.reviewHow)}</p>
+              <div class="clarity-workspace-mode-actions">
+                <button type="button" class="btn btn-primary" data-action="switch-gremlin-mode" data-gremlin-mode="review"${canOpenReview ? '' : ' disabled'}>${escapeHtml(ui.reviewTitle)}</button>
+              </div>
+              ${canOpenReview ? '' : `<p class="prompt clarity-workspace-inline-note">${escapeHtml(reviewBlockedLabel || ui.loginRequiredNotice)}</p>`}
+            </article>
+            <article class="clarity-workspace-mode-card clarity-workspace-home-card">
+              <div class="clarity-workspace-mode-copy">
+                <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.strategicLinksTitle)}</span>
+                <h3>${escapeHtml(ui.strategicLinksTitle)}</h3>
+                <p>${escapeHtml(ui.strategicLinksBody)}</p>
+              </div>
+              <p class="prompt clarity-workspace-mini-note">${escapeHtml(ui.strategicLinksHow)}</p>
+              <div class="clarity-workspace-mode-actions">
+                <button type="button" class="btn btn-primary" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links"${canOpenStrategicLinks ? '' : ' disabled'}>${escapeHtml(ui.strategicLinksTitle)}</button>
+              </div>
+              ${canOpenStrategicLinks ? '' : `<p class="prompt clarity-workspace-inline-note">${escapeHtml(!isLoggedInMember ? ui.loginRequiredNotice : ui.cycleRequiredNotice)}</p>`}
+            </article>
+            <article class="clarity-workspace-mode-card clarity-workspace-home-card">
+              <div class="clarity-workspace-mode-copy">
+                <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.pdfTitle)}</span>
+                <h3>${escapeHtml(ui.pdfTitle)}</h3>
+                <p>${escapeHtml(ui.pdfBody)}</p>
+              </div>
+              <p class="prompt clarity-workspace-mini-note">${escapeHtml(ui.pdfHow)}</p>
+              <div class="clarity-workspace-mode-actions">
+                <button type="button" class="btn btn-primary" data-action="switch-gremlin-mode" data-gremlin-mode="pdf"${canStructurePdf ? '' : ' disabled'}>${escapeHtml(ui.pdfTitle)}</button>
+              </div>
+              ${canStructurePdf ? '' : `<p class="prompt clarity-workspace-inline-note">${escapeHtml(!isLoggedInMember ? ui.loginRequiredNotice : ui.pdfAdminOnlyShort)}</p>`}
+            </article>
+            <article class="clarity-workspace-mode-card clarity-workspace-home-card">
+              <div class="clarity-workspace-mode-copy">
+                <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.policyTitle)}</span>
+                <h3>${escapeHtml(ui.policyTitle)}</h3>
+                <p>${escapeHtml(ui.policyBody)}</p>
+              </div>
+              <p class="prompt clarity-workspace-mini-note">${escapeHtml(ui.policyHow)}</p>
+              <div class="clarity-workspace-mode-actions">
+                <button type="button" class="btn btn-primary" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment"${canOpenPolicy ? '' : ' disabled'}>${escapeHtml(ui.policyTitle)}</button>
+              </div>
+              ${canOpenPolicy ? '' : `<p class="prompt clarity-workspace-inline-note">${escapeHtml(ui.loginRequiredNotice)}</p>`}
+            </article>
+          </section>
+        </section>
+      `;
+    }
+
     if (activeMode === 'strategic-links') {
       return `
         <section class="clarity-workspace-section">
@@ -3059,14 +3150,18 @@ function renderClarityGremlinWorkspaceView() {
       <section class="clarity-workspace-nav card">
         <div class="guideline-group-header">
           <h3>${escapeHtml(ui.modesLabel)}</h3>
-          <span class="tag">${escapeHtml(ui.gremlinHome)}</span>
+          ${activeMode === 'home'
+            ? `<span class="tag">${escapeHtml(ui.gremlinHome)}</span>`
+            : `<button type="button" class="btn btn-ghost" data-action="switch-gremlin-mode" data-gremlin-mode="home">${escapeHtml(ui.backToOverview)}</button>`}
         </div>
-        <div class="clarity-workspace-mode-tabs">
-          <button type="button" class="btn ${activeMode === 'review' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="review">${escapeHtml(ui.reviewTitle)}</button>
-          <button type="button" class="btn ${activeMode === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links">${escapeHtml(ui.strategicLinksTitle)}</button>
-          <button type="button" class="btn ${activeMode === 'pdf' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="pdf">${escapeHtml(ui.pdfTitle)}</button>
-          <button type="button" class="btn ${activeMode === 'policy-alignment' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment">${escapeHtml(ui.policyTitle)}</button>
-        </div>
+        ${activeMode === 'home' ? '' : `
+          <div class="clarity-workspace-mode-tabs">
+            <button type="button" class="btn ${activeMode === 'review' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="review">${escapeHtml(ui.reviewTitle)}</button>
+            <button type="button" class="btn ${activeMode === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links">${escapeHtml(ui.strategicLinksTitle)}</button>
+            <button type="button" class="btn ${activeMode === 'pdf' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="pdf">${escapeHtml(ui.pdfTitle)}</button>
+            <button type="button" class="btn ${activeMode === 'policy-alignment' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment">${escapeHtml(ui.policyTitle)}</button>
+          </div>
+        `}
       </section>
       ${renderModeBody()}
     </section>
@@ -3573,7 +3668,7 @@ function captureClarityGremlinLaunchContext() {
   state.clarityGremlinLaunchContextEntityId = '';
 }
 
-function openClarityGremlinWorkspace(mode = 'review') {
+function openClarityGremlinWorkspace(mode = 'home') {
   state.clarityGremlinWorkspaceTab = normalizeClarityGremlinWorkspaceTab(mode);
   if (state.activeView === 'clarity-gremlin') {
     syncRouteState();
@@ -4185,6 +4280,9 @@ function renderSteps() {
               window.clearTimeout(state.mapInstitutionPulseTimerId);
               state.mapInstitutionPulseTimerId = 0;
             }
+          }
+          if (item.id === 'clarity-gremlin') {
+            state.clarityGremlinWorkspaceTab = 'home';
           }
           state.expandedStepId = canExpand ? item.id : '';
           setActiveView(item.id);
