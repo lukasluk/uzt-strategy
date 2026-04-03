@@ -2914,7 +2914,6 @@ function resolveClarityGremlinLaunchLabel() {
 
 function renderClarityGremlinWorkspaceView() {
   const ui = clarityGremlinWorkspaceUiText();
-  const activeMode = normalizeClarityGremlinWorkspaceTab(state.clarityGremlinWorkspaceTab);
   const currentProvider = formatFeatureAiLabel('clarityGremlin');
   const launchContextLabel = resolveClarityGremlinLaunchLabel();
   const canStructurePdf = canManageSelectedInstitution();
@@ -2929,6 +2928,16 @@ function renderClarityGremlinWorkspaceView() {
     : !state.cycle?.id
       ? langText('Pirmiausia pasirinkite aktyvią strategiją su ciklu.', 'Select an active strategy with a cycle first.')
       : '';
+  const requestedMode = normalizeClarityGremlinWorkspaceTab(state.clarityGremlinWorkspaceTab);
+  const activeMode = !isLoggedInMember
+    ? 'home'
+    : requestedMode === 'review' && !canOpenReview
+      ? 'home'
+      : requestedMode === 'strategic-links' && !canOpenStrategicLinks
+        ? 'home'
+        : requestedMode === 'pdf' && !canStructurePdf
+          ? 'home'
+          : requestedMode;
 
   const renderModeBody = () => {
     if (activeMode === 'home') {
@@ -3083,48 +3092,41 @@ function renderClarityGremlinWorkspaceView() {
       `;
     }
 
+    if (activeMode === 'review') {
+      return `
+        <section class="clarity-workspace-section">
+          <article class="clarity-workspace-mode-card clarity-workspace-mode-card-primary clarity-workspace-single-mode-card">
+            <div class="clarity-workspace-mode-copy">
+              <span class="clarity-workspace-mode-kicker">${escapeHtml(ui.reviewTitle)}</span>
+              <h3>${escapeHtml(ui.reviewTitle)}</h3>
+              <p>${escapeHtml(ui.reviewBody)}</p>
+              <div class="header-stack">
+                <span class="tag">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
+                <span class="tag">${escapeHtml(ui.launchContext)}: ${escapeHtml(launchContextLabel || ui.noContext)}</span>
+              </div>
+            </div>
+            <p class="prompt clarity-workspace-mini-note">${escapeHtml(ui.reviewHow)}</p>
+            <div class="clarity-workspace-mode-actions">
+              <button type="button" class="btn btn-primary" data-action="open-gremlin-review"${canOpenReview ? '' : ' disabled'}>${escapeHtml(ui.reviewAction)}</button>
+            </div>
+            ${canOpenReview ? '' : `<p class="prompt clarity-workspace-inline-note">${escapeHtml(reviewBlockedLabel)}</p>`}
+          </article>
+        </section>
+      `;
+    }
+
     return `
-      <section class="clarity-workspace-section clarity-workspace-review-grid">
-        <article class="clarity-workspace-mode-card clarity-workspace-mode-card-primary">
+      <section class="clarity-workspace-section">
+        <article class="clarity-workspace-mode-card clarity-workspace-home-card">
           <div class="clarity-workspace-mode-copy">
             <h3>${escapeHtml(ui.reviewTitle)}</h3>
             <p>${escapeHtml(ui.reviewBody)}</p>
-            <div class="header-stack">
-              <span class="tag">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
-              <span class="tag">${escapeHtml(ui.launchContext)}: ${escapeHtml(launchContextLabel || ui.noContext)}</span>
-            </div>
           </div>
+          <p class="prompt clarity-workspace-mini-note">${escapeHtml(ui.reviewHow)}</p>
           <div class="clarity-workspace-mode-actions">
-            <button type="button" class="btn btn-primary" data-action="open-gremlin-review"${canOpenReview ? '' : ' disabled'}>${escapeHtml(ui.reviewAction)}</button>
-            ${reviewBlockedLabel ? `<p class="prompt clarity-workspace-inline-note">${escapeHtml(reviewBlockedLabel)}</p>` : ''}
+            <button type="button" class="btn btn-primary" data-action="switch-gremlin-mode" data-gremlin-mode="review"${canOpenReview ? '' : ' disabled'}>${escapeHtml(ui.reviewTitle)}</button>
           </div>
-        </article>
-        <article class="clarity-workspace-mode-card">
-          <div class="clarity-workspace-mode-copy">
-            <h3>${escapeHtml(ui.strategicLinksTitle)}</h3>
-            <p>${escapeHtml(ui.strategicLinksBody)}</p>
-          </div>
-          <div class="clarity-workspace-mode-actions">
-            <button type="button" class="btn btn-ghost" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links">${escapeHtml(ui.strategicLinksTitle)}</button>
-          </div>
-        </article>
-        <article class="clarity-workspace-mode-card">
-          <div class="clarity-workspace-mode-copy">
-            <h3>${escapeHtml(ui.pdfTitle)}</h3>
-            <p>${escapeHtml(ui.pdfBody)}</p>
-          </div>
-          <div class="clarity-workspace-mode-actions">
-            <button type="button" class="btn btn-ghost" data-action="switch-gremlin-mode" data-gremlin-mode="pdf">${escapeHtml(ui.pdfAction)}</button>
-          </div>
-        </article>
-        <article class="clarity-workspace-mode-card">
-          <div class="clarity-workspace-mode-copy">
-            <h3>${escapeHtml(ui.policyTitle)}</h3>
-            <p>${escapeHtml(ui.policyBody)}</p>
-          </div>
-          <div class="clarity-workspace-mode-actions">
-            <button type="button" class="btn btn-ghost" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment">${escapeHtml(ui.policyAction)}</button>
-          </div>
+          ${canOpenReview ? '' : `<p class="prompt clarity-workspace-inline-note">${escapeHtml(reviewBlockedLabel || ui.loginRequiredNotice)}</p>`}
         </article>
       </section>
     `;
@@ -3156,10 +3158,10 @@ function renderClarityGremlinWorkspaceView() {
         </div>
         ${activeMode === 'home' ? '' : `
           <div class="clarity-workspace-mode-tabs">
-            <button type="button" class="btn ${activeMode === 'review' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="review">${escapeHtml(ui.reviewTitle)}</button>
-            <button type="button" class="btn ${activeMode === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links">${escapeHtml(ui.strategicLinksTitle)}</button>
-            <button type="button" class="btn ${activeMode === 'pdf' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="pdf">${escapeHtml(ui.pdfTitle)}</button>
-            <button type="button" class="btn ${activeMode === 'policy-alignment' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment">${escapeHtml(ui.policyTitle)}</button>
+            <button type="button" class="btn ${activeMode === 'review' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="review"${canOpenReview ? '' : ' disabled'}>${escapeHtml(ui.reviewTitle)}</button>
+            <button type="button" class="btn ${activeMode === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links"${canOpenStrategicLinks ? '' : ' disabled'}>${escapeHtml(ui.strategicLinksTitle)}</button>
+            <button type="button" class="btn ${activeMode === 'pdf' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="pdf"${canStructurePdf ? '' : ' disabled'}>${escapeHtml(ui.pdfTitle)}</button>
+            <button type="button" class="btn ${activeMode === 'policy-alignment' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment"${canOpenPolicy ? '' : ' disabled'}>${escapeHtml(ui.policyTitle)}</button>
           </div>
         `}
       </section>
