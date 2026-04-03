@@ -2941,21 +2941,8 @@ function renderClarityGremlinWorkspaceView() {
 
   const renderModeBody = () => {
     if (activeMode === 'home') {
-      const globalNotice = !isLoggedInMember
-        ? ui.loginRequiredNotice
-        : !hasCycle
-          ? ui.cycleRequiredNotice
-          : '';
       return `
         <section class="clarity-workspace-section">
-          <section class="clarity-workspace-home-intro card">
-            <div class="guideline-group-header">
-              <h3>${escapeHtml(ui.overviewTitle)}</h3>
-              <span class="tag">${escapeHtml(ui.providerLabel)}: ${escapeHtml(currentProvider)}</span>
-            </div>
-            <p class="prompt">${escapeHtml(ui.overviewIntro)}</p>
-            ${globalNotice ? `<p class="prompt clarity-workspace-home-notice">${escapeHtml(globalNotice)}</p>` : ''}
-          </section>
           <section class="clarity-workspace-home-grid">
             <article class="clarity-workspace-mode-card clarity-workspace-home-card">
               <div class="clarity-workspace-mode-copy">
@@ -3149,22 +3136,12 @@ function renderClarityGremlinWorkspaceView() {
           </div>
         </div>
       </div>
-      <section class="clarity-workspace-nav card">
-        <div class="guideline-group-header">
-          <h3>${escapeHtml(ui.modesLabel)}</h3>
-          ${activeMode === 'home'
-            ? `<span class="tag">${escapeHtml(ui.gremlinHome)}</span>`
-            : `<button type="button" class="btn btn-ghost" data-action="switch-gremlin-mode" data-gremlin-mode="home">${escapeHtml(ui.backToOverview)}</button>`}
-        </div>
-        ${activeMode === 'home' ? '' : `
-          <div class="clarity-workspace-mode-tabs">
-            <button type="button" class="btn ${activeMode === 'review' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="review"${canOpenReview ? '' : ' disabled'}>${escapeHtml(ui.reviewTitle)}</button>
-            <button type="button" class="btn ${activeMode === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links"${canOpenStrategicLinks ? '' : ' disabled'}>${escapeHtml(ui.strategicLinksTitle)}</button>
-            <button type="button" class="btn ${activeMode === 'pdf' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="pdf"${canStructurePdf ? '' : ' disabled'}>${escapeHtml(ui.pdfTitle)}</button>
-            <button type="button" class="btn ${activeMode === 'policy-alignment' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment"${canOpenPolicy ? '' : ' disabled'}>${escapeHtml(ui.policyTitle)}</button>
-          </div>
-        `}
-      </section>
+      <div class="clarity-workspace-topnav" role="tablist" aria-label="${escapeHtml(ui.modesLabel)}">
+        <button type="button" class="btn ${activeMode === 'home' ? 'btn-ghost' : activeMode === 'review' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="review"${canOpenReview ? '' : ' disabled'}>${escapeHtml(ui.reviewTitle)}</button>
+        <button type="button" class="btn ${activeMode === 'strategic-links' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="strategic-links"${canOpenStrategicLinks ? '' : ' disabled'}>${escapeHtml(ui.strategicLinksTitle)}</button>
+        <button type="button" class="btn ${activeMode === 'pdf' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="pdf"${canStructurePdf ? '' : ' disabled'}>${escapeHtml(ui.pdfTitle)}</button>
+        <button type="button" class="btn ${activeMode === 'policy-alignment' ? 'btn-primary' : 'btn-ghost'}" data-action="switch-gremlin-mode" data-gremlin-mode="policy-alignment"${canOpenPolicy ? '' : ' disabled'}>${escapeHtml(ui.policyTitle)}</button>
+      </div>
       ${renderModeBody()}
     </section>
   `;

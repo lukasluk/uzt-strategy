@@ -4849,6 +4849,17 @@ body.embed-map-page .map-fullscreen-watermark img {
   padding: 18px 18px 16px;
 }
 
+.clarity-workspace-topnav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.clarity-workspace-topnav .btn {
+  min-height: 48px;
+  justify-content: center;
+}
+
 .clarity-workspace-mode-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -10971,6 +10982,7 @@ body.meta-admin-page .tag-slug {
 }
 @media (max-width: 1100px) {
   .clarity-workspace-home-grid,
+  .clarity-workspace-topnav,
   .clarity-workspace-mode-tabs,
   .clarity-workspace-review-grid,
   .clarity-workspace-mode-card-wide,
