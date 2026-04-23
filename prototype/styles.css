@@ -6344,6 +6344,84 @@ select:focus {
   margin: 0;
   color: #7a6240;
 }
+.guideline-groups.guideline-groups-cards-only {
+  display: grid;
+  gap: 22px;
+}
+.guideline-inline-edit-shell {
+  display: grid;
+  gap: 18px;
+}
+.guideline-inline-edit-intro {
+  border-color: #d9e4f5;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8fd 100%);
+}
+.guideline-inline-edit-section {
+  margin: 0;
+}
+.guideline-inline-edit-grid {
+  display: grid;
+  gap: 14px;
+}
+.guideline-inline-edit-card {
+  display: grid;
+  gap: 14px;
+  border-color: #d7e4f4;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+.guideline-inline-edit-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.guideline-inline-edit-field {
+  display: grid;
+  gap: 8px;
+}
+.guideline-inline-edit-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #54667e;
+}
+.guideline-inline-edit-title,
+.guideline-inline-edit-read-title {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #d7e1ef;
+  background: #ffffff;
+  color: #18314d;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+.guideline-inline-edit-title:focus {
+  outline: none;
+  border-color: #b9ccf0;
+  box-shadow: 0 0 0 4px rgba(59, 116, 211, 0.08);
+}
+.guideline-inline-edit-read-title {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+}
+.guideline-inline-edit-description.rich-text-surface {
+  min-height: 132px;
+  padding: 14px 16px;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.guideline-inline-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.guideline-inline-open-btn {
+  white-space: nowrap;
+}
 .card-pending {
   border-style: dashed;
   border-width: 2px;

@@ -252,6 +252,7 @@ const state = {
   mapLayer: 'guidelines',
   mapGuidelinesShowInitiatives: false,
   guidelinesShowInitiatives: false,
+  guidelinesInspectionMode: 'default',
   implementationPlanLayer: resolveInitialImplementationPlanLayer(),
   implementationPlanSubview: resolveInitialImplementationPlanSubview(),
   clarityGremlinWorkspaceTab: resolveInitialClarityGremlinWorkspaceTab(),
@@ -4526,6 +4527,43 @@ function normalizeGuidelineRelation(value) {
   return 'orphan';
 }
 
+function normalizeGuidelinesInspectionMode(value) {
+  const normalized = String(value || 'default').trim().toLowerCase();
+  if (
+    normalized === 'full-with-initiatives'
+    || normalized === 'guidelines-only'
+    || normalized === 'text-blocks'
+  ) {
+    return normalized;
+  }
+  return 'default';
+}
+
+function guidelinesInspectionMode() {
+  return normalizeGuidelinesInspectionMode(state.guidelinesInspectionMode);
+}
+
+function guidelinesShowAssociatedInitiatives() {
+  return guidelinesInspectionMode() === 'full-with-initiatives';
+}
+
+function guidelinesCardsOnlyMode() {
+  return guidelinesInspectionMode() === 'guidelines-only';
+}
+
+function guidelinesTextBlocksMode() {
+  return guidelinesInspectionMode() === 'text-blocks';
+}
+
+function cycleGuidelinesInspectionMode() {
+  const order = ['default', 'full-with-initiatives', 'guidelines-only', 'text-blocks'];
+  const current = guidelinesInspectionMode();
+  const currentIndex = order.indexOf(current);
+  const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+  state.guidelinesInspectionMode = order[(safeIndex + 1) % order.length];
+  state.guidelinesShowInitiatives = guidelinesShowAssociatedInitiatives();
+}
+
 function isPendingStatus(value) {
   return String(value || '').trim().toLowerCase() === 'pending';
 }
@@ -5541,6 +5579,74 @@ function renderInitiativeCard(initiative, options) {
         </div>
       ` : ''}
     </article>
+  `;
+}
+
+function renderGuidelineInlineTextBlock(guideline, options = {}) {
+  const item = guideline && typeof guideline === 'object' ? guideline : null;
+  if (!item?.id) return '';
+  const editable = Boolean(options.editable);
+  const relationKey = normalizeGuidelineRelation(item.relationType);
+  const relationTag = relationLabel(relationKey).charAt(0).toUpperCase() + relationLabel(relationKey).slice(1);
+  const guidelineStatus = String(item.status || 'active').trim().toLowerCase();
+  const pendingStatus = guidelineStatus === 'pending';
+  const disabledAttr = editable && !state.busy ? '' : 'disabled';
+  const titleLabel = langText('Gairės pavadinimas', 'Guideline title');
+  const descriptionLabel = langText('Aprašymas', 'Description');
+  const saveLabel = langText('Išsaugoti tekstą', 'Save text');
+  const detailLabel = langText('Atidaryti kortelę', 'Open card');
+  const linkedInitiatives = resolveGuidelineRelatedInitiatives(item).items;
+
+  return `
+    <form class="card guideline-inline-edit-card guideline-relation-${escapeHtml(relationKey)}" data-guideline-inline-form="1" data-guideline-id="${escapeHtml(item.id)}">
+      <div class="guideline-inline-edit-head">
+        <div class="header-stack">
+          <span class="tag">${escapeHtml(relationTag)}</span>
+          ${pendingStatus ? `<span class="tag tag-main">${escapeHtml(langText('Laukia tvirtinimo', 'Pending'))}</span>` : ''}
+          ${linkedInitiatives.length ? `<span class="tag tag-initiative-peek">${escapeHtml(langText('Iniciatyvos', 'Initiatives'))}: ${linkedInitiatives.length}</span>` : ''}
+        </div>
+        <button type="button" class="btn btn-ghost guideline-inline-open-btn" data-action="open-inline-guideline-detail" data-guideline-id="${escapeHtml(item.id)}">${escapeHtml(detailLabel)}</button>
+      </div>
+      <label class="guideline-inline-edit-field">
+        <span class="guideline-inline-edit-label">${escapeHtml(titleLabel)}</span>
+        ${editable
+      ? `<input class="guideline-inline-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required ${disabledAttr} />`
+      : `<div class="guideline-inline-edit-read-title">${escapeHtml(item.title || '-')}</div>`}
+      </label>
+      <label class="guideline-inline-edit-field">
+        <span class="guideline-inline-edit-label">${escapeHtml(descriptionLabel)}</span>
+        ${editable
+      ? renderRichTextEditor({
+        name: 'description',
+        value: item.description || '',
+        placeholder: langText('Trumpas gairės aprašymas', 'Short guideline description'),
+        disabled: state.busy,
+        textareaClass: 'guideline-inline-edit-description'
+      })
+      : renderRichTextContent(item.description, langText('Be paaiškinimo', 'No description provided.'))}
+      </label>
+      ${editable ? `
+        <div class="guideline-inline-edit-actions">
+          <button class="btn btn-primary" type="submit" ${disabledAttr}>${escapeHtml(saveLabel)}</button>
+        </div>
+      ` : ''}
+    </form>
+  `;
+}
+
+function renderGuidelineTextBlocksSection(title, guidelines, options = {}) {
+  const list = Array.isArray(guidelines) ? guidelines : [];
+  if (!list.length) return '';
+  return `
+    <section class="guideline-group guideline-inline-edit-section">
+      <div class="guideline-group-header">
+        <h3>${escapeHtml(title)}</h3>
+        <span class="tag">${list.length}</span>
+      </div>
+      <div class="guideline-inline-edit-grid">
+        ${list.map((guideline) => renderGuidelineInlineTextBlock(guideline, options)).join('')}
+      </div>
+    </section>
   `;
 }
 
@@ -8108,7 +8214,11 @@ function renderStepView() {
   const member = isLoggedIn();
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
+  const canManage = canManageSelectedInstitution();
   const relationGroups = buildGuidelineRelationshipGroups(state.guidelines);
+  const showAssociatedInitiatives = guidelinesShowAssociatedInitiatives();
+  const showCardsOnly = guidelinesCardsOnlyMode();
+  const showTextBlocksOnly = guidelinesTextBlocksMode();
   const activeParentGuidelines = (state.guidelines || []).filter((guideline) => {
     const status = String(guideline?.status || '').trim().toLowerCase();
     return status === 'active' && normalizeGuidelineRelation(guideline?.relationType) === 'parent';
@@ -8117,8 +8227,30 @@ function renderStepView() {
     .map((guideline) => `<option value="${escapeHtml(guideline.id)}">${escapeHtml(guideline.title || guideline.id)}</option>`)
     .join('');
 
+  if (showTextBlocksOnly) {
+    elements.stepView.innerHTML = `
+      <section id="guidelineGroups" class="guideline-inline-edit-shell">
+        <div class="guideline-inline-edit-intro card">
+          <strong>${escapeHtml(langText('Teksto blokų režimas', 'Text block mode'))}</strong>
+          <p class="prompt" style="margin: 8px 0 0;">
+            ${escapeHtml(
+      canManage
+        ? langText('Redaguokite gairių pavadinimus ir aprašymus tiesiogiai šiame puslapyje.', 'Edit guideline titles and descriptions directly on this page.')
+        : langText('Čia rodomi tik gairių tekstai. Prisijunkite kaip institucijos administratorius, jei norite juos redaguoti.', 'Only guideline text is shown here. Sign in as an institution administrator to edit it.')
+    )}
+          </p>
+        </div>
+        ${renderGuidelineTextBlocksSection(langText('Tėvinės ir vaikinės gairės', 'Parent and child guidelines'), relationGroups.parentGroups.flatMap((group) => [group.parent, ...group.children]), { editable: canManage })}
+        ${renderGuidelineTextBlocksSection(langText('Vaikinės be tėvinės', 'Children without parent'), relationGroups.unassignedChildren, { editable: canManage })}
+        ${renderGuidelineTextBlocksSection(langText('Našlaitinės gairės', 'Orphan guidelines'), relationGroups.orphanGuidelines, { editable: canManage })}
+      </section>
+    `;
+    bindStepEvents();
+    return;
+  }
+
   elements.stepView.innerHTML = `
-    <div id="guidelineGroups" class="guideline-groups">
+    <div id="guidelineGroups" class="guideline-groups${showCardsOnly ? ' guideline-groups-cards-only' : ''}">
       <section class="guideline-group">
         ${relationGroups.parentGroups.length
           ? relationGroups.parentGroups.map((group) => `
@@ -8130,7 +8262,7 @@ function renderStepView() {
                       writable,
                       authenticated,
                       commentsVisible: state.commentsVisible,
-                      showAssociatedInitiatives: state.guidelinesShowInitiatives
+                      showAssociatedInitiatives
                     })}
                   </div>
                   <div class="relationship-child-stack">
@@ -8142,7 +8274,7 @@ function renderStepView() {
                             writable,
                             authenticated,
                             commentsVisible: state.commentsVisible,
-                            showAssociatedInitiatives: state.guidelinesShowInitiatives
+                            showAssociatedInitiatives
                           })).join('')}
                         </div>`
                       : `<div class="relationship-child-empty">
@@ -8167,14 +8299,14 @@ function renderStepView() {
             <h3>${langText('Vaikinės be tėvinės', 'Children without parent')}</h3>
             <span class="tag">${relationGroups.unassignedChildren.length}</span>
           </div>
-          <p class="prompt">${langText('Šios vaikinės gairės dar neturi teisingai priskirtos tėvinės gairės.', 'These child guidelines are missing a properly assigned parent guideline.')}</p>
+          ${showCardsOnly ? '' : `<p class="prompt">${langText('Šios vaikinės gairės dar neturi teisingai priskirtos tėvinės gairės.', 'These child guidelines are missing a properly assigned parent guideline.')}</p>`}
           <div class="card-list">
             ${relationGroups.unassignedChildren.map((guideline) => renderGuidelineCard(guideline, {
               member,
               writable,
               authenticated,
               commentsVisible: state.commentsVisible,
-              showAssociatedInitiatives: state.guidelinesShowInitiatives
+              showAssociatedInitiatives
             })).join('')}
           </div>
         </section>
@@ -8185,7 +8317,7 @@ function renderStepView() {
           <h3>${langText('Naslaitines gaires', 'Orphan guidelines')}</h3>
           <span class="tag">${relationGroups.orphanGuidelines.length}</span>
         </div>
-        <p class="prompt">${langText('Savarankiškos gairės, kurios nėra priskirtos tėvinei gairei.', 'Standalone guidelines that are not assigned to a parent guideline.')}</p>
+        ${showCardsOnly ? '' : `<p class="prompt">${langText('Savarankiškos gairės, kurios nėra priskirtos tėvinei gairei.', 'Standalone guidelines that are not assigned to a parent guideline.')}</p>`}
         ${relationGroups.orphanGuidelines.length
           ? `<div class="card-list">
               ${relationGroups.orphanGuidelines.map((guideline) => renderGuidelineCard(guideline, {
@@ -8193,7 +8325,7 @@ function renderStepView() {
                 writable,
                 authenticated,
                 commentsVisible: state.commentsVisible,
-                showAssociatedInitiatives: state.guidelinesShowInitiatives
+                showAssociatedInitiatives
               })).join('')}
             </div>`
           : `<div class="card guideline-empty">
@@ -8203,6 +8335,7 @@ function renderStepView() {
         }
       </section>
     </div>
+    ${showCardsOnly ? '' : `
     <section id="guidelineAddSection" class="step-add-anchor">
     ${member ? (writable ? `
       <div class="card guideline-add-card" style="margin-top: 16px;">
@@ -8263,10 +8396,11 @@ function renderStepView() {
       </div>
     `)}
     </section>
+    `}
 
-    <div class="header-stack step-header-actions" style="margin-top: 16px;">
+    ${showCardsOnly ? '' : `<div class="header-stack step-header-actions" style="margin-top: 16px;">
       <button id="exportBtnInline" class="btn btn-primary" ${state.busy ? 'disabled' : ''}>${langText('Eksportuoti santrauka', 'Export summary')}</button>
-    </div>
+    </div>`}
   `;
 
   bindStepEvents();
@@ -8292,6 +8426,49 @@ function bindStepEvents() {
   }
 
   bindRichTextEditors(elements.stepView);
+
+  elements.stepView.querySelectorAll('[data-action="open-inline-guideline-detail"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const guidelineId = String(button.getAttribute('data-guideline-id') || '').trim();
+      if (!guidelineId) return;
+      openGuidelineDetail(guidelineId);
+    });
+  });
+
+  elements.stepView.querySelectorAll('[data-guideline-inline-form]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!canManageSelectedInstitution()) return;
+      const guidelineId = String(form.getAttribute('data-guideline-id') || '').trim();
+      const guideline = findGuidelineById(guidelineId);
+      if (!guidelineId || !guideline) return;
+      const fd = new FormData(form);
+      const title = String(fd.get('title') || '').trim();
+      const description = normalizeRichTextValue(fd.get('description'));
+      if (!title) return;
+
+      await runBusy(async () => {
+        await api(`/api/v1/admin/guidelines/${encodeURIComponent(guidelineId)}`, {
+          method: 'PUT',
+          body: {
+            title,
+            description,
+            status: String(guideline.status || 'active').trim() || 'active',
+            relationType: normalizeGuidelineRelation(guideline.relationType),
+            parentGuidelineId: String(guideline.parentGuidelineId || '').trim() || null,
+            lineSide: normalizeLineSide(guideline.lineSide),
+            implementationDate: normalizeImplementationDateInputValue(
+              guideline.implementationDate || guideline.implementation_target_date || ''
+            ),
+            implementationOwner: String(
+              guideline.implementationOwner || guideline.implementation_owner || ''
+            ).trim()
+          }
+        });
+        await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
+      });
+    });
+  });
 
   const syncGuidelineParentField = () => {
     if (!(guidelineRelationType instanceof HTMLSelectElement)) return;
@@ -8808,7 +8985,7 @@ function bindGlobal() {
     const pressedJ = code === 'KeyJ' || key === 'j';
     if (state.activeView === 'guidelines' && pressedI) {
       event.preventDefault();
-      state.guidelinesShowInitiatives = !state.guidelinesShowInitiatives;
+      cycleGuidelinesInspectionMode();
       render();
       return;
     }
