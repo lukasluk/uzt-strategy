@@ -1379,18 +1379,21 @@ function renderRichTextEditor({
   value = '',
   placeholder = '',
   disabled = false,
-  textareaClass = ''
+  textareaClass = '',
+  showToolbar = true
 } = {}) {
   const classes = ['rich-text-input', textareaClass].filter(Boolean).join(' ');
   const disabledAttr = disabled ? 'disabled' : '';
   const sanitizedValue = sanitizeRichTextHtml(value);
   return `
     <div class="rich-text-editor">
+      ${showToolbar ? `
       <div class="rich-text-toolbar" role="toolbar" aria-label="${escapeHtml(langText('Teksto formatavimas', 'Text formatting'))}">
         <button type="button" class="btn btn-ghost rich-text-toolbar-btn" data-action="format-rich-text" data-command="bold" title="${escapeHtml(langText('Paryskinti', 'Bold'))}" ${disabledAttr}><strong>B</strong></button>
         <button type="button" class="btn btn-ghost rich-text-toolbar-btn" data-action="format-rich-text" data-command="italic" title="${escapeHtml(langText('Pasvyras', 'Italic'))}" ${disabledAttr}><em>I</em></button>
         <button type="button" class="btn btn-ghost rich-text-toolbar-btn" data-action="format-rich-text" data-command="underline" title="${escapeHtml(langText('Pabraukti', 'Underline'))}" ${disabledAttr}><u>U</u></button>
       </div>
+      ` : ''}
       <div
         class="rich-text-surface ${escapeHtml(textareaClass)}"
         contenteditable="${disabled ? 'false' : 'true'}"
@@ -5591,10 +5594,6 @@ function renderGuidelineInlineTextBlock(guideline, options = {}) {
   const guidelineStatus = String(item.status || 'active').trim().toLowerCase();
   const pendingStatus = guidelineStatus === 'pending';
   const disabledAttr = editable && !state.busy ? '' : 'disabled';
-  const titleLabel = langText('Gairės pavadinimas', 'Guideline title');
-  const descriptionLabel = langText('Aprašymas', 'Description');
-  const saveLabel = langText('Išsaugoti tekstą', 'Save text');
-  const detailLabel = langText('Atidaryti kortelę', 'Open card');
   const linkedInitiatives = resolveGuidelineRelatedInitiatives(item).items;
 
   return `
@@ -5605,31 +5604,20 @@ function renderGuidelineInlineTextBlock(guideline, options = {}) {
           ${pendingStatus ? `<span class="tag tag-main">${escapeHtml(langText('Laukia tvirtinimo', 'Pending'))}</span>` : ''}
           ${linkedInitiatives.length ? `<span class="tag tag-initiative-peek">${escapeHtml(langText('Iniciatyvos', 'Initiatives'))}: ${linkedInitiatives.length}</span>` : ''}
         </div>
-        <button type="button" class="btn btn-ghost guideline-inline-open-btn" data-action="open-inline-guideline-detail" data-guideline-id="${escapeHtml(item.id)}">${escapeHtml(detailLabel)}</button>
       </div>
-      <label class="guideline-inline-edit-field">
-        <span class="guideline-inline-edit-label">${escapeHtml(titleLabel)}</span>
-        ${editable
+      ${editable
       ? `<input class="guideline-inline-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required ${disabledAttr} />`
       : `<div class="guideline-inline-edit-read-title">${escapeHtml(item.title || '-')}</div>`}
-      </label>
-      <label class="guideline-inline-edit-field">
-        <span class="guideline-inline-edit-label">${escapeHtml(descriptionLabel)}</span>
-        ${editable
+      ${editable
       ? renderRichTextEditor({
         name: 'description',
         value: item.description || '',
         placeholder: langText('Trumpas gairės aprašymas', 'Short guideline description'),
         disabled: state.busy,
-        textareaClass: 'guideline-inline-edit-description'
+        textareaClass: 'guideline-inline-edit-description',
+        showToolbar: false
       })
       : renderRichTextContent(item.description, langText('Be paaiškinimo', 'No description provided.'))}
-      </label>
-      ${editable ? `
-        <div class="guideline-inline-edit-actions">
-          <button class="btn btn-primary" type="submit" ${disabledAttr}>${escapeHtml(saveLabel)}</button>
-        </div>
-      ` : ''}
     </form>
   `;
 }
@@ -5648,6 +5636,125 @@ function renderGuidelineTextBlocksSection(title, guidelines, options = {}) {
       </div>
     </section>
   `;
+}
+
+const guidelineInlineAutosaveState = new Map();
+
+function collectGuidelineInlinePayload(form) {
+  const guidelineId = String(form?.getAttribute('data-guideline-id') || '').trim();
+  const guideline = findGuidelineById(guidelineId);
+  if (!guidelineId || !guideline) return null;
+  const fd = new FormData(form);
+  const title = String(fd.get('title') || '').trim();
+  const description = normalizeRichTextValue(fd.get('description'));
+  if (!title) return null;
+  return {
+    guidelineId,
+    guideline,
+    title,
+    description,
+    serialized: JSON.stringify({ title, description })
+  };
+}
+
+function updateLocalGuidelineInlineDraft(guidelineId, patch = {}) {
+  const targetId = String(guidelineId || '').trim();
+  if (!targetId) return;
+  const guideline = findGuidelineById(targetId);
+  if (!guideline) return;
+  if (Object.prototype.hasOwnProperty.call(patch, 'title')) guideline.title = patch.title;
+  if (Object.prototype.hasOwnProperty.call(patch, 'description')) guideline.description = patch.description;
+}
+
+async function flushGuidelineInlineAutosave(form) {
+  if (!(form instanceof HTMLFormElement) || !document.body.contains(form)) return;
+  if (!canManageSelectedInstitution()) return;
+
+  const snapshot = collectGuidelineInlinePayload(form);
+  if (!snapshot) return;
+
+  const saveState = guidelineInlineAutosaveState.get(snapshot.guidelineId) || {
+    timerId: 0,
+    saving: false,
+    dirty: false,
+    lastSavedSerialized: ''
+  };
+  saveState.timerId = 0;
+  if (saveState.saving) {
+    saveState.dirty = true;
+    guidelineInlineAutosaveState.set(snapshot.guidelineId, saveState);
+    return;
+  }
+  if (snapshot.serialized === saveState.lastSavedSerialized) {
+    guidelineInlineAutosaveState.set(snapshot.guidelineId, saveState);
+    return;
+  }
+
+  saveState.saving = true;
+  saveState.dirty = false;
+  guidelineInlineAutosaveState.set(snapshot.guidelineId, saveState);
+
+  try {
+    await api(`/api/v1/admin/guidelines/${encodeURIComponent(snapshot.guidelineId)}`, {
+      method: 'PUT',
+      body: {
+        title: snapshot.title,
+        description: snapshot.description,
+        status: String(snapshot.guideline.status || 'active').trim() || 'active',
+        relationType: normalizeGuidelineRelation(snapshot.guideline.relationType),
+        parentGuidelineId: String(snapshot.guideline.parentGuidelineId || '').trim() || null,
+        lineSide: normalizeLineSide(snapshot.guideline.lineSide),
+        implementationDate: normalizeImplementationDateInputValue(
+          snapshot.guideline.implementationDate || snapshot.guideline.implementation_target_date || ''
+        ),
+        implementationOwner: String(
+          snapshot.guideline.implementationOwner || snapshot.guideline.implementation_owner || ''
+        ).trim()
+      }
+    });
+    updateLocalGuidelineInlineDraft(snapshot.guidelineId, {
+      title: snapshot.title,
+      description: snapshot.description
+    });
+    saveState.lastSavedSerialized = snapshot.serialized;
+  } catch (error) {
+    notifyError(toUserMessage(error));
+  } finally {
+    saveState.saving = false;
+    guidelineInlineAutosaveState.set(snapshot.guidelineId, saveState);
+    const latest = collectGuidelineInlinePayload(form);
+    if (saveState.dirty || (latest && latest.serialized !== saveState.lastSavedSerialized)) {
+      void flushGuidelineInlineAutosave(form);
+    }
+  }
+}
+
+function scheduleGuidelineInlineAutosave(form, { immediate = false } = {}) {
+  if (!(form instanceof HTMLFormElement)) return;
+  const guidelineId = String(form.getAttribute('data-guideline-id') || '').trim();
+  if (!guidelineId) return;
+  const saveState = guidelineInlineAutosaveState.get(guidelineId) || {
+    timerId: 0,
+    saving: false,
+    dirty: false,
+    lastSavedSerialized: ''
+  };
+  saveState.dirty = true;
+  if (saveState.timerId) {
+    window.clearTimeout(saveState.timerId);
+    saveState.timerId = 0;
+  }
+  guidelineInlineAutosaveState.set(guidelineId, saveState);
+  if (immediate) {
+    void flushGuidelineInlineAutosave(form);
+    return;
+  }
+  saveState.timerId = window.setTimeout(() => {
+    const latestState = guidelineInlineAutosaveState.get(guidelineId);
+    if (latestState) latestState.timerId = 0;
+    void flushGuidelineInlineAutosave(form);
+  }, 450);
+  guidelineInlineAutosaveState.set(guidelineId, saveState);
 }
 
 function setGuidelineInitiativePeekHighlight(initiativeId) {
@@ -8229,21 +8336,64 @@ function renderStepView() {
 
   if (showTextBlocksOnly) {
     elements.stepView.innerHTML = `
-      <section id="guidelineGroups" class="guideline-inline-edit-shell">
-        <div class="guideline-inline-edit-intro card">
-          <strong>${escapeHtml(langText('Teksto blokų režimas', 'Text block mode'))}</strong>
-          <p class="prompt" style="margin: 8px 0 0;">
-            ${escapeHtml(
-      canManage
-        ? langText('Redaguokite gairių pavadinimus ir aprašymus tiesiogiai šiame puslapyje.', 'Edit guideline titles and descriptions directly on this page.')
-        : langText('Čia rodomi tik gairių tekstai. Prisijunkite kaip institucijos administratorius, jei norite juos redaguoti.', 'Only guideline text is shown here. Sign in as an institution administrator to edit it.')
-    )}
-          </p>
-        </div>
-        ${renderGuidelineTextBlocksSection(langText('Tėvinės ir vaikinės gairės', 'Parent and child guidelines'), relationGroups.parentGroups.flatMap((group) => [group.parent, ...group.children]), { editable: canManage })}
-        ${renderGuidelineTextBlocksSection(langText('Vaikinės be tėvinės', 'Children without parent'), relationGroups.unassignedChildren, { editable: canManage })}
-        ${renderGuidelineTextBlocksSection(langText('Našlaitinės gairės', 'Orphan guidelines'), relationGroups.orphanGuidelines, { editable: canManage })}
-      </section>
+      <div id="guidelineGroups" class="guideline-groups guideline-inline-edit-shell">
+        <section class="guideline-group">
+          ${relationGroups.parentGroups.length
+            ? relationGroups.parentGroups.map((group) => `
+                <div class="relationship-cluster">
+                  <div class="relationship-cluster-cards">
+                    <div class="relationship-parent-slot">
+                      ${renderGuidelineInlineTextBlock(group.parent, { editable: canManage })}
+                    </div>
+                    <div class="relationship-child-stack">
+                      <div class="relationship-child-label">${langText('Vaikinės gairės', 'Child guidelines')}: ${group.children.length}</div>
+                      ${group.children.length
+                        ? `<div class="card-list relationship-child-grid guideline-inline-edit-child-grid">
+                            ${group.children.map((child) => renderGuidelineInlineTextBlock(child, { editable: canManage })).join('')}
+                          </div>`
+                        : `<div class="relationship-child-empty">
+                            <p class="prompt">${langText('Vaikinių gairių dar nėra.', 'No child guidelines yet.')}</p>
+                          </div>`
+                      }
+                    </div>
+                  </div>
+                </div>
+              `).join('')
+            : `<div class="card guideline-empty">
+                <strong>${langText('Kol kas nėra tėvinių gairių su ryšiais','No parent guidelines with links yet')}</strong>
+                <p class="prompt" style="margin: 6px 0 0;">${langText('Sukūrus ryšius, tėvinės ir vaikinės gairės bus rodomos viename bloke.','Once links are created, parent and child guidelines will be displayed in one block.')}</p>
+              </div>`
+          }
+        </section>
+
+        ${relationGroups.unassignedChildren.length ? `
+          <section class="guideline-group">
+            <div class="guideline-group-header">
+              <h3>${langText('Vaikinės be tėvinės', 'Children without parent')}</h3>
+              <span class="tag">${relationGroups.unassignedChildren.length}</span>
+            </div>
+            <div class="card-list guideline-inline-edit-grid">
+              ${relationGroups.unassignedChildren.map((guideline) => renderGuidelineInlineTextBlock(guideline, { editable: canManage })).join('')}
+            </div>
+          </section>
+        ` : ''}
+
+        <section class="guideline-group">
+          <div class="guideline-group-header">
+            <h3>${langText('Naslaitines gaires', 'Orphan guidelines')}</h3>
+            <span class="tag">${relationGroups.orphanGuidelines.length}</span>
+          </div>
+          ${relationGroups.orphanGuidelines.length
+            ? `<div class="card-list guideline-inline-edit-grid">
+                ${relationGroups.orphanGuidelines.map((guideline) => renderGuidelineInlineTextBlock(guideline, { editable: canManage })).join('')}
+              </div>`
+            : `<div class="card guideline-empty">
+                <strong>${langText('Našlaitinių gairių nėra','No orphan guidelines')}</strong>
+                <p class="prompt" style="margin: 6px 0 0;">${langText('Visos gairės jau susietos su tėvinėmis arba pažymėtos kitaip.','All guidelines are already linked to parent guidelines or marked differently.')}</p>
+              </div>`
+          }
+        </section>
+      </div>
     `;
     bindStepEvents();
     return;
@@ -8427,47 +8577,34 @@ function bindStepEvents() {
 
   bindRichTextEditors(elements.stepView);
 
-  elements.stepView.querySelectorAll('[data-action="open-inline-guideline-detail"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const guidelineId = String(button.getAttribute('data-guideline-id') || '').trim();
-      if (!guidelineId) return;
-      openGuidelineDetail(guidelineId);
-    });
-  });
-
   elements.stepView.querySelectorAll('[data-guideline-inline-form]').forEach((form) => {
-    form.addEventListener('submit', async (event) => {
+    form.addEventListener('submit', (event) => {
       event.preventDefault();
-      if (!canManageSelectedInstitution()) return;
-      const guidelineId = String(form.getAttribute('data-guideline-id') || '').trim();
-      const guideline = findGuidelineById(guidelineId);
-      if (!guidelineId || !guideline) return;
-      const fd = new FormData(form);
-      const title = String(fd.get('title') || '').trim();
-      const description = normalizeRichTextValue(fd.get('description'));
-      if (!title) return;
-
-      await runBusy(async () => {
-        await api(`/api/v1/admin/guidelines/${encodeURIComponent(guidelineId)}`, {
-          method: 'PUT',
-          body: {
-            title,
-            description,
-            status: String(guideline.status || 'active').trim() || 'active',
-            relationType: normalizeGuidelineRelation(guideline.relationType),
-            parentGuidelineId: String(guideline.parentGuidelineId || '').trim() || null,
-            lineSide: normalizeLineSide(guideline.lineSide),
-            implementationDate: normalizeImplementationDateInputValue(
-              guideline.implementationDate || guideline.implementation_target_date || ''
-            ),
-            implementationOwner: String(
-              guideline.implementationOwner || guideline.implementation_owner || ''
-            ).trim()
-          }
-        });
-        await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
-      });
+      scheduleGuidelineInlineAutosave(form, { immediate: true });
     });
+    const titleInput = form.querySelector('input[name="title"]');
+    if (titleInput instanceof HTMLInputElement) {
+      titleInput.addEventListener('input', () => {
+        updateLocalGuidelineInlineDraft(form.getAttribute('data-guideline-id'), { title: titleInput.value });
+        scheduleGuidelineInlineAutosave(form);
+      });
+      titleInput.addEventListener('blur', () => {
+        scheduleGuidelineInlineAutosave(form, { immediate: true });
+      });
+    }
+    const editorSurface = form.querySelector('.rich-text-surface');
+    if (editorSurface instanceof HTMLElement) {
+      editorSurface.addEventListener('input', () => {
+        const hiddenInput = form.querySelector('.rich-text-hidden-input');
+        updateLocalGuidelineInlineDraft(form.getAttribute('data-guideline-id'), {
+          description: String(hiddenInput?.value || '')
+        });
+        scheduleGuidelineInlineAutosave(form);
+      });
+      editorSurface.addEventListener('blur', () => {
+        scheduleGuidelineInlineAutosave(form, { immediate: true });
+      });
+    }
   });
 
   const syncGuidelineParentField = () => {
