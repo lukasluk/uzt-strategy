@@ -8334,6 +8334,11 @@ function renderStepView() {
   if (showTextBlocksOnly) {
     elements.stepView.innerHTML = `
       <div id="guidelineGroups" class="guideline-groups guideline-inline-edit-shell">
+        ${canManage ? `
+          <div class="guideline-inline-edit-note">
+            ${escapeHtml(langText('Pakeitimai issaugomi automatiskai jums rasant.', 'Changes are saved automatically while you type.'))}
+          </div>
+        ` : ''}
         <section class="guideline-group">
           ${relationGroups.parentGroups.length
             ? relationGroups.parentGroups.map((group) => `
@@ -8341,6 +8346,13 @@ function renderStepView() {
                   <div class="relationship-cluster-cards">
                     <div class="relationship-parent-slot">
                       ${renderGuidelineInlineTextBlock(group.parent, { editable: canManage })}
+                      ${canManage && writable ? `
+                        <div class="guideline-inline-parent-tools">
+                          <button type="button" class="btn btn-ghost guideline-inline-add-child-btn" data-action="create-child-guideline" data-parent-id="${escapeHtml(group.parent.id)}">
+                            ${escapeHtml(langText('Prideti vaikine gaire', 'Add child guideline'))}
+                          </button>
+                        </div>
+                      ` : ''}
                     </div>
                     <div class="relationship-child-stack">
                       ${group.children.length

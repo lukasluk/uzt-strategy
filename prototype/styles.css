@@ -6351,12 +6351,33 @@ select:focus {
 .guideline-inline-edit-shell {
   gap: 22px;
 }
+.guideline-inline-edit-note {
+  margin: -6px 0 2px;
+  color: #5e7696;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .guideline-inline-edit-grid {
   display: grid;
   gap: 14px;
 }
 .guideline-inline-edit-child-grid {
   align-items: stretch;
+}
+.guideline-inline-parent-tools {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 6px;
+}
+.guideline-inline-add-child-btn {
+  padding: 8px 14px;
+  border-color: #d7e4f4;
+  background: rgba(255, 255, 255, 0.82);
+  color: #315277;
+}
+.guideline-inline-add-child-btn:hover {
+  border-color: #b8cdea;
+  background: #ffffff;
 }
 .guideline-inline-edit-card {
   display: grid;
