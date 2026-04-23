@@ -6364,30 +6364,28 @@ select:focus {
   border-color: #d7e4f4;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
-.guideline-inline-edit-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
 .guideline-inline-edit-field {
   display: grid;
   gap: 8px;
 }
 .guideline-inline-edit-title,
 .guideline-inline-edit-read-title {
+  display: block;
   width: 100%;
   min-height: 40px;
   padding: 0;
   border-radius: 0;
   border: 0;
   background: transparent;
+  box-shadow: none;
+  resize: none;
+  overflow: hidden;
   color: #18314d;
   font-size: 22px;
   font-weight: 700;
   line-height: 1.18;
   letter-spacing: -0.02em;
+  cursor: text;
 }
 .guideline-inline-edit-title:focus {
   outline: none;
@@ -6404,6 +6402,7 @@ select:focus {
   background: transparent;
   font-size: 16px;
   line-height: 1.65;
+  cursor: text;
 }
 .guideline-inline-edit-description.rich-text-surface:focus {
   box-shadow: inset 0 -2px 0 rgba(59, 116, 211, 0.2);

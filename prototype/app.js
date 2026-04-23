@@ -5590,23 +5590,14 @@ function renderGuidelineInlineTextBlock(guideline, options = {}) {
   if (!item?.id) return '';
   const editable = Boolean(options.editable);
   const relationKey = normalizeGuidelineRelation(item.relationType);
-  const relationTag = relationLabel(relationKey).charAt(0).toUpperCase() + relationLabel(relationKey).slice(1);
   const guidelineStatus = String(item.status || 'active').trim().toLowerCase();
   const pendingStatus = guidelineStatus === 'pending';
   const disabledAttr = editable && !state.busy ? '' : 'disabled';
-  const linkedInitiatives = resolveGuidelineRelatedInitiatives(item).items;
 
   return `
-    <form class="card guideline-inline-edit-card guideline-relation-${escapeHtml(relationKey)}" data-guideline-inline-form="1" data-guideline-id="${escapeHtml(item.id)}">
-      <div class="guideline-inline-edit-head">
-        <div class="header-stack">
-          <span class="tag">${escapeHtml(relationTag)}</span>
-          ${pendingStatus ? `<span class="tag tag-main">${escapeHtml(langText('Laukia tvirtinimo', 'Pending'))}</span>` : ''}
-          ${linkedInitiatives.length ? `<span class="tag tag-initiative-peek">${escapeHtml(langText('Iniciatyvos', 'Initiatives'))}: ${linkedInitiatives.length}</span>` : ''}
-        </div>
-      </div>
+    <form class="card guideline-inline-edit-card guideline-relation-${escapeHtml(relationKey)}${pendingStatus ? ' card-pending' : ''}" data-guideline-inline-form="1" data-guideline-id="${escapeHtml(item.id)}">
       ${editable
-      ? `<input class="guideline-inline-edit-title" type="text" name="title" value="${escapeHtml(item.title || '')}" required ${disabledAttr} />`
+      ? `<textarea class="guideline-inline-edit-title" name="title" rows="1" required ${disabledAttr}>${escapeHtml(item.title || '')}</textarea>`
       : `<div class="guideline-inline-edit-read-title">${escapeHtml(item.title || '-')}</div>`}
       ${editable
       ? renderRichTextEditor({
@@ -5639,6 +5630,12 @@ function renderGuidelineTextBlocksSection(title, guidelines, options = {}) {
 }
 
 const guidelineInlineAutosaveState = new Map();
+
+function syncGuidelineInlineTitleField(field) {
+  if (!(field instanceof HTMLTextAreaElement)) return;
+  field.style.height = '0px';
+  field.style.height = `${Math.max(field.scrollHeight, 40)}px`;
+}
 
 function collectGuidelineInlinePayload(form) {
   const guidelineId = String(form?.getAttribute('data-guideline-id') || '').trim();
@@ -8346,7 +8343,6 @@ function renderStepView() {
                       ${renderGuidelineInlineTextBlock(group.parent, { editable: canManage })}
                     </div>
                     <div class="relationship-child-stack">
-                      <div class="relationship-child-label">${langText('Vaikinės gairės', 'Child guidelines')}: ${group.children.length}</div>
                       ${group.children.length
                         ? `<div class="card-list relationship-child-grid guideline-inline-edit-child-grid">
                             ${group.children.map((child) => renderGuidelineInlineTextBlock(child, { editable: canManage })).join('')}
@@ -8582,9 +8578,11 @@ function bindStepEvents() {
       event.preventDefault();
       scheduleGuidelineInlineAutosave(form, { immediate: true });
     });
-    const titleInput = form.querySelector('input[name="title"]');
-    if (titleInput instanceof HTMLInputElement) {
+    const titleInput = form.querySelector('textarea[name="title"]');
+    if (titleInput instanceof HTMLTextAreaElement) {
+      syncGuidelineInlineTitleField(titleInput);
       titleInput.addEventListener('input', () => {
+        syncGuidelineInlineTitleField(titleInput);
         updateLocalGuidelineInlineDraft(form.getAttribute('data-guideline-id'), { title: titleInput.value });
         scheduleGuidelineInlineAutosave(form);
       });
