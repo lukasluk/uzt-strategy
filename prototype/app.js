@@ -4551,8 +4551,16 @@ function normalizeGuidelinesInspectionMode(value) {
   return 'default';
 }
 
+function availableGuidelinesInspectionModes() {
+  return canManageSelectedInstitution()
+    ? ['default', 'full-with-initiatives', 'guidelines-only', 'text-blocks']
+    : ['default', 'full-with-initiatives'];
+}
+
 function guidelinesInspectionMode() {
-  return normalizeGuidelinesInspectionMode(state.guidelinesInspectionMode);
+  const normalized = normalizeGuidelinesInspectionMode(state.guidelinesInspectionMode);
+  const availableModes = availableGuidelinesInspectionModes();
+  return availableModes.includes(normalized) ? normalized : availableModes[0];
 }
 
 function guidelinesShowAssociatedInitiatives() {
@@ -4568,7 +4576,7 @@ function guidelinesTextBlocksMode() {
 }
 
 function cycleGuidelinesInspectionMode() {
-  const order = ['default', 'full-with-initiatives', 'guidelines-only', 'text-blocks'];
+  const order = availableGuidelinesInspectionModes();
   const current = guidelinesInspectionMode();
   const currentIndex = order.indexOf(current);
   const safeIndex = currentIndex >= 0 ? currentIndex : 0;
