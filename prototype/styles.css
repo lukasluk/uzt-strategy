@@ -6589,6 +6589,10 @@ select:focus {
   gap: 0;
   align-items: center;
 }
+.implementation-plan-board[data-implementation-layer="guidelines"] .implementation-plan-table-head,
+.implementation-plan-board[data-implementation-layer="guidelines"] .implementation-plan-row {
+  grid-template-columns: minmax(0, 1.35fr) 220px minmax(240px, 1fr);
+}
 .implementation-plan-table-head {
   background: linear-gradient(180deg, #f5f8ff 0%, #ecf2ff 100%);
   border-bottom: 1px solid #dae5f4;
@@ -6761,6 +6765,43 @@ select:focus {
 }
 .implementation-plan-read-value.is-empty {
   color: #8aa0bb;
+}
+.implementation-plan-cell-related {
+  color: #26476f;
+}
+.implementation-plan-cell-progress {
+  display: grid;
+  gap: 8px;
+}
+.implementation-plan-progress {
+  display: grid;
+  gap: 8px;
+}
+.implementation-plan-progress-bar-shell {
+  position: relative;
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: #e8eef8;
+}
+.implementation-plan-progress-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #86d2bd 0%, #49a38c 100%);
+}
+.implementation-plan-progress-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: #5f7696;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.implementation-plan-progress-meta strong {
+  color: #18345b;
+  font-size: 14px;
 }
 .implementation-plan-cell-actions {
   display: flex;
@@ -8978,7 +9019,9 @@ select:focus {
   }
 
   .implementation-plan-cell-date,
+  .implementation-plan-cell-related,
   .implementation-plan-cell-owner,
+  .implementation-plan-cell-progress,
   .implementation-plan-cell-actions {
     padding-top: 0;
   }
@@ -8990,6 +9033,12 @@ select:focus {
   .implementation-plan-cell-actions {
     justify-content: flex-start;
     padding-bottom: 14px;
+  }
+
+  .implementation-plan-progress-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .implementation-plan-level-1 .implementation-plan-cell-main {
