@@ -3781,6 +3781,15 @@ function flushPendingGuidelineFocus() {
   target.classList.remove('guideline-focus-pulse');
   void target.offsetWidth;
   target.classList.add('guideline-focus-pulse');
+  if (guidelinesTextBlocksMode()) {
+    const inlineTitleField = target.querySelector('textarea[name="title"]');
+    if (inlineTitleField instanceof HTMLTextAreaElement) {
+      window.setTimeout(() => {
+        inlineTitleField.focus();
+        inlineTitleField.select();
+      }, 120);
+    }
+  }
   window.setTimeout(() => target.classList.remove('guideline-focus-pulse'), 1000);
   clearGuidelineFocusQuery();
 }
@@ -8346,13 +8355,6 @@ function renderStepView() {
                   <div class="relationship-cluster-cards">
                     <div class="relationship-parent-slot">
                       ${renderGuidelineInlineTextBlock(group.parent, { editable: canManage })}
-                      ${canManage && writable ? `
-                        <div class="guideline-inline-parent-tools">
-                          <button type="button" class="btn btn-ghost guideline-inline-add-child-btn" data-action="create-child-guideline" data-parent-id="${escapeHtml(group.parent.id)}">
-                            ${escapeHtml(langText('Prideti vaikine gaire', 'Add child guideline'))}
-                          </button>
-                        </div>
-                      ` : ''}
                     </div>
                     <div class="relationship-child-stack">
                       ${group.children.length
@@ -8363,6 +8365,13 @@ function renderStepView() {
                             <p class="prompt">${langText('Vaikinių gairių dar nėra.', 'No child guidelines yet.')}</p>
                           </div>`
                       }
+                      ${canManage && writable ? `
+                        <div class="guideline-inline-child-actions">
+                          <button type="button" class="btn btn-ghost guideline-inline-add-child-btn" data-action="create-child-guideline" data-parent-id="${escapeHtml(group.parent.id)}">
+                            ${escapeHtml(langText('Prideti vaikine gaire', 'Add child guideline'))}
+                          </button>
+                        </div>
+                      ` : ''}
                     </div>
                   </div>
                 </div>
@@ -8660,6 +8669,29 @@ function bindStepEvents() {
     }, 180);
   };
 
+  const createChildGuidelineInline = async (parentGuidelineId) => {
+    const parentId = String(parentGuidelineId || '').trim();
+    if (!parentId || !state.cycle?.id) return;
+    if (!canManageSelectedInstitution() || !cycleIsWritable()) return;
+    const endpoint = state.role === 'institution_admin'
+      ? `/api/v1/admin/cycles/${encodeURIComponent(state.cycle.id)}/guidelines`
+      : `/api/v1/cycles/${encodeURIComponent(state.cycle.id)}/guidelines`;
+
+    await runBusy(async () => {
+      const payload = await api(endpoint, {
+        method: 'POST',
+        body: {
+          title: langText('Nauja vaikine gaire', 'New child guideline'),
+          description: '',
+          relationType: 'child',
+          parentGuidelineId: parentId
+        }
+      });
+      scheduleGuidelineFocus(payload?.guidelineId || '');
+      await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
+    });
+  };
+
   if (guidelineForm) {
     guidelineForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -8764,7 +8796,11 @@ function bindStepEvents() {
       }
 
       if (action === 'create-child-guideline') {
-        openChildGuidelineCreate(actionElement.dataset.parentId);
+        if (guidelinesTextBlocksMode()) {
+          await createChildGuidelineInline(actionElement.dataset.parentId);
+        } else {
+          openChildGuidelineCreate(actionElement.dataset.parentId);
+        }
         return;
       }
 
