@@ -5306,10 +5306,10 @@ body.map-comment-modal-open {
   justify-content: flex-end;
 }
 .it-plan-toolbar {
-  display: grid;
-  grid-template-columns: 120px 120px repeat(4, max-content);
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  align-items: end;
+  align-items: center;
 }
 .it-plan-toolbar label {
   display: grid;
@@ -5389,9 +5389,49 @@ body.map-comment-modal-open {
   border-color: #9bb6e6;
   background: #ffffff;
 }
+.it-plan-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #d6e1ef;
+  border-radius: 14px;
+  background: #ffffff;
+}
+.it-plan-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.it-plan-table th,
+.it-plan-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e4edf7;
+  border-right: 1px solid #e4edf7;
+  text-align: left;
+  vertical-align: top;
+}
+.it-plan-table th:last-child,
+.it-plan-table td:last-child {
+  border-right: 0;
+}
+.it-plan-table thead th {
+  background: #eef5ff;
+  color: #17365e;
+  font-weight: 800;
+}
+.it-plan-table tbody tr:nth-child(even) td {
+  background: #f8fbff;
+}
+.it-plan-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.it-plan-hero a {
+  color: #2553e8;
+  font-weight: 800;
+}
 @media (max-width: 1040px) {
   .it-plan-hero,
-  .it-plan-toolbar,
   .it-plan-block-head {
     grid-template-columns: 1fr;
   }
