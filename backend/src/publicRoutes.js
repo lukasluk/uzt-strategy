@@ -676,7 +676,6 @@ function registerPublicRoutes({
 
     const guidelinesByCycle = {};
     const guidelineLookupByCycle = {};
-    const voteByGuideline = {};
     const commentsByGuideline = {};
     const initiativesByCycle = {};
     const initiativeLinksByInitiative = {};
@@ -692,24 +691,6 @@ function registerPublicRoutes({
          order by created_at asc`,
         [cycleIds]
       );
-
-      const votesRes = await query(
-        `select g.id as guideline_id,
-                coalesce(sum(v.score), 0)::int as total_score,
-                count(distinct v.voter_id)::int as voter_count
-         from strategy_guidelines g
-         left join strategy_votes v on v.guideline_id = g.id
-         where g.cycle_id = any($1::uuid[])
-           and g.status in ('active', 'disabled', 'merged', 'hidden')
-         group by g.id`,
-        [cycleIds]
-      );
-      votesRes.rows.forEach((row) => {
-        voteByGuideline[row.guideline_id] = {
-          totalScore: Number(row.total_score || 0),
-          voterCount: Number(row.voter_count || 0)
-        };
-      });
 
       if (commentVisibleCycleIds.length) {
         const commentsRes = await query(
@@ -829,8 +810,8 @@ function registerPublicRoutes({
           lineSide: normalizeLineSide(row.line_side) || 'auto',
           mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
           mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
-          totalScore: voteByGuideline[row.id]?.totalScore || 0,
-          voterCount: voteByGuideline[row.id]?.voterCount || 0,
+          totalScore: 0,
+          voterCount: 0,
           strategyLinks: strategyLinksByGuideline[row.id] || [],
           strategyLinkCount: (strategyLinksByGuideline[row.id] || []).length,
           commentCount: visibleComments.length,
@@ -951,17 +932,9 @@ function registerPublicRoutes({
          ) as initiative_comments_count,
          (
            select count(distinct voter_id)
-           from (
-             select v.voter_id
-             from strategy_votes v
-             join strategy_guidelines g on g.id = v.guideline_id
-             where g.cycle_id = $1
-             union
-             select iv.voter_id
-             from strategy_initiative_votes iv
-             join strategy_initiatives i on i.id = iv.initiative_id
-             where i.cycle_id = $1
-           ) as voters
+           from strategy_initiative_votes iv
+           join strategy_initiatives i on i.id = iv.initiative_id
+           where i.cycle_id = $1
          ) as participant_count`,
       [cycle.id]
     );
@@ -1008,17 +981,6 @@ function registerPublicRoutes({
       [cycle.id]
     );
 
-    const votes = await query(
-      `select g.id as guideline_id,
-              coalesce(sum(v.score), 0)::int as total_score,
-              count(distinct v.voter_id)::int as voter_count
-       from strategy_guidelines g
-       left join strategy_votes v on v.guideline_id = g.id
-       where g.cycle_id = $1 and g.status in ('active', 'disabled')
-       group by g.id`,
-      [cycle.id]
-    );
-
     const comments = commentsVisible
       ? await query(
         `select c.id,
@@ -1036,9 +998,6 @@ function registerPublicRoutes({
       )
       : { rows: [] };
 
-    const voteByGuideline = Object.fromEntries(
-      votes.rows.map((row) => [row.guideline_id, { totalScore: row.total_score, voterCount: row.voter_count }])
-    );
     const commentsByGuideline = comments.rows.reduce((acc, row) => {
       if (!acc[row.guideline_id]) acc[row.guideline_id] = [];
       acc[row.guideline_id].push({
@@ -1065,8 +1024,8 @@ function registerPublicRoutes({
       relationType: g.relation_type || 'orphan',
       parentGuidelineId: g.parent_guideline_id || null,
       lineSide: normalizeLineSide(g.line_side) || 'auto',
-      totalScore: voteByGuideline[g.id]?.totalScore || 0,
-      voterCount: voteByGuideline[g.id]?.voterCount || 0,
+      totalScore: 0,
+      voterCount: 0,
       strategyLinks: strategyLinksByGuideline[g.id] || [],
       strategyLinkCount: (strategyLinksByGuideline[g.id] || []).length,
       comments: commentsByGuideline[g.id] || [],

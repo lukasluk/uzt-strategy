@@ -2,7 +2,7 @@
   {
     id: 'guidelines',
     title: 'GairÄ—s',
-    hint: 'Aptarimas, balsavimas, komentarai',
+    hint: 'Aptarimas, struktūra, komentarai',
     prompt: 'Kur link judesime ir kokia nauda kursime?'
   },
   {
@@ -48,7 +48,7 @@ const introSlides = [
   },
   {
     title: '5. Balsuokite už pasiūlymus',
-    body: 'Nariai gali balsuoti už vieni kitų teiktus pasiūlymus gairiuose ir iniciatyvose.',
+    body: 'Nariai gali balsuoti už iniciatyvas, o gaires naudoti strateginei struktūrai ir komentarams.',
     points: [
       'Balsai skiriami "+" ir "-" mygtukais.',
       'Kol ciklas atviras, balsus galima koreguoti.'
@@ -85,7 +85,7 @@ const DEFAULT_VISION_TEXT = 'Ilgalaikė kryptis ir siekiama pokyčio būsena.';
 const DEFAULT_GUIDE_INTRO_TEXT = [
   'digistrategy.eu sistema skirta patogiam jūsų institucijos strategijos rengimo procesui. Patogiai susikurkite gairių struktūrą ir priskirkite konkrečias iniciatyvas tų gairių įgyvendinimui.',
   'Sistema susideda iš 2 pagrindinių dalių:',
-  '1. Kortelių valdymo modulio (Gairės ir Iniciatyvos) - čia jūsų kolegos gali komentuoti, siūlyti įvairias strategijos kryptis, balsuoti už vieni kitų teiktus pasiūlymus.',
+  '1. Kortelių valdymo modulio (Gairės ir Iniciatyvos) - čia jūsų kolegos gali komentuoti, siūlyti įvairias strategijos kryptis ir balsuoti už iniciatyvas.',
   '2. Strategijų žemėlapis - patogus vizualinis įrankis peržiūrėti strategijos struktūrą ir ryšius tarp skirtingų jos elementų.',
   'Galutinį savo interaktyvų strategijos žemėlapį įkelkite į intranetą ar vidinį puslapį su embedding funkcionalumu. Sistema skirta valstybinėms institucijoms, kurios nori savo strategijos kūrimo procesą vykdyti efektyviai.'
 ].join('\\n');
@@ -102,7 +102,7 @@ const DEFAULT_ABOUT_TEXT = [
 const DEFAULT_GUIDE_INTRO_TEXT_EN = [
   'digistrategy.eu is designed to make your institution strategy process practical and collaborative. Build a clear guideline structure and connect concrete initiatives to guideline delivery.',
   'The platform has 2 core parts:',
-  '1. Card management module (Guidelines and Initiatives) where your colleagues can comment, suggest strategic directions, and vote on proposals.',
+  '1. Card management module (Guidelines and Initiatives) where your colleagues can comment, suggest strategic directions, and vote on initiatives.',
   '2. Strategy map - a visual tool to review structure and links between different strategy elements.',
   'Publish your interactive strategy map in intranet or internal pages using embed functionality. The system is designed for public institutions that want to run strategy creation more effectively.'
 ].join('\n');
@@ -1152,14 +1152,6 @@ function voteBudget() {
   return Number(state.context?.rules?.voteBudget || 20);
 }
 
-function minPerGuideline() {
-  return Number(state.context?.rules?.minPerGuideline ?? 0);
-}
-
-function maxPerGuideline() {
-  return Number(state.context?.rules?.maxPerGuideline ?? 5);
-}
-
 function minPerInitiative() {
   return Number(state.context?.rules?.minPerInitiative ?? 0);
 }
@@ -1502,7 +1494,8 @@ function toUserMessage(error) {
     'strategy not found': 'Pasirinkta strategija nerasta.',
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
     'cycle not writable': 'Ciklas nebeleidÅ¾ia redaguoti (tik skaitymas).',
-    'guideline voting disabled': 'Å i gairÄ— iÅ¡jungta: balsuoti negalima.',
+    'guideline voting disabled': 'Balsavimas uÅ¾ gaires iÅ¡jungtas. Balsus skirkite iniciatyvoms.',
+    'guideline commenting disabled': 'Komentavimas prie Å¡ios gairÄ—s iÅ¡jungtas.',
     'initiative voting disabled': 'Å i iniciatyva iÅ¡jungta: balsuoti negalima.',
     'vote budget exceeded': 'VirÅ¡ytas balsÅ³ biudÅ¾etas.',
     forbidden: 'Veiksmas neleidÅ¾iamas.',
@@ -3247,9 +3240,6 @@ async function loadMemberContext() {
   if (context.cycle?.id) {
     const votesPayload = await api(`/api/v1/cycles/${encodeURIComponent(context.cycle.id)}/my-votes`);
     const nextVotes = {};
-    (votesPayload.guidelineVotes || votesPayload.votes || []).forEach((vote) => {
-      nextVotes[vote.guidelineId] = Number(vote.score || 0);
-    });
     (votesPayload.initiativeVotes || []).forEach((vote) => {
       nextVotes[vote.initiativeId] = Number(vote.score || 0);
     });
@@ -3830,8 +3820,8 @@ function strategySwitcherCardMarkup(options = {}) {
   const used = usedVotesTotal();
   const remaining = Math.max(0, budget - used);
   const voteBudgetTooltip = langText(
-    'Balsų biudžetas priskiriamas konkrečiai pasirinktai strategijai. Rodoma, kiek balsų liko iš viso šios strategijos ciklo biudžeto.',
-    'Vote budget is assigned to the currently selected strategy. Shows how many votes remain out of this strategy cycle total.'
+    'Balsų biudžetas naudojamas iniciatyvoms pasirinktoje strategijoje. Rodoma, kiek balsų dar galima skirti iniciatyvoms.',
+    'Vote budget is used for initiatives in the selected strategy. Shows how many votes remain for initiatives.'
   );
   const voteBudgetMarkup = showVoteBudget
     ? `
@@ -5307,7 +5297,6 @@ function renderGuidelineCard(guideline, options) {
   const commentsVisible = Boolean(options.commentsVisible);
   const showCommentsSection = Boolean(options.authenticated || commentsVisible);
   const commentsHint = commentsReadOnlyHintText(options);
-  const userScore = Number(state.userVotes[guideline.id] || 0);
   const comments = Array.isArray(guideline.comments) ? guideline.comments : [];
   const safeComments = commentsVisible
     ? (comments.length
@@ -5389,16 +5378,6 @@ function renderGuidelineCard(guideline, options) {
     copyAction: 'copy-guideline-link'
   });
 
-  const budget = voteBudget();
-  const usedWithoutCurrent = usedVotesTotal() - userScore;
-  const maxAllowed = clamp(
-    Math.min(maxPerGuideline(), budget - usedWithoutCurrent),
-    minPerGuideline(),
-    maxPerGuideline()
-  );
-  const canMinus = options.member && options.writable && !votingDisabled && !state.busy && userScore > minPerGuideline();
-  const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
-
   return `
     <article class="card guideline-card ${isLinkable ? 'is-linkable' : ''} guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''} ${pendingStatus ? 'card-pending' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
       <div class="card-top">
@@ -5413,28 +5392,6 @@ function renderGuidelineCard(guideline, options) {
         ${strategyLinksMarkup}
         ${relatedInitiativesMarkup}
       </div>
-      ${options.member ? `
-        <div class="vote-panel">
-          <div class="vote-panel-head">
-            <span class="vote-label">${langText('Tavo balas', 'Your vote')}</span>
-          </div>
-          <div class="vote-panel-body">
-            <div class="vote-controls">
-              <button class="vote-btn" data-action="vote-minus" data-id="${escapeHtml(guideline.id)}" aria-label="${escapeHtml(langText('Atimti bala', 'Decrease vote'))}" ${canMinus ? '' : 'disabled'}>&minus;</button>
-              <span class="vote-score">${userScore}</span>
-              <button class="vote-btn" data-action="vote-plus" data-id="${escapeHtml(guideline.id)}" aria-label="${escapeHtml(langText('Prideti bala', 'Increase vote'))}" ${canPlus ? '' : 'disabled'}>+</button>
-            </div>
-            <div class="vote-total">${langText('Bendras balas', 'Total score')}: <strong>${Number(guideline.totalScore || 0)}</strong></div>
-            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiÅ«lymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : langText('Balsavimas isjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
-          </div>
-        </div>
-      ` : `
-        <div class="vote-panel">
-          <div class="vote-panel-body">
-            <div class="vote-total"><strong>${langText('Bendras balas', 'Total score')}: ${Number(guideline.totalScore || 0)}</strong></div>
-          </div>
-        </div>
-      `}
       ${showCommentsSection ? `
         <div class="card-section">
           <strong>${langText('Komentarai', 'Comments')}</strong>
@@ -8600,7 +8557,7 @@ function renderStepView() {
     ` : `
       <div class="card" style="margin-top: 16px;">
         <strong>${langText('Prisijunkite, kad galėtumėte aktyviai dalyvauti', 'Sign in to participate actively')}</strong>
-        <p class="prompt" style="margin: 8px 0 0;">${langText('Viešai matomi visi komentarai prie strategijos gairių. Prisijungus galima siūlyti gaires, komentuoti ir balsuoti.', 'Public users can view the strategy cards. Sign in to suggest guidelines, comment, and vote.')}</p>
+        <p class="prompt" style="margin: 8px 0 0;">${langText('Viešai matomi komentarai prie strategijos gairių. Prisijungus galima siūlyti gaires, komentuoti ir balsuoti už iniciatyvas.', 'Public users can view guideline comments. Sign in to suggest guidelines, comment, and vote for initiatives.')}</p>
         <button id="openAuthFromStep" class="btn btn-primary" style="margin-top: 12px;">${langText('Prisijungti', 'Sign in')}</button>
       </div>
     `)}
@@ -8861,14 +8818,6 @@ function bindStepEvents() {
         return;
       }
 
-      if (action === 'vote-plus' || action === 'vote-minus') {
-        const delta = action === 'vote-plus' ? 1 : -1;
-        const origin = getElementCenter(actionElement);
-        await runBusy(async () => {
-          const changed = await changeVote(guidelineId, delta);
-          if (changed) triggerVoteBurstAt(origin, delta);
-        });
-      }
     });
 
     list.addEventListener('submit', async (event) => {
@@ -8890,29 +8839,6 @@ function bindStepEvents() {
       });
     });
   }
-}
-
-async function changeVote(guidelineId, delta) {
-  if (!isLoggedIn()) throw new Error('unauthorized');
-  if (!cycleIsWritable()) throw new Error('cycle not writable');
-
-  const current = Number(state.userVotes[guidelineId] || 0);
-  const usedWithoutCurrent = usedVotesTotal() - current;
-  const maxAllowed = clamp(
-    Math.min(maxPerGuideline(), voteBudget() - usedWithoutCurrent),
-    minPerGuideline(),
-    maxPerGuideline()
-  );
-  const next = clamp(current + delta, minPerGuideline(), maxAllowed);
-  if (next === current) return false;
-
-  const response = await api(`/api/v1/guidelines/${encodeURIComponent(guidelineId)}/vote`, {
-    method: 'PUT',
-    body: { score: next }
-  });
-  state.userVotes[guidelineId] = Number(response.score || next);
-  await Promise.all([refreshGuidelines(), refreshSummary(), loadStrategyMap()]);
-  return true;
 }
 
 async function changeInitiativeVote(initiativeId, delta) {

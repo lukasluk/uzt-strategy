@@ -1307,17 +1307,9 @@ function registerAdminRoutes({
        join platform_users u on u.id = m.user_id
        left join (
          select voter_id, sum(score)::int as total_score, count(*)::int as vote_count
-         from (
-           select v.voter_id, v.score
-           from strategy_votes v
-           join strategy_guidelines g on g.id = v.guideline_id
-           where g.cycle_id = $1
-           union all
-           select v.voter_id, v.score
-           from strategy_initiative_votes v
-           join strategy_initiatives i on i.id = v.initiative_id
-           where i.cycle_id = $1
-         ) as all_votes
+         from strategy_initiative_votes v
+         join strategy_initiatives i on i.id = v.initiative_id
+         where i.cycle_id = $1
          group by voter_id
        ) votes on votes.voter_id = u.id
        where m.institution_id = $2 and m.status = 'active'
@@ -1509,16 +1501,9 @@ function registerAdminRoutes({
 
     const guidelinesRes = await query(
       `select g.id, g.title, g.description, g.status, g.relation_type, g.parent_guideline_id, g.line_side, g.created_at,
-              coalesce(v.total_score, 0)::int as total_score,
-              coalesce(v.voter_count, 0)::int as voter_count
+              0::int as total_score,
+              0::int as voter_count
        from strategy_guidelines g
-       left join (
-         select guideline_id,
-                coalesce(sum(score), 0)::int as total_score,
-                count(distinct voter_id)::int as voter_count
-         from strategy_votes
-         group by guideline_id
-       ) v on v.guideline_id = g.id
        where g.cycle_id = $1
        order by g.created_at asc`,
       [cycleId]
@@ -1670,7 +1655,7 @@ function registerAdminRoutes({
         createdAt: row.created_at,
         totalScore: row.total_score,
         voterCount: row.voter_count,
-        votes: votesByGuideline[row.id] || [],
+        votes: [],
         commentCount: (commentsByGuideline[row.id] || []).length,
         comments: commentsByGuideline[row.id] || [],
         strategyLinks: strategyLinksByGuideline[row.id] || [],

@@ -1,13 +1,5 @@
 function createVoteService({ query }) {
   async function getUserCycleVotes(cycleId, userId) {
-    const votesRes = await query(
-      `select v.guideline_id, v.score
-       from strategy_votes v
-       join strategy_guidelines g on g.id = v.guideline_id
-       where g.cycle_id = $1 and v.voter_id = $2`,
-      [cycleId, userId]
-    );
-
     const initiativeVotesRes = await query(
       `select v.initiative_id, v.score
        from strategy_initiative_votes v
@@ -16,20 +8,14 @@ function createVoteService({ query }) {
       [cycleId, userId]
     );
 
-    const votes = votesRes.rows.map((row) => ({
-      guidelineId: row.guideline_id,
-      score: row.score
-    }));
     const initiativeVotes = initiativeVotesRes.rows.map((row) => ({
       initiativeId: row.initiative_id,
       score: row.score
     }));
 
-    const totalUsed =
-      votes.reduce((sum, row) => sum + row.score, 0) +
-      initiativeVotes.reduce((sum, row) => sum + row.score, 0);
+    const totalUsed = initiativeVotes.reduce((sum, row) => sum + row.score, 0);
 
-    return { votes, initiativeVotes, totalUsed };
+    return { votes: [], initiativeVotes, totalUsed };
   }
 
   async function getCurrentGuidelineVote(guidelineId, voterId) {
@@ -50,22 +36,10 @@ function createVoteService({ query }) {
 
   async function calculateUserCycleVoteTotal(userId, cycleId) {
     const totalRes = await query(
-      `select
-         (
-           coalesce((
-             select sum(v.score)::int
-             from strategy_votes v
-             join strategy_guidelines g on g.id = v.guideline_id
-             where v.voter_id = $1 and g.cycle_id = $2
-           ), 0)
-           +
-           coalesce((
-             select sum(v.score)::int
-             from strategy_initiative_votes v
-             join strategy_initiatives i on i.id = v.initiative_id
-             where v.voter_id = $1 and i.cycle_id = $2
-           ), 0)
-         )::int as total_used`,
+      `select coalesce(sum(v.score), 0)::int as total_used
+       from strategy_initiative_votes v
+       join strategy_initiatives i on i.id = v.initiative_id
+       where v.voter_id = $1 and i.cycle_id = $2`,
       [userId, cycleId]
     );
     return Number(totalRes.rows[0]?.total_used || 0);

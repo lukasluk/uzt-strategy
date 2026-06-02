@@ -362,7 +362,7 @@ function registerMemberRoutes({
     if (context) {
       if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
       if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
-      if (context.guideline_status !== 'active') return res.status(409).json({ error: 'guideline voting disabled' });
+      if (context.guideline_status !== 'active') return res.status(409).json({ error: 'guideline commenting disabled' });
 
       const commentId = await createGuidelineComment({
         guidelineId,
@@ -379,7 +379,7 @@ function registerMemberRoutes({
     if (!proposalContext) return res.status(404).json({ error: 'guideline not found' });
     if (proposalContext.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
     if (!isCycleWritable(proposalContext.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
-    if (proposalContext.proposal_status !== 'pending') return res.status(409).json({ error: 'guideline voting disabled' });
+    if (proposalContext.proposal_status !== 'pending') return res.status(409).json({ error: 'guideline commenting disabled' });
 
     const commentId = await createProposalComment({
       proposalId: proposalContext.proposal_id,
@@ -438,41 +438,7 @@ function registerMemberRoutes({
 
 
   app.put('/api/v1/guidelines/:guidelineId/vote', requireAuth, memberWriteGuard, async (req, res) => {
-    const guidelineId = String(req.params.guidelineId || '').trim();
-    const score = Number(req.body?.score);
-    if (!guidelineId || !Number.isInteger(score) || score < 0 || score > 5) {
-      return res.status(400).json({ error: 'guidelineId and score(0..5) required' });
-    }
-
-    const context = await loadGuidelineContext(guidelineId);
-    if (!context) {
-      const proposalContext = await loadGuidelineProposalContext(guidelineId);
-      if (proposalContext && proposalContext.institution_id === req.auth.institutionId) {
-        return res.status(409).json({ error: 'guideline voting disabled' });
-      }
-      return res.status(404).json({ error: 'guideline not found' });
-    }
-    if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
-    if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
-    if (context.guideline_status !== 'active') return res.status(409).json({ error: 'guideline voting disabled' });
-
-    const currentVote = await getCurrentGuidelineVote(guidelineId, req.auth.sub);
-    const currentScore = currentVote?.score || 0;
-    const totalUsed = await calculateUserCycleVoteTotal(req.auth.sub, context.cycle_id);
-    const nextTotal = totalUsed - currentScore + score;
-    if (nextTotal > voteBudget) {
-      return res.status(400).json({ error: 'vote budget exceeded' });
-    }
-
-    await upsertGuidelineVote({
-      guidelineId,
-      voterId: req.auth.sub,
-      score,
-      uuid
-    });
-
-    broadcast({ type: 'v1.vote.updated', institutionId: req.auth.institutionId, guidelineId, score });
-    res.json({ ok: true, score, totalUsed: nextTotal, budget: voteBudget });
+    res.status(410).json({ error: 'guideline voting disabled' });
   });
 
 

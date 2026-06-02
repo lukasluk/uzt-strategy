@@ -164,7 +164,6 @@ function buildInstitutionNodeMarkup({ node, activeLayer, editable }) {
 
 function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
   const relation = String(node.guideline.relationType || 'orphan');
-  const score = Number(node.guideline.totalScore || 0);
   const linkedInitiativeCount = Math.max(0, Number(node.linkedInitiativeCount || 0));
   const mapCommentCount = Math.max(
     0,
@@ -188,10 +187,6 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
     seenLinkKeys.add(key);
     uniqueLinks.push(link);
   });
-  const scoreForSquares = Math.max(0, Math.round(score));
-  const voteSquares = scoreForSquares
-    ? Array.from({ length: scoreForSquares }, () => '<span class="map-vote-square" aria-hidden="true"></span>').join('')
-    : '';
   const strategicFocusChip = activeLayer === 'strategic-links' && node.isStrategicLinked
     ? `<span class="map-strategy-link-chip" title="${escapeHtml(mapLang('Gairė turi tarpstrateginį ryšį', 'Guideline has a cross-strategy link'))}">${escapeHtml(mapLang('Susieta', 'Linked'))}</span>`
     : '';
@@ -269,14 +264,8 @@ function buildGuidelineNodeMarkup({ node, activeLayer, editable }) {
           </div>
           ${guidelineOwnerLabel ? `<small>${escapeHtml(guidelineOwnerLabel)}</small>` : ''}
           ${planMetaMarkup}
-          <div class="map-vote-row">
-            <span class="map-vote-chip" title="${escapeHtml(mapLang('Bendras balas', 'Total score'))}">
-              <strong>${score}</strong>
-            </span>
-            ${strategicFocusChip}
-          </div>
+          ${strategicFocusChip ? `<div class="map-vote-row">${strategicFocusChip}</div>` : ''}
           ${strategyLinkListMarkup}
-          ${voteSquares ? `<div class="map-vote-squares">${voteSquares}</div>` : ''}
           <button
             type="button"
             class="map-comment-btn"

@@ -458,8 +458,6 @@ function registerAuthRoutes({
       cycle,
       rules: {
         voteBudget,
-        minPerGuideline: 0,
-        maxPerGuideline: 5,
         minPerInitiative: 0,
         maxPerInitiative: 5
       }

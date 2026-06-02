@@ -260,17 +260,12 @@ async function loadCycleSnapshot(query, cycleId) {
             g.implementation_target_date,
             g.implementation_owner,
             g.status,
-            coalesce(v.total_score, 0)::int as total_score,
+            0::int as total_score,
             coalesce(comments.comment_count, 0)::int as comment_count,
             coalesce(children.child_count, 0)::int as child_count,
             coalesce(initiatives.initiative_count, 0)::int as initiative_count
      from strategy_guidelines g
      left join strategy_guidelines parent on parent.id = g.parent_guideline_id
-     left join (
-       select guideline_id, sum(score)::int as total_score
-       from strategy_votes
-       group by guideline_id
-     ) v on v.guideline_id = g.id
      left join (
        select guideline_id, count(*)::int as comment_count
        from strategy_comments
@@ -426,16 +421,11 @@ async function loadStrategicLinkCandidateStrategies(query, {
             g.description,
             g.relation_type,
             parent.title as parent_title,
-            coalesce(v.total_score, 0)::int as total_score,
+            0::int as total_score,
             coalesce(children.child_count, 0)::int as child_count,
             coalesce(initiatives.initiative_count, 0)::int as initiative_count
      from strategy_guidelines g
      left join strategy_guidelines parent on parent.id = g.parent_guideline_id
-     left join (
-       select guideline_id, sum(score)::int as total_score
-       from strategy_votes
-       group by guideline_id
-     ) v on v.guideline_id = g.id
      left join (
        select parent_guideline_id, count(*)::int as child_count
        from strategy_guidelines

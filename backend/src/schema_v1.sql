@@ -117,6 +117,10 @@ create table if not exists strategy_votes (
   unique (guideline_id, voter_id)
 );
 
+-- Guideline voting has been retired. Keep the legacy table for compatibility,
+-- but remove all stored guideline votes so the shared vote budget returns to users.
+delete from strategy_votes;
+
 create table if not exists strategy_initiatives (
   id uuid primary key,
   cycle_id uuid not null references strategy_cycles(id) on delete cascade,
