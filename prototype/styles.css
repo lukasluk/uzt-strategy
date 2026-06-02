@@ -5352,6 +5352,10 @@ body.map-comment-modal-open {
   min-width: 0;
   box-shadow: 0 8px 18px rgba(36, 67, 108, 0.06);
 }
+.it-plan-block-compact {
+  gap: 8px;
+  padding: 10px 12px;
+}
 .it-plan-status-ready {
   border-left-color: #2f9e67;
 }
@@ -5383,6 +5387,14 @@ body.map-comment-modal-open {
   padding: 13px 14px;
   font: 14px/1.55 var(--font-body);
   resize: vertical;
+}
+.it-plan-block-compact .it-plan-block-input {
+  min-height: 72px;
+  padding: 10px 12px;
+  line-height: 1.45;
+}
+.it-plan-block-compact .it-plan-block-actions {
+  gap: 6px;
 }
 .it-plan-block-input:focus {
   outline: 2px solid rgba(37, 83, 232, 0.16);
