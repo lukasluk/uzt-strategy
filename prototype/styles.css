@@ -6545,7 +6545,7 @@ select:focus {
   padding-left: 10px;
 }
 .guideline-card .vote-panel {
-  background: #e9f5ff;
+  display: none !important;
 }
 .guideline-initiative-peek {
   display: grid;
