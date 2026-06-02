@@ -165,8 +165,11 @@ const IT_PLAN_ABBREVIATION_EXPLANATIONS={
   API:'Aplikacijų programavimo sąsaja',
   CPU:'Centrinis procesorius',
   DI:'Dirbtinis intelektas',
+  DR:'Atkūrimas po sutrikimo / veiklos tęstinumo užtikrinimas',
+  DTMF:'Daugiadažnis toninis rinkimas',
   EDR:'Galinių įrenginių aptikimo ir reagavimo priemonė',
   ES:'Europos Sąjunga',
+  ESCO:'Europos įgūdžių, kompetencijų, kvalifikacijų ir profesijų klasifikatorius',
   HDD:'Duomenų saugykla / kietasis diskas',
   IDS:'Įsilaužimų aptikimo sistema',
   IPS:'Įsilaužimų prevencijos sistema',
@@ -184,21 +187,27 @@ const IT_PLAN_ABBREVIATION_EXPLANATIONS={
   VDC:'Valstybės duomenų centras',
   VSSA:'Valstybės skaitmeninių sprendimų agentūra'
 };
+function isItPlanAbbreviation(value){
+  const text=String(value||'').trim();
+  if(!text||text.length<2||text.length>12)return false;
+  if(IT_PLAN_ABBREVIATION_EXPLANATIONS[text])return true;
+  return /[A-ZĄČĘĖĮŠŲŪŽ]/.test(text)&&!/^[a-ząčęėįšųūž]+$/.test(text);
+}
 function buildItPlanTermsText(guidelines,initiatives){
-  const sourceText=[...(guidelines||[]),...(initiatives||[])].map(item=>`${item?.title||''} ${item?.description||''}`).join('\n');
+  const sourceText=stripItPlanHtml([...(guidelines||[]),...(initiatives||[])].map(item=>`${item?.title||''} ${item?.description||''}`).join('\n')).replace(/\s+/g,' ').trim();
   const definitions=new Map();
-  const parenthetical=/([A-ZĄČĘĖĮŠŲŪŽa-ząčęėįšųūž][^()\n]{4,120}?)\s*\(([A-ZĄČĘĖĮŠŲŪŽ]{2,12})\)/g;
+  const parenthetical=/([A-ZĄČĘĖĮŠŲŪŽa-ząčęėįšųūž][^()]{4,160}?)\s*\(([A-ZĄČĘĖĮŠŲŪŽa-z]{2,12})\)/g;
   let match;
   while((match=parenthetical.exec(sourceText))){
     const explanation=String(match[1]||'').replace(/[.,;:\s-]+$/g,'').trim();
     const abbr=String(match[2]||'').trim();
-    if(abbr&&explanation)definitions.set(abbr,explanation);
+    if(isItPlanAbbreviation(abbr)&&explanation)definitions.set(abbr,explanation);
   }
-  const acronymBeforeDefinition=/([A-ZĄČĘĖĮŠŲŪŽ]{2,12})\s*\(([^()\n]{4,180})\)/g;
+  const acronymBeforeDefinition=/([A-ZĄČĘĖĮŠŲŪŽa-z]{2,12})\s*\(([^()]{4,220})\)/g;
   while((match=acronymBeforeDefinition.exec(sourceText))){
     const abbr=String(match[1]||'').trim();
     const explanation=String(match[2]||'').replace(/[.,;:\s-]+$/g,'').trim();
-    if(abbr&&explanation)definitions.set(abbr,explanation);
+    if(isItPlanAbbreviation(abbr)&&explanation)definitions.set(abbr,explanation);
   }
   Object.keys(IT_PLAN_ABBREVIATION_EXPLANATIONS).forEach(abbr=>{
     const escaped=abbr.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
