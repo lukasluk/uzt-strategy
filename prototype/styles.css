@@ -5353,8 +5353,8 @@ body.map-comment-modal-open {
   box-shadow: 0 8px 18px rgba(36, 67, 108, 0.06);
 }
 .it-plan-block-compact {
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 9px 12px;
 }
 .it-plan-status-ready {
   border-left-color: #2f9e67;
@@ -5402,9 +5402,12 @@ body.map-comment-modal-open {
   font-style: italic;
 }
 .it-plan-block-compact .it-plan-block-input {
-  min-height: 72px;
-  padding: 10px 12px;
+  min-height: 0;
+  padding: 9px 12px;
   line-height: 1.45;
+}
+.it-plan-block-compact .it-plan-rich-input {
+  height: auto;
 }
 .it-plan-block-compact .it-plan-block-actions {
   gap: 6px;
