@@ -42,6 +42,37 @@ const IT_PLAN_TEMPLATE_SECTIONS=Object.freeze([
   {id:'softwareLicenseRenewal',number:'4.4',title:'Reikalingos programinės įrangos licencijų atnaujinimas'}
 ]);
 const IT_PLAN_TEMPLATE_SECTION_BY_ID=new Map(IT_PLAN_TEMPLATE_SECTIONS.map(section=>[section.id,section]));
+const IT_PLAN_SECTION_FILL_RULES=Object.freeze({
+  terms:'Surenkami trumpiniai iš aktyvių gairių ir iniciatyvų pavadinimų bei aprašymų. Reikšmė imama iš skliaustų, brūkšniu atskirto paaiškinimo arba patvirtinto žinomų IT/VSSA trumpinių sąrašo.',
+  general:'Naudojama strategijos misija, vizija, pagrindinės gairės ir iniciatyvos. Tekstas turi aprašyti valdytojo IT plėtros kryptį, o ne techninę statistiką apie pačios strategijos objektų skaičių.',
+  systems:'Naudojamos iniciatyvos, kurios gali būti siejamos su tvarkomomis IS ar registrais. Oficialūs IS rekvizitai, RISR kodai ir gyvavimo ciklo etapai pažymimi kaip pildomi už digistrategy.eu ribų.',
+  priorities:'Prioritetai formuojami iš tėvinių gairių; jei tėvinių gairių nėra, naudojamos aktyvios gairės pagal strateginį svorį.',
+  organizationalChanges:'Naudojamos gairės ir iniciatyvos, kurios paaiškina poreikį keisti organizacinę aplinką, procesus, paslaugas, duomenų valdymą ar technologijas.',
+  developmentPriorities:'Naudojamos strateginės gairės kaip plėtros prioritetų sąrašas. Kiekviena gairė pateikiama su trumpu turinio paaiškinimu.',
+  plannedChanges:'Naudojamos visos aktyvios iniciatyvos. Lentelėje iniciatyvos paverčiamos planuojamais IS pokyčiais, o pokyčio rūšis nustatoma pagal aprašyme esančius požymius.',
+  updateProjects:'Tai tarpinis VSSA šablono skirsnis, kuriame projektai grupuojami į investicinius projektus ir kitas priemones.',
+  investmentProjects:'Naudojamos iniciatyvos su investicijų, finansavimo, projekto ar kapitalo požymiais. Kaštai ir finansavimo šaltiniai paliekami patikslinti, jei strategijoje jų nėra.',
+  otherMeasures:'Naudojamos iniciatyvos, kurios nepriskirtos investicijų ar palaikymo grupėms. Sąsaja su plėtros tikslais imama iš iniciatyvai priskirtų gairių.',
+  maintenance:'Naudojamos iniciatyvos su palaikymo, priežiūros, licencijų, infrastruktūros, migravimo ar saugumo požymiais. Sutartiniai ir kaštų duomenys pažymimi kaip papildytini.',
+  itMeasures:'1.2 skirsnis pildomas pagal VSSA šablono operacinius IT duomenis: infrastruktūrą, tinklus, saugumo priemones, kompiuterizuotas darbo vietas ir programinę įrangą. digistrategy.eu šių kiekybinių techninių duomenų nelaiko single source of truth.',
+  itMeasuresServers:'Pildoma iš IT infrastruktūros apskaitos: paslaugų teikėjai, serverių ar debesijos tipai, CPU, RAM, saugyklų apimtys ir duomenų centro tipas.',
+  itMeasuresNetwork:'Pildoma iš tinklo architektūros ir eksploatavimo duomenų: topologija, komponentai, pralaidumai, segmentavimas, atnaujinimo poreikiai ir terminai.',
+  itMeasuresSecurity:'Pildoma iš saugumo priemonių apskaitos: ugniasienės, IDS/IPS, EDR, SIEM, atsakomybės, planuojami pakeitimai ir įgyvendinimo terminai.',
+  itMeasuresWorkplaces:'Pildoma iš darbo vietų ir įrangos apskaitos: esami bei planuojami kiekiai, tipai, atnaujinimo periodiškumas ir standartinė komplektacija.',
+  itMeasuresSoftware:'Pildoma iš programinės įrangos ir licencijų apskaitos: produktai, versijos, tiekėjai, licencijų modeliai, kiekiai ir metiniai kaštai.',
+  itMeasuresSaas:'Pildoma iš SaaS paslaugų ir licencijų apskaitos: teikėjai, planai, licencijų tipai, kiekiai, metiniai kaštai ir pratęsimo grafikas.',
+  eServices:'Naudojamos iniciatyvos su paslaugų, portalo, savitarnos, klientų, naudotojų ar elektroninio teikimo požymiais.',
+  eServicesList:'Lentelėje pateikiamos atpažintos el. paslaugų iniciatyvos. IS pavadinimas imamas iš susietų gairių arba pažymimas kaip patikslintinas.',
+  eServicesChanges:'Naudojamos tos pačios el. paslaugų iniciatyvos, akcentuojant planuojamus kūrimo, atnaujinimo, pertvarkymo ar likvidavimo pokyčius.',
+  orgStructure:'Šis skirsnis pildomas iš organizacijos vidaus valdymo duomenų, nes digistrategy.eu strateginės gairės paprastai nekaupia pilnos padalinių ir atsakomybių struktūros.',
+  orgStructureChanges:'Pildoma pagal planuojamus atsakomybių, funkcijų, procesų ar struktūros pokyčius, reikalingus IT plėtros planui įgyvendinti.',
+  qualificationRequirements:'Pildoma pagal personalo, kompetencijų ir mokymų poreikius: reikalingos pareigybės, kvalifikacijos, mokymai ir papildomi pajėgumai.',
+  technologyMeasures:'Tai VSSA šablono techninių priemonių santraukos skirsnis; konkretūs infrastruktūros ir licencijų duomenys detalizuojami 4.1-4.4 dalyse.',
+  usedInfrastructure:'Pildoma iš infrastruktūros valdymo duomenų: naudojama infrastruktūra, pajėgumai, prieinamumas, atnaujinimo poreikis, duomenų centro ar debesijos paslaugos.',
+  systemApplicationSoftware:'Pildoma iš sisteminės ir taikomosios programinės įrangos apskaitos: paskirtis, versijos, tiekėjai, licencijų modeliai ir palaikymo poreikiai.',
+  saasLicenseRenewal:'Pildoma iš SaaS licencijų apskaitos: paslaugos, tiekėjai, licencijų tipai, kiekis, metiniai kaštai ir atnaujinimo laikotarpis.',
+  softwareLicenseRenewal:'Pildoma iš programinės įrangos licencijų apskaitos: tiekėjai, versijos, kiekiai, poreikis pagal metus, kaštai ir atnaujinimo planas.'
+});
 
 hydrateAuthFromStorage();
 if(IS_EMBEDDED_ADMIN)document.body.classList.add('embedded-admin');
@@ -187,29 +218,48 @@ const IT_PLAN_ABBREVIATION_EXPLANATIONS={
   UZT:'Užimtumo tarnyba',
   'UŽT':'Užimtumo tarnyba',
   VDC:'Valstybės duomenų centras',
-  VSSA:'Valstybės skaitmeninių sprendimų agentūra'
+  VSSA:'Valstybės skaitmeninių sprendimų agentūra',
+  AICCA:'Artificial Intelligence Career Coaching Assistant'
 };
+const IT_PLAN_ABBREVIATION_STOP_WORDS=new Set(['KAS','KAD','KUR','NES','BET','AR','IR','TIK','TAIP','JEI']);
+function normalizeItPlanAbbreviation(value){return String(value||'').trim().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,'');}
+function cleanItPlanDefinition(value){
+  return compactPlanText(value,220).replace(/^(pvz\.?|t\. y\.|tai yra)\s*[,;:-]?\s*/i,'').replace(/[.,;:\s-]+$/g,'').trim();
+}
+function addItPlanDefinition(definitions,abbr,explanation){
+  const key=normalizeItPlanAbbreviation(abbr);
+  const value=cleanItPlanDefinition(explanation);
+  if(!isItPlanAbbreviation(key)||IT_PLAN_ABBREVIATION_STOP_WORDS.has(key))return;
+  if(!value||value.length<3)return;
+  const existing=String(definitions.get(key)||'').trim();
+  if(!existing||/nepaaiškinta|patikslinti/i.test(existing)||value.length>existing.length)definitions.set(key,value);
+}
 function isItPlanAbbreviation(value){
-  const text=String(value||'').trim();
+  const text=normalizeItPlanAbbreviation(value);
   if(!text||text.length<2||text.length>12)return false;
+  if(IT_PLAN_ABBREVIATION_STOP_WORDS.has(text))return false;
   if(IT_PLAN_ABBREVIATION_EXPLANATIONS[text])return true;
-  return /[A-ZĄČĘĖĮŠŲŪŽ]/.test(text)&&!/^[a-ząčęėįšųūž]+$/.test(text);
+  return /^[A-ZĄČĘĖĮŠŲŪŽ0-9]{2,12}$/.test(text)&&/[A-ZĄČĘĖĮŠŲŪŽ]/.test(text);
 }
 function buildItPlanTermsText(guidelines,initiatives){
   const sourceText=stripItPlanHtml([...(guidelines||[]),...(initiatives||[])].map(item=>`${item?.title||''} ${item?.description||''}`).join('\n')).replace(/\s+/g,' ').trim();
   const definitions=new Map();
-  const parenthetical=/([A-ZĄČĘĖĮŠŲŪŽa-ząčęėįšųūž][^()]{4,160}?)\s*\(([A-ZĄČĘĖĮŠŲŪŽa-z]{2,12})\)/g;
+  const parenthetical=/([A-ZĄČĘĖĮŠŲŪŽa-ząčęėįšųūž][^()]{4,180}?)\s*\(([A-ZĄČĘĖĮŠŲŪŽ0-9]{2,12})\)/g;
   let match;
   while((match=parenthetical.exec(sourceText))){
-    const explanation=String(match[1]||'').replace(/[.,;:\s-]+$/g,'').trim();
-    const abbr=String(match[2]||'').trim();
-    if(isItPlanAbbreviation(abbr)&&explanation)definitions.set(abbr,explanation);
+    addItPlanDefinition(definitions,match[2],match[1]);
   }
-  const acronymBeforeDefinition=/([A-ZĄČĘĖĮŠŲŪŽa-z]{2,12})\s*\(([^()]{4,220})\)/g;
+  const acronymBeforeDefinition=/([A-ZĄČĘĖĮŠŲŪŽ0-9]{2,12})\s*\(([^()]{4,240})\)/g;
   while((match=acronymBeforeDefinition.exec(sourceText))){
-    const abbr=String(match[1]||'').trim();
-    const explanation=String(match[2]||'').replace(/[.,;:\s-]+$/g,'').trim();
-    if(isItPlanAbbreviation(abbr)&&explanation)definitions.set(abbr,explanation);
+    addItPlanDefinition(definitions,match[1],match[2]);
+  }
+  const separatorDefinition=/(^|[\s,;])([A-ZĄČĘĖĮŠŲŪŽ0-9]{2,12})\s*(?:-|–|—|:)\s*([^.;\n]{4,220})/gu;
+  while((match=separatorDefinition.exec(sourceText))){
+    addItPlanDefinition(definitions,match[2],match[3]);
+  }
+  const meansDefinition=/(^|[\s,;])([A-ZĄČĘĖĮŠŲŪŽ0-9]{2,12})\s+(?:reiškia|yra)\s+([^.;\n]{4,220})/giu;
+  while((match=meansDefinition.exec(sourceText))){
+    addItPlanDefinition(definitions,match[2],match[3]);
   }
   Object.keys(IT_PLAN_ABBREVIATION_EXPLANATIONS).forEach(abbr=>{
     const escaped=abbr.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -218,9 +268,9 @@ function buildItPlanTermsText(guidelines,initiatives){
   });
   const acronymPattern=/(^|[^\p{L}\p{N}])([A-ZĄČĘĖĮŠŲŪŽ]{2,12})(?=$|[^\p{L}\p{N}])/gu;
   while((match=acronymPattern.exec(sourceText))){
-    const abbr=String(match[2]||'').trim();
+    const abbr=normalizeItPlanAbbreviation(match[2]);
     if(!abbr||/^\d+$/.test(abbr))continue;
-    if(!definitions.has(abbr))definitions.set(abbr,IT_PLAN_ABBREVIATION_EXPLANATIONS[abbr]||'Reikia patikslinti trumpinio reikšmę.');
+    if(!definitions.has(abbr)&&!IT_PLAN_ABBREVIATION_STOP_WORDS.has(abbr))definitions.set(abbr,IT_PLAN_ABBREVIATION_EXPLANATIONS[abbr]||'Strategijoje reikšmė nepaaiškinta.');
   }
   const rows=[...definitions.entries()].sort((a,b)=>a[0].localeCompare(b[0],'lt'));
   if(!rows.length)return'Gairėse ir iniciatyvose aiškių trumpinių neatpažinta. Jeigu plane naudojami papildomi sutrumpinimai, juos reikia įrašyti rankiniu būdu.';
@@ -236,7 +286,7 @@ function itPlanNarrativeItems(items,limit=6){return items.slice(0,limit).map(ite
 function itPlanSourceItems(items,limit=8){const seen=new Set();return(Array.isArray(items)?items:[]).map(item=>String(item?.title||item?.id||'').trim()).filter(title=>{if(!title||seen.has(title))return false;seen.add(title);return true;}).slice(0,limit);}
 function itPlanConfidenceLabel(block){const status=String(block?.status||'review').trim().toLowerCase();if(status==='ready')return'aukštas';if(status==='missing')return'žemas';return'vidutinis';}
 function itPlanEvidenceItems(block){const items=[];const sourceCount=Array.isArray(block?.sourceItems)?block.sourceItems.length:0;const rowCount=Array.isArray(block?.table?.rows)?block.table.rows.length:0;if(sourceCount)items.push(`Naudota šaltinių: ${sourceCount}`);if(rowCount)items.push(`Sugeneruota lentelės eilučių: ${rowCount}`);if(Array.isArray(block?.missingFields)&&block.missingFields.length)items.push(`Papildytini laukai: ${block.missingFields.length}`);if(!items.length)items.push('Pagrindas: VSSA šablono struktūra ir strategijos duomenų peržiūra');return items;}
-function itPlanBlockIssues(block){const issues=[];const status=String(block?.status||'review').trim().toLowerCase();const text=itPlanBlockContentText(block);if(status==='missing')issues.push('Skirsniui trūksta duomenų, kurių digistrategy.eu nekaupia.');if(/Reikia patikslinti|Reikia papildyti|Reikia pridėti|neatpažinta/i.test(text))issues.push('Tekste liko vietų, kurias reikia patikslinti arba papildyti.');if(/Reikia patikslinti trumpinio reikšmę/i.test(text))issues.push('Yra trumpinių be patvirtintos reikšmės.');if(Array.isArray(block?.table?.rows)&&block.table.rows.length===0)issues.push('Lentelėje nėra sugeneruotų įrašų.');return[...new Set(issues)];}
+function itPlanBlockIssues(block){const issues=[];const status=String(block?.status||'review').trim().toLowerCase();const text=itPlanBlockContentText(block);if(status==='missing')issues.push('Skirsniui trūksta duomenų, kurių digistrategy.eu nekaupia.');if(/Reikia patikslinti|Reikia papildyti|Reikia pridėti|neatpažinta|nepaaiškinta/i.test(text))issues.push('Tekste liko vietų, kurias reikia patikslinti arba papildyti.');if(/trumpinio reikšmę|reikšmė nepaaiškinta/i.test(text))issues.push('Yra trumpinių be patvirtintos reikšmės.');if(Array.isArray(block?.table?.rows)&&block.table.rows.length===0)issues.push('Lentelėje nėra sugeneruotų įrašų.');return[...new Set(issues)];}
 function itPlanDraftIssues(blocks){return(Array.isArray(blocks)?blocks:[]).flatMap(block=>itPlanBlockIssues(block).map(issue=>({block,issue})));}
 function buildItPlanDraftV2(){
   const cycle=state.cycle||{};
@@ -267,7 +317,7 @@ function buildItPlanDraftV2(){
   const maintenanceRows=maintenance.map(item=>[item.title||'-','Reikia patikslinti priežiūrą atliekančią organizaciją.',itPlanInitiativeTimeline(item),'Reikia patikslinti planuojamus priežiūros kaštus.']);
   const serviceRows=services.map(item=>[item.title||'-',itPlanGuidelineTitlesForInitiative(item).join('; ')||'Reikia patikslinti informacinę sistemą.',planSentence(item.description,'Reikia papildyti paslaugos pokyčio aprašymą.'),inferItPlanChangeType(item)]);
   const sections=[
-    {id:'terms',title:'Sąvokos ir sutrumpinimai',status:termsText.includes('neatpažinta')?'review':'ready',source:'Trumpiniai iš gairių ir iniciatyvų',text:termsText},
+    {id:'terms',title:'Sąvokos ir sutrumpinimai',status:/neatpažinta|nepaaiškinta|patikslinti/i.test(termsText)?'review':'ready',source:'Trumpiniai iš gairių ir iniciatyvų',text:termsText},
     {id:'general',title:'Bendra informacija apie valdytoją',status:guidelines.length||initiatives.length?'ready':'review',source:'Gairių ir iniciatyvų turinys',text:generalContent},
     {id:'systems',number:'1',title:'Tvarkomos informacinės sistemos',status:'review',source:'Reikia patikslinti IS / registrų sąrašą',text:[`digistrategy.eu strategijoje identifikuotos iniciatyvos, kurios gali būti siejamos su institucijos valdomomis informacinėmis sistemomis ir registrais.`,initiativeList,`Papildyti prieš teikiant VSSA: kiekvienai sistemai nurodyti oficialų pavadinimą, RISR kodą, gyvavimo ciklo etapą ir valdytojo / tvarkytojo informaciją, jei ši informacija nėra saugoma strategijoje.`].join('\n\n')},
     {id:'priorities',number:'1.1',title:'Informacinių sistemų plėtros prioritetai',status:priorityGuidelines.length?'ready':'review',source:'Gairės',text:[`Plėtros prioritetai formuojami iš patvirtintų strategijos gairių. ${parentGuidelines.length?`Tėvinės gairės naudojamos kaip aukščiausio lygio prioritetų ašys.`:'Kad prioritetai būtų aiškesni, rekomenduojama pažymėti tėvines gaires.'}`,guidelineList].join('\n\n')},
@@ -334,13 +384,13 @@ function buildItPlanDraftV2(){
     saasLicenseRenewal:['SaaS paslaugos','Tiekėjai','Licencijų tipai','Licencijų kiekis','Metiniai kaštai','Atnaujinimo laikotarpis'],
     softwareLicenseRenewal:['Programinės įrangos tiekėjai','Versijos','Licencijų kiekis','Poreikis pagal metus','Kaštai','Atnaujinimo planas']
   };
-  return sections.map(section=>{const template=IT_PLAN_TEMPLATE_SECTION_BY_ID.get(section.id)||{};const finalBlock={...section,...template,sourceItems:sourceItemsById[section.id]||[],missingFields:missingFieldsById[section.id]||[],text:Object.prototype.hasOwnProperty.call(state.itPlanDraftOverrides,section.id)?state.itPlanDraftOverrides[section.id]:section.text};return{...finalBlock,confidence:itPlanConfidenceLabel(finalBlock),evidenceItems:itPlanEvidenceItems(finalBlock),issues:itPlanBlockIssues(finalBlock)};});
+  return sections.map(section=>{const template=IT_PLAN_TEMPLATE_SECTION_BY_ID.get(section.id)||{};const finalBlock={...section,...template,fillRule:IT_PLAN_SECTION_FILL_RULES[section.id]||'Skirsnis pildomas pagal VSSA IT plėtros plano šablono struktūrą ir susijusią strategijos informaciją.',sourceItems:sourceItemsById[section.id]||[],missingFields:missingFieldsById[section.id]||[],text:Object.prototype.hasOwnProperty.call(state.itPlanDraftOverrides,section.id)?state.itPlanDraftOverrides[section.id]:section.text};return{...finalBlock,confidence:itPlanConfidenceLabel(finalBlock),evidenceItems:itPlanEvidenceItems(finalBlock),issues:itPlanBlockIssues(finalBlock)};});
 }
 function itPlanStatusLabel(status){const normalized=String(status||'review').trim().toLowerCase();if(normalized==='ready')return'Parengta iš strategijos';if(normalized==='missing')return'Reikia papildyti';return'Reikia peržiūrėti';}
 function renderItPlanTable(table){if(!table||!Array.isArray(table.headers)||!Array.isArray(table.rows))return'';return`<div class="it-plan-table-wrap"><table class="it-plan-table"><thead><tr>${table.headers.map(header=>`<th>${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${table.rows.map(row=>`<tr>${table.headers.map((_,index)=>`<td>${renderItPlanRichHtml(row[index]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
 function itPlanTablePlainText(table){if(!table||!Array.isArray(table.headers)||!Array.isArray(table.rows))return'';const headers=table.headers.map(markdownCell).join('\t');const rows=table.rows.map(row=>table.headers.map((_,index)=>markdownCell(row[index]||'')).join('\t'));return[headers,...rows].join('\n');}
 function itPlanBlockContentText(block){const tableText=itPlanTablePlainText(block?.table);const text=stripItPlanHtml(String(block?.text||'').trim());return[tableText,text].filter(Boolean).join('\n\n');}
-function renderItPlanBlock(block){const body=block.table?renderItPlanTable(block.table):`<div class="it-plan-block-input it-plan-rich-input" data-it-plan-block="${escapeHtml(block.id)}" contenteditable="true" role="textbox" aria-multiline="true">${renderItPlanRichHtml(block.text||'')}</div>`;const compact=!block.table&&String(block?.status||'').trim().toLowerCase()==='missing';const sources=Array.isArray(block?.sourceItems)?block.sourceItems:[];const missingFields=Array.isArray(block?.missingFields)?block.missingFields:[];const issues=Array.isArray(block?.issues)?block.issues:itPlanBlockIssues(block);const evidenceItems=Array.isArray(block?.evidenceItems)?block.evidenceItems:itPlanEvidenceItems(block);const isGeneratingThis=state.itPlanGeneratingBlockId===block.id;const sourceTrace=sources.length?`<details class="it-plan-source-list"><summary>Šaltiniai (${sources.length})</summary><ol>${sources.map(source=>`<li>${escapeHtml(source)}</li>`).join('')}</ol></details>`:'';const checklist=missingFields.length?`<div class="it-plan-checklist"><strong>Papildyti už digistrategy.eu ribų</strong><ul>${missingFields.map(field=>`<li>${escapeHtml(field)}</li>`).join('')}</ul></div>`:'';const warnings=issues.length?`<ul class="it-plan-warning-list">${issues.map(issue=>`<li>${escapeHtml(issue)}</li>`).join('')}</ul>`:'';return`<article class="it-plan-block it-plan-status-${escapeHtml(block.status)} ${compact?'it-plan-block-compact':''}"><div class="it-plan-block-head"><div><strong>${escapeHtml(itPlanSectionTitle(block))}</strong><p class="prompt">${escapeHtml(block.source||'digistrategy.eu')}</p></div><span class="tag">${escapeHtml(itPlanStatusLabel(block.status))}</span></div><div class="it-plan-block-meta"><span class="tag">Pasitikėjimas: ${escapeHtml(block.confidence||itPlanConfidenceLabel(block))}</span>${evidenceItems.map(item=>`<span class="tag">${escapeHtml(item)}</span>`).join('')}</div>${sourceTrace}${checklist}${warnings}${body}<div class="it-plan-block-actions"><button type="button" class="btn btn-ghost" data-action="regenerate-it-plan-block" data-it-plan-block="${escapeHtml(block.id)}" ${state.busy?'disabled':''}>${escapeHtml(isGeneratingThis?'Generuojama...':'Sugeneruoti skirsnį')}</button><button type="button" class="btn btn-ghost" data-action="copy-it-plan-block" data-it-plan-block="${escapeHtml(block.id)}">${escapeHtml(langText('Kopijuoti','Copy'))}</button><button type="button" class="btn btn-ghost" data-action="download-it-plan-block" data-it-plan-block="${escapeHtml(block.id)}">${escapeHtml(langText('Parsisiųsti','Download'))}</button></div></article>`;}
+function renderItPlanBlock(block){const body=block.table?renderItPlanTable(block.table):`<div class="it-plan-block-input it-plan-rich-input" data-it-plan-block="${escapeHtml(block.id)}" contenteditable="true" role="textbox" aria-multiline="true">${renderItPlanRichHtml(block.text||'')}</div>`;const compact=!block.table&&String(block?.status||'').trim().toLowerCase()==='missing';const sources=Array.isArray(block?.sourceItems)?block.sourceItems:[];const missingFields=Array.isArray(block?.missingFields)?block.missingFields:[];const issues=Array.isArray(block?.issues)?block.issues:itPlanBlockIssues(block);const evidenceItems=Array.isArray(block?.evidenceItems)?block.evidenceItems:itPlanEvidenceItems(block);const isGeneratingThis=state.itPlanGeneratingBlockId===block.id;const fillRule=String(block?.fillRule||'').trim();const ruleBlock=fillRule?`<details class="it-plan-rule"><summary>Pildymo taisyklė</summary><p>${escapeHtml(fillRule)}</p></details>`:'';const sourceTrace=sources.length?`<details class="it-plan-source-list"><summary>Šaltiniai (${sources.length})</summary><ol>${sources.map(source=>`<li>${escapeHtml(source)}</li>`).join('')}</ol></details>`:'';const checklist=missingFields.length?`<div class="it-plan-checklist"><strong>Papildyti už digistrategy.eu ribų</strong><ul>${missingFields.map(field=>`<li>${escapeHtml(field)}</li>`).join('')}</ul></div>`:'';const warnings=issues.length?`<ul class="it-plan-warning-list">${issues.map(issue=>`<li>${escapeHtml(issue)}</li>`).join('')}</ul>`:'';return`<article class="it-plan-block it-plan-status-${escapeHtml(block.status)} ${compact?'it-plan-block-compact':''}"><div class="it-plan-block-head"><div><strong>${escapeHtml(itPlanSectionTitle(block))}</strong><p class="prompt">${escapeHtml(block.source||'digistrategy.eu')}</p></div><span class="tag">${escapeHtml(itPlanStatusLabel(block.status))}</span></div><div class="it-plan-block-meta"><span class="tag">Pasitikėjimas: ${escapeHtml(block.confidence||itPlanConfidenceLabel(block))}</span>${evidenceItems.map(item=>`<span class="tag">${escapeHtml(item)}</span>`).join('')}</div>${ruleBlock}${sourceTrace}${checklist}${warnings}${body}<div class="it-plan-block-actions"><button type="button" class="btn btn-ghost" data-action="regenerate-it-plan-block" data-it-plan-block="${escapeHtml(block.id)}" ${state.busy?'disabled':''}>${escapeHtml(isGeneratingThis?'Generuojama...':'Sugeneruoti skirsnį')}</button><button type="button" class="btn btn-ghost" data-action="copy-it-plan-block" data-it-plan-block="${escapeHtml(block.id)}">${escapeHtml(langText('Kopijuoti','Copy'))}</button><button type="button" class="btn btn-ghost" data-action="download-it-plan-block" data-it-plan-block="${escapeHtml(block.id)}">${escapeHtml(langText('Parsisiųsti','Download'))}</button></div></article>`;}
 function renderItPlanWorkspace(){const draft=buildItPlanDraftV2();const ready=draft.filter(block=>block.status==='ready').length;const review=draft.filter(block=>block.status==='review').length;const missing=draft.filter(block=>block.status==='missing').length;const draftIssues=itPlanDraftIssues(draft);const vssaUrl='https://vssa.lrv.lt/lt/veiklos-sritys/valstybes-informaciniu-istekliu-valdymas/it-pletros-planai/';const generatedAt=state.itPlanGeneratedAt?formatDateTime(state.itPlanGeneratedAt):'';const warningBanner=draftIssues.length?`<div class="it-plan-warning-banner"><strong>Prieš teikiant VSSA peržiūrėti: ${draftIssues.length}</strong><span>Asistentas pažymėjo skirsnius, kuriuose liko patikslinimų arba digistrategy.eu nekaupiamų duomenų.</span></div>`:'';return`<section class="card it-plan-workspace" data-admin-section="it-plan" style="margin-bottom:16px;"><div class="it-plan-hero"><div><span class="tag">${escapeHtml(langText('VSSA juodraštis','VSSA draft'))}</span><h2>${escapeHtml(langText('IT plėtros plano asistentas','IT plan assistant'))}</h2><p class="prompt">Sistema iš strategijos gairių ir iniciatyvų parengia IT plėtros plano tekstinius blokus. Struktūra parengta vadovaujantis <a href="${escapeHtml(vssaUrl)}" target="_blank" rel="noopener noreferrer">VSSA IT plėtros plano rekomendacijomis ir šablonu</a>; infrastruktūros, licencijų ir kaštų dalys pažymimos kaip papildytinos.</p></div><div class="it-plan-scoreboard"><span class="tag">${ready} parengta</span><span class="tag">${review} peržiūrėti</span><span class="tag">${missing} papildyti</span>${draftIssues.length?`<span class="tag">${draftIssues.length} įspėjimai</span>`:''}${state.itPlanGenerating?'<span class="tag tag-main">Generuojama...</span>':generatedAt?`<span class="tag">Sugeneruota: ${escapeHtml(generatedAt)}</span>`:''}</div></div>${warningBanner}<div class="it-plan-toolbar"><button type="button" class="btn btn-ghost" data-action="reset-it-plan-draft" ${state.busy||state.itPlanGenerating?'disabled':''}>${escapeHtml(state.itPlanGenerating?langText('Generuojama...','Generating...'):langText('Sugeneruoti iš strategijos','Generate from strategy'))}</button><button type="button" class="btn btn-ghost" data-action="copy-it-plan-all" ${state.busy?'disabled':''}>${escapeHtml(langText('Kopijuoti viską','Copy all'))}</button><button type="button" class="btn btn-primary" data-action="download-it-plan-all" ${state.busy?'disabled':''}>${escapeHtml(langText('Parsisiųsti juodraštį','Download draft'))}</button></div></section><section class="card it-plan-blocks-card" data-admin-section="it-plan" style="margin-bottom:16px;"><div class="it-plan-blocks">${draft.map(renderItPlanBlock).join('')}</div></section>`;}
 function collectItPlanDraftValues(){const blocks=buildItPlanDraftV2();const values=[];blocks.forEach(block=>{const field=root?.querySelector?.(`.it-plan-block-input[data-it-plan-block="${CSS.escape(block.id)}"]`);const text=field instanceof HTMLTextAreaElement?field.value:(field instanceof HTMLElement?field.innerHTML:block.text);values.push({...block,text});});return values;}
 function buildItPlanPlainText(){return collectItPlanDraftValues().map(block=>`${itPlanSectionTitle(block)}\n${itPlanStatusLabel(block.status)}\n\n${itPlanBlockContentText(block)}`).join('\n\n---\n\n');}

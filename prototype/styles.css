@@ -5393,6 +5393,7 @@ body.map-comment-modal-open {
   gap: 6px;
   align-items: center;
 }
+.it-plan-rule,
 .it-plan-source-list,
 .it-plan-checklist,
 .it-plan-warning-list {
@@ -5401,15 +5402,21 @@ body.map-comment-modal-open {
   font-size: 13px;
   line-height: 1.45;
 }
+.it-plan-rule,
 .it-plan-source-list {
   border: 1px solid #dce8f7;
   background: #f8fbff;
   padding: 8px 10px;
 }
+.it-plan-rule summary,
 .it-plan-source-list summary {
   cursor: pointer;
   color: #17365e;
   font-weight: 800;
+}
+.it-plan-rule p {
+  margin: 7px 0 0;
+  color: #536987;
 }
 .it-plan-source-list ol {
   margin: 8px 0 0 18px;
