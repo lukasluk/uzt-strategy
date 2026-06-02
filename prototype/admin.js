@@ -10,6 +10,38 @@ const EMBED_MAP_PATH_PREFIX='/embed/strategy-map';
 const FOCUS_GUIDELINE_QUERY_KEY='focusGuideline';
 
 const state={institutionSlug:resolveInstitutionSlug(),strategySlug:resolveStrategySlug(),strategy:null,strategies:[],loading:false,busy:false,error:'',notice:'',adminTab:'cycle',token:null,user:null,role:null,context:null,cycle:null,participants:[],guidelines:[],initiatives:[],availableGuidelines:[],parentGuidelines:[],guidelineLinks:[],pendingProposals:[],pendingReviewProposalId:'',inviteToken:'',inviteUrl:'',inviteExpiresAt:null,lastPasswordReset:null,embedViewStats:{viewCount:0,lastViewedAt:null,totalEmbedViews:0},itPlanDraftOverrides:{}};
+const IT_PLAN_TEMPLATE_SECTIONS=Object.freeze([
+  {id:'terms',number:'',title:'Sąvokos ir sutrumpinimai'},
+  {id:'general',number:'',title:'Bendra informacija apie valdytoją'},
+  {id:'systems',number:'1',title:'Tvarkomos informacinės sistemos'},
+  {id:'priorities',number:'1.1',title:'Informacinių sistemų plėtros prioritetai'},
+  {id:'organizationalChanges',number:'1.1.1',title:'Organizacinėje aplinkoje iškilę pokyčiai'},
+  {id:'developmentPriorities',number:'1.1.2',title:'Plėtros prioritetai'},
+  {id:'plannedChanges',number:'1.1.3',title:'Planuojami informacinių sistemų pokyčiai'},
+  {id:'updateProjects',number:'1.1.4',title:'Atnaujinimo projektai'},
+  {id:'investmentProjects',number:'1.1.4.1',title:'Planuojami įgyvendinti investicijų projektai'},
+  {id:'otherMeasures',number:'1.1.4.2',title:'Kiti planuojami įgyvendinti projektai / priemonės'},
+  {id:'maintenance',number:'1.1.5',title:'Planuojamos palaikymo ir priežiūros paslaugos'},
+  {id:'itMeasures',number:'1.2',title:'Informacija apie organizacijos IT priemones'},
+  {id:'itMeasuresServers',number:'1.2.1',title:'Serveriai ir duomenų saugyklos'},
+  {id:'itMeasuresNetwork',number:'1.2.2',title:'Tinklai'},
+  {id:'itMeasuresSecurity',number:'1.2.3',title:'Saugumo užtikrinimui naudojamos priemonės'},
+  {id:'itMeasuresWorkplaces',number:'1.2.4',title:'Kompiuterizuotos darbo vietos'},
+  {id:'itMeasuresSoftware',number:'1.2.5',title:'Naudojama programinė įranga'},
+  {id:'itMeasuresSaas',number:'1.2.6',title:'Naudojama programinė įranga kaip paslauga'},
+  {id:'eServices',number:'2',title:'Administracinės arba viešosios paslaugos teikiamos elektroniniu būdu'},
+  {id:'eServicesList',number:'2.1',title:'El. paslaugos'},
+  {id:'eServicesChanges',number:'2.2',title:'Pokyčiai'},
+  {id:'orgStructure',number:'3',title:'Organizacinė struktūra'},
+  {id:'orgStructureChanges',number:'3.1',title:'Planuojami pokyčiai'},
+  {id:'qualificationRequirements',number:'3.2',title:'Kvalifikaciniai reikalavimai'},
+  {id:'technologyMeasures',number:'4',title:'Informacinių technologijų priemonės'},
+  {id:'usedInfrastructure',number:'4.1',title:'Naudojama infrastruktūra'},
+  {id:'systemApplicationSoftware',number:'4.2',title:'Sisteminė ir taikomoji programinė įranga'},
+  {id:'saasLicenseRenewal',number:'4.3',title:'Reikalingos programinės įrangos kaip paslaugos (SaaS) licencijų atnaujinimas'},
+  {id:'softwareLicenseRenewal',number:'4.4',title:'Reikalingos programinės įrangos licencijų atnaujinimas'}
+]);
+const IT_PLAN_TEMPLATE_SECTION_BY_ID=new Map(IT_PLAN_TEMPLATE_SECTIONS.map(section=>[section.id,section]));
 
 hydrateAuthFromStorage();
 if(IS_EMBEDDED_ADMIN)document.body.classList.add('embedded-admin');
@@ -193,7 +225,7 @@ function buildItPlanDraftV2(){
     {id:'saasLicenseRenewal',number:'4.3',title:'Reikalingos programinės įrangos kaip paslaugos (SaaS) licencijų atnaujinimas',status:'missing',source:'Duomenų digistrategy.eu nėra',text:'Papildyti už digistrategy.eu ribų: nurodyti SaaS paslaugas, tiekėjus, licencijų tipus, licencijų kiekį, metinius kaštus ir planuojamą atnaujinimo laikotarpį.'},
     {id:'softwareLicenseRenewal',number:'4.4',title:'Reikalingos programinės įrangos licencijų atnaujinimas',status:'missing',source:'Duomenų digistrategy.eu nėra',text:'Papildyti už digistrategy.eu ribų: nurodyti programinės įrangos tiekėjus, versijas, licencijų kiekį, poreikį pagal metus, kaštus ir atnaujinimo planą.'}
   ];
-  return sections.map(section=>({...section,text:Object.prototype.hasOwnProperty.call(state.itPlanDraftOverrides,section.id)?state.itPlanDraftOverrides[section.id]:section.text}));
+  return sections.map(section=>{const template=IT_PLAN_TEMPLATE_SECTION_BY_ID.get(section.id)||{};return{...section,...template,text:Object.prototype.hasOwnProperty.call(state.itPlanDraftOverrides,section.id)?state.itPlanDraftOverrides[section.id]:section.text};});
 }
 function itPlanStatusLabel(status){const normalized=String(status||'review').trim().toLowerCase();if(normalized==='ready')return'Parengta iš strategijos';if(normalized==='missing')return'Reikia papildyti';return'Reikia peržiūrėti';}
 function renderItPlanTable(table){if(!table||!Array.isArray(table.headers)||!Array.isArray(table.rows))return'';return`<div class="it-plan-table-wrap"><table class="it-plan-table"><thead><tr>${table.headers.map(header=>`<th>${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${table.rows.map(row=>`<tr>${table.headers.map((_,index)=>`<td>${renderItPlanRichHtml(row[index]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
