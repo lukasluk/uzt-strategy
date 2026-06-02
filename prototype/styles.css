@@ -5388,6 +5388,19 @@ body.map-comment-modal-open {
   font: 14px/1.55 var(--font-body);
   resize: vertical;
 }
+.it-plan-rich-input {
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.it-plan-rich-input strong,
+.it-plan-rich-input b {
+  font-weight: 800;
+}
+.it-plan-rich-input em,
+.it-plan-rich-input i {
+  font-style: italic;
+}
 .it-plan-block-compact .it-plan-block-input {
   min-height: 72px;
   padding: 10px 12px;
