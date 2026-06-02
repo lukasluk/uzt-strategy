@@ -155,11 +155,59 @@ function renderPendingReviewModal(){const proposal=proposalById(state.pendingRev
 function syncPendingReviewPatchVisibility(){const select=document.getElementById('pendingProposalDecisionInput');const patchFields=document.getElementById('pendingProposalPatchFields');if(!(select instanceof HTMLSelectElement)||!(patchFields instanceof HTMLElement))return;const show=String(select.value||'').trim().toLowerCase()==='approved_with_changes';patchFields.hidden=!show;const parentSelect=document.getElementById('pendingProposalParentGuidelineInput');const relationSelect=document.getElementById('pendingProposalRelationInput');if(parentSelect instanceof HTMLSelectElement&&relationSelect instanceof HTMLSelectElement){const relation=String(relationSelect.value||'orphan').trim().toLowerCase();const needsParent=show&&relation==='child';parentSelect.disabled=state.busy||!needsParent;if(!needsParent)parentSelect.value='';}}
 function activeAdminGuidelines(){return(Array.isArray(state.guidelines)?state.guidelines:[]).filter(item=>String(item?.status||'active').trim().toLowerCase()==='active');}
 function activeAdminInitiatives(){return(Array.isArray(state.initiatives)?state.initiatives:[]).filter(item=>String(item?.status||'active').trim().toLowerCase()==='active');}
-function compactPlanText(value,max=900){const text=String(value||'').replace(/\s+/g,' ').trim();if(!text)return'';if(text.length<=max)return text;return`${text.slice(0,Math.max(0,max-3)).trim()}...`;}
+function compactPlanText(value,max=900){return String(value||'').replace(/\s+/g,' ').trim();}
 function planSentence(value,fallback){const text=compactPlanText(value,360);return text||fallback;}
 function markdownCell(value){return stripItPlanHtml(value).replace(/\|/g,'/').replace(/\s+/g,' ').trim();}
 function stripItPlanHtml(value){const host=document.createElement('div');const withBreaks=String(value||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(div|p|li|tr)>/gi,'\n');host.innerHTML=withBreaks;return String(host.textContent||'').replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n').trim();}
 function renderItPlanRichHtml(value){return escapeHtml(value).replace(/&lt;(strong|b|em|i)(?:\s.*?)?&gt;/gi,'<$1>').replace(/&lt;\/(strong|b|em|i)&gt;/gi,'</$1>').replace(/&lt;br\s*\/?&gt;/gi,'<br>');}
+const IT_PLAN_ABBREVIATION_EXPLANATIONS={
+  API:'Aplikacijų programavimo sąsaja',
+  CPU:'Centrinis procesorius',
+  DI:'Dirbtinis intelektas',
+  EDR:'Galinių įrenginių aptikimo ir reagavimo priemonė',
+  ES:'Europos Sąjunga',
+  HDD:'Duomenų saugykla / kietasis diskas',
+  IDS:'Įsilaužimų aptikimo sistema',
+  IPS:'Įsilaužimų prevencijos sistema',
+  IS:'Informacinė sistema',
+  IT:'Informacinės technologijos',
+  KDV:'Kompiuterizuota darbo vieta',
+  LDV:'Laisva darbo vieta',
+  LR:'Lietuvos Respublika',
+  RAM:'Operatyvioji atmintis',
+  RISR:'Registrų ir informacinių sistemų registras',
+  SaaS:'Programinė įranga kaip paslauga',
+  SIEM:'Saugumo informacijos ir įvykių valdymo sistema',
+  UZT:'Užimtumo tarnyba',
+  'UŽT':'Užimtumo tarnyba',
+  VDC:'Valstybės duomenų centras',
+  VSSA:'Valstybės skaitmeninių sprendimų agentūra'
+};
+function buildItPlanTermsText(guidelines,initiatives){
+  const sourceText=[...(guidelines||[]),...(initiatives||[])].map(item=>`${item?.title||''} ${item?.description||''}`).join('\n');
+  const definitions=new Map();
+  const parenthetical=/([A-ZĄČĘĖĮŠŲŪŽa-ząčęėįšųūž][^()\n]{4,120}?)\s*\(([A-ZĄČĘĖĮŠŲŪŽ]{2,12})\)/g;
+  let match;
+  while((match=parenthetical.exec(sourceText))){
+    const explanation=String(match[1]||'').replace(/[.,;:\s-]+$/g,'').trim();
+    const abbr=String(match[2]||'').trim();
+    if(abbr&&explanation)definitions.set(abbr,explanation);
+  }
+  Object.keys(IT_PLAN_ABBREVIATION_EXPLANATIONS).forEach(abbr=>{
+    const escaped=abbr.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const pattern=new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}(?=$|[^\\p{L}\\p{N}])`,'u');
+    if(pattern.test(sourceText)&&!definitions.has(abbr))definitions.set(abbr,IT_PLAN_ABBREVIATION_EXPLANATIONS[abbr]);
+  });
+  const acronymPattern=/(^|[^\p{L}\p{N}])([A-ZĄČĘĖĮŠŲŪŽ]{2,12})(?=$|[^\p{L}\p{N}])/gu;
+  while((match=acronymPattern.exec(sourceText))){
+    const abbr=String(match[2]||'').trim();
+    if(!abbr||/^\d+$/.test(abbr))continue;
+    if(!definitions.has(abbr))definitions.set(abbr,IT_PLAN_ABBREVIATION_EXPLANATIONS[abbr]||'Reikia patikslinti trumpinio reikšmę.');
+  }
+  const rows=[...definitions.entries()].sort((a,b)=>a[0].localeCompare(b[0],'lt'));
+  if(!rows.length)return'Gairėse ir iniciatyvose aiškių trumpinių neatpažinta. Jeigu plane naudojami papildomi sutrumpinimai, juos reikia įrašyti rankiniu būdu.';
+  return rows.map(([abbr,explanation])=>`${abbr} - ${explanation}`).join('\n');
+}
 function itPlanGuidelineTitlesForInitiative(initiative){const linked=Array.isArray(initiative?.guidelineLinks)?initiative.guidelineLinks:[];const ids=Array.isArray(initiative?.guidelineIds)?initiative.guidelineIds:linked.map(item=>item.guidelineId);const byId=new Map(activeAdminGuidelines().map(item=>[String(item.id),item]));const titles=[];ids.forEach(id=>{const guideline=byId.get(String(id));if(guideline?.title)titles.push(String(guideline.title).trim());});linked.forEach(item=>{const title=String(item?.guidelineTitle||item?.title||'').trim();if(title&&!titles.includes(title))titles.push(title);});return titles;}
 function itPlanInitiativeTimeline(initiative){const date=String(initiative?.implementationDate||initiative?.implementation_target_date||'').trim();return date||'Reikia patikslinti pagal strategijos turinį.';}
 function inferItPlanChangeType(initiative){const text=`${initiative?.title||''} ${initiative?.description||''}`.toLowerCase();if(/likvid|atsisak|nebeteik/.test(text))return'Likvidavimas';if(/migrav|perkėl|perkel|debes|valstybės duomenų centr/.test(text))return'Pertvarkymas';if(/nauj|sukūr|sukur|dieg|įdieg|idieg/.test(text))return'Sukūrimas';if(/atnaujin|moderniz|tobulin|plėtr|plet/.test(text))return'Atnaujinimas';return'Atnaujinimas / plėtra';}
@@ -171,6 +219,7 @@ function buildItPlanDraftV2(){
   const cycle=state.cycle||{};
   const guidelines=activeAdminGuidelines();
   const initiatives=activeAdminInitiatives();
+  const termsText=buildItPlanTermsText(guidelines,initiatives);
   const parentGuidelines=guidelines.filter(item=>String(item.relationType||'').trim().toLowerCase()==='parent');
   const priorityGuidelines=(parentGuidelines.length?parentGuidelines:guidelines).slice().sort((a,b)=>Number(b.totalScore||0)-Number(a.totalScore||0)||String(a.title||'').localeCompare(String(b.title||''),'lt'));
   const investment=initiatives.filter(item=>initiativeMatchesPlanTopic(item,/investic|finans|projekt|kapital/));
@@ -195,7 +244,7 @@ function buildItPlanDraftV2(){
   const maintenanceRows=maintenance.map(item=>[item.title||'-','Reikia patikslinti priežiūrą atliekančią organizaciją.',itPlanInitiativeTimeline(item),'Reikia patikslinti planuojamus priežiūros kaštus.']);
   const serviceRows=services.map(item=>[item.title||'-',itPlanGuidelineTitlesForInitiative(item).join('; ')||'Reikia patikslinti informacinę sistemą.',planSentence(item.description,'Reikia papildyti paslaugos pokyčio aprašymą.'),inferItPlanChangeType(item)]);
   const sections=[
-    {id:'terms',title:'Sąvokos ir sutrumpinimai',status:'missing',source:'Duomenų digistrategy.eu nėra',text:'Papildyti už digistrategy.eu ribų: įrašyti plane naudojamas sąvokas, sutrumpinimus ir jų paaiškinimus.'},
+    {id:'terms',title:'Sąvokos ir sutrumpinimai',status:termsText.includes('neatpažinta')?'review':'ready',source:'Trumpiniai iš gairių ir iniciatyvų',text:termsText},
     {id:'general',title:'Bendra informacija apie valdytoją',status:guidelines.length||initiatives.length?'ready':'review',source:'Gairių ir iniciatyvų turinys',text:generalContent},
     {id:'systems',number:'1',title:'Tvarkomos informacinės sistemos',status:'review',source:'Reikia patikslinti IS / registrų sąrašą',text:[`digistrategy.eu strategijoje identifikuotos iniciatyvos, kurios gali būti siejamos su institucijos valdomomis informacinėmis sistemomis ir registrais.`,initiativeList,`Papildyti prieš teikiant VSSA: kiekvienai sistemai nurodyti oficialų pavadinimą, RISR kodą, gyvavimo ciklo etapą ir valdytojo / tvarkytojo informaciją, jei ši informacija nėra saugoma strategijoje.`].join('\n\n')},
     {id:'priorities',number:'1.1',title:'Informacinių sistemų plėtros prioritetai',status:priorityGuidelines.length?'ready':'review',source:'Gairės',text:[`Plėtros prioritetai formuojami iš patvirtintų strategijos gairių. ${parentGuidelines.length?`Tėvinės gairės naudojamos kaip aukščiausio lygio prioritetų ašys.`:'Kad prioritetai būtų aiškesni, rekomenduojama pažymėti tėvines gaires.'}`,guidelineList].join('\n\n')},
