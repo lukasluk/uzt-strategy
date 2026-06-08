@@ -1,3 +1,5 @@
+const { normalizeInitiativeKeywords } = require('./initiativeKeywordService');
+
 function createAdminMutationService({ query }) {
   async function createInstitutionInvite({
     institutionId,
@@ -193,8 +195,11 @@ function createAdminMutationService({ query }) {
     status,
     implementationDate,
     implementationOwner,
-    implementationCompletedAt
+    implementationCompletedAt,
+    keywords
   }) {
+    const hasKeywords = Array.isArray(keywords);
+    const normalizedKeywords = hasKeywords ? normalizeInitiativeKeywords(keywords) : [];
     await query(
       `update strategy_initiatives
        set title = $1,
@@ -203,9 +208,10 @@ function createAdminMutationService({ query }) {
            implementation_target_date = $4,
            implementation_owner = $5,
            implementation_completed_at = $6,
+           keywords = case when $7::boolean then $8::jsonb else keywords end,
            line_side = 'auto',
            updated_at = now()
-       where id = $7`,
+       where id = $9`,
       [
         title,
         description || null,
@@ -213,6 +219,8 @@ function createAdminMutationService({ query }) {
         implementationDate || null,
         implementationOwner || null,
         implementationCompletedAt || null,
+        hasKeywords,
+        JSON.stringify(normalizedKeywords),
         initiativeId
       ]
     );

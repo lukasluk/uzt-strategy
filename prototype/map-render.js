@@ -6,6 +6,30 @@ function buildMapHeaderMarkup() {
 }
 
 function buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes }) {
+  let keywordFilterMarkup = '';
+  try {
+    const selectedInstitution = typeof mapSelectedInstitutionRecord === 'function'
+      ? mapSelectedInstitutionRecord()
+      : null;
+    const sourceInitiatives = Array.isArray(selectedInstitution?.initiatives) ? selectedInstitution.initiatives : [];
+    const options = typeof collectInitiativeKeywordOptions === 'function'
+      ? collectInitiativeKeywordOptions(sourceInitiatives)
+      : [];
+    const filtered = typeof filterInitiativesByKeywords === 'function'
+      ? filterInitiativesByKeywords(sourceInitiatives, state.mapKeywordFilters)
+      : sourceInitiatives;
+    if (typeof renderInitiativeKeywordFilterBar === 'function') {
+      keywordFilterMarkup = renderInitiativeKeywordFilterBar({
+        options,
+        selected: state.mapKeywordFilters,
+        scope: 'map',
+        totalCount: sourceInitiatives.length,
+        filteredCount: filtered.length
+      });
+    }
+  } catch {
+    keywordFilterMarkup = '';
+  }
   return `
       <div class="map-overlay-toolbar">
         <div class="map-layer-toggle map-overlay-layer-toggle">
@@ -18,6 +42,7 @@ function buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes }) {
           <button type="button" data-map-reset-btn class="btn btn-ghost">${escapeHtml(mapLang('Centruoti vaizdą', 'Center view'))}</button>
           <button type="button" data-map-fullscreen-btn class="btn btn-ghost btn-icon map-fullscreen-btn" aria-label="${escapeHtml(mapLang('Įjungti pilno ekrano režimą', 'Enable fullscreen mode'))}" title="${escapeHtml(mapLang('Įjungti pilno ekrano režimą', 'Enable fullscreen mode'))}"></button>
         </div>
+        ${keywordFilterMarkup}
       </div>
     `;
 }

@@ -131,6 +131,7 @@ create table if not exists strategy_initiatives (
   implementation_completed_at timestamptz,
   status text not null default 'active' check (status in ('active', 'disabled', 'merged', 'hidden')),
   line_side text not null default 'auto',
+  keywords jsonb not null default '[]'::jsonb,
   map_x integer,
   map_y integer,
   created_by uuid references platform_users(id) on delete set null,
@@ -482,6 +483,14 @@ alter table if exists strategy_guidelines
 
 alter table if exists strategy_initiatives
   add column if not exists line_side text not null default 'auto';
+
+alter table if exists strategy_initiatives
+  add column if not exists keywords jsonb not null default '[]'::jsonb;
+
+update strategy_initiatives
+set keywords = '[]'::jsonb
+where keywords is null
+  or jsonb_typeof(keywords) <> 'array';
 
 alter table if exists strategy_initiatives
   add column if not exists implementation_target_date date;

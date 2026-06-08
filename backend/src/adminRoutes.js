@@ -14,6 +14,7 @@ const {
   resolveInstitutionAiSettings,
   resolveInstitutionModelOverride
 } = require('./services/aiProviderService');
+const { normalizeInitiativeKeywords } = require('./services/initiativeKeywordService');
 
 function registerAdminRoutes({
   app,
@@ -1783,7 +1784,7 @@ function registerAdminRoutes({
     );
 
     const initiativesRes = await query(
-      `select i.id, i.title, i.description, i.status, i.line_side, i.map_x, i.map_y, i.created_at,
+      `select i.id, i.title, i.description, i.status, i.line_side, i.keywords, i.map_x, i.map_y, i.created_at,
               coalesce(v.total_score, 0)::int as total_score,
               coalesce(v.voter_count, 0)::int as voter_count
        from strategy_initiatives i
@@ -1883,6 +1884,7 @@ function registerAdminRoutes({
         title: row.title,
         description: row.description,
         status: row.status,
+        keywords: normalizeInitiativeKeywords(row.keywords),
         lineSide: normalizeLineSide(row.line_side) || 'auto',
         mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
         mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
@@ -1903,6 +1905,7 @@ function registerAdminRoutes({
     const cycleId = String(req.params.cycleId || '').trim();
     const title = String(req.body?.title || '').trim();
     const description = String(req.body?.description || '').trim();
+    const keywords = normalizeInitiativeKeywords(req.body?.keywords);
     const guidelineIdsRaw = req.body?.guidelineIds;
     if (!cycleId || !title) return res.status(400).json({ error: 'cycleId and title required' });
 
@@ -1928,6 +1931,7 @@ function registerAdminRoutes({
         title,
         description,
         guidelineIds,
+        keywords,
         createdBy: req.auth.sub,
         uuid
       });
@@ -2203,6 +2207,8 @@ function registerAdminRoutes({
     const description = String(req.body?.description || '').trim();
     const status = String(req.body?.status || 'active').trim();
     const lineSide = normalizeLineSide(req.body?.lineSide);
+    const keywordsProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'keywords');
+    const keywords = keywordsProvided ? normalizeInitiativeKeywords(req.body?.keywords) : undefined;
     const guidelineIdsRaw = req.body?.guidelineIds;
     if (!initiativeId || !title) return res.status(400).json({ error: 'initiativeId and title required' });
     if (!['active', 'disabled', 'merged', 'hidden'].includes(status)) return res.status(400).json({ error: 'invalid status' });
@@ -2249,7 +2255,8 @@ function registerAdminRoutes({
       lineSide,
       implementationDate,
       implementationOwner,
-      implementationCompletedAt
+      implementationCompletedAt,
+      keywords
     });
 
     await replaceInitiativeGuidelineLinks({

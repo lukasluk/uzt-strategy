@@ -136,7 +136,10 @@ function layoutStrategyMap() {
   });
 
   const guidelines = Array.isArray(institution.guidelines) ? institution.guidelines : [];
-  const initiatives = Array.isArray(institution.initiatives) ? institution.initiatives : [];
+  const sourceInitiatives = Array.isArray(institution.initiatives) ? institution.initiatives : [];
+  const initiatives = typeof filterInitiativesByKeywords === 'function'
+    ? filterInitiativesByKeywords(sourceInitiatives, state.mapKeywordFilters)
+    : sourceInitiatives;
   const linkedInitiativeCountByGuidelineId = {};
   initiatives.forEach((initiative) => {
     const linkedGuidelineIds = Array.isArray(initiative.guidelineIds) ? initiative.guidelineIds : [];

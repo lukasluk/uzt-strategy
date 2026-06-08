@@ -542,6 +542,15 @@ function renderMapView() {
     renderMapEmptyState();
     return;
   }
+  if (typeof mapSelectedInstitutionRecord === 'function'
+    && typeof collectInitiativeKeywordOptions === 'function'
+    && typeof sanitizeSelectedKeywords === 'function') {
+    const selectedInstitution = mapSelectedInstitutionRecord();
+    const keywordOptions = collectInitiativeKeywordOptions(
+      Array.isArray(selectedInstitution?.initiatives) ? selectedInstitution.initiatives : []
+    );
+    state.mapKeywordFilters = sanitizeSelectedKeywords(state.mapKeywordFilters, keywordOptions);
+  }
   const primaryGraph = layoutStrategyMap();
   if (!primaryGraph.institution) {
     renderMapInstitutionPromptState();
@@ -574,6 +583,20 @@ function renderMapView() {
   const planButtons = Array.from(elements.stepView.querySelectorAll('[data-map-layer-btn="plan"]'));
   bindMapLayerButtons(layerGuidelinesButtons, layerInitiativesButtons, layerStrategicButtons);
   bindMapPlanButtons(planButtons);
+  elements.stepView.querySelectorAll('[data-action="toggle-keyword-filter"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (typeof toggleKeywordFilter !== 'function') return;
+      toggleKeywordFilter(button.dataset.scope || 'map', button.dataset.keyword || '');
+      renderMapView();
+    });
+  });
+  elements.stepView.querySelectorAll('[data-action="clear-keyword-filter"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (typeof clearKeywordFilter !== 'function') return;
+      clearKeywordFilter(button.dataset.scope || 'map');
+      renderMapView();
+    });
+  });
   elements.stepView.querySelectorAll('[data-action="show-related-initiatives"]').forEach((button) => {
     button.addEventListener('click', (event) => {
       event.preventDefault();

@@ -4,6 +4,7 @@ const {
   buildFallbackStrategyCatalogClassification,
   refreshStrategyCatalogClassifications
 } = require('./services/strategyCatalogService');
+const { normalizeInitiativeKeywords } = require('./services/initiativeKeywordService');
 
 function registerPublicRoutes({
   app,
@@ -214,6 +215,7 @@ function registerPublicRoutes({
         lineSide: normalizeLineSide(proposal.lineSide) || 'auto',
         mapX: null,
         mapY: null,
+        keywords: [],
         guidelineLinks,
         guidelineIds,
         totalScore: 0,
@@ -721,7 +723,7 @@ function registerPublicRoutes({
       }
 
       const initiativesRes = await query(
-        `select id, cycle_id, title, description, implementation_target_date, implementation_owner, implementation_completed_at, status, line_side, map_x, map_y, created_at
+        `select id, cycle_id, title, description, implementation_target_date, implementation_owner, implementation_completed_at, status, line_side, keywords, map_x, map_y, created_at
          from strategy_initiatives
          where cycle_id = any($1::uuid[])
            and status in ('active', 'disabled', 'merged', 'hidden')
@@ -839,6 +841,7 @@ function registerPublicRoutes({
           implementationOwner: row.implementation_owner || null,
           implementationCompletedAt: row.implementation_completed_at || null,
           status: row.status,
+          keywords: normalizeInitiativeKeywords(row.keywords),
           lineSide: normalizeLineSide(row.line_side) || 'auto',
           mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
           mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,
@@ -1064,7 +1067,7 @@ function registerPublicRoutes({
     if (!cycle) return res.status(404).json({ error: 'cycle not found' });
 
     const initiativesRes = await query(
-      `select id, title, description, implementation_target_date, implementation_owner, implementation_completed_at, status, line_side, map_x, map_y, created_at
+      `select id, title, description, implementation_target_date, implementation_owner, implementation_completed_at, status, line_side, keywords, map_x, map_y, created_at
        from strategy_initiatives
        where cycle_id = $1 and status in ('active', 'disabled')
        order by created_at asc`,
@@ -1142,6 +1145,7 @@ function registerPublicRoutes({
       implementationOwner: row.implementation_owner || null,
       implementationCompletedAt: row.implementation_completed_at || null,
       status: row.status,
+      keywords: normalizeInitiativeKeywords(row.keywords),
       lineSide: normalizeLineSide(row.line_side) || 'auto',
       mapX: Number.isFinite(Number(row.map_x)) ? Number(row.map_x) : null,
       mapY: Number.isFinite(Number(row.map_y)) ? Number(row.map_y) : null,

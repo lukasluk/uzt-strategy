@@ -1,3 +1,5 @@
+const { normalizeInitiativeKeywords } = require('./initiativeKeywordService');
+
 function createContentMutationService({ query }) {
   async function createGuideline({
     cycleId,
@@ -42,14 +44,16 @@ function createContentMutationService({ query }) {
     title,
     description,
     guidelineIds,
+    keywords = [],
     createdBy,
     uuid
   }) {
     const initiativeId = uuid();
+    const normalizedKeywords = normalizeInitiativeKeywords(keywords);
     await query(
-      `insert into strategy_initiatives (id, cycle_id, title, description, status, line_side, created_by)
-       values ($1, $2, $3, $4, 'active', $5, $6)`,
-      [initiativeId, cycleId, title, description || null, 'auto', createdBy]
+      `insert into strategy_initiatives (id, cycle_id, title, description, status, line_side, keywords, created_by)
+       values ($1, $2, $3, $4, 'active', $5, $6::jsonb, $7)`,
+      [initiativeId, cycleId, title, description || null, 'auto', JSON.stringify(normalizedKeywords), createdBy]
     );
     for (const guidelineId of guidelineIds) {
       await query(

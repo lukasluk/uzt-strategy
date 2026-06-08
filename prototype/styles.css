@@ -2488,6 +2488,76 @@ textarea {
   margin-right: 6px;
 }
 
+.initiative-keywords,
+.keyword-filter-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.initiative-keywords {
+  margin-top: 10px;
+}
+
+.initiative-keyword-chip,
+.keyword-filter-chip,
+.keyword-filter-clear {
+  border: 1px solid #d7e3f4;
+  border-radius: 999px;
+  background: #f6f9fd;
+  color: #244160;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.initiative-keyword-chip {
+  background: #fff8ee;
+  border-color: #e2c89f;
+  color: #6d542f;
+}
+
+.keyword-filter-chip.is-active {
+  background: #2855f6;
+  border-color: #2855f6;
+  color: #fff;
+}
+
+.initiative-keyword-chip:hover,
+.keyword-filter-chip:hover,
+.keyword-filter-clear:hover {
+  border-color: #7da4d6;
+  background: #edf4ff;
+}
+
+.keyword-filter-bar {
+  border: 1px solid #d9e5f6;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.keyword-filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: #213955;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.keyword-filter-clear {
+  background: #fff;
+  color: #5a6c83;
+}
+
 .card-actions {
   display: flex;
   justify-content: space-between;
@@ -3277,6 +3347,23 @@ body.embed-map-page .map-overlay-toolbar {
   opacity: 1;
   transform: translateY(0);
   transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.map-overlay-toolbar .keyword-filter-bar {
+  pointer-events: auto;
+  flex: 1 1 100%;
+  max-width: min(720px, 100%);
+  margin: 0;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+}
+.map-overlay-toolbar .keyword-filter-head {
+  margin-bottom: 6px;
+}
+.map-overlay-toolbar .keyword-filter-chip,
+.map-overlay-toolbar .keyword-filter-clear {
+  padding: 4px 8px;
+  font-size: 11px;
 }
 .map-overlay-toolbar.is-idle-hidden {
   opacity: 0;
