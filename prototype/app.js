@@ -5728,6 +5728,24 @@ function renderInitiativeKeywordChips(initiative) {
   `;
 }
 
+function renderInitiativeViewIcon(mode) {
+  if (mode === 'list') {
+    return `
+      <svg class="initiative-view-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <path d="M4 5.5h12M4 10h12M4 14.5h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+      </svg>
+    `;
+  }
+  return `
+    <svg class="initiative-view-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <rect x="3.5" y="4" width="5" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6"></rect>
+      <rect x="11.5" y="4" width="5" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6"></rect>
+      <rect x="3.5" y="11" width="5" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6"></rect>
+      <rect x="11.5" y="11" width="5" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6"></rect>
+    </svg>
+  `;
+}
+
 function renderInitiativeKeywordFilterBar({
   options,
   selected,
@@ -5763,15 +5781,19 @@ function renderInitiativeKeywordFilterBar({
                 class="keyword-filter-chip initiative-view-chip${normalizedViewMode === 'cards' ? ' is-active' : ''}"
                 data-action="set-initiative-view"
                 data-view-mode="cards"
+                aria-label="${escapeHtml(langText('Rodyti kortelėmis', 'Show as cards'))}"
                 aria-pressed="${normalizedViewMode === 'cards' ? 'true' : 'false'}"
-              >${escapeHtml(langText('Kortelės', 'Cards'))}</button>
+                title="${escapeHtml(langText('Rodyti kortelėmis', 'Show as cards'))}"
+              >${renderInitiativeViewIcon('cards')}</button>
               <button
                 type="button"
                 class="keyword-filter-chip initiative-view-chip${normalizedViewMode === 'list' ? ' is-active' : ''}"
                 data-action="set-initiative-view"
                 data-view-mode="list"
+                aria-label="${escapeHtml(langText('Rodyti sąrašu', 'Show as list'))}"
                 aria-pressed="${normalizedViewMode === 'list' ? 'true' : 'false'}"
-              >${escapeHtml(langText('Sąrašas', 'List'))}</button>
+                title="${escapeHtml(langText('Rodyti sąrašu', 'Show as list'))}"
+              >${renderInitiativeViewIcon('list')}</button>
             </div>
             <label class="initiative-sort-control">
               <span>${escapeHtml(langText('Rikiuoti', 'Sort'))}</span>

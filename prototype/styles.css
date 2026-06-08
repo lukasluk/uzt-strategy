@@ -1578,18 +1578,77 @@ textarea {
 }
 .initiative-list-list {
   grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 10px;
 }
 .initiative-list-list .initiative-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.38fr);
-  align-items: start;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
 }
 .initiative-list-list .initiative-card .card-top {
   min-width: 0;
+  border-left-width: 4px;
+  padding-left: 10px;
 }
 .initiative-list-list .initiative-card .vote-panel {
   margin-top: 0;
+  min-width: 190px;
+  padding: 8px 10px;
+}
+.initiative-list-list .initiative-card .title-row {
+  align-items: center;
+  gap: 8px;
+}
+.initiative-list-list .initiative-card .title-row h4 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.18;
+}
+.initiative-list-list .initiative-card .rich-text-content {
+  display: -webkit-box;
+  margin-top: 5px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.initiative-list-list .initiative-card .rich-text-content p {
+  margin: 0;
+}
+.initiative-list-list .initiative-keywords {
+  margin-top: 6px;
+}
+.initiative-list-list .initiative-keyword-chip {
+  padding: 3px 7px;
+  font-size: 11px;
+}
+.initiative-list-list .card-share-row,
+.initiative-list-list .card-section {
+  display: none;
+}
+.initiative-list-list .vote-panel-head {
+  display: none;
+}
+.initiative-list-list .vote-panel-body {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.initiative-list-list .vote-controls {
+  gap: 6px;
+}
+.initiative-list-list .vote-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+}
+.initiative-list-list .vote-score {
+  font-size: 16px;
+}
+.initiative-list-list .vote-total {
+  white-space: nowrap;
 }
 .admin-guideline-grid {
   grid-template-columns: repeat(auto-fit, minmax(860px, 1fr));
@@ -2596,8 +2655,18 @@ textarea {
 }
 
 .initiative-view-chip {
-  padding: 4px 8px;
-  font-size: 11px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+}
+
+.initiative-view-icon {
+  width: 17px;
+  height: 17px;
+  display: block;
 }
 
 .initiative-sort-control {
