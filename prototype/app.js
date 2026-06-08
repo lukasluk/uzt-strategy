@@ -7594,7 +7594,7 @@ function bindInitiativeCardInteractions(list) {
 
   list.addEventListener('click', async (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
+    if (!(target instanceof Element)) return;
     const detailView = list.dataset.detailView === '1';
     const clickedInteractive = target.closest('button, input, textarea, select, a, label, form');
     if (!clickedInteractive && !detailView) {
