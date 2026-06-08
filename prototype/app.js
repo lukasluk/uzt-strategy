@@ -250,6 +250,8 @@ const state = {
   historyCycleId: '',
   historySortOrder: 'desc',
   initiativeKeywordFilters: [],
+  initiativeViewMode: 'cards',
+  initiativeSortMode: 'created',
   mapKeywordFilters: [],
   mapLayer: 'guidelines',
   mapGuidelinesShowInitiatives: false,
@@ -1328,6 +1330,32 @@ function filterInitiativesByKeywords(initiatives, selectedKeywords) {
   return (Array.isArray(initiatives) ? initiatives : []).filter((initiative) =>
     initiativeMatchesKeywordFilters(initiative, selectedKeywords)
   );
+}
+
+function normalizeInitiativeViewMode(value) {
+  return String(value || '').trim().toLowerCase() === 'list' ? 'list' : 'cards';
+}
+
+function normalizeInitiativeSortMode(value) {
+  const mode = String(value || '').trim().toLowerCase();
+  return ['votes', 'title', 'created'].includes(mode) ? mode : 'created';
+}
+
+function sortInitiativesForView(initiatives, sortMode) {
+  const mode = normalizeInitiativeSortMode(sortMode);
+  return [...(Array.isArray(initiatives) ? initiatives : [])].sort((left, right) => {
+    if (mode === 'votes') {
+      const byScore = Number(right?.totalScore || 0) - Number(left?.totalScore || 0);
+      if (byScore !== 0) return byScore;
+      return String(left?.title || '').localeCompare(String(right?.title || ''), 'lt');
+    }
+    if (mode === 'title') {
+      return String(left?.title || '').localeCompare(String(right?.title || ''), 'lt');
+    }
+    const leftTime = new Date(left?.createdAt || 0).getTime() || 0;
+    const rightTime = new Date(right?.createdAt || 0).getTime() || 0;
+    return rightTime - leftTime;
+  });
 }
 
 function sanitizeRichTextHtml(value) {
@@ -5705,11 +5733,15 @@ function renderInitiativeKeywordFilterBar({
   selected,
   scope,
   totalCount,
-  filteredCount
+  filteredCount,
+  viewMode = 'cards',
+  sortMode = 'created'
 }) {
   const available = Array.isArray(options) ? options : [];
   const selectedKeywords = sanitizeSelectedKeywords(selected, available);
-  if (!isLoggedIn() || !available.length) return '';
+  const showFilter = isLoggedIn() && available.length;
+  const showViewControls = scope === 'initiatives';
+  if (!showFilter && !showViewControls) return '';
   const selectedSet = new Set(selectedKeywords.map((keyword) => keywordKey(keyword)));
   const label = scope === 'map'
     ? langText('Raktažodžių filtras', 'Keyword filter')
@@ -5717,13 +5749,43 @@ function renderInitiativeKeywordFilterBar({
   const countLabel = selectedKeywords.length
     ? `${filteredCount} / ${totalCount}`
     : String(totalCount);
+  const normalizedViewMode = normalizeInitiativeViewMode(viewMode);
+  const normalizedSortMode = normalizeInitiativeSortMode(sortMode);
   return `
     <div class="keyword-filter-bar" data-keyword-filter-scope="${escapeHtml(scope)}">
       <div class="keyword-filter-head">
         <span>${escapeHtml(label)}</span>
-        <span class="tag tag-subtle">${escapeHtml(countLabel)}</span>
+        <div class="initiative-display-controls">
+          ${showViewControls ? `
+            <div class="initiative-view-toggle" aria-label="${escapeHtml(langText('Atvaizdavimas', 'View'))}">
+              <button
+                type="button"
+                class="keyword-filter-chip initiative-view-chip${normalizedViewMode === 'cards' ? ' is-active' : ''}"
+                data-action="set-initiative-view"
+                data-view-mode="cards"
+                aria-pressed="${normalizedViewMode === 'cards' ? 'true' : 'false'}"
+              >${escapeHtml(langText('Kortelės', 'Cards'))}</button>
+              <button
+                type="button"
+                class="keyword-filter-chip initiative-view-chip${normalizedViewMode === 'list' ? ' is-active' : ''}"
+                data-action="set-initiative-view"
+                data-view-mode="list"
+                aria-pressed="${normalizedViewMode === 'list' ? 'true' : 'false'}"
+              >${escapeHtml(langText('Sąrašas', 'List'))}</button>
+            </div>
+            <label class="initiative-sort-control">
+              <span>${escapeHtml(langText('Rikiuoti', 'Sort'))}</span>
+              <select data-action="set-initiative-sort" aria-label="${escapeHtml(langText('Rikiuoti iniciatyvas', 'Sort initiatives'))}">
+                <option value="created" ${normalizedSortMode === 'created' ? 'selected' : ''}>${escapeHtml(langText('Sukūrimo data', 'Created'))}</option>
+                <option value="votes" ${normalizedSortMode === 'votes' ? 'selected' : ''}>${escapeHtml(langText('Balsai', 'Votes'))}</option>
+                <option value="title" ${normalizedSortMode === 'title' ? 'selected' : ''}>${escapeHtml(langText('Pavadinimas', 'Title'))}</option>
+              </select>
+            </label>
+          ` : ''}
+          <span class="tag tag-subtle">${escapeHtml(countLabel)}</span>
+        </div>
       </div>
-      <div class="keyword-filter-options">
+      ${showFilter ? `<div class="keyword-filter-options">
         ${available.map((keyword) => {
           const active = selectedSet.has(keywordKey(keyword));
           return `
@@ -5745,7 +5807,7 @@ function renderInitiativeKeywordFilterBar({
             data-scope="${escapeHtml(scope)}"
           >${escapeHtml(langText('Išvalyti', 'Clear'))}</button>
         ` : ''}
-      </div>
+      </div>` : ''}
     </div>
   `;
 }
@@ -7532,6 +7594,11 @@ function bindInitiativeCardInteractions(list) {
       render();
       return;
     }
+    if (action === 'set-initiative-view') {
+      state.initiativeViewMode = normalizeInitiativeViewMode(actionElement.dataset.viewMode);
+      render();
+      return;
+    }
     if (action === 'filter-initiative-keyword') {
       const keyword = String(actionElement.dataset.keyword || '').trim();
       if (keyword) {
@@ -7593,6 +7660,14 @@ function bindInitiativeCardInteractions(list) {
       });
       await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
     });
+  });
+
+  list.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    if (String(target.dataset.action || '') !== 'set-initiative-sort') return;
+    state.initiativeSortMode = normalizeInitiativeSortMode(target.value);
+    render();
   });
 }
 
@@ -7760,7 +7835,10 @@ function renderInitiativesView() {
   const canEditInitiatives = canManageSelectedInstitution();
   const keywordOptions = collectInitiativeKeywordOptions(initiatives);
   state.initiativeKeywordFilters = sanitizeSelectedKeywords(state.initiativeKeywordFilters, keywordOptions);
+  state.initiativeViewMode = normalizeInitiativeViewMode(state.initiativeViewMode);
+  state.initiativeSortMode = normalizeInitiativeSortMode(state.initiativeSortMode);
   const filteredInitiatives = filterInitiativesByKeywords(initiatives, state.initiativeKeywordFilters);
+  const visibleInitiatives = sortInitiativesForView(filteredInitiatives, state.initiativeSortMode);
   const eligibleGuidelines = state.guidelines.filter((guideline) => {
     const status = String(guideline.status || 'active').toLowerCase();
     return status === 'active';
@@ -7774,16 +7852,18 @@ function renderInitiativesView() {
         selected: state.initiativeKeywordFilters,
         scope: 'initiatives',
         totalCount: initiatives.length,
-        filteredCount: filteredInitiatives.length
+        filteredCount: filteredInitiatives.length,
+        viewMode: state.initiativeViewMode,
+        sortMode: state.initiativeSortMode
       })}
       ${initiatives.length && !filteredInitiatives.length
         ? `<div class="card guideline-empty">
             <strong>${langText('Pagal pasirinktus raktažodžius iniciatyvų nėra', 'No initiatives match the selected keywords')}</strong>
             <p class="prompt" style="margin: 6px 0 0;">${langText('Išvalykite filtrą arba pasirinkite kitą raktažodį.', 'Clear the filter or choose another keyword.')}</p>
           </div>`
-        : filteredInitiatives.length
-        ? `<div class="card-list initiative-list">
-            ${filteredInitiatives.map((initiative) => renderInitiativeCard(initiative, {
+        : visibleInitiatives.length
+        ? `<div class="card-list initiative-list initiative-list-${escapeHtml(state.initiativeViewMode)}">
+            ${visibleInitiatives.map((initiative) => renderInitiativeCard(initiative, {
               member,
               writable,
               authenticated,
