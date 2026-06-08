@@ -1296,6 +1296,10 @@ function initiativeKeywords(initiative) {
   return normalizeKeywordList(initiative?.keywords);
 }
 
+function keywordInputValue(value) {
+  return normalizeKeywordList(value).join(', ');
+}
+
 function collectInitiativeKeywordOptions(initiatives = state.initiatives) {
   const map = new Map();
   (Array.isArray(initiatives) ? initiatives : []).forEach((initiative) => {
@@ -5599,6 +5603,7 @@ function renderInitiativeCard(initiative, options) {
     : `<li class="comment-item comment-item-empty">${escapeHtml(commentsHiddenHintText())}</li>`;
   const initiativeStatus = String(initiative.status || 'active').toLowerCase();
   const pendingStatus = initiativeStatus === 'pending';
+  const canEditInitiative = Boolean(options.canEdit) && !pendingStatus;
   const votingDisabled = initiativeStatus === 'disabled' || pendingStatus;
   const linkedNames = resolveInitiativeGuidelineNames(initiative);
   const initiativeUrl = initiativeShareUrl(initiative.id);
@@ -5626,6 +5631,14 @@ function renderInitiativeCard(initiative, options) {
           <h4>${escapeHtml(initiative.title)}</h4>
           ${pendingStatus ? `<span class="tag tag-main">${langText('Laukia tvirtinimo', 'Pending')}</span>` : ''}
           ${initiativeStatus === 'disabled' ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
+          ${canEditInitiative ? `
+            <button
+              type="button"
+              class="btn btn-ghost initiative-admin-edit-btn"
+              data-action="edit-initiative-admin"
+              data-id="${escapeHtml(initiative.id)}"
+            >${escapeHtml(langText('Raktažodžiai', 'Keywords'))}</button>
+          ` : ''}
         </div>
         ${renderRichTextContent(initiative.description, langText('Be paaiskinimo', 'No description provided.'))}
         ${keywordMarkup}
@@ -6136,6 +6149,7 @@ function openInitiativeAdminEditModal(initiative) {
   closeInternalEditModal();
 
   const selectedGuidelineIds = resolveInitiativeGuidelineIds(item);
+  const keywordValue = keywordInputValue(item.keywords);
   const overlay = document.createElement('div');
   overlay.id = 'internalEntityEditOverlay';
   overlay.className = 'modal-overlay';
@@ -6165,6 +6179,11 @@ function openInitiativeAdminEditModal(initiative) {
               textareaClass: 'admin-edit-description'
             })}
           </label>
+          <label class="admin-edit-field">
+            <span class="admin-edit-field-label">${escapeHtml(langText('Raktažodžiai', 'Keywords'))}</span>
+            <input type="text" name="keywords" value="${escapeHtml(keywordValue)}" placeholder="${escapeHtml(langText('Pvz. Saugumas, DI, Duomenys', 'E.g. Security, AI, Data'))}" />
+          </label>
+          <p class="prompt admin-edit-section-hint">${escapeHtml(langText('Atskirkite kableliais. Raktažodžiai matomi prie iniciatyvos ir naudojami filtravimui.', 'Separate with commas. Keywords are shown on the initiative and used for filtering.'))}</p>
         </section>
         <section class="admin-edit-section">
           <h4 class="admin-edit-section-title">${escapeHtml(langText('Igyvendinimas', 'Implementation'))}</h4>
@@ -6219,6 +6238,7 @@ function openInitiativeAdminEditModal(initiative) {
     const title = String(fd.get('title') || '').trim();
     const description = normalizeRichTextValue(fd.get('description'));
     const status = String(fd.get('status') || 'active').trim();
+    const keywords = normalizeKeywordList(fd.get('keywords'));
     const implementationDate = normalizeImplementationDateInputValue(fd.get('implementationDate'));
     const implementationOwner = String(fd.get('implementationOwner') || '').trim();
     const guidelineIds = checkedFormValues(form, 'guidelineIds');
@@ -6230,6 +6250,7 @@ function openInitiativeAdminEditModal(initiative) {
           title,
           description,
           status,
+          keywords,
           guidelineIds,
           lineSide: 'auto',
           implementationDate,
@@ -6239,7 +6260,8 @@ function openInitiativeAdminEditModal(initiative) {
       closeInternalEditModal();
       state.notice = langText('Iniciatyva atnaujinta.', 'Initiative updated.');
       notifySuccess(state.notice);
-      await bootstrap();
+      await Promise.all([refreshInitiatives(), refreshSummary(), loadStrategyMap(), refreshHistory()]);
+      render();
     });
   });
 
@@ -7524,6 +7546,14 @@ function bindInitiativeCardInteractions(list) {
     const initiativeId = String(actionElement.dataset.id || '').trim();
     if (!action || !initiativeId) return;
 
+    if (action === 'edit-initiative-admin') {
+      const initiative = findInitiativeById(initiativeId);
+      if (initiative && canManageSelectedInstitution()) {
+        openInitiativeAdminEditModal(initiative);
+      }
+      return;
+    }
+
     if (action === 'copy-initiative-link') {
       const url = String(actionElement.dataset.url || initiativeShareUrl(initiativeId)).trim();
       const copied = await copyTextToClipboard(url);
@@ -7639,6 +7669,7 @@ function renderInitiativeDetailView() {
     writable,
     authenticated,
     commentsVisible: state.commentsVisible,
+    canEdit,
     linkable: false
   })}
       </div>
@@ -7726,6 +7757,7 @@ function renderInitiativesView() {
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
   const initiatives = Array.isArray(state.initiatives) ? state.initiatives : [];
+  const canEditInitiatives = canManageSelectedInstitution();
   const keywordOptions = collectInitiativeKeywordOptions(initiatives);
   state.initiativeKeywordFilters = sanitizeSelectedKeywords(state.initiativeKeywordFilters, keywordOptions);
   const filteredInitiatives = filterInitiativesByKeywords(initiatives, state.initiativeKeywordFilters);
@@ -7755,7 +7787,8 @@ function renderInitiativesView() {
               member,
               writable,
               authenticated,
-              commentsVisible: state.commentsVisible
+              commentsVisible: state.commentsVisible,
+              canEdit: canEditInitiatives
             })).join('')}
           </div>`
         : `<div class="card guideline-empty">

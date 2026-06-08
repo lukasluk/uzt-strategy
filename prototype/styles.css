@@ -2534,6 +2534,15 @@ textarea {
   background: #edf4ff;
 }
 
+.initiative-admin-edit-btn {
+  margin-left: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-color: #e2c89f;
+  background: #fff8ee;
+  color: #6d542f;
+}
+
 .keyword-filter-bar {
   border: 1px solid #d9e5f6;
   border-radius: 8px;
