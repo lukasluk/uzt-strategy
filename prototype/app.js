@@ -251,7 +251,7 @@ const state = {
   historySortOrder: 'desc',
   initiativeKeywordFilters: [],
   initiativeViewMode: 'cards',
-  initiativeSortMode: 'created',
+  initiativeSortMode: 'created-desc',
   mapKeywordFilters: [],
   mapLayer: 'guidelines',
   mapGuidelinesShowInitiatives: false,
@@ -1338,7 +1338,8 @@ function normalizeInitiativeViewMode(value) {
 
 function normalizeInitiativeSortMode(value) {
   const mode = String(value || '').trim().toLowerCase();
-  return ['votes', 'title', 'created'].includes(mode) ? mode : 'created';
+  if (mode === 'created') return 'created-desc';
+  return ['votes', 'title', 'created-desc', 'created-asc'].includes(mode) ? mode : 'created-desc';
 }
 
 function sortInitiativesForView(initiatives, sortMode) {
@@ -1354,7 +1355,7 @@ function sortInitiativesForView(initiatives, sortMode) {
     }
     const leftTime = new Date(left?.createdAt || 0).getTime() || 0;
     const rightTime = new Date(right?.createdAt || 0).getTime() || 0;
-    return rightTime - leftTime;
+    return mode === 'created-asc' ? leftTime - rightTime : rightTime - leftTime;
   });
 }
 
@@ -5753,7 +5754,7 @@ function renderInitiativeKeywordFilterBar({
   totalCount,
   filteredCount,
   viewMode = 'cards',
-  sortMode = 'created'
+  sortMode = 'created-desc'
 }) {
   const available = Array.isArray(options) ? options : [];
   const selectedKeywords = sanitizeSelectedKeywords(selected, available);
@@ -5798,7 +5799,8 @@ function renderInitiativeKeywordFilterBar({
             <label class="initiative-sort-control">
               <span>${escapeHtml(langText('Rikiuoti', 'Sort'))}</span>
               <select data-action="set-initiative-sort" aria-label="${escapeHtml(langText('Rikiuoti iniciatyvas', 'Sort initiatives'))}">
-                <option value="created" ${normalizedSortMode === 'created' ? 'selected' : ''}>${escapeHtml(langText('Sukūrimo data', 'Created'))}</option>
+                <option value="created-desc" ${normalizedSortMode === 'created-desc' ? 'selected' : ''}>${escapeHtml(langText('Naujausios viršuje', 'Newest first'))}</option>
+                <option value="created-asc" ${normalizedSortMode === 'created-asc' ? 'selected' : ''}>${escapeHtml(langText('Seniausios viršuje', 'Oldest first'))}</option>
                 <option value="votes" ${normalizedSortMode === 'votes' ? 'selected' : ''}>${escapeHtml(langText('Balsai', 'Votes'))}</option>
                 <option value="title" ${normalizedSortMode === 'title' ? 'selected' : ''}>${escapeHtml(langText('Pavadinimas', 'Title'))}</option>
               </select>
