@@ -2609,12 +2609,35 @@ textarea {
 }
 
 .initiative-admin-edit-btn {
-  margin-left: auto;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
   padding: 6px 10px;
   font-size: 12px;
   border-color: #e2c89f;
   background: #fff8ee;
   color: #6d542f;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-3px);
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+}
+
+.initiative-card:hover .initiative-admin-edit-btn,
+.initiative-card:focus-within .initiative-admin-edit-btn {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.initiative-list-list .initiative-admin-edit-btn {
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
 }
 
 .keyword-filter-bar {
@@ -9067,6 +9090,7 @@ select:focus {
 }
 
 .initiative-card {
+  position: relative;
   border-color: #e2c89f;
   background: linear-gradient(180deg, #fffdf8 0%, #f9efdf 100%);
   box-shadow: 0 10px 24px rgba(160, 104, 29, 0.14);
