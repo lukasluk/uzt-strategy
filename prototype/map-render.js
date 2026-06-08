@@ -18,13 +18,17 @@ function buildMapToolbarMarkup({ activeLayer, hasInitiativeNodes }) {
     const filtered = typeof filterInitiativesByKeywords === 'function'
       ? filterInitiativesByKeywords(sourceInitiatives, state.mapKeywordFilters)
       : sourceInitiatives;
+    const keywordCounts = typeof collectInitiativeKeywordCounts === 'function'
+      ? collectInitiativeKeywordCounts(sourceInitiatives)
+      : null;
     if (typeof renderInitiativeKeywordFilterBar === 'function') {
       keywordFilterMarkup = renderInitiativeKeywordFilterBar({
         options,
         selected: state.mapKeywordFilters,
         scope: 'map',
         totalCount: sourceInitiatives.length,
-        filteredCount: filtered.length
+        filteredCount: filtered.length,
+        keywordCounts
       });
     }
   } catch {

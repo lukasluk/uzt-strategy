@@ -1314,6 +1314,18 @@ function collectInitiativeKeywordOptions(initiatives = state.initiatives) {
   return Array.from(map.values()).sort((left, right) => left.localeCompare(right, 'lt'));
 }
 
+function collectInitiativeKeywordCounts(initiatives = state.initiatives) {
+  const counts = {};
+  (Array.isArray(initiatives) ? initiatives : []).forEach((initiative) => {
+    initiativeKeywords(initiative).forEach((keyword) => {
+      const key = keywordKey(keyword);
+      if (!key) return;
+      counts[key] = Number(counts[key] || 0) + 1;
+    });
+  });
+  return counts;
+}
+
 function sanitizeSelectedKeywords(selected, options) {
   const available = new Set((Array.isArray(options) ? options : []).map((item) => keywordKey(item)));
   return normalizeKeywordList(selected).filter((keyword) => available.has(keywordKey(keyword)));
@@ -5754,9 +5766,13 @@ function renderInitiativeKeywordFilterBar({
   totalCount,
   filteredCount,
   viewMode = 'cards',
-  sortMode = 'created-desc'
+  sortMode = 'created-desc',
+  keywordCounts = null
 }) {
   const available = Array.isArray(options) ? options : [];
+  const countsByKeyword = keywordCounts && typeof keywordCounts === 'object'
+    ? keywordCounts
+    : collectInitiativeKeywordCounts();
   const selectedKeywords = sanitizeSelectedKeywords(selected, available);
   const showFilter = isLoggedIn() && available.length;
   const showViewControls = scope === 'initiatives';
@@ -5812,6 +5828,7 @@ function renderInitiativeKeywordFilterBar({
       ${showFilter ? `<div class="keyword-filter-options">
         ${available.map((keyword) => {
           const active = selectedSet.has(keywordKey(keyword));
+          const count = Number(countsByKeyword[keywordKey(keyword)] || 0);
           return `
             <button
               type="button"
@@ -5820,7 +5837,7 @@ function renderInitiativeKeywordFilterBar({
               data-scope="${escapeHtml(scope)}"
               data-keyword="${escapeHtml(keyword)}"
               aria-pressed="${active ? 'true' : 'false'}"
-            >${escapeHtml(keyword)}</button>
+            ><span>${escapeHtml(keyword)}</span><span class="keyword-filter-count">${count}</span></button>
           `;
         }).join('')}
         ${selectedKeywords.length ? `
@@ -7858,6 +7875,7 @@ function renderInitiativesView() {
   const initiatives = Array.isArray(state.initiatives) ? state.initiatives : [];
   const canEditInitiatives = canManageSelectedInstitution();
   const keywordOptions = collectInitiativeKeywordOptions(initiatives);
+  const keywordCounts = collectInitiativeKeywordCounts(initiatives);
   state.initiativeKeywordFilters = sanitizeSelectedKeywords(state.initiativeKeywordFilters, keywordOptions);
   state.initiativeViewMode = normalizeInitiativeViewMode(state.initiativeViewMode);
   state.initiativeSortMode = normalizeInitiativeSortMode(state.initiativeSortMode);
@@ -7878,7 +7896,8 @@ function renderInitiativesView() {
         totalCount: initiatives.length,
         filteredCount: filteredInitiatives.length,
         viewMode: state.initiativeViewMode,
-        sortMode: state.initiativeSortMode
+        sortMode: state.initiativeSortMode,
+        keywordCounts
       })}
       ${initiatives.length && !filteredInitiatives.length
         ? `<div class="card guideline-empty">

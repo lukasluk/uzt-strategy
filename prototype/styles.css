@@ -2577,6 +2577,9 @@ textarea {
 .initiative-keyword-chip,
 .keyword-filter-chip,
 .keyword-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid #d7e3f4;
   border-radius: 999px;
   background: #f6f9fd;
@@ -2587,6 +2590,25 @@ textarea {
   padding: 5px 9px;
   cursor: pointer;
   transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.keyword-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(36, 65, 96, 0.09);
+  color: currentColor;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.keyword-filter-chip.is-active .keyword-filter-count {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .initiative-keyword-chip {
@@ -2680,7 +2702,6 @@ textarea {
 .initiative-view-chip {
   width: 30px;
   height: 30px;
-  display: inline-flex;
   justify-content: center;
   align-items: center;
   padding: 0;
