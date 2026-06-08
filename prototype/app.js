@@ -5784,12 +5784,52 @@ function renderInitiativeKeywordFilterBar({
   const countLabel = selectedKeywords.length
     ? `${filteredCount} / ${totalCount}`
     : String(totalCount);
+  const filterButtonLabel = langText('Filtrai', 'Filters');
   const normalizedViewMode = normalizeInitiativeViewMode(viewMode);
   const normalizedSortMode = normalizeInitiativeSortMode(sortMode);
   return `
     <div class="keyword-filter-bar" data-keyword-filter-scope="${escapeHtml(scope)}">
       <div class="keyword-filter-head">
-        <span>${escapeHtml(label)}</span>
+        ${showFilter ? `
+          <div class="keyword-filter-menu">
+            <button
+              type="button"
+              class="keyword-filter-trigger${selectedKeywords.length ? ' is-active' : ''}"
+              aria-haspopup="true"
+              aria-expanded="false"
+            >
+              <span>${escapeHtml(filterButtonLabel)}</span>
+              ${selectedKeywords.length ? `<span class="keyword-filter-trigger-count">${selectedKeywords.length}</span>` : ''}
+            </button>
+            <div class="keyword-filter-popover" role="dialog" aria-label="${escapeHtml(label)}">
+              <div class="keyword-filter-popover-title">${escapeHtml(label)}</div>
+              <div class="keyword-filter-options">
+                ${available.map((keyword) => {
+                  const active = selectedSet.has(keywordKey(keyword));
+                  const count = Number(countsByKeyword[keywordKey(keyword)] || 0);
+                  return `
+                    <button
+                      type="button"
+                      class="keyword-filter-chip${active ? ' is-active' : ''}"
+                      data-action="toggle-keyword-filter"
+                      data-scope="${escapeHtml(scope)}"
+                      data-keyword="${escapeHtml(keyword)}"
+                      aria-pressed="${active ? 'true' : 'false'}"
+                    ><span>${escapeHtml(keyword)}</span><span class="keyword-filter-count">${count}</span></button>
+                  `;
+                }).join('')}
+                ${selectedKeywords.length ? `
+                  <button
+                    type="button"
+                    class="keyword-filter-clear"
+                    data-action="clear-keyword-filter"
+                    data-scope="${escapeHtml(scope)}"
+                  >${escapeHtml(langText('Išvalyti', 'Clear'))}</button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        ` : `<span>${escapeHtml(label)}</span>`}
         <div class="initiative-display-controls">
           ${showViewControls ? `
             <div class="initiative-view-toggle" aria-label="${escapeHtml(langText('Atvaizdavimas', 'View'))}">
@@ -5825,30 +5865,6 @@ function renderInitiativeKeywordFilterBar({
           <span class="tag tag-subtle">${escapeHtml(countLabel)}</span>
         </div>
       </div>
-      ${showFilter ? `<div class="keyword-filter-options">
-        ${available.map((keyword) => {
-          const active = selectedSet.has(keywordKey(keyword));
-          const count = Number(countsByKeyword[keywordKey(keyword)] || 0);
-          return `
-            <button
-              type="button"
-              class="keyword-filter-chip${active ? ' is-active' : ''}"
-              data-action="toggle-keyword-filter"
-              data-scope="${escapeHtml(scope)}"
-              data-keyword="${escapeHtml(keyword)}"
-              aria-pressed="${active ? 'true' : 'false'}"
-            ><span>${escapeHtml(keyword)}</span><span class="keyword-filter-count">${count}</span></button>
-          `;
-        }).join('')}
-        ${selectedKeywords.length ? `
-          <button
-            type="button"
-            class="keyword-filter-clear"
-            data-action="clear-keyword-filter"
-            data-scope="${escapeHtml(scope)}"
-          >${escapeHtml(langText('Išvalyti', 'Clear'))}</button>
-        ` : ''}
-      </div>` : ''}
     </div>
   `;
 }
