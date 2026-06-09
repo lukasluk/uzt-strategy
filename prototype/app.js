@@ -8003,7 +8003,7 @@ function renderInitiativesView() {
         </div>
         <div class="initiative-add-layout">
           <div class="initiative-add-form-pane">
-          <p class="prompt" style="margin-bottom: 10px;">${langText('Iniciatyva turi būti priskirta bent vienai gairei.', 'An initiative must be linked to at least one guideline.')}</p>
+            <p class="prompt" style="margin-bottom: 10px;">${langText('Iniciatyva turi būti priskirta bent vienai gairei.', 'An initiative must be linked to at least one guideline.')}</p>
             <form id="initiativeAddForm">
               <div class="form-row">
                 <input type="text" name="title" placeholder="${escapeHtml(langText('Iniciatyvos pavadinimas', 'Initiative title'))}" required ${state.busy ? 'disabled' : ''}/>
@@ -8022,11 +8022,11 @@ function renderInitiativesView() {
               <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('Pridėti iniciatyvą', 'Add initiative')}</button>
             </form>
           </div>
-          <aside class="initiative-add-matrix-pane">
-            ${guidelineInitiativeMatrix}
-          </aside>
         </div>
       </div>
+      <aside class="initiative-add-matrix-pane initiative-add-matrix-pane-full">
+        ${guidelineInitiativeMatrix}
+      </aside>
     ` : `
       <div class="card" style="margin-top: 16px;">
         <strong>${langText('Ciklas užrakintas redagavimui', 'Cycle is locked for editing')}</strong>

@@ -2997,16 +2997,21 @@ textarea {
 }
 .initiative-add-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.92fr);
-  gap: 14px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 .initiative-add-form-pane {
   min-width: 0;
+  max-width: 760px;
 }
 .initiative-add-matrix-pane {
   min-width: 0;
-  display: flex;
+  display: block;
+  margin-top: 12px;
+}
+.initiative-add-matrix-pane-full {
+  width: 100%;
 }
 .initiative-matrix-card {
   border: 1px solid var(--border-soft);
@@ -3016,7 +3021,7 @@ textarea {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 10px;
-  height: 100%;
+  height: auto;
 }
 .initiative-matrix-header {
   display: flex;
@@ -3043,7 +3048,16 @@ textarea {
 .initiative-matrix-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 460px;
+  table-layout: fixed;
+  min-width: 620px;
+}
+.initiative-matrix-table th:first-child,
+.initiative-matrix-table td:first-child {
+  width: 28%;
+}
+.initiative-matrix-table th:last-child,
+.initiative-matrix-table td:last-child {
+  width: 72%;
 }
 .initiative-matrix-table th,
 .initiative-matrix-table td {
