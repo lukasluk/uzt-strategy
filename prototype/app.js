@@ -8005,21 +8005,25 @@ function renderInitiativesView() {
           <div class="initiative-add-form-pane">
             <p class="prompt" style="margin-bottom: 10px;">${langText('Iniciatyva turi būti priskirta bent vienai gairei.', 'An initiative must be linked to at least one guideline.')}</p>
             <form id="initiativeAddForm">
-              <div class="form-row">
-                <input type="text" name="title" placeholder="${escapeHtml(langText('Iniciatyvos pavadinimas', 'Initiative title'))}" required ${state.busy ? 'disabled' : ''}/>
+              <div class="initiative-add-fields-pane">
+                <div class="form-row">
+                  <input type="text" name="title" placeholder="${escapeHtml(langText('Iniciatyvos pavadinimas', 'Initiative title'))}" required ${state.busy ? 'disabled' : ''}/>
+                </div>
+                ${renderRichTextEditor({
+                  name: 'desc',
+                  placeholder: langText('Trumpas paaiškinimas', 'Short description'),
+                  rows: 5,
+                  disabled: state.busy
+                })}
               </div>
-              ${renderRichTextEditor({
-                name: 'desc',
-                placeholder: langText('Trumpas paaiškinimas', 'Short description'),
-                rows: 5,
-                disabled: state.busy
-              })}
-              <label class="prompt" style="display:block;margin:10px 0 6px;">${langText('Priskirtos gairės', 'Linked guidelines')}</label>
-              <div class="guideline-checkbox-panel">
-                ${renderGuidelineCheckboxList(eligibleGuidelines, { name: 'guidelineIds', disabled: state.busy })}
+              <div class="initiative-add-guidelines-pane">
+                <label class="prompt" style="display:block;margin:0 0 6px;">${langText('Priskirtos gairės', 'Linked guidelines')}</label>
+                <div class="guideline-checkbox-panel">
+                  ${renderGuidelineCheckboxList(eligibleGuidelines, { name: 'guidelineIds', disabled: state.busy })}
+                </div>
+                <p class="prompt guideline-checkbox-hint" style="margin: 8px 0 0;">${langText('Pažymėkite vieną ar kelias gaires.', 'Select one or more guidelines.')}</p>
+                <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('Pridėti iniciatyvą', 'Add initiative')}</button>
               </div>
-              <p class="prompt guideline-checkbox-hint" style="margin: 8px 0 0;">${langText('Pažymėkite vieną ar kelias gaires.', 'Select one or more guidelines.')}</p>
-              <button class="btn btn-primary" type="submit" style="margin-top: 12px;" ${state.busy ? 'disabled' : ''}>${langText('Pridėti iniciatyvą', 'Add initiative')}</button>
             </form>
           </div>
         </div>

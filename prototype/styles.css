@@ -3003,7 +3003,16 @@ textarea {
 }
 .initiative-add-form-pane {
   min-width: 0;
-  max-width: 760px;
+}
+.initiative-add-form-pane form {
+  display: grid;
+  grid-template-columns: minmax(0, 0.68fr) minmax(320px, 0.62fr);
+  gap: 18px;
+  align-items: start;
+}
+.initiative-add-fields-pane,
+.initiative-add-guidelines-pane {
+  min-width: 0;
 }
 .initiative-add-matrix-pane {
   min-width: 0;
@@ -10091,6 +10100,11 @@ select:focus {
   }
 
   .initiative-add-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .initiative-add-form-pane form {
     grid-template-columns: 1fr;
     gap: 10px;
   }
