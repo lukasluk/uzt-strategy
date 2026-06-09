@@ -5449,6 +5449,9 @@ function renderGuidelineCard(guideline, options) {
   const relatedInitiatives = options?.showAssociatedInitiatives
     ? resolveGuidelineRelatedInitiatives(guideline).items
     : [];
+  const associatedVoteTotal = options?.showAssociatedInitiatives
+    ? guidelineRelatedInitiativeVoteTotal(guideline)
+    : null;
   const relatedInitiativesMarkup = options?.showAssociatedInitiatives
     ? `
       <div class="guideline-initiative-peek">
@@ -5464,7 +5467,10 @@ function renderGuidelineCard(guideline, options) {
                   class="guideline-initiative-peek-chip"
                   data-action="open-guideline-linked-initiative"
                   data-initiative-id="${escapeHtml(String(initiative?.id || '').trim())}"
-                >${escapeHtml(String(initiative?.title || initiative?.id || '').trim() || '-')}</button>
+                >
+                  <span>${escapeHtml(String(initiative?.title || initiative?.id || '').trim() || '-')}</span>
+                  <span class="detail-related-score">(${escapeHtml(String(initiativeVoteTotal(initiative)))})</span>
+                </button>
               `).join('')}
             </div>
           `
@@ -5484,7 +5490,10 @@ function renderGuidelineCard(guideline, options) {
     <article class="card guideline-card ${isLinkable ? 'is-linkable' : ''} guideline-relation-${escapeHtml(relationKey)} ${votingDisabled ? 'guideline-disabled' : ''} ${pendingStatus ? 'card-pending' : ''}" data-guideline-id="${escapeHtml(guideline.id)}">
       <div class="card-top">
         <div class="title-row">
-          <h4>${escapeHtml(guideline.title)}</h4>
+          <h4>
+            <span>${escapeHtml(guideline.title)}</span>
+            ${associatedVoteTotal === null ? '' : `<span class="detail-related-score">(${escapeHtml(String(associatedVoteTotal))})</span>`}
+          </h4>
           <span class="tag">${escapeHtml(relationTag)}</span>
           ${pendingStatus ? `<span class="tag tag-main">${langText('Laukia tvirtinimo', 'Pending')}</span>` : ''}
           ${guidelineStatus === 'disabled' ? `<span class="tag tag-disabled">${langText('Isjungta', 'Disabled')}</span>` : ''}
