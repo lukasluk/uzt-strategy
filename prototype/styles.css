@@ -2383,6 +2383,12 @@ textarea {
   min-width: 0;
 }
 
+.detail-related-score {
+  margin-left: 5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .detail-related-link-branch {
   width: 14px;
   min-height: 18px;

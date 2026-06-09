@@ -7018,6 +7018,15 @@ function resolveGuidelineRelatedInitiatives(guideline) {
   };
 }
 
+function initiativeVoteTotal(initiative) {
+  return Number(initiative?.totalScore || 0);
+}
+
+function guidelineRelatedInitiativeVoteTotal(guideline) {
+  return resolveGuidelineRelatedInitiatives(guideline).items
+    .reduce((sum, initiative) => sum + initiativeVoteTotal(initiative), 0);
+}
+
 function renderRelatedDetailSectionMarkup({
   heading,
   emptyLabel,
@@ -7027,7 +7036,9 @@ function renderRelatedDetailSectionMarkup({
   headingClass = '',
   action = 'open-related-guideline-detail',
   idAttribute = 'data-guideline-id',
-  tone = 'guideline'
+  tone = 'guideline',
+  countLabel = null,
+  scoreProvider = null
 }) {
   const cards = Array.isArray(items) ? items : [];
   const safeSectionClass = String(sectionClass || '').trim();
@@ -7035,12 +7046,16 @@ function renderRelatedDetailSectionMarkup({
   const safeAction = String(action || 'open-related-guideline-detail').trim() || 'open-related-guideline-detail';
   const safeIdAttribute = String(idAttribute || 'data-guideline-id').trim() || 'data-guideline-id';
   const safeTone = String(tone || 'guideline').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
+  const hasScoreProvider = typeof scoreProvider === 'function';
+  const safeCountLabel = countLabel === null || countLabel === undefined
+    ? String(cards.length)
+    : String(countLabel);
   return `
     <section class="guideline-group detail-related-group detail-related-group-tone-${escapeHtml(safeTone)} ${escapeHtml(safeSectionClass)}">
       ${showHeading ? `
         <div class="guideline-group-header">
           <h3 class="${escapeHtml(safeHeadingClass)}">${escapeHtml(heading)}</h3>
-          <span class="tag detail-related-count">${cards.length}</span>
+          <span class="tag detail-related-count">${escapeHtml(safeCountLabel)}</span>
         </div>
       ` : ''}
       ${cards.length
@@ -7052,12 +7067,15 @@ function renderRelatedDetailSectionMarkup({
                   : '';
                 const relationClass = relation ? ` detail-related-link-relation-${escapeHtml(relation)}` : '';
                 const title = escapeHtml(card?.title || card?.id);
+                const scoreLabel = hasScoreProvider
+                  ? `<span class="detail-related-score">(${escapeHtml(String(scoreProvider(card)))})</span>`
+                  : '';
                 const content = safeTone === 'guideline'
                   ? `<span class="detail-related-link-wrap">
                       ${relation === 'child' ? '<span class="detail-related-link-branch" aria-hidden="true"></span>' : ''}
-                      <span class="detail-related-link-title">${title}</span>
+                      <span class="detail-related-link-title">${title}${scoreLabel}</span>
                     </span>`
-                  : title;
+                  : `<span class="detail-related-link-title">${title}${scoreLabel}</span>`;
                 return `
               <button
                 type="button"
@@ -7164,21 +7182,30 @@ function renderInitiativeRelatedGuidelinesSection(initiative) {
 }
 
 function renderGuidelineDetailRelatedGrid(guideline) {
+  const relatedGuidelines = resolveGuidelineRelatedItems(guideline);
+  const showParentVoteTotal = normalizeGuidelineRelation(guideline?.relationType) === 'child';
+  const parentVoteTotal = showParentVoteTotal && relatedGuidelines.items.length
+    ? guidelineRelatedInitiativeVoteTotal(relatedGuidelines.items[0])
+    : null;
+  const relatedInitiatives = resolveGuidelineRelatedInitiatives(guideline);
   return `
     <div class="detail-related-grid">
       ${renderRelatedDetailSectionMarkup({
-    ...resolveGuidelineRelatedItems(guideline),
+    ...relatedGuidelines,
     showHeading: true,
     sectionClass: 'detail-related-group-guideline',
-    tone: 'guideline'
+    tone: 'guideline',
+    countLabel: showParentVoteTotal ? parentVoteTotal : null,
+    scoreProvider: showParentVoteTotal ? guidelineRelatedInitiativeVoteTotal : null
   })}
       ${renderRelatedDetailSectionMarkup({
-    ...resolveGuidelineRelatedInitiatives(guideline),
+    ...relatedInitiatives,
     showHeading: true,
     sectionClass: 'detail-related-group-initiative',
     action: 'open-related-initiative-detail',
     idAttribute: 'data-initiative-id',
-    tone: 'initiative'
+    tone: 'initiative',
+    scoreProvider: initiativeVoteTotal
   })}
     </div>
   `;
