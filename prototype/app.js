@@ -4266,8 +4266,8 @@ function renderSteps() {
   const canOpenHistory = isLoggedIn();
   const canOpenPolicyAlignment = isLoggedIn();
   const items = [
-    { id: 'guidelines', title: langText('Gairės', 'Guidelines'), locked: false },
-    { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false },
+    { id: 'guidelines', title: langText('Gairės', 'Guidelines'), locked: false, count: Array.isArray(state.guidelines) ? state.guidelines.length : 0 },
+    { id: 'initiatives', title: langText('Iniciatyvos', 'Initiatives'), locked: false, count: Array.isArray(state.initiatives) ? state.initiatives.length : 0 },
     { id: 'implementation-plan', title: langText('Įgyvendinimo planas', 'Implementation plan'), locked: false },
     { id: 'map', title: langText('Strategijų žemėlapis', 'Strategy map'), locked: false },
     { id: 'clarity-gremlin', title: clarityGremlinUiText().actionLabel, locked: false }
@@ -4338,6 +4338,7 @@ function renderSteps() {
       <div class="step-pill-head">
         <span class="step-icon" aria-hidden="true">${stepIconMarkup(item.id)}</span>
         <h4>${escapeHtml(item.title)}</h4>
+        ${typeof item.count === 'number' ? `<span class="step-count" aria-label="${escapeHtml(langText('Kiekis', 'Count'))}: ${item.count}">${item.count}</span>` : ''}
         ${item.alert ? '<span class="step-alert-dot" aria-hidden="true"></span>' : ''}
       </div>
     `;

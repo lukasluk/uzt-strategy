@@ -552,6 +552,7 @@ body.embed-map-page .stage {
   }
 
   .steps.is-collapsed .step-pill h4,
+  .steps.is-collapsed .step-count,
   .steps.is-collapsed .step-pill-action,
   .steps.is-collapsed .policy-alignment-nav-actions,
   .steps.is-collapsed .policy-alignment-nav-header h4 {
@@ -1125,6 +1126,28 @@ body.embed-map-page .stage {
   font-size: 16px;
   margin: 0;
   line-height: 1.2;
+}
+
+.step-count {
+  min-width: 24px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eaf2ff;
+  border: 1px solid #d4e3f8;
+  color: #1f4f84;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.step-pill.active .step-count {
+  background: #dfeaff;
+  border-color: #c3d6fb;
 }
 
 .step-alert-dot {
