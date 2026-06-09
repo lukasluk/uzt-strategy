@@ -2093,7 +2093,8 @@ textarea {
   margin-top: 12px;
   display: grid;
   gap: 8px;
-  min-height: 100%;
+  min-height: 0;
+  align-content: start;
   padding: 0;
   border: none;
   background: transparent;
@@ -2104,7 +2105,7 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .detail-related-grid-single {
@@ -2323,10 +2324,13 @@ textarea {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
+  align-content: start;
+  align-items: start;
 }
 
 .detail-related-link {
   appearance: none;
+  align-self: start;
   border: 1px solid #c9dbf4;
   border-radius: 12px;
   background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
@@ -2360,6 +2364,11 @@ textarea {
   border-left: var(--detail-related-guideline-accent-width) solid var(--detail-related-guideline-accent);
   background: linear-gradient(180deg, #ffffff 0%, #f2f7ff 100%);
   color: #274975;
+}
+
+.detail-related-group-guideline .detail-related-link-guideline {
+  padding-top: 7px;
+  padding-bottom: 7px;
 }
 
 .detail-related-link-guideline.detail-related-link-relation-child {

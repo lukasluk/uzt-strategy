@@ -7192,10 +7192,12 @@ function renderInitiativeRelatedGuidelinesSection(initiative) {
 
 function renderGuidelineDetailRelatedGrid(guideline) {
   const relatedGuidelines = resolveGuidelineRelatedItems(guideline);
+  const guidelineRelation = normalizeGuidelineRelation(guideline?.relationType);
   const showParentVoteTotal = normalizeGuidelineRelation(guideline?.relationType) === 'child';
   const parentVoteTotal = showParentVoteTotal && relatedGuidelines.items.length
     ? guidelineRelatedInitiativeVoteTotal(relatedGuidelines.items[0])
     : null;
+  const showRelatedGuidelineVoteTotals = showParentVoteTotal || guidelineRelation === 'parent';
   const relatedInitiatives = resolveGuidelineRelatedInitiatives(guideline);
   return `
     <div class="detail-related-grid">
@@ -7205,7 +7207,7 @@ function renderGuidelineDetailRelatedGrid(guideline) {
     sectionClass: 'detail-related-group-guideline',
     tone: 'guideline',
     countLabel: showParentVoteTotal ? parentVoteTotal : null,
-    scoreProvider: showParentVoteTotal ? guidelineRelatedInitiativeVoteTotal : null
+    scoreProvider: showRelatedGuidelineVoteTotals ? guidelineRelatedInitiativeVoteTotal : null
   })}
       ${renderRelatedDetailSectionMarkup({
     ...relatedInitiatives,
