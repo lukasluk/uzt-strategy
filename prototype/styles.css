@@ -3066,6 +3066,10 @@ textarea {
   font-size: 12px;
   line-height: 1.2;
 }
+.initiative-matrix-score {
+  font-weight: 800;
+  white-space: nowrap;
+}
 .initiative-matrix-empty {
   display: inline-block;
   padding: 4px 9px;

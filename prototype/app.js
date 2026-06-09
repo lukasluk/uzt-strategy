@@ -5575,28 +5575,39 @@ function buildGuidelineInitiativeMatrixRows(guidelines, initiatives) {
   const rows = guidelineList.map((guideline) => ({
     guidelineId: guideline.id,
     guidelineTitle: String(guideline.title || '').trim() || 'Be pavadinimo',
-    initiativeTitles: []
+    initiatives: []
   }));
   const rowByGuidelineId = new Map(rows.map((row) => [row.guidelineId, row]));
 
   initiativeList.forEach((initiative) => {
-    const initiativeTitle = String(initiative?.title || '').trim() || 'Be pavadinimo';
     const guidelineIds = resolveInitiativeGuidelineIds(initiative);
     guidelineIds.forEach((guidelineId) => {
       const row = rowByGuidelineId.get(guidelineId);
       if (!row) return;
-      row.initiativeTitles.push(initiativeTitle);
+      row.initiatives.push(initiative);
     });
   });
 
   return rows
     .map((row) => {
-      const uniqueTitles = Array.from(new Set(row.initiativeTitles)).sort((a, b) => a.localeCompare(b, 'lt'));
+      const uniqueById = new Map();
+      row.initiatives.forEach((initiative) => {
+        const key = String(initiative?.id || initiative?.title || '').trim();
+        if (!key || uniqueById.has(key)) return;
+        uniqueById.set(key, initiative);
+      });
+      const uniqueInitiatives = Array.from(uniqueById.values()).sort((a, b) => {
+        const leftTitle = String(a?.title || a?.id || '').trim();
+        const rightTitle = String(b?.title || b?.id || '').trim();
+        return leftTitle.localeCompare(rightTitle, 'lt');
+      });
+      const voteTotal = uniqueInitiatives.reduce((sum, initiative) => sum + initiativeVoteTotal(initiative), 0);
       return {
         guidelineId: row.guidelineId,
         guidelineTitle: row.guidelineTitle,
-        initiativeTitles: uniqueTitles,
-        unassigned: uniqueTitles.length === 0
+        initiatives: uniqueInitiatives,
+        voteTotal,
+        unassigned: uniqueInitiatives.length === 0
       };
     })
     .sort((a, b) => a.guidelineTitle.localeCompare(b.guidelineTitle, 'lt'));
@@ -5623,11 +5634,14 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
             ${rows.length
               ? rows.map((row) => `
                 <tr class="${row.unassigned ? 'is-unassigned' : ''}">
-                  <td class="initiative-matrix-guideline">${escapeHtml(row.guidelineTitle)}</td>
+                  <td class="initiative-matrix-guideline">${escapeHtml(row.guidelineTitle)} <span class="initiative-matrix-score">(${escapeHtml(String(row.voteTotal || 0))})</span></td>
                   <td>
                     ${row.unassigned
                       ? `<span class="initiative-matrix-empty">${langText('Nepriskirta nė viena iniciatyva', 'No initiatives assigned')}</span>`
-                      : `<div class="initiative-matrix-initiative-list">${row.initiativeTitles.map((title) => `<span class="initiative-matrix-chip">${escapeHtml(title)}</span>`).join('')}</div>`}
+                      : `<div class="initiative-matrix-initiative-list">${row.initiatives.map((initiative) => {
+                        const title = String(initiative?.title || initiative?.id || '').trim() || 'Be pavadinimo';
+                        return `<span class="initiative-matrix-chip">${escapeHtml(title)} <span class="initiative-matrix-score">(${escapeHtml(String(initiativeVoteTotal(initiative)))})</span></span>`;
+                      }).join('')}</div>`}
                   </td>
                 </tr>
               `).join('')
