@@ -2320,6 +2320,85 @@ textarea {
   line-height: 1.15;
 }
 
+.detail-related-table-wrap {
+  min-width: 0;
+}
+
+.detail-related-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  color: #244160;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.detail-related-table-row {
+  cursor: pointer;
+}
+
+.detail-related-table-row:focus-visible {
+  outline: 2px solid rgba(63, 143, 230, 0.35);
+  outline-offset: 2px;
+}
+
+.detail-related-table-number,
+.detail-related-table-title {
+  border-top: 1px solid #cddcf4;
+  border-bottom: 1px solid #cddcf4;
+  background: linear-gradient(180deg, #ffffff 0%, #f2f7ff 100%);
+  color: #274975;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.detail-related-table-number {
+  width: 34px;
+  padding: 7px 6px;
+  border-left: 4px solid var(--guideline-parent-accent);
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  text-align: center;
+  font-weight: 800;
+}
+
+.detail-related-table-title {
+  padding: 7px 10px;
+  border-right: 1px solid #cddcf4;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.detail-related-table-row:hover .detail-related-table-number,
+.detail-related-table-row:hover .detail-related-table-title {
+  border-color: #abc6ec;
+  background: #ffffff;
+}
+
+.detail-related-table-guideline .detail-related-table-row-relation-child .detail-related-table-number {
+  border-left-color: var(--guideline-child-accent);
+}
+
+.detail-related-table-guideline .detail-related-table-row-relation-orphan .detail-related-table-number {
+  border-left-color: var(--guideline-orphan-accent);
+}
+
+.detail-related-table-initiative .detail-related-table-number,
+.detail-related-table-initiative .detail-related-table-title {
+  border-color: #e3c9a4;
+  background: linear-gradient(180deg, #fffefb 0%, #fbf1e1 100%);
+  color: #6e4f24;
+}
+
+.detail-related-table-initiative .detail-related-table-number {
+  border-left-color: var(--initiative-accent);
+}
+
+.detail-related-table-initiative .detail-related-table-row:hover .detail-related-table-number,
+.detail-related-table-initiative .detail-related-table-row:hover .detail-related-table-title {
+  border-color: #d6b482;
+  background: #ffffff;
+}
+
 .detail-related-grid .detail-related-links {
   display: grid;
   grid-template-columns: 1fr;

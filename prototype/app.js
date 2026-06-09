@@ -7046,7 +7046,6 @@ function renderRelatedDetailSectionMarkup({
   action = 'open-related-guideline-detail',
   idAttribute = 'data-guideline-id',
   tone = 'guideline',
-  countLabel = null,
   scoreProvider = null
 }) {
   const cards = Array.isArray(items) ? items : [];
@@ -7056,44 +7055,40 @@ function renderRelatedDetailSectionMarkup({
   const safeIdAttribute = String(idAttribute || 'data-guideline-id').trim() || 'data-guideline-id';
   const safeTone = String(tone || 'guideline').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
   const hasScoreProvider = typeof scoreProvider === 'function';
-  const safeCountLabel = countLabel === null || countLabel === undefined
-    ? String(cards.length)
-    : String(countLabel);
   return `
     <section class="guideline-group detail-related-group detail-related-group-tone-${escapeHtml(safeTone)} ${escapeHtml(safeSectionClass)}">
       ${showHeading ? `
         <div class="guideline-group-header">
           <h3 class="${escapeHtml(safeHeadingClass)}">${escapeHtml(heading)}</h3>
-          <span class="tag detail-related-count">${escapeHtml(safeCountLabel)}</span>
         </div>
       ` : ''}
       ${cards.length
-    ? `<div class="detail-related-links">
-            ${cards.map((card) => `
-              ${(() => {
+    ? `<div class="detail-related-table-wrap">
+            <table class="detail-related-table detail-related-table-${escapeHtml(safeTone)}" aria-label="${escapeHtml(heading)}">
+              <tbody>
+                ${cards.map((card, index) => {
                 const relation = safeTone === 'guideline'
                   ? normalizeGuidelineRelation(card?.relationType)
                   : '';
-                const relationClass = relation ? ` detail-related-link-relation-${escapeHtml(relation)}` : '';
+                const relationClass = relation ? ` detail-related-table-row-relation-${escapeHtml(relation)}` : '';
                 const title = escapeHtml(card?.title || card?.id);
                 const scoreLabel = hasScoreProvider
                   ? `<span class="detail-related-score">(${escapeHtml(String(scoreProvider(card)))})</span>`
                   : '';
-                const content = safeTone === 'guideline'
-                  ? `<span class="detail-related-link-wrap">
-                      ${relation === 'child' ? '<span class="detail-related-link-branch" aria-hidden="true"></span>' : ''}
-                      <span class="detail-related-link-title">${title}${scoreLabel}</span>
-                    </span>`
-                  : `<span class="detail-related-link-title">${title}${scoreLabel}</span>`;
                 return `
-              <button
-                type="button"
-                class="detail-related-link detail-related-link-${escapeHtml(safeTone)}${relationClass}"
-                data-action="${escapeHtml(safeAction)}"
-                ${safeIdAttribute}="${escapeHtml(card.id)}"
-              >${content}</button>`;
-              })()}
-            `).join('')}
+                  <tr
+                    class="detail-related-table-row detail-related-table-row-${escapeHtml(safeTone)}${relationClass}"
+                    data-action="${escapeHtml(safeAction)}"
+                    ${safeIdAttribute}="${escapeHtml(card.id)}"
+                    role="button"
+                    tabindex="0"
+                  >
+                    <td class="detail-related-table-number">${index + 1}</td>
+                    <td class="detail-related-table-title"><span>${title}</span>${scoreLabel}</td>
+                  </tr>`;
+              }).join('')}
+              </tbody>
+            </table>
           </div>`
     : `<div class="card guideline-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`}
     </section>
@@ -7194,9 +7189,6 @@ function renderGuidelineDetailRelatedGrid(guideline) {
   const relatedGuidelines = resolveGuidelineRelatedItems(guideline);
   const guidelineRelation = normalizeGuidelineRelation(guideline?.relationType);
   const showParentVoteTotal = normalizeGuidelineRelation(guideline?.relationType) === 'child';
-  const parentVoteTotal = showParentVoteTotal && relatedGuidelines.items.length
-    ? guidelineRelatedInitiativeVoteTotal(relatedGuidelines.items[0])
-    : null;
   const showRelatedGuidelineVoteTotals = showParentVoteTotal || guidelineRelation === 'parent';
   const relatedInitiatives = resolveGuidelineRelatedInitiatives(guideline);
   return `
@@ -7206,7 +7198,6 @@ function renderGuidelineDetailRelatedGrid(guideline) {
     showHeading: true,
     sectionClass: 'detail-related-group-guideline',
     tone: 'guideline',
-    countLabel: showParentVoteTotal ? parentVoteTotal : null,
     scoreProvider: showRelatedGuidelineVoteTotals ? guidelineRelatedInitiativeVoteTotal : null
   })}
       ${renderRelatedDetailSectionMarkup({
@@ -7626,17 +7617,29 @@ function renderGuidelineDetailView() {
     });
   });
   elements.stepView.querySelectorAll('[data-action="open-related-guideline-detail"]').forEach((button) => {
-    button.addEventListener('click', () => {
+    const openRelatedGuideline = () => {
       const relatedId = String(button.dataset.guidelineId || '').trim();
       if (!relatedId) return;
       openGuidelineDetail(relatedId);
+    };
+    button.addEventListener('click', openRelatedGuideline);
+    button.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openRelatedGuideline();
     });
   });
   elements.stepView.querySelectorAll('[data-action="open-related-initiative-detail"]').forEach((button) => {
-    button.addEventListener('click', () => {
+    const openRelatedInitiative = () => {
       const initiativeId = String(button.dataset.initiativeId || '').trim();
       if (!initiativeId) return;
       openInitiativeDetail(initiativeId);
+    };
+    button.addEventListener('click', openRelatedInitiative);
+    button.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openRelatedInitiative();
     });
   });
   const openMapButton = elements.stepView.querySelector('#openGuidelineMapBtn');
