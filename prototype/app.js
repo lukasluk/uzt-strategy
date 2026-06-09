@@ -5450,7 +5450,7 @@ function renderGuidelineCard(guideline, options) {
   const relatedInitiatives = options?.showAssociatedInitiatives
     ? resolveGuidelineRelatedInitiatives(guideline).items
     : [];
-  const associatedVoteTotal = options?.showAssociatedInitiatives
+  const associatedVoteTotal = (options?.showAssociatedInitiatives || options?.showVoteTotalInTitle)
     ? guidelineRelatedInitiativeVoteTotal(guideline)
     : null;
   const relatedInitiativesMarkup = options?.showAssociatedInitiatives
@@ -7605,7 +7605,8 @@ function renderGuidelineDetailView() {
     writable,
     authenticated,
     commentsVisible: state.commentsVisible,
-    linkable: false
+    linkable: false,
+    showVoteTotalInTitle: true
   })}
       </div>
     </section>
