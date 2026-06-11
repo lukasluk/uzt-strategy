@@ -252,6 +252,7 @@ const state = {
   initiativeKeywordFilters: [],
   initiativeViewMode: 'cards',
   initiativeSortMode: 'created-desc',
+  implementationPlanKeywordFilter: '',
   mapKeywordFilters: [],
   mapLayer: 'guidelines',
   mapGuidelinesShowInitiatives: false,
@@ -4828,8 +4829,8 @@ function isImplementationItemCompleted(item) {
   return Boolean(normalizeImplementationCompletedAt(item?.implementationCompletedAt));
 }
 
-function summarizeGuidelineImplementationProgress(guideline) {
-  const relatedInitiatives = resolveGuidelineRelatedInitiatives(guideline).items;
+function summarizeGuidelineImplementationProgress(guideline, initiativeSource = state.initiatives) {
+  const relatedInitiatives = resolveGuidelineRelatedInitiatives(guideline, initiativeSource).items;
   const total = relatedInitiatives.length;
   const completed = relatedInitiatives.filter((initiative) => isImplementationItemCompleted(initiative)).length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -4905,6 +4906,28 @@ function buildImplementationPlanInitiativeRows(initiatives) {
     level: 0,
     relationKey: 'initiative'
   }));
+}
+
+function filterGuidelinesForImplementationPlan(guidelines, initiatives) {
+  const guidelineList = Array.isArray(guidelines) ? guidelines : [];
+  const initiativeList = Array.isArray(initiatives) ? initiatives : [];
+  if (!initiativeList.length) return [];
+
+  const includedIds = new Set();
+  initiativeList.forEach((initiative) => {
+    resolveInitiativeGuidelineIds(initiative).forEach((guidelineId) => {
+      const id = String(guidelineId || '').trim();
+      if (!id) return;
+      includedIds.add(id);
+      const guideline = guidelineList.find((item) => String(item?.id || '').trim() === id);
+      if (guideline && normalizeGuidelineRelation(guideline.relationType) === 'child') {
+        const parentId = String(guideline.parentGuidelineId || '').trim();
+        if (parentId) includedIds.add(parentId);
+      }
+    });
+  });
+
+  return guidelineList.filter((guideline) => includedIds.has(String(guideline?.id || '').trim()));
 }
 
 function parseImplementationPlanDateUtc(rawDate) {
@@ -5285,7 +5308,7 @@ function scheduleImplementationPlanCalendarConnectorRender() {
   });
 }
 
-function renderImplementationPlanRow(row, { editable = false } = {}) {
+function renderImplementationPlanRow(row, { editable = false, implementationInitiatives = state.initiatives } = {}) {
   const item = row?.item && typeof row.item === 'object' ? row.item : null;
   if (!item) return '';
   const rowKind = String(row.kind || '').trim().toLowerCase() === 'initiative' ? 'initiative' : 'guideline';
@@ -5297,7 +5320,7 @@ function renderImplementationPlanRow(row, { editable = false } = {}) {
     : '';
 
   if (rowKind === 'guideline') {
-    const progress = summarizeGuidelineImplementationProgress(item);
+    const progress = summarizeGuidelineImplementationProgress(item, implementationInitiatives);
     const relatedInitiativesLabel = langText('Susietos iniciatyvos: {count}', 'Linked initiatives: {count}')
       .replace('{count}', String(progress.total));
     const progressDetail = progress.total
@@ -5575,7 +5598,11 @@ function buildGuidelineInitiativeMatrixRows(guidelines, initiatives) {
 
   const rows = guidelineList.map((guideline) => ({
     guidelineId: guideline.id,
+    guideline,
     guidelineTitle: String(guideline.title || '').trim() || 'Be pavadinimo',
+    relationType: normalizeGuidelineRelation(guideline.relationType),
+    parentGuidelineId: String(guideline.parentGuidelineId || '').trim(),
+    level: normalizeGuidelineRelation(guideline.relationType) === 'child' ? 1 : 0,
     initiatives: []
   }));
   const rowByGuidelineId = new Map(rows.map((row) => [row.guidelineId, row]));
@@ -5589,8 +5616,7 @@ function buildGuidelineInitiativeMatrixRows(guidelines, initiatives) {
     });
   });
 
-  return rows
-    .map((row) => {
+  const enrichedRows = rows.map((row) => {
       const uniqueById = new Map();
       row.initiatives.forEach((initiative) => {
         const key = String(initiative?.id || initiative?.title || '').trim();
@@ -5605,13 +5631,43 @@ function buildGuidelineInitiativeMatrixRows(guidelines, initiatives) {
       const voteTotal = uniqueInitiatives.reduce((sum, initiative) => sum + initiativeVoteTotal(initiative), 0);
       return {
         guidelineId: row.guidelineId,
+        guideline: row.guideline,
         guidelineTitle: row.guidelineTitle,
+        relationType: row.relationType,
+        parentGuidelineId: row.parentGuidelineId,
+        level: row.level,
         initiatives: uniqueInitiatives,
         voteTotal,
         unassigned: uniqueInitiatives.length === 0
       };
-    })
-    .sort((a, b) => a.guidelineTitle.localeCompare(b.guidelineTitle, 'lt'));
+    });
+  const enrichedById = new Map(enrichedRows.map((row) => [row.guidelineId, row]));
+  const groups = buildGuidelineRelationshipGroups(guidelineList);
+  const orderedRows = [];
+
+  groups.parentGroups.forEach((group) => {
+    const parentRow = enrichedById.get(group.parent.id);
+    if (parentRow) orderedRows.push(parentRow);
+    group.children.forEach((child) => {
+      const childRow = enrichedById.get(child.id);
+      if (childRow) orderedRows.push(childRow);
+    });
+  });
+  groups.orphanGuidelines.forEach((guideline) => {
+    const row = enrichedById.get(guideline.id);
+    if (row) orderedRows.push(row);
+  });
+  groups.unassignedChildren.forEach((guideline) => {
+    const row = enrichedById.get(guideline.id);
+    if (row) orderedRows.push(row);
+  });
+
+  enrichedRows.forEach((row) => {
+    if (orderedRows.some((orderedRow) => orderedRow.guidelineId === row.guidelineId)) return;
+    orderedRows.push(row);
+  });
+
+  return orderedRows;
 }
 
 function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
@@ -5634,14 +5690,19 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
           <tbody>
             ${rows.length
               ? rows.map((row) => `
-                <tr class="${row.unassigned ? 'is-unassigned' : ''}">
-                  <td class="initiative-matrix-guideline">${escapeHtml(row.guidelineTitle)} <span class="initiative-matrix-score">(${escapeHtml(String(row.voteTotal || 0))})</span></td>
+                <tr class="initiative-matrix-row initiative-matrix-row-${escapeHtml(row.relationType || 'orphan')} initiative-matrix-level-${escapeHtml(String(row.level || 0))} ${row.unassigned ? 'is-unassigned' : ''}">
+                  <td class="initiative-matrix-guideline">
+                    <button type="button" class="initiative-matrix-guideline-button" data-action="open-matrix-guideline-preview" data-guideline-id="${escapeHtml(row.guidelineId)}">
+                      ${Number(row.level || 0) > 0 ? '<span class="initiative-matrix-branch" aria-hidden="true"></span>' : ''}
+                      <span>${escapeHtml(row.guidelineTitle)} <span class="initiative-matrix-score">(${escapeHtml(String(row.voteTotal || 0))})</span></span>
+                    </button>
+                  </td>
                   <td>
                     ${row.unassigned
                       ? `<span class="initiative-matrix-empty">${langText('Nepriskirta nė viena iniciatyva', 'No initiatives assigned')}</span>`
                       : `<div class="initiative-matrix-initiative-list">${row.initiatives.map((initiative) => {
                         const title = String(initiative?.title || initiative?.id || '').trim() || 'Be pavadinimo';
-                        return `<span class="initiative-matrix-chip">${escapeHtml(title)} <span class="initiative-matrix-score">(${escapeHtml(String(initiativeVoteTotal(initiative)))})</span></span>`;
+                        return `<button type="button" class="initiative-matrix-chip initiative-matrix-chip-button" data-action="open-matrix-initiative-preview" data-initiative-id="${escapeHtml(initiative.id)}">${escapeHtml(title)} <span class="initiative-matrix-score">(${escapeHtml(String(initiativeVoteTotal(initiative)))})</span></button>`;
                       }).join('')}</div>`}
                   </td>
                 </tr>
@@ -5652,6 +5713,86 @@ function renderGuidelineInitiativeMatrix(guidelines, initiatives) {
       </div>
     </div>
   `;
+}
+
+function closeMatrixEntityPreviewModal() {
+  const overlay = document.getElementById('matrixEntityPreviewOverlay');
+  if (overlay) overlay.remove();
+}
+
+function openMatrixEntityPreview(kind, entityId) {
+  const normalizedKind = String(kind || '').trim().toLowerCase();
+  const id = String(entityId || '').trim();
+  const item = normalizedKind === 'initiative' ? findInitiativeById(id) : findGuidelineById(id);
+  if (!item) return;
+
+  closeMatrixEntityPreviewModal();
+
+  const isInitiative = normalizedKind === 'initiative';
+  const title = String(item.title || item.id || '').trim() || '-';
+  const descriptionMarkup = renderRichTextContent(item.description, langText('Be paaiškinimo', 'No description provided.'));
+  const linkedGuidelines = isInitiative ? resolveInitiativeLinkedGuidelines(item) : [];
+  const relatedInitiatives = isInitiative ? [] : resolveGuidelineRelatedInitiatives(item).items;
+  const score = isInitiative ? initiativeVoteTotal(item) : guidelineRelatedInitiativeVoteTotal(item);
+  const keywords = isInitiative ? initiativeKeywords(item) : [];
+  const relation = isInitiative ? '' : relationLabel(item.relationType);
+  const implementationDate = normalizeImplementationDateInputValue(item.implementationDate);
+  const implementationOwner = String(item.implementationOwner || '').trim();
+  const implementationMeta = [formatInstitutionDate(implementationDate), implementationOwner].filter(Boolean).join(' · ');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'matrixEntityPreviewOverlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card matrix-preview-modal" role="dialog" aria-modal="true" aria-labelledby="matrixPreviewTitle">
+      <div class="auth-modal-header">
+        <div>
+          <h3 id="matrixPreviewTitle">${escapeHtml(title)}</h3>
+          <p class="prompt matrix-preview-subtitle">${escapeHtml(isInitiative ? langText('Iniciatyva', 'Initiative') : langText('Gairė', 'Guideline'))}</p>
+        </div>
+        <button type="button" class="btn btn-ghost" data-action="close-matrix-preview">${escapeHtml(langText('Uždaryti', 'Close'))}</button>
+      </div>
+      <div class="matrix-preview-body">
+        <div class="header-stack matrix-preview-meta">
+          <span class="tag">${escapeHtml(langText('Balsai', 'Votes'))}: ${escapeHtml(String(score || 0))}</span>
+          ${isInitiative && implementationMeta ? `<span class="tag">${escapeHtml(langText('Įgyvendinimas', 'Implementation'))}: ${escapeHtml(implementationMeta)}</span>` : ''}
+          ${!isInitiative ? `<span class="tag">${escapeHtml(relation)}</span>` : ''}
+        </div>
+        ${keywords.length ? `<div class="matrix-preview-keywords">${keywords.map((keyword) => `<span class="initiative-keyword-chip">${escapeHtml(keyword)}</span>`).join('')}</div>` : ''}
+        <div class="matrix-preview-description">${descriptionMarkup}</div>
+        ${isInitiative
+          ? `<section class="matrix-preview-section">
+              <h4>${escapeHtml(langText('Priskirtos gairės', 'Linked guidelines'))}</h4>
+              ${linkedGuidelines.length
+                ? `<ul class="matrix-preview-list">${linkedGuidelines.map((guideline) => `<li>${escapeHtml(guideline?.title || guideline?.id || '-')}</li>`).join('')}</ul>`
+                : `<p class="prompt">${escapeHtml(langText('Gairės nepriskirtos.', 'No guidelines linked.'))}</p>`}
+            </section>`
+          : `<section class="matrix-preview-section">
+              <h4>${escapeHtml(langText('Susijusios iniciatyvos', 'Associated initiatives'))}</h4>
+              ${relatedInitiatives.length
+                ? `<ul class="matrix-preview-list">${relatedInitiatives.slice(0, 12).map((initiative) => `<li>${escapeHtml(initiative?.title || initiative?.id || '-')} <span class="matrix-preview-score">(${escapeHtml(String(initiativeVoteTotal(initiative)))})</span></li>`).join('')}</ul>`
+                : `<p class="prompt">${escapeHtml(langText('Susietų iniciatyvų nėra.', 'No linked initiatives.'))}</p>`}
+            </section>`}
+      </div>
+      <div class="matrix-preview-footer">
+        <button type="button" class="btn btn-primary" data-action="open-matrix-preview-detail">${escapeHtml(langText('Atidaryti kortelę', 'Open card'))}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('[data-action="close-matrix-preview"]')?.addEventListener('click', closeMatrixEntityPreviewModal);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeMatrixEntityPreviewModal();
+  });
+  overlay.querySelector('[data-action="open-matrix-preview-detail"]')?.addEventListener('click', () => {
+    closeMatrixEntityPreviewModal();
+    if (isInitiative) {
+      openInitiativeDetail(id);
+      return;
+    }
+    openGuidelineDetail(id);
+  });
 }
 
 function renderInitiativeCard(initiative, options) {
@@ -7006,7 +7147,7 @@ function resolveGuidelineRelatedItems(guideline) {
   };
 }
 
-function resolveGuidelineRelatedInitiatives(guideline) {
+function resolveGuidelineRelatedInitiatives(guideline, initiativeSource = state.initiatives) {
   const item = guideline && typeof guideline === 'object' ? guideline : null;
   if (!item) {
     return {
@@ -7030,7 +7171,7 @@ function resolveGuidelineRelatedInitiatives(guideline) {
     });
   }
 
-  const initiatives = sortCardsByTitle((Array.isArray(state.initiatives) ? state.initiatives : []).filter((initiative) => {
+  const initiatives = sortCardsByTitle((Array.isArray(initiativeSource) ? initiativeSource : []).filter((initiative) => {
     const linkedGuidelineIds = resolveInitiativeGuidelineIds(initiative);
     return linkedGuidelineIds.some((guidelineId) => guidelineIds.has(String(guidelineId || '').trim()));
   }));
@@ -8087,6 +8228,12 @@ function renderInitiativesView() {
       });
     });
   }
+  elements.stepView.querySelectorAll('[data-action="open-matrix-guideline-preview"]').forEach((button) => {
+    button.addEventListener('click', () => openMatrixEntityPreview('guideline', button.dataset.guidelineId));
+  });
+  elements.stepView.querySelectorAll('[data-action="open-matrix-initiative-preview"]').forEach((button) => {
+    button.addEventListener('click', () => openMatrixEntityPreview('initiative', button.dataset.initiativeId));
+  });
   bindInitiativeCardInteractions(list);
 }
 
@@ -8121,10 +8268,38 @@ function renderImplementationPlanView() {
   const editable = canManageSelectedInstitution();
   const activeLayer = state.implementationPlanLayer === 'initiatives' ? 'initiatives' : 'guidelines';
   const activeSubview = state.implementationPlanSubview === 'calendar' ? 'calendar' : 'table';
-  const guidelineRows = buildImplementationPlanGuidelineRows(state.guidelines);
-  const initiativeRows = buildImplementationPlanInitiativeRows(state.initiatives);
+  const implementationCandidateRows = buildImplementationPlanInitiativeRows(state.initiatives);
+  const implementationCandidateInitiatives = implementationCandidateRows.map((row) => row.item).filter(Boolean);
+  const implementationKeywordOptions = collectInitiativeKeywordOptions(implementationCandidateInitiatives);
+  const selectedImplementationKeyword = implementationKeywordOptions.find((keyword) =>
+    keywordKey(keyword) === keywordKey(state.implementationPlanKeywordFilter)
+  ) || '';
+  state.implementationPlanKeywordFilter = selectedImplementationKeyword;
+  const implementationFilteredInitiatives = selectedImplementationKeyword
+    ? filterInitiativesByKeywords(implementationCandidateInitiatives, [selectedImplementationKeyword])
+    : implementationCandidateInitiatives;
+  const initiativeRows = buildImplementationPlanInitiativeRows(implementationFilteredInitiatives);
+  const implementationVisibleInitiatives = initiativeRows.map((row) => row.item).filter(Boolean);
+  const guidelineSource = selectedImplementationKeyword
+    ? filterGuidelinesForImplementationPlan(state.guidelines, implementationVisibleInitiatives)
+    : state.guidelines;
+  const guidelineRows = buildImplementationPlanGuidelineRows(guidelineSource);
   const rows = activeLayer === 'initiatives' ? initiativeRows : guidelineRows;
   const calendarData = buildImplementationPlanCalendarEntries({ initiativeRows });
+  const implementationKeywordFilterMarkup = implementationKeywordOptions.length
+    ? `
+      <label class="implementation-plan-keyword-filter">
+        <span>${escapeHtml(langText('Raktažodis', 'Keyword'))}</span>
+        <select data-action="set-implementation-keyword-filter" ${state.busy ? 'disabled' : ''}>
+          <option value="">${escapeHtml(langText('Visos iniciatyvos', 'All initiatives'))}</option>
+          ${implementationKeywordOptions.map((keyword) => `
+            <option value="${escapeHtml(keyword)}" ${keywordKey(keyword) === keywordKey(selectedImplementationKeyword) ? 'selected' : ''}>${escapeHtml(keyword)}</option>
+          `).join('')}
+        </select>
+        <span class="tag">${escapeHtml(`${implementationVisibleInitiatives.length} / ${implementationCandidateInitiatives.length}`)}</span>
+      </label>
+    `
+    : '';
   const title = langText('Įgyvendinimo planas', 'Implementation plan');
   const emptyLabel = activeLayer === 'initiatives'
     ? langText('Iniciatyvų įgyvendinimo planas dar neužpildytas.', 'No initiative implementation entries yet.')
@@ -8149,6 +8324,7 @@ function renderImplementationPlanView() {
           <h2>${escapeHtml(title)}</h2>
         </div>
         <div class="header-stack implementation-plan-header-actions">
+          ${implementationKeywordFilterMarkup}
           <div class="map-layer-toggle implementation-plan-layer-toggle">
             <button
               type="button"
@@ -8186,7 +8362,7 @@ function renderImplementationPlanView() {
                 `}
             </div>
             ${rows.length
-              ? rows.map((row) => renderImplementationPlanRow(row, { editable })).join('')
+              ? rows.map((row) => renderImplementationPlanRow(row, { editable, implementationInitiatives: implementationVisibleInitiatives })).join('')
               : `<div class="implementation-plan-empty"><strong>${escapeHtml(emptyLabel)}</strong></div>`}
             ${editable && activeLayer === 'initiatives' && rows.length ? `<div class="implementation-plan-footer">${pageActionButtonsMarkup}</div>` : ''}
           </form>
@@ -8205,6 +8381,12 @@ function renderImplementationPlanView() {
       }
       openGuidelineDetail(itemId);
     });
+  });
+
+  elements.stepView.querySelector('[data-action="set-implementation-keyword-filter"]')?.addEventListener('change', (event) => {
+    state.implementationPlanKeywordFilter = String(event.target?.value || '').trim();
+    syncRouteState();
+    render();
   });
 
   elements.stepView.querySelectorAll('[data-implementation-nav]').forEach((button) => {
