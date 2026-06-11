@@ -1,7 +1,7 @@
 function createContextLookupService({ query }) {
   async function verifyCycleAccess(cycleId, institutionId) {
     const cycleRes = await query(
-      'select id, institution_id, strategy_id, state from strategy_cycles where id = $1',
+      'select id, institution_id, strategy_id, state, voting_enabled from strategy_cycles where id = $1',
       [cycleId]
     );
     const cycle = cycleRes.rows[0];
@@ -64,6 +64,7 @@ function createContextLookupService({ query }) {
               i.status as initiative_status,
               c.id as cycle_id,
               c.state as cycle_state,
+              c.voting_enabled as cycle_voting_enabled,
               c.institution_id
        from strategy_initiatives i
        join strategy_cycles c on c.id = i.cycle_id
@@ -91,6 +92,10 @@ function createContextLookupService({ query }) {
 
   function isCycleWritable(state) {
     return state === 'open';
+  }
+
+  function isCycleVotingEnabled(cycle) {
+    return cycle?.voting_enabled !== false && cycle?.cycle_voting_enabled !== false;
   }
 
   function normalizeLineSide(value) {
@@ -156,6 +161,7 @@ function createContextLookupService({ query }) {
     loadInitiativeContext,
     loadInitiativeCommentContext,
     isCycleWritable,
+    isCycleVotingEnabled,
     normalizeLineSide,
     validateGuidelineRelationship,
     validateInitiativeGuidelineAssignments

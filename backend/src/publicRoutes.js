@@ -63,6 +63,7 @@ function registerPublicRoutes({
       id: cycle.id,
       title: cycle.title,
       state: cycle.state,
+      votingEnabled: cycle.voting_enabled !== false,
       finalizedAt: cycle.finalized_at,
       missionText: cycle.mission_text || null,
       visionText: cycle.vision_text || null,

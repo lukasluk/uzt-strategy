@@ -8,6 +8,7 @@ function registerMemberRoutes({
   verifyCycleAccess,
   voteBudget,
   isCycleWritable,
+  isCycleVotingEnabled,
   normalizeLineSide,
   loadGuidelineContext,
   loadInitiativeContext,
@@ -459,6 +460,9 @@ function registerMemberRoutes({
     }
     if (context.institution_id !== req.auth.institutionId) return res.status(403).json({ error: 'cross-institution forbidden' });
     if (!isCycleWritable(context.cycle_state)) return res.status(409).json({ error: 'cycle not writable' });
+    if (typeof isCycleVotingEnabled === 'function' && !isCycleVotingEnabled(context)) {
+      return res.status(409).json({ error: 'voting disabled' });
+    }
     if (context.initiative_status !== 'active') return res.status(409).json({ error: 'initiative voting disabled' });
 
     const currentVote = await getCurrentInitiativeVote(initiativeId, req.auth.sub);

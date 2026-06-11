@@ -1153,6 +1153,11 @@ function cycleIsWritable() {
   return WRITABLE_CYCLE_STATES.has(String(state.cycle?.state || '').toLowerCase());
 }
 
+function cycleVotingIsOpen() {
+  const value = state.cycle?.votingEnabled ?? state.cycle?.voting_enabled;
+  return cycleIsWritable() && value !== false;
+}
+
 function voteBudget() {
   return Number(state.context?.rules?.voteBudget || 20);
 }
@@ -1597,6 +1602,7 @@ function toUserMessage(error) {
     'strategy not found': 'Pasirinkta strategija nerasta.',
     'cycle not found': 'Aktyvus strategijos ciklas nerastas.',
     'cycle not writable': 'Ciklas nebeleidžia redaguoti (tik skaitymas).',
+    'voting disabled': 'Balsavimas sustabdytas administratoriaus.',
     'guideline voting disabled': 'Balsavimas už gaires išjungtas. Balsus skirkite iniciatyvoms.',
     'guideline commenting disabled': 'Komentavimas prie šios gairės išjungtas.',
     'initiative voting disabled': 'Ši iniciatyva išjungta: balsuoti negalima.',
@@ -5810,7 +5816,8 @@ function renderInitiativeCard(initiative, options) {
   const initiativeStatus = String(initiative.status || 'active').toLowerCase();
   const pendingStatus = initiativeStatus === 'pending';
   const canEditInitiative = Boolean(options.canEdit) && !pendingStatus;
-  const votingDisabled = initiativeStatus === 'disabled' || pendingStatus;
+  const votingClosed = options.votingOpen === false;
+  const votingDisabled = initiativeStatus === 'disabled' || pendingStatus || votingClosed;
   const linkedNames = resolveInitiativeGuidelineNames(initiative);
   const initiativeUrl = initiativeShareUrl(initiative.id);
   const keywordMarkup = renderInitiativeKeywordChips(initiative);
@@ -5827,8 +5834,8 @@ function renderInitiativeCard(initiative, options) {
     minPerInitiative(),
     maxPerInitiative()
   );
-  const canMinus = options.member && options.writable && !votingDisabled && !state.busy && userScore > minPerInitiative();
-  const canPlus = options.member && options.writable && !votingDisabled && !state.busy && userScore < maxAllowed;
+  const canMinus = options.member && options.votingOpen !== false && !votingDisabled && !state.busy && userScore > minPerInitiative();
+  const canPlus = options.member && options.votingOpen !== false && !votingDisabled && !state.busy && userScore < maxAllowed;
 
   return `
     <article class="card initiative-card ${isLinkable ? 'is-linkable' : ''} ${votingDisabled ? 'guideline-disabled' : ''} ${pendingStatus ? 'card-pending' : ''}" data-initiative-id="${escapeHtml(initiative.id)}">
@@ -5850,7 +5857,7 @@ function renderInitiativeCard(initiative, options) {
         ${keywordMarkup}
         ${shareMarkup}
       </div>
-      ${options.member ? `
+      ${options.member && !votingClosed ? `
         <div class="vote-panel">
           <div class="vote-panel-head">
             <span class="vote-label">${langText('Tavo balas', 'Your vote')}</span>
@@ -5862,13 +5869,14 @@ function renderInitiativeCard(initiative, options) {
               <button class="vote-btn" data-action="initiative-vote-plus" data-id="${escapeHtml(initiative.id)}" aria-label="${escapeHtml(langText('Pridėti balą', 'Increase vote'))}" ${canPlus ? '' : 'disabled'}>+</button>
             </div>
             <div class="vote-total">${langText('Bendras balas', 'Total score')}: <strong>${Number(initiative.totalScore || 0)}</strong></div>
-            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiūlymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : langText('Balsavimas išjungtas administratoriaus', 'Voting disabled by administrator')}</div>` : ''}
+            ${votingDisabled ? `<div class="vote-total">${pendingStatus ? langText('Laukiantis pasiūlymas: balsavimas negalimas', 'Pending proposal: voting is disabled') : (votingClosed ? langText('Balsavimas sustabdytas administratoriaus', 'Voting paused by administrator') : langText('Balsavimas išjungtas administratoriaus', 'Voting disabled by administrator'))}</div>` : ''}
           </div>
         </div>
       ` : `
         <div class="vote-panel">
           <div class="vote-panel-body">
             <div class="vote-total"><strong>${langText('Bendras balas', 'Total score')}: ${Number(initiative.totalScore || 0)}</strong></div>
+            ${votingClosed ? `<div class="vote-total">${langText('Balsavimas sustabdytas administratoriaus', 'Voting paused by administrator')}</div>` : ''}
           </div>
         </div>
       `}
@@ -7723,6 +7731,7 @@ function renderGuidelineDetailView() {
   const member = isLoggedIn();
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
+  const votingOpen = cycleVotingIsOpen();
   const breadcrumbMarkup = buildGuidelineDetailBreadcrumbs(guideline);
   const relatedGuidelinesMarkup = renderGuidelineDetailRelatedGrid(guideline);
   const canManage = canManageSelectedInstitution();
@@ -7747,6 +7756,7 @@ function renderGuidelineDetailView() {
         ${renderGuidelineCard(guideline, {
     member,
     writable,
+    votingOpen,
     authenticated,
     commentsVisible: state.commentsVisible,
     linkable: false,
@@ -7978,6 +7988,7 @@ function renderInitiativeDetailView() {
   const member = isLoggedIn();
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
+  const votingOpen = cycleVotingIsOpen();
   const relatedGuidelinesMarkup = renderInitiativeRelatedGuidelinesSection(initiative);
   const canManage = canManageSelectedInstitution();
   const isPendingProposal = Boolean(String(initiative.pendingProposalId || '').trim());
@@ -8000,6 +8011,7 @@ function renderInitiativeDetailView() {
         ${renderInitiativeCard(initiative, {
     member,
     writable,
+    votingOpen,
     authenticated,
     commentsVisible: state.commentsVisible,
     canEdit,
@@ -8089,6 +8101,7 @@ function renderInitiativesView() {
   const member = isLoggedIn();
   const authenticated = isAuthenticated();
   const writable = member && cycleIsWritable();
+  const votingOpen = cycleVotingIsOpen();
   const initiatives = Array.isArray(state.initiatives) ? state.initiatives : [];
   const canEditInitiatives = canManageSelectedInstitution();
   const keywordOptions = collectInitiativeKeywordOptions(initiatives);
@@ -8126,6 +8139,7 @@ function renderInitiativesView() {
             ${visibleInitiatives.map((initiative) => renderInitiativeCard(initiative, {
               member,
               writable,
+              votingOpen,
               authenticated,
               commentsVisible: state.commentsVisible,
               canEdit: canEditInitiatives

@@ -43,6 +43,14 @@ function createAdminMutationService({ query }) {
     await query('update strategy_cycles set results_published = $1 where id = $2', [published, cycleId]);
   }
 
+  async function setCycleVotingEnabled({ cycleId, enabled }) {
+    const updated = await query(
+      'update strategy_cycles set voting_enabled = $1 where id = $2 returning voting_enabled',
+      [Boolean(enabled), cycleId]
+    );
+    return updated.rows[0] || null;
+  }
+
   async function updatePlatformUserPassword({ userId, salt, hash }) {
     await query(
       `update platform_users
@@ -336,6 +344,7 @@ function createAdminMutationService({ query }) {
     setCycleState,
     setCycleSettings,
     setCycleResultsPublished,
+    setCycleVotingEnabled,
     updatePlatformUserPassword,
     deleteInstitutionMembership,
     countUserMemberships,

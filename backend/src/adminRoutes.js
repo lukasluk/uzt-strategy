@@ -46,6 +46,7 @@ function registerAdminRoutes({
   setCycleState,
   setCycleSettings,
   setCycleResultsPublished,
+  setCycleVotingEnabled,
   updatePlatformUserPassword,
   deleteInstitutionMembership,
   countUserMemberships,
@@ -1290,6 +1291,23 @@ function registerAdminRoutes({
     await setCycleResultsPublished({ cycleId, published });
     broadcast({ type: 'v1.cycle.results', institutionId: req.auth.institutionId, cycleId, published });
     res.json({ ok: true, published });
+  });
+
+
+  app.post('/api/v1/admin/cycles/:cycleId/voting', requireAuth, adminWriteGuard, async (req, res) => {
+    if (req.auth.role !== 'institution_admin') return res.status(403).json({ error: 'admin role required' });
+    const cycleId = String(req.params.cycleId || '').trim();
+    const enabled = Boolean(req.body?.enabled);
+
+    const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
+    if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
+
+    const updated = typeof setCycleVotingEnabled === 'function'
+      ? await setCycleVotingEnabled({ cycleId, enabled })
+      : null;
+    const votingEnabled = updated?.voting_enabled !== false && enabled;
+    broadcast({ type: 'v1.cycle.voting', institutionId: req.auth.institutionId, cycleId, votingEnabled });
+    res.json({ ok: true, votingEnabled });
   });
 
 

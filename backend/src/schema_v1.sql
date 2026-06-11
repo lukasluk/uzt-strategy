@@ -64,6 +64,7 @@ create table if not exists strategy_cycles (
   strategy_id uuid references institution_strategies(id) on delete set null,
   title text not null,
   state text not null default 'open' check (state in ('open', 'closed')),
+  voting_enabled boolean not null default true,
   results_published boolean not null default false,
   starts_at timestamptz,
   ends_at timestamptz,
@@ -244,6 +245,8 @@ create index if not exists idx_invites_email on institution_invites(email);
 create index if not exists idx_strategies_institution on institution_strategies(institution_id);
 alter table if exists strategy_cycles
   add column if not exists strategy_id uuid references institution_strategies(id) on delete set null;
+alter table if exists strategy_cycles
+  add column if not exists voting_enabled boolean not null default true;
 alter table if exists institution_strategies
   add column if not exists clarity_gremlin_calls_used integer not null default 0;
 alter table if exists institution_strategies
