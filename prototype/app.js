@@ -252,7 +252,7 @@ const state = {
   initiativeKeywordFilters: [],
   initiativeViewMode: 'cards',
   initiativeSortMode: 'created-desc',
-  implementationPlanKeywordFilter: '',
+  implementationPlanKeywordFilters: [],
   mapKeywordFilters: [],
   mapLayer: 'guidelines',
   mapGuidelinesShowInitiatives: false,
@@ -5943,7 +5943,7 @@ function renderInitiativeKeywordFilterBar({
   const showViewControls = scope === 'initiatives';
   if (!showFilter && !showViewControls) return '';
   const selectedSet = new Set(selectedKeywords.map((keyword) => keywordKey(keyword)));
-  const label = scope === 'map'
+  const label = scope === 'map' || scope === 'implementation-plan'
     ? langText('Raktažodžių filtras', 'Keyword filter')
     : langText('Filtruoti iniciatyvas pagal raktažodžius', 'Filter initiatives by keywords');
   const countLabel = selectedKeywords.length
@@ -6035,7 +6035,9 @@ function renderInitiativeKeywordFilterBar({
 }
 
 function toggleKeywordFilter(scope, keyword) {
-  const target = scope === 'map' ? 'mapKeywordFilters' : 'initiativeKeywordFilters';
+  const target = scope === 'map'
+    ? 'mapKeywordFilters'
+    : (scope === 'implementation-plan' ? 'implementationPlanKeywordFilters' : 'initiativeKeywordFilters');
   const current = normalizeKeywordList(state[target]);
   const key = keywordKey(keyword);
   if (!key) return;
@@ -6047,6 +6049,7 @@ function toggleKeywordFilter(scope, keyword) {
 
 function clearKeywordFilter(scope) {
   if (scope === 'map') state.mapKeywordFilters = [];
+  else if (scope === 'implementation-plan') state.implementationPlanKeywordFilters = [];
   else state.initiativeKeywordFilters = [];
 }
 
@@ -8271,34 +8274,31 @@ function renderImplementationPlanView() {
   const implementationCandidateRows = buildImplementationPlanInitiativeRows(state.initiatives);
   const implementationCandidateInitiatives = implementationCandidateRows.map((row) => row.item).filter(Boolean);
   const implementationKeywordOptions = collectInitiativeKeywordOptions(implementationCandidateInitiatives);
-  const selectedImplementationKeyword = implementationKeywordOptions.find((keyword) =>
-    keywordKey(keyword) === keywordKey(state.implementationPlanKeywordFilter)
-  ) || '';
-  state.implementationPlanKeywordFilter = selectedImplementationKeyword;
-  const implementationFilteredInitiatives = selectedImplementationKeyword
-    ? filterInitiativesByKeywords(implementationCandidateInitiatives, [selectedImplementationKeyword])
+  const implementationKeywordCounts = collectInitiativeKeywordCounts(implementationCandidateInitiatives);
+  state.implementationPlanKeywordFilters = sanitizeSelectedKeywords(
+    state.implementationPlanKeywordFilters,
+    implementationKeywordOptions
+  );
+  const implementationFilteredInitiatives = state.implementationPlanKeywordFilters.length
+    ? filterInitiativesByKeywords(implementationCandidateInitiatives, state.implementationPlanKeywordFilters)
     : implementationCandidateInitiatives;
   const initiativeRows = buildImplementationPlanInitiativeRows(implementationFilteredInitiatives);
   const implementationVisibleInitiatives = initiativeRows.map((row) => row.item).filter(Boolean);
-  const guidelineSource = selectedImplementationKeyword
+  const guidelineSource = state.implementationPlanKeywordFilters.length
     ? filterGuidelinesForImplementationPlan(state.guidelines, implementationVisibleInitiatives)
     : state.guidelines;
   const guidelineRows = buildImplementationPlanGuidelineRows(guidelineSource);
   const rows = activeLayer === 'initiatives' ? initiativeRows : guidelineRows;
   const calendarData = buildImplementationPlanCalendarEntries({ initiativeRows });
   const implementationKeywordFilterMarkup = implementationKeywordOptions.length
-    ? `
-      <label class="implementation-plan-keyword-filter">
-        <span>${escapeHtml(langText('Raktažodis', 'Keyword'))}</span>
-        <select data-action="set-implementation-keyword-filter" ${state.busy ? 'disabled' : ''}>
-          <option value="">${escapeHtml(langText('Visos iniciatyvos', 'All initiatives'))}</option>
-          ${implementationKeywordOptions.map((keyword) => `
-            <option value="${escapeHtml(keyword)}" ${keywordKey(keyword) === keywordKey(selectedImplementationKeyword) ? 'selected' : ''}>${escapeHtml(keyword)}</option>
-          `).join('')}
-        </select>
-        <span class="tag">${escapeHtml(`${implementationVisibleInitiatives.length} / ${implementationCandidateInitiatives.length}`)}</span>
-      </label>
-    `
+    ? renderInitiativeKeywordFilterBar({
+      options: implementationKeywordOptions,
+      selected: state.implementationPlanKeywordFilters,
+      scope: 'implementation-plan',
+      totalCount: implementationCandidateInitiatives.length,
+      filteredCount: implementationVisibleInitiatives.length,
+      keywordCounts: implementationKeywordCounts
+    })
     : '';
   const title = langText('Įgyvendinimo planas', 'Implementation plan');
   const emptyLabel = activeLayer === 'initiatives'
@@ -8383,10 +8383,22 @@ function renderImplementationPlanView() {
     });
   });
 
-  elements.stepView.querySelector('[data-action="set-implementation-keyword-filter"]')?.addEventListener('change', (event) => {
-    state.implementationPlanKeywordFilter = String(event.target?.value || '').trim();
-    syncRouteState();
-    render();
+  elements.stepView.querySelector('.implementation-plan-header-actions')?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const actionElement = target.closest('[data-action]');
+    if (!(actionElement instanceof HTMLElement)) return;
+    const action = actionElement.dataset.action;
+    if (action === 'toggle-keyword-filter') {
+      toggleKeywordFilter(actionElement.dataset.scope || 'implementation-plan', actionElement.dataset.keyword || '');
+      syncRouteState();
+      render();
+    }
+    if (action === 'clear-keyword-filter') {
+      clearKeywordFilter(actionElement.dataset.scope || 'implementation-plan');
+      syncRouteState();
+      render();
+    }
   });
 
   elements.stepView.querySelectorAll('[data-implementation-nav]').forEach((button) => {

@@ -7444,32 +7444,18 @@ select:focus {
 .implementation-plan-layer-toggle .btn {
   min-width: 132px;
 }
-.implementation-plan-keyword-filter {
-  display: inline-flex;
-  align-items: center;
+.implementation-plan-header-actions .keyword-filter-bar {
+  margin-bottom: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.implementation-plan-header-actions .keyword-filter-head {
   gap: 8px;
-  min-height: 42px;
-  padding: 4px 6px 4px 12px;
-  border: 1px solid #d6e1f0;
-  border-radius: 999px;
-  background: #f8fbff;
-  color: #2b4667;
-  font-size: 13px;
-  font-weight: 800;
 }
-.implementation-plan-keyword-filter select {
-  min-width: 180px;
-  max-width: 260px;
-  border: 1px solid #cbd9ec;
-  border-radius: 999px;
-  background: #fff;
-  color: #17345c;
-  font: inherit;
-  font-weight: 700;
-  padding: 7px 28px 7px 10px;
-}
-.implementation-plan-keyword-filter .tag {
-  white-space: nowrap;
+.implementation-plan-header-actions .keyword-filter-popover {
+  right: 0;
+  left: auto;
 }
 .implementation-plan-meta {
   gap: 8px;
@@ -9906,15 +9892,12 @@ select:focus {
     min-width: 0;
   }
 
-  .implementation-plan-keyword-filter {
+  .implementation-plan-header-actions .keyword-filter-bar {
     width: 100%;
-    border-radius: 16px;
-    justify-content: space-between;
   }
 
-  .implementation-plan-keyword-filter select {
-    min-width: 0;
-    flex: 1 1 auto;
+  .implementation-plan-header-actions .keyword-filter-head {
+    width: 100%;
   }
 
   .implementation-plan-table-head {
