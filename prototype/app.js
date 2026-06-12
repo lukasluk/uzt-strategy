@@ -1324,6 +1324,56 @@ function collectInitiativeKeywordOptions(initiatives = state.initiatives) {
   return Array.from(map.values()).sort((left, right) => left.localeCompare(right, 'lt'));
 }
 
+function collectInitiativeKeywordUsage(initiatives = state.initiatives) {
+  const map = new Map();
+  (Array.isArray(initiatives) ? initiatives : []).forEach((initiative) => {
+    initiativeKeywords(initiative).forEach((keyword) => {
+      const key = keywordKey(keyword);
+      if (!key) return;
+      const existing = map.get(key);
+      if (existing) existing.count += 1;
+      else map.set(key, { keyword, count: 1 });
+    });
+  });
+  return Array.from(map.values()).sort((left, right) =>
+    Number(right.count || 0) - Number(left.count || 0) ||
+    String(left.keyword || '').localeCompare(String(right.keyword || ''), 'lt')
+  ).slice(0, 32);
+}
+
+function renderAdminKeywordSuggestions(selectedKeywords = []) {
+  const options = collectInitiativeKeywordUsage();
+  if (!options.length) return '';
+  const selectedKeys = new Set(normalizeKeywordList(selectedKeywords).map(keywordKey));
+  return `
+    <div class="admin-keyword-suggestions" data-admin-keyword-suggestions="1">
+      <span class="admin-keyword-suggestions-label">${escapeHtml(langText('Naudojami raktažodžiai', 'Used keywords'))}</span>
+      ${options.map((item) => {
+        const active = selectedKeys.has(keywordKey(item.keyword));
+        return `
+          <button
+            type="button"
+            class="admin-keyword-suggestion${active ? ' is-active' : ''}"
+            data-action="toggle-admin-keyword"
+            data-keyword="${escapeHtml(item.keyword)}"
+            aria-pressed="${active ? 'true' : 'false'}"
+          >${escapeHtml(item.keyword)} <span>${Number(item.count || 0)}</span></button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function syncAdminKeywordSuggestionButtons(container, currentKeywords) {
+  if (!container) return;
+  const selectedKeys = new Set(normalizeKeywordList(currentKeywords).map(keywordKey));
+  container.querySelectorAll('[data-action="toggle-admin-keyword"]').forEach((button) => {
+    const active = selectedKeys.has(keywordKey(button.dataset.keyword));
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
 function collectInitiativeKeywordCounts(initiatives = state.initiatives) {
   const counts = {};
   (Array.isArray(initiatives) ? initiatives : []).forEach((initiative) => {
@@ -6505,6 +6555,7 @@ function openInitiativeAdminEditModal(initiative) {
           <label class="admin-edit-field">
             <span class="admin-edit-field-label">${escapeHtml(langText('Raktažodžiai', 'Keywords'))}</span>
             <input type="text" name="keywords" value="${escapeHtml(keywordValue)}" placeholder="${escapeHtml(langText('Pvz. Saugumas, DI, Duomenys', 'E.g. Security, AI, Data'))}" />
+            ${renderAdminKeywordSuggestions(item.keywords)}
           </label>
           <p class="prompt admin-edit-section-hint">${escapeHtml(langText('Atskirkite kableliais. Raktažodžiai matomi prie iniciatyvos ir naudojami filtravimui.', 'Separate with commas. Keywords are shown on the initiative and used for filtering.'))}</p>
         </section>
@@ -6555,6 +6606,23 @@ function openInitiativeAdminEditModal(initiative) {
   bindRichTextEditors(overlay);
 
   const form = overlay.querySelector('#initiativeEditForm');
+  overlay.querySelectorAll('[data-action="toggle-admin-keyword"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const keyword = String(button.dataset.keyword || '').trim();
+      const input = form?.querySelector('input[name="keywords"]');
+      const suggestions = button.closest('[data-admin-keyword-suggestions]');
+      if (!keyword || !input) return;
+      const current = normalizeKeywordList(input.value);
+      const key = keywordKey(keyword);
+      const exists = current.some((item) => keywordKey(item) === key);
+      const next = exists
+        ? current.filter((item) => keywordKey(item) !== key)
+        : normalizeKeywordList([...current, keyword]);
+      input.value = keywordInputValue(next);
+      syncAdminKeywordSuggestionButtons(suggestions, next);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const fd = new FormData(form);
