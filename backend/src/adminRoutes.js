@@ -1248,12 +1248,16 @@ function registerAdminRoutes({
     const body = req.body || {};
     const missionProvided = Object.prototype.hasOwnProperty.call(body, 'missionText');
     const visionProvided = Object.prototype.hasOwnProperty.call(body, 'visionText');
-    if (!missionProvided && !visionProvided) {
-      return res.status(400).json({ error: 'missionText or visionText required' });
+    const implementationPlanKeywordsProvided = Object.prototype.hasOwnProperty.call(body, 'implementationPlanKeywords');
+    if (!missionProvided && !visionProvided && !implementationPlanKeywordsProvided) {
+      return res.status(400).json({ error: 'missionText, visionText or implementationPlanKeywords required' });
     }
 
     const missionText = missionProvided ? (String(body.missionText || '').trim() || null) : null;
     const visionText = visionProvided ? (String(body.visionText || '').trim() || null) : null;
+    const implementationPlanKeywords = implementationPlanKeywordsProvided
+      ? normalizeInitiativeKeywords(body.implementationPlanKeywords)
+      : [];
 
     const cycleAccess = await verifyCycleAccess(cycleId, req.auth.institutionId);
     if (!cycleAccess.ok) return res.status(cycleAccess.status).json({ error: cycleAccess.error });
@@ -1263,7 +1267,9 @@ function registerAdminRoutes({
       missionProvided,
       missionText,
       visionProvided,
-      visionText
+      visionText,
+      implementationPlanKeywordsProvided,
+      implementationPlanKeywords
     });
 
     broadcast({
@@ -1275,7 +1281,8 @@ function registerAdminRoutes({
     res.json({
       ok: true,
       missionText: updated?.mission_text || null,
-      visionText: updated?.vision_text || null
+      visionText: updated?.vision_text || null,
+      implementationPlanKeywords: normalizeInitiativeKeywords(updated?.implementation_plan_keywords)
     });
   });
 

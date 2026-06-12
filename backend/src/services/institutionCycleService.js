@@ -46,7 +46,7 @@ function createInstitutionCycleService({ query }) {
     const allowInstitutionFallback = options?.allowInstitutionFallback !== false;
     if (strategyId) {
       const resByStrategy = await query(
-        `select id, institution_id, strategy_id, title, state, voting_enabled, results_published, starts_at, ends_at, finalized_at, mission_text, vision_text, map_x, map_y, created_at
+        `select id, institution_id, strategy_id, title, state, voting_enabled, implementation_plan_keywords, results_published, starts_at, ends_at, finalized_at, mission_text, vision_text, map_x, map_y, created_at
          from strategy_cycles
          where institution_id = $1 and strategy_id = $2 and state in ('open', 'closed')
          order by created_at desc
@@ -58,7 +58,7 @@ function createInstitutionCycleService({ query }) {
     }
 
     const resFallback = await query(
-      `select id, institution_id, strategy_id, title, state, voting_enabled, results_published, starts_at, ends_at, finalized_at, mission_text, vision_text, map_x, map_y, created_at
+      `select id, institution_id, strategy_id, title, state, voting_enabled, implementation_plan_keywords, results_published, starts_at, ends_at, finalized_at, mission_text, vision_text, map_x, map_y, created_at
        from strategy_cycles
        where institution_id = $1 and state in ('open', 'closed')
        order by created_at desc

@@ -27,14 +27,34 @@ function createAdminMutationService({ query }) {
     );
   }
 
-  async function setCycleSettings({ cycleId, missionProvided, missionText, visionProvided, visionText }) {
+  async function setCycleSettings({
+    cycleId,
+    missionProvided,
+    missionText,
+    visionProvided,
+    visionText,
+    implementationPlanKeywordsProvided,
+    implementationPlanKeywords
+  }) {
+    const normalizedImplementationPlanKeywords = implementationPlanKeywordsProvided
+      ? normalizeInitiativeKeywords(implementationPlanKeywords)
+      : [];
     const updated = await query(
       `update strategy_cycles
        set mission_text = case when $1::boolean then $2 else mission_text end,
-           vision_text = case when $3::boolean then $4 else vision_text end
-       where id = $5
-       returning mission_text, vision_text`,
-      [missionProvided, missionText, visionProvided, visionText, cycleId]
+           vision_text = case when $3::boolean then $4 else vision_text end,
+           implementation_plan_keywords = case when $5::boolean then $6::jsonb else implementation_plan_keywords end
+       where id = $7
+       returning mission_text, vision_text, implementation_plan_keywords`,
+      [
+        missionProvided,
+        missionText,
+        visionProvided,
+        visionText,
+        implementationPlanKeywordsProvided,
+        JSON.stringify(normalizedImplementationPlanKeywords),
+        cycleId
+      ]
     );
     return updated.rows[0] || null;
   }

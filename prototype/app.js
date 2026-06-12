@@ -1158,6 +1158,10 @@ function cycleVotingIsOpen() {
   return cycleIsWritable() && value !== false;
 }
 
+function cycleImplementationPlanKeywords() {
+  return normalizeKeywordList(state.cycle?.implementationPlanKeywords ?? state.cycle?.implementation_plan_keywords);
+}
+
 function voteBudget() {
   return Number(state.context?.rules?.voteBudget || 20);
 }
@@ -5947,7 +5951,9 @@ function renderInitiativeKeywordFilterBar({
     ? keywordCounts
     : collectInitiativeKeywordCounts();
   const selectedKeywords = sanitizeSelectedKeywords(selected, available);
-  const showFilter = isLoggedIn() && available.length;
+  const implementationPlanScope = scope === 'implementation-plan';
+  const canManageImplementationPlanFilter = implementationPlanScope && canManageSelectedInstitution();
+  const showFilter = isLoggedIn() && available.length && (!implementationPlanScope || canManageImplementationPlanFilter);
   const showViewControls = scope === 'initiatives';
   if (!showFilter && !showViewControls) return '';
   const selectedSet = new Set(selectedKeywords.map((keyword) => keywordKey(keyword)));
@@ -5976,6 +5982,12 @@ function renderInitiativeKeywordFilterBar({
             </button>
             <div class="keyword-filter-popover" role="dialog" aria-label="${escapeHtml(label)}">
               <div class="keyword-filter-popover-title">${escapeHtml(label)}</div>
+              ${canManageImplementationPlanFilter ? `
+                <p class="keyword-filter-disclaimer">${escapeHtml(langText(
+    'Šis filtras nustato, kurios iniciatyvos patenka į įgyvendinimo planą. Paprasti vartotojai šiame puslapyje matys tik atrinktas iniciatyvas; neįtrauktos iniciatyvos jiems nebus rodomos.',
+    'This filter defines which initiatives are included in the implementation plan. Regular users will only see the selected initiatives on this page; excluded initiatives will not be shown.'
+  ))}</p>
+              ` : ''}
               <div class="keyword-filter-options">
                 ${available.map((keyword) => {
                   const active = selectedSet.has(keywordKey(keyword));
@@ -6059,6 +6071,22 @@ function clearKeywordFilter(scope) {
   if (scope === 'map') state.mapKeywordFilters = [];
   else if (scope === 'implementation-plan') state.implementationPlanKeywordFilters = [];
   else state.initiativeKeywordFilters = [];
+}
+
+async function saveImplementationPlanKeywordFilters(keywords) {
+  if (!state.cycle?.id || !canManageSelectedInstitution()) return;
+  const normalizedKeywords = normalizeKeywordList(keywords);
+  const payload = await api(`/api/v1/admin/cycles/${encodeURIComponent(state.cycle.id)}/settings`, {
+    method: 'PUT',
+    body: { implementationPlanKeywords: normalizedKeywords }
+  });
+  const savedKeywords = normalizeKeywordList(payload?.implementationPlanKeywords ?? normalizedKeywords);
+  state.cycle = {
+    ...(state.cycle || {}),
+    implementationPlanKeywords: savedKeywords,
+    implementation_plan_keywords: savedKeywords
+  };
+  state.implementationPlanKeywordFilters = savedKeywords;
 }
 
 function renderGuidelineInlineTextBlock(guideline, options = {}) {
@@ -8290,7 +8318,7 @@ function renderImplementationPlanView() {
   const implementationKeywordOptions = collectInitiativeKeywordOptions(implementationCandidateInitiatives);
   const implementationKeywordCounts = collectInitiativeKeywordCounts(implementationCandidateInitiatives);
   state.implementationPlanKeywordFilters = sanitizeSelectedKeywords(
-    state.implementationPlanKeywordFilters,
+    cycleImplementationPlanKeywords(),
     implementationKeywordOptions
   );
   const implementationFilteredInitiatives = state.implementationPlanKeywordFilters.length
@@ -8397,19 +8425,35 @@ function renderImplementationPlanView() {
     });
   });
 
-  elements.stepView.querySelector('.implementation-plan-header-actions')?.addEventListener('click', (event) => {
+  elements.stepView.querySelector('.implementation-plan-header-actions')?.addEventListener('click', async (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
     const actionElement = target.closest('[data-action]');
     if (!(actionElement instanceof HTMLElement)) return;
     const action = actionElement.dataset.action;
+    const scope = actionElement.dataset.scope || 'implementation-plan';
     if (action === 'toggle-keyword-filter') {
-      toggleKeywordFilter(actionElement.dataset.scope || 'implementation-plan', actionElement.dataset.keyword || '');
+      toggleKeywordFilter(scope, actionElement.dataset.keyword || '');
+      if (scope === 'implementation-plan' && canManageSelectedInstitution()) {
+        const nextKeywords = normalizeKeywordList(state.implementationPlanKeywordFilters);
+        await runBusy(async () => {
+          await saveImplementationPlanKeywordFilters(nextKeywords);
+          state.notice = langText('Įgyvendinimo plano filtras išsaugotas.', 'Implementation plan filter saved.');
+        });
+        return;
+      }
       syncRouteState();
       render();
     }
     if (action === 'clear-keyword-filter') {
-      clearKeywordFilter(actionElement.dataset.scope || 'implementation-plan');
+      clearKeywordFilter(scope);
+      if (scope === 'implementation-plan' && canManageSelectedInstitution()) {
+        await runBusy(async () => {
+          await saveImplementationPlanKeywordFilters([]);
+          state.notice = langText('Įgyvendinimo plano filtras išsaugotas.', 'Implementation plan filter saved.');
+        });
+        return;
+      }
       syncRouteState();
       render();
     }

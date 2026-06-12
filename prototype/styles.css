@@ -2944,6 +2944,17 @@ textarea {
   font-weight: 800;
 }
 
+.keyword-filter-disclaimer {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid #d7e3f4;
+  border-radius: 8px;
+  background: #f4f8ff;
+  color: #41556f;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .initiative-display-controls,
 .initiative-view-toggle,
 .initiative-sort-control {

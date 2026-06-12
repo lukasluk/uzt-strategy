@@ -64,6 +64,7 @@ function registerPublicRoutes({
       title: cycle.title,
       state: cycle.state,
       votingEnabled: cycle.voting_enabled !== false,
+      implementationPlanKeywords: normalizeInitiativeKeywords(cycle.implementation_plan_keywords),
       finalizedAt: cycle.finalized_at,
       missionText: cycle.mission_text || null,
       visionText: cycle.vision_text || null,

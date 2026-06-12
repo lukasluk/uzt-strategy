@@ -65,6 +65,7 @@ create table if not exists strategy_cycles (
   title text not null,
   state text not null default 'open' check (state in ('open', 'closed')),
   voting_enabled boolean not null default true,
+  implementation_plan_keywords jsonb not null default '[]'::jsonb,
   results_published boolean not null default false,
   starts_at timestamptz,
   ends_at timestamptz,
@@ -247,6 +248,8 @@ alter table if exists strategy_cycles
   add column if not exists strategy_id uuid references institution_strategies(id) on delete set null;
 alter table if exists strategy_cycles
   add column if not exists voting_enabled boolean not null default true;
+alter table if exists strategy_cycles
+  add column if not exists implementation_plan_keywords jsonb not null default '[]'::jsonb;
 alter table if exists institution_strategies
   add column if not exists clarity_gremlin_calls_used integer not null default 0;
 alter table if exists institution_strategies
