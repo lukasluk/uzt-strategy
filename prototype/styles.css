@@ -1898,6 +1898,43 @@ textarea {
   display: grid;
   gap: 10px;
 }
+.admin-keyword-suggestions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+.admin-keyword-suggestions-label {
+  color: #6f7d98;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-keyword-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid #cfe0f7;
+  border-radius: 999px;
+  background: #f7fbff;
+  color: #244d83;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.admin-keyword-suggestion span {
+  color: #7082a1;
+  font-size: 11px;
+}
+.admin-keyword-suggestion:hover,
+.admin-keyword-suggestion.is-active {
+  border-color: #9fbcff;
+  background: #eaf2ff;
+  color: #123a75;
+}
 .guideline-groups {
   display: grid;
   gap: 18px;
